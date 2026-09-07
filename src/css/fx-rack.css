@@ -1,0 +1,171 @@
+/* ==========================================================================
+   ABLETON DEVICE FX RACK STYLES
+   ========================================================================== */
+
+.fx-rack-strip {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fx-rack-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rack-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+}
+
+.rack-tag {
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: var(--accent-green);
+  background: rgba(16, 185, 129, 0.1);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+/* Horizontal scrollable devices container */
+.devices-scroll-bay {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+
+.ableton-device-box {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  min-width: 170px;
+  flex-shrink: 0;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.device-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #1a1e27;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.dev-power-btn {
+  background: #374151;
+  color: #9ca3af;
+  border: none;
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.dev-power-btn.active {
+  background: var(--accent-amber);
+  color: #000;
+  box-shadow: 0 0 8px var(--accent-amber-glow);
+}
+
+.dev-name {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.dev-body {
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.knob-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 12px;
+  width: 100%;
+}
+
+/* Rotary Knob Component */
+.rotary-knob {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: ns-resize;
+}
+
+.knob-face {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #3a4150 0%, #151820 100%);
+  border: 2px solid #4b5563;
+  position: relative;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.6);
+  transition: border-color 0.15s ease;
+}
+
+.rotary-knob:hover .knob-face {
+  border-color: var(--accent-amber);
+}
+
+.knob-pointer {
+  width: 3px;
+  height: 12px;
+  background: var(--accent-amber);
+  border-radius: 2px;
+  position: absolute;
+  top: 3px;
+  left: calc(50% - 1.5px);
+  transform-origin: bottom center;
+  transform: rotate(0deg);
+  box-shadow: 0 0 6px var(--accent-amber);
+}
+
+.knob-label {
+  font-size: 0.58rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+.knob-value {
+  font-family: var(--font-family-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.rotary-speed-toggle {
+  background: #374151;
+  color: var(--accent-amber);
+  border: 1px solid var(--border-medium);
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  margin-right: 4px;
+}
+
+.rotary-speed-toggle:active {
+  background: var(--accent-amber);
+  color: #000;
+}

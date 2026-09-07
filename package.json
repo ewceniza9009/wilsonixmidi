@@ -1,0 +1,19 @@
+{
+  "name": "midikey-elite",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MidiKey Elite - Ableton-inspired Live Performance Workstation & DAW for Desktop and Android",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 3000",
+    "build": "vite build",
+    "preview": "vite preview",
+    "gen-license": "node tools/license-generator.js"
+  },
+  "devDependencies": {
+    "vite": "^6.2.0"
+  },
+  "dependencies": {
+    "soundfont-player": "^0.12.0"
+  }
+}

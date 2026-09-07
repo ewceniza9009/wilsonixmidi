@@ -1,0 +1,836 @@
+/* ==========================================================================
+   KORG TRITON WORKSTATION & MULTI-LAYER COMBI STYLES
+   Brushed Silver Chassis, TouchView Blue LCD, 4-Column Program Matrix,
+   Realtime Controls 1-4, and 4-Timbre Combi Mixer.
+   ========================================================================== */
+
+/* Triton Chassis */
+.triton-hardware-chassis {
+  height: 100%;
+  max-height: 100%;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, #d4d8df 0%, #b8bec9 12%, #8e96a4 100%);
+  border: 1px solid #5a6270;
+  border-radius: var(--radius-md);
+  padding: 6px 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7), inset 0 1px 3px rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #11141a;
+  overflow: hidden;
+}
+
+/* Top Header Bar */
+.triton-top-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: 8px;
+  background: linear-gradient(180deg, #323742 0%, #1c2027 100%);
+  border: 1px solid #11141a;
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  color: #fff;
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+}
+
+.korg-badge {
+  display: flex;
+  align-items: center;
+}
+
+.korg-logo-text {
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #f3f4f6;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+/* Realtime Controls 1-4 */
+.triton-realtime-bay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.rt-bay-label {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #9ca3af;
+}
+
+.rt-knobs-row {
+  display: flex;
+  gap: 12px;
+}
+
+.rt-knob-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.rt-knob-num {
+  font-size: 0.55rem;
+  font-weight: 800;
+  color: var(--accent-amber);
+}
+
+.triton-silver-knob {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffffff 0%, #a8b0bd 50%, #4b5260 100%);
+  border: 1px solid #2d333f;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
+  position: relative;
+  cursor: ns-resize;
+}
+
+.knob-notch {
+  width: 2px;
+  height: 7px;
+  background: #11141a;
+  position: absolute;
+  top: 2px;
+  left: calc(50% - 1px);
+  transform-origin: bottom center;
+  transform: rotate(-30deg);
+}
+
+.rt-label {
+  font-size: 0.52rem;
+  font-weight: 800;
+  color: #cbd5e1;
+}
+
+/* Blue LCD Display */
+.triton-lcd-display {
+  flex: 1;
+  min-width: 200px;
+  background: radial-gradient(circle at 50% 50%, #004d80 0%, #00223d 100%);
+  border: 2px solid #11151c;
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lcd-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  color: #7dd3fc;
+  border-bottom: 1px solid rgba(125, 211, 252, 0.2);
+  padding-bottom: 2px;
+}
+
+.lcd-main-title {
+  font-family: var(--font-family-mono);
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 0 8px rgba(0, 210, 255, 0.6);
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+
+.lcd-badge {
+  background: #38bdf8;
+  color: #000;
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+
+.lcd-arp-indicator {
+  color: #34d399;
+}
+
+.lcd-main-title {
+  font-family: var(--font-family-mono);
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 1px;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+}
+
+/* Brand Badge */
+.triton-brand-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.workstation-tag {
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  color: #9ca3af;
+}
+
+.triton-hero-text {
+  font-size: 1.8rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #ffffff;
+}
+
+/* Sub-Tab Navigation Bar */
+.triton-subtab-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #252b36;
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  border: 1px solid #1c2029;
+}
+
+.nav-cluster-left {
+  display: flex;
+  gap: 6px;
+}
+
+.triton-subtab {
+  background: #374151;
+  color: #cbd5e1;
+  border: 1px solid #4b5563;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 6px 14px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.triton-subtab:hover {
+  background: #4b5563;
+  color: #fff;
+}
+
+.triton-subtab.active {
+  background: #0284c7;
+  color: #fff;
+  border-color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+}
+
+.triton-search-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #11141a;
+  border: 1px solid #4b5563;
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+}
+
+.triton-search-box input {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 0.75rem;
+  outline: none;
+  width: 180px;
+}
+
+/* /* TouchView Screen Body (Flex: 1, fits exactly in remaining stage space) */
+.touchview-screen {
+  background: #11141a;
+  border: 1px solid #232936;
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.9);
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Banks Row */
+.triton-banks-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+
+.triton-bank-card {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #1e2430;
+  border: 1px solid #374151;
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.12s ease;
+}
+
+.triton-bank-card:hover {
+  background: #2b3345;
+}
+
+.triton-bank-card.active {
+  background: linear-gradient(135deg, rgba(2, 132, 199, 0.45), rgba(2, 132, 199, 0.15));
+  border-color: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+}
+
+.mini-triton-icon {
+  width: 18px;
+  height: 11px;
+  background: #94a3b8;
+  border-radius: 2px;
+  border: 1px solid #475569;
+}
+
+.bank-meta {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.bank-card-title {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #f3f4f6;
+}
+
+.bank-card-desc {
+  font-size: 0.52rem;
+  color: #94a3b8;
+}
+
+/* TouchView 4-Column Program Grid (Scrolls INSIDE its box, NEVER pushes keyboard!) */
+.touchview-program-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+@media (max-width: 900px) {
+  .touchview-program-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.triton-prog-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #181d27;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  padding: 4px 6px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.triton-prog-cell:hover {
+  background: #252e3d;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.triton-prog-cell.active {
+  background: #0284c7;
+  border-color: #7dd3fc;
+  box-shadow: 0 0 8px rgba(2, 132, 199, 0.5);
+}
+
+.prog-bank-code {
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.triton-prog-cell.active .prog-bank-code {
+  color: #e0f2fe;
+}
+
+.prog-num {
+  font-family: var(--font-family-mono);
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: var(--accent-amber);
+}
+
+.prog-name-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #f3f4f6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.prog-star {
+  font-size: 0.6rem;
+  color: #f59e0b;
+}
+
+/* ==========================================================================
+   4-TIMBRE MULTI-LAYER COMBI MIXER RACK
+   ========================================================================== */
+
+.combi-layers-console {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.combi-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.combi-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.combi-pill {
+  font-size: 0.65rem;
+  font-weight: 800;
+  background: var(--accent-amber);
+  color: #000;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.combi-main-title {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: 0.5px;
+}
+
+.combi-preset-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.combi-preset-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.combi-preset-btn:hover {
+  background: var(--bg-card-hover);
+  color: #fff;
+}
+
+.combi-preset-btn.active {
+  background: linear-gradient(135deg, rgba(255, 118, 77, 0.3), rgba(255, 118, 77, 0.1));
+  border-color: var(--accent-amber);
+  color: var(--accent-amber);
+  box-shadow: 0 0 10px var(--accent-amber-glow);
+}
+
+/* 4-Layer Strips Rack */
+.layer-strips-rack {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .layer-strips-rack {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.layer-channel-strip {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.15s ease;
+}
+
+.layer-channel-strip.muted {
+  opacity: 0.45;
+}
+
+.strip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.layer-power-btn {
+  background: #374151;
+  color: #9ca3af;
+  border: none;
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.layer-power-btn.active {
+  background: var(--accent-green);
+  color: #000;
+  box-shadow: 0 0 8px var(--accent-green-glow);
+}
+
+.strip-num {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+
+.strip-inst-picker, .strip-fx-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.strip-picker-label {
+  font-size: 0.58rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.strip-inst-picker select, .strip-fx-picker select {
+  width: 100%;
+  background: #11141a;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.70rem;
+  font-weight: 700;
+  padding: 5px 6px;
+  outline: none;
+  cursor: pointer;
+}
+
+.strip-fx-picker select {
+  border-color: rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+  background: #0b1320;
+}
+
+.strip-fx-picker select:focus, .strip-inst-picker select:focus {
+  border-color: var(--accent-amber);
+}
+
+.strip-fader-bay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #0d0f14;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  min-height: 100px;
+}
+
+.fader-track {
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vertical-fader {
+  -webkit-appearance: slider-vertical;
+  writing-mode: bt-lr;
+  width: 18px;
+  height: 85px;
+  cursor: pointer;
+}
+
+.fader-readout {
+  font-family: var(--font-family-mono);
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--accent-amber);
+  min-width: 42px;
+  text-align: right;
+}
+
+.strip-footer-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.octave-mini-picker {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #11141a;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.oct-mini-btn {
+  background: #374151;
+  color: #fff;
+  border: none;
+  font-size: 0.58rem;
+  font-weight: 800;
+  padding: 2px 5px;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.oct-mini-val {
+  font-family: var(--font-family-mono);
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #38bdf8;
+  min-width: 18px;
+  text-align: center;
+}
+
+.strip-role-tag {
+  font-size: 0.58rem;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   KORG TRITON IFX / MFX ROUTING MATRIX & EASY EDIT
+   ========================================================================== */
+.ifx-mfx-workspace, .easy-edit-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: #e2e8f0;
+}
+
+.ifx-mfx-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 6px;
+}
+
+.ifx-title {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #38bdf8;
+  letter-spacing: 0.5px;
+}
+
+.ifx-chip {
+  font-size: 0.62rem;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  font-weight: 700;
+}
+
+.ifx-mfx-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 850px) {
+  .ifx-mfx-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ifx-col-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #f59e0b;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.ifx-column, .mfx-column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ifx-slot-card, .mfx-slot-card, .meq-slot-card {
+  background: #181d27;
+  border: 1px solid #283142;
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.ifx-slot-card:hover, .mfx-slot-card:hover {
+  border-color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.15);
+}
+
+.slot-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.slot-tag {
+  font-family: var(--font-family-mono);
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #94a3b8;
+  background: #0f131a;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid #334155;
+  white-space: nowrap;
+}
+
+.slot-name {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #f8fafc;
+  flex: 1;
+}
+
+.slot-toggle {
+  background: #27272a;
+  color: #71717a;
+  border: 1px solid #3f3f46;
+  border-radius: 4px;
+  padding: 4px 12px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.slot-toggle.active {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+}
+
+.slot-knobs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  background: #0f131a;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.slot-param {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.fx-slider {
+  accent-color: #38bdf8;
+  cursor: pointer;
+  width: 90px;
+}
+
+.rotary-speed-btn-triton {
+  background: #0f172a;
+  border: 1px solid #38bdf8;
+  color: #38bdf8;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.meq-controls {
+  display: flex;
+  gap: 12px;
+  background: #0f131a;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+.meq-band {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.easy-sliders-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.easy-slider-card {
+  background: #181d27;
+  border: 1px solid #283142;
+  border-radius: 6px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.easy-slider-card label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #38bdf8;
+}
