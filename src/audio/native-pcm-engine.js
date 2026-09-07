@@ -629,6 +629,19 @@ export class NativePcmEngine {
                 }
               }
             }
+            // Safety edge fade: last 10ms slopes to zero so even a non-looped
+            // sample can never end in a hard stop/click
+            try {
+              const edgeLen = Math.min(Math.floor(buf.sampleRate * 0.01), Math.floor(buf.length * 0.02));
+              if (edgeLen > 16) {
+                for (let c = 0; c < buf.numberOfChannels; c++) {
+                  const d = buf.getChannelData(c);
+                  for (let i = 0; i < edgeLen; i++) {
+                    d[buf.length - edgeLen + i] *= 0.5 * (1 + Math.cos((i / edgeLen) * Math.PI));
+                  }
+                }
+              }
+            } catch (e) {}
           } catch (e) {}
           resolve(buf);
         };
@@ -648,42 +661,65 @@ export class NativePcmEngine {
   }
 
   createCrossfadedLoopBuffer(ctx, originalBuf, instId) {
-    // Sustain loops disabled: the 400ms tail-into-head morph was audible as a swish/crackle
-    // in the middle of held notes. Return the natural sample for 100% clean sustain.
-    return originalBuf;
-    // All sustained continuous instruments: Strings, Synths, Leads, Pads, Choirs, Organs, Brass, Horns, Basses
-    // (Acoustic Saxophone, Pianos, EPs, Guitars use authentic full unlooped acoustic breath/decay for 100% pure tone)
-    const isContinuousInst = [
-      "string_ensemble_1", "m1_universe", "m1_choir", "m1_fresh_air",
-      "drawbar_organ", "m1_organ_2", "brass_section", "synth_bass_1",
-      "distortion_guitar", "overdriven_guitar", "supersaw_lead", "fat_brass_horns"
-    ].includes(instId) || 
-    instId?.includes("organ") || 
-    instId?.includes("string") || 
-    instId?.includes("pad") || 
-    instId?.includes("choir") || 
-    instId?.includes("brass") ||
-    instId?.includes("synth") ||
-    instId?.includes("lead") ||
-    instId?.includes("bass") ||
-    instId?.includes("universe") ||
-    instId?.includes("fresh_air");
-
-    if (!isContinuousInst || !originalBuf || originalBuf.duration < 0.6) {
+    // Sustain loops via best-match search (sampler-style): find the loop start whose
+    // waveform best matches the loop end, so the splice is seamless with only a 25ms
+    // equal-power blend. Samples with no clean match (decaying pianos) stay unlooped
+    // and decay naturally instead of click-looping.
+    if (!originalBuf || originalBuf.duration < 0.6) {
       return originalBuf;
     }
-
     const numChannels = Math.max(2, originalBuf.numberOfChannels);
     const sampleRate = originalBuf.sampleRate;
     const totalSamples = originalBuf.length;
 
-    // Generous 400ms smooth equal-power crossfade window
-    const fadeSamples = Math.min(Math.floor(sampleRate * 0.40), Math.floor(totalSamples * 0.30));
-    // Start loop AFTER the attack transient - avoids crackle from blending tail into attack
-    const loopStartSample = Math.min(Math.floor(sampleRate * 0.50), Math.floor(totalSamples * 0.40));
+    const fadeSamples = Math.min(Math.floor(sampleRate * 0.025), Math.floor(totalSamples * 0.03));
     const loopEndSample = totalSamples - fadeSamples;
+    const minLoopLen = Math.min(Math.floor(sampleRate * 0.4), Math.floor(totalSamples * 0.2));
+    const searchFrom = Math.floor(totalSamples * 0.15);
+    const searchTo = loopEndSample - minLoopLen;
+    if (searchTo <= searchFrom || fadeSamples < 64) {
+      return originalBuf;
+    }
 
-    if (loopEndSample <= loopStartSample + fadeSamples * 2) {
+    let loopStartSample = -1;
+    try {
+      const ref = originalBuf.getChannelData(0);
+      // Overall RMS for the match-quality threshold
+      let sum = 0;
+      let cnt = 0;
+      for (let i = searchFrom; i < loopEndSample; i += 7) {
+        sum += ref[i] * ref[i];
+        cnt++;
+      }
+      const rms = Math.sqrt(sum / Math.max(1, cnt));
+      if (rms < 0.001) {
+        return originalBuf;
+      }
+      const W = Math.min(1024, fadeSamples * 2);
+      const endBase = loopEndSample - W;
+      // Loose threshold + loudest-match preference: sustained chords ring long and
+      // full instead of fading into a whisper; the 25ms blend hides the splice
+      const threshold = rms * 0.45;
+      let bestRms = -1;
+      for (let s = searchFrom; s <= searchTo; s += 256) {
+        let diff = 0;
+        let lvl = 0;
+        for (let i = 0; i < W; i += 2) {
+          const d = ref[s + i] - ref[endBase + i];
+          diff += d * d;
+          lvl += ref[s + i] * ref[s + i];
+        }
+        diff = Math.sqrt(diff / (W / 2));
+        if (diff < threshold) {
+          const startRms = Math.sqrt(lvl / (W / 2));
+          if (startRms > bestRms) {
+            bestRms = startRms;
+            loopStartSample = s;
+          }
+        }
+      }
+    } catch (e) {}
+    if (loopStartSample < 0) {
       return originalBuf;
     }
 
@@ -1203,6 +1239,12 @@ export class NativePcmEngine {
     } else {
       voiceGain.gain.setTargetAtTime(peakGain, now, 0.002);
     }
+    // Bounded sustain: full hold ~5s, then slow exponential die-out (~9s to silence).
+    // Releasing keys/sustain overrides this instantly via its own release envelope.
+    voiceGain.gain.setTargetAtTime(0.0001, now + 5.0, 1.5);
+    try {
+      src.stop(now + 12);
+    } catch (e) {}
 
     // Voice Audio Chain: Source -> TVF -> TVA -> (Layer Insert Bus | Master Rack)
     src.connect(filter);
