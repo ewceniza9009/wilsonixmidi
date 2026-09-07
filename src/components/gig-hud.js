@@ -41,7 +41,7 @@ export class GigHudUI {
         <!-- 1. Brand & License Unit -->
         <div class="hud-left-unit">
           <div class="brand-logo">
-            <span class="logo-accent">MIDI</span>KEY <span class="logo-badge">ELITE</span>
+            <span class="logo-accent">WILSONIX</span> MIDIKEY
           </div>
           <button class="license-badge-btn ${isPro ? "pro" : "demo"}" id="hud-license-btn" title="License Status">
             ${isPro ? `★ PRO: ${licenseInfo?.licensee || "LICENSED"}` : "⚡ DEMO"}

@@ -51,6 +51,13 @@ export class VirtualKeyboardUI {
       this.setKeyVisualState(midi, isPressed, vel);
     };
 
+    // Chord pads -> virtual key highlight bridge
+    window.addEventListener("wilsonix-keys-visual", e => {
+      const { notes, pressed, velocity } = e.detail || {};
+      if (!Array.isArray(notes)) return;
+      notes.forEach(m => this.setKeyVisualState(m, !!pressed, velocity || 95));
+    });
+
     whitneyDemoPlayer.onProgressCallback = (elapsed) => {
       const btn = document.getElementById("hud-whitney-demo-btn");
       const hudBtn = document.getElementById("hud-whitney-play-btn");

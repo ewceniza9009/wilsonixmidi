@@ -237,6 +237,7 @@ export class ChordPadsUI {
     activeNotes.forEach(m => {
       multiLayerEngine.noteOn(m, 105);
     });
+    this.emitKeyVisual(activeNotes, true, 105);
   }
 
   releaseChord(index) {
@@ -244,6 +245,15 @@ export class ChordPadsUI {
     if (notes) {
       notes.forEach(m => multiLayerEngine.noteOff(m));
       this.activeNotesMap.delete(index);
+      this.emitKeyVisual(notes, false);
     }
+  }
+
+  emitKeyVisual(notes, pressed, velocity = 95) {
+    try {
+      window.dispatchEvent(
+        new CustomEvent("wilsonix-keys-visual", { detail: { notes, pressed, velocity } })
+      );
+    } catch (e) {}
   }
 }
