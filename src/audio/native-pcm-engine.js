@@ -115,20 +115,48 @@ export class LayerInsertProcessor {
     switch (this.currentFx) {
       case "chorus_lush":
       case "chorus_vintage": {
-        const delay = ctx.createDelay();
-        delay.delayTime.value = this.currentFx === "chorus_lush" ? 0.025 : 0.018;
+        // True Studio Dimension D Stereo Chorus (Dual out-of-phase lines - Zero comb filtering / Zero metallic ring)
+        const isLush = this.currentFx === "chorus_lush";
+        const delayL = ctx.createDelay(0.1);
+        const delayR = ctx.createDelay(0.1);
+        delayL.delayTime.value = isLush ? 0.016 : 0.012;
+        delayR.delayTime.value = isLush ? 0.022 : 0.017;
+
         const lfo = ctx.createOscillator();
         lfo.type = "sine";
-        lfo.frequency.value = this.currentFx === "chorus_lush" ? 1.2 : 0.8;
-        const lfoGain = ctx.createGain();
-        lfoGain.gain.value = 0.0035;
-        lfo.connect(lfoGain);
-        lfoGain.connect(delay.delayTime);
-        lfo.start();
+        lfo.frequency.value = isLush ? 1.0 : 0.7;
 
-        this.effectChainInput.connect(delay);
-        delay.connect(this.effectChainOutput);
-        this.activeFxNodes.push(delay, lfo, lfoGain);
+        const lfoGainL = ctx.createGain();
+        const lfoGainR = ctx.createGain();
+        const depth = isLush ? 0.0030 : 0.0020;
+        lfoGainL.gain.value = depth;
+        lfoGainR.gain.value = -depth;
+
+        lfo.connect(lfoGainL);
+        lfo.connect(lfoGainR);
+        lfoGainL.connect(delayL.delayTime);
+        lfoGainR.connect(delayR.delayTime);
+
+        const hp = ctx.createBiquadFilter();
+        hp.type = "highpass";
+        hp.frequency.value = 120;
+
+        const lp = ctx.createBiquadFilter();
+        lp.type = "lowpass";
+        lp.frequency.value = 8500;
+
+        this.effectChainInput.connect(hp);
+        hp.connect(lp);
+        lp.connect(delayL);
+        lp.connect(delayR);
+
+        const merger = ctx.createChannelMerger(2);
+        delayL.connect(merger, 0, 0);
+        delayR.connect(merger, 0, 1);
+        merger.connect(this.effectChainOutput);
+
+        lfo.start();
+        this.activeFxNodes.push(delayL, delayR, lfo, lfoGainL, lfoGainR, hp, lp, merger);
         break;
       }
 
@@ -502,40 +530,103 @@ export class NativePcmEngine {
     });
   }
 
+  createCrossfadedLoopBuffer(ctx, originalBuf, instId) {
+    // All sustained continuous instruments: Strings, Synths, Leads, Pads, Choirs, Organs, Brass, Horns, Sax, Basses
+    const isContinuousInst = [
+      "string_ensemble_1", "m1_universe", "m1_choir", "m1_fresh_air",
+      "drawbar_organ", "m1_organ_2", "brass_section", "alto_sax", "synth_bass_1",
+      "distortion_guitar", "overdriven_guitar", "supersaw_lead", "fat_brass_horns"
+    ].includes(instId) || 
+    instId?.includes("organ") || 
+    instId?.includes("string") || 
+    instId?.includes("pad") || 
+    instId?.includes("choir") || 
+    instId?.includes("sax") || 
+    instId?.includes("brass") ||
+    instId?.includes("synth") ||
+    instId?.includes("lead") ||
+    instId?.includes("bass") ||
+    instId?.includes("universe") ||
+    instId?.includes("fresh_air");
+
+    if (!isContinuousInst || !originalBuf || originalBuf.duration < 0.25) {
+      return originalBuf;
+    }
+
+    const numChannels = originalBuf.numberOfChannels;
+    const sampleRate = originalBuf.sampleRate;
+    const totalSamples = originalBuf.length;
+
+    // Crossfade window: smooth equal-power sine/cosine blending (constant acoustic energy, zero phase clicks)
+    const fadeSamples = Math.min(Math.floor(sampleRate * 0.20), Math.floor(totalSamples * 0.25));
+    const loopStartSample = Math.min(Math.floor(sampleRate * 0.25), Math.floor(totalSamples * 0.20)); // Start after initial attack transient
+    const loopEndSample = totalSamples - fadeSamples;
+
+    if (loopEndSample <= loopStartSample + fadeSamples) {
+      return originalBuf;
+    }
+
+    const newBuf = ctx.createBuffer(numChannels, loopEndSample, sampleRate);
+
+    for (let ch = 0; ch < numChannels; ch++) {
+      const srcData = originalBuf.getChannelData(ch);
+      const dstData = newBuf.getChannelData(ch);
+
+      // 1. Copy original unmolested samples up to fade start
+      for (let i = 0; i < loopEndSample - fadeSamples; i++) {
+        dstData[i] = srcData[i];
+      }
+
+      // 2. Seamlessly crossfade tail with loop start head
+      for (let i = 0; i < fadeSamples; i++) {
+        const outIdx = loopEndSample - fadeSamples + i;
+        const inIdx = loopStartSample + i;
+
+        // Equal-power crossfade curve: cos^2(t) + sin^2(t) = 1.0 (constant loudness, 0% clicks)
+        const t = i / fadeSamples;
+        const gainOut = Math.cos(t * Math.PI * 0.5);
+        const gainIn = Math.sin(t * Math.PI * 0.5);
+
+        dstData[outIdx] = srcData[outIdx] * gainOut + srcData[inIdx] * gainIn;
+      }
+    }
+
+    newBuf._isLoopable = true;
+    newBuf._loopStartSec = loopStartSample / sampleRate;
+    newBuf._loopEndSec = loopEndSample / sampleRate;
+
+    return newBuf;
+  }
+
   async initBuffers() {
     // 1. Instantly decode acoustic grand piano FIRST (< 15ms) so piano is immediate
     await this.decodeEmbeddedAnchors("acoustic_grand_piano");
     this.isReady = true;
 
-    // 2. Decode ALL essential instruments in parallel so every preset sounds different
-    const remainingBanks = [
-      "string_ensemble_1", "electric_piano_1", "drawbar_organ",
-      "brass_section", "alto_sax", "synth_bass_1",
-      "acoustic_guitar_nylon", "abletunes_fm_piano", "abletunes_upright",
-      "distortion_guitar", "overdriven_guitar", "electric_guitar_clean",
-      "m1_piano_16", "m1_organ_2", "m1_universe", "m1_choir", "m1_fresh_air", "m1_slap_bass",
-    ];
-    await Promise.all(remainingBanks.map(id => this.decodeEmbeddedAnchors(id)));
-
-    // 3. Smooth background preload for full 88-key soundfonts
-    const allSoundfonts = [
-      "acoustic_grand_piano",
-      "distortion_guitar",
-      "overdriven_guitar",
-      "electric_guitar_clean",
-      "acoustic_guitar_nylon",
-      "drawbar_organ",
+    // 2. Load essential multi-layer soundfonts immediately (Strings, EP, Organ, Brass, Sax, Bass)
+    const prioritySoundfonts = [
       "string_ensemble_1",
       "electric_piano_1",
+      "drawbar_organ",
       "brass_section",
       "alto_sax",
       "synth_bass_1",
+      "acoustic_guitar_nylon",
     ];
-    // Idle-staggered background preload so real-time audio thread is 100% responsive
-    allSoundfonts.forEach((id, idx) => {
+    prioritySoundfonts.forEach(id => {
+      this.loadSoundfont(id);
+    });
+
+    // 3. Background preload for remaining soundfonts
+    const backgroundSoundfonts = [
+      "distortion_guitar",
+      "overdriven_guitar",
+      "electric_guitar_clean",
+    ];
+    backgroundSoundfonts.forEach((id, idx) => {
       setTimeout(() => {
         this.loadSoundfont(id);
-      }, 800 + idx * 600);
+      }, 500 + idx * 400);
     });
   }
 
@@ -578,7 +669,8 @@ export class NativePcmEngine {
             try {
               const arrayBuf = this.base64ToArrayBuffer(base64Uri);
               const audioBuf = await this.decodeAudioBuffer(ctx, arrayBuf);
-              instMap.set(midi, audioBuf);
+              const processedBuf = this.createCrossfadedLoopBuffer(ctx, audioBuf, instId);
+              instMap.set(midi, processedBuf);
             } catch (err) {}
           })
         );
@@ -615,8 +707,9 @@ export class NativePcmEngine {
         if (!resp.ok) continue;
         const arrayBuf = await resp.arrayBuffer();
         const audioBuf = await this.decodeAudioBuffer(ctx, arrayBuf);
-        instMap.set(sample.m, audioBuf);
-        instMap.set(`${sample.m}_${sample.v}`, audioBuf);
+        const processedBuf = this.createCrossfadedLoopBuffer(ctx, audioBuf, instId);
+        instMap.set(sample.m, processedBuf);
+        instMap.set(`${sample.m}_${sample.v}`, processedBuf);
       } catch (e) {}
     }
     console.log(`[Abletunes Engine] Loaded lightweight studio anchors: ${bank.name} (${instMap.size} anchors in RAM)`);
@@ -637,7 +730,8 @@ export class NativePcmEngine {
       try {
         const arrayBuf = this.base64ToArrayBuffer(base64);
         const audioBuf = await this.decodeAudioBuffer(ctx, arrayBuf);
-        instMap.set(midi, audioBuf);
+        const processedBuf = this.createCrossfadedLoopBuffer(ctx, audioBuf, instId);
+        instMap.set(midi, processedBuf);
       } catch (e) {
         console.warn(`[PCM Rompler] Anchor ${midi} decode failed for ${instId}:`, e);
       }
@@ -823,23 +917,24 @@ export class NativePcmEngine {
     src.buffer = anchorData.buffer;
     src.playbackRate.setValueAtTime(bentPlaybackRate, now);
 
-    // Sustain Looping: ONLY for continuous organs with long buffers
-    const bufDuration = anchorData.buffer ? anchorData.buffer.duration : 0;
-    const isOrgan = instId === "drawbar_organ" || instId === "m1_organ_2" || instId?.includes("organ");
-    if (isOrgan && bufDuration > 0.8) {
+    // Infinite Smooth Hold for sustained instruments (Equal-Power Pre-Crossfaded: 0% chop, 0% clicks)
+    if (anchorData.buffer && anchorData.buffer._isLoopable) {
       src.loop = true;
-      src.loopStart = 0.35;
-      src.loopEnd = Math.max(0.70, bufDuration * 0.88);
+      src.loopStart = anchorData.buffer._loopStartSec;
+      src.loopEnd = anchorData.buffer._loopEndSec;
+    } else {
+      // Natural unlooped acoustic decay for grand pianos, EPs, and guitars
+      src.loop = false;
     }
 
-    // 2. Dynamic Time-Variant Filter (TVF): Clean acoustic lowpass without harsh resonance
+    // 2. Dynamic Time-Variant Filter (TVF): Clean acoustic warmth (eliminates high-frequency digital hiss)
     const filter = ctx.createBiquadFilter();
     filter.type = "lowpass";
-    const minCutoff = 10000;
-    const maxCutoff = 22000;
+    const minCutoff = 5500;
+    const maxCutoff = 16000;
     const dynamicCutoff = minCutoff + velNorm * (maxCutoff - minCutoff);
     filter.frequency.setValueAtTime(dynamicCutoff, now);
-    filter.Q.setValueAtTime(0.4, now);
+    filter.Q.setValueAtTime(0.35, now);
 
     // 3. Time-Variant Amplifier (TVA): Full-bodied, punchy studio loudness calibration
     const voiceGain = ctx.createGain();

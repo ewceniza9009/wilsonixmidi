@@ -19,7 +19,7 @@ export class GrandPianoAcoustics {
     this.sympatheticAmount = 0.55; // 0 to 1
     this.soundboardAmount = 0.65;  // 0 to 1
     this.hammerHardness = 0.50;    // 0 to 1
-    this.pedalNoiseAmount = 0.40;  // 0 to 1
+    this.pedalNoiseAmount = 0.0;   // 0.0 by default to ensure 100% silent, hiss-free operation
     this.lidPosition = "open";     // 'open', 'half', 'closed'
     this.enabled = true;           // Active by default for rich acoustic grand piano
 

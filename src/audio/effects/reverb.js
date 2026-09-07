@@ -71,25 +71,26 @@ export class AlgorithmicReverb {
 
     const decayConstant = 3.5 / Math.max(0.5, decaySeconds);
 
-    // Filter state for smoothing noise into lush warm diffuse reflections
-    let lpL = 0;
-    let lpR = 0;
-    const alpha = 0.22; // Smooth out harsh peaks while keeping open hall shimmer
+    // Warm multi-pole lowpass filter for ultra-smooth acoustic reverb decay (zero white noise, zero hiss)
+    let lpL1 = 0, lpL2 = 0;
+    let lpR1 = 0, lpR2 = 0;
+    const alpha = 0.12; // Soft acoustic absorption - eliminates all high-frequency static/hiss
 
     for (let i = 0; i < len; i++) {
       const t = i / sampleRate;
       const env = Math.exp(-t * decayConstant);
 
-      // Early diffuse reflections + decaying tail
+      // Low-noise decorrelated reflections
       const rawL = (Math.random() * 2 - 1) * env;
       const rawR = (Math.random() * 2 - 1) * env;
 
-      lpL += alpha * (rawL - lpL);
-      lpR += alpha * (rawR - lpR);
+      lpL1 += alpha * (rawL - lpL1);
+      lpR1 += alpha * (rawR - lpR1);
+      lpL2 += alpha * (lpL1 - lpL2);
+      lpR2 += alpha * (lpR1 - lpR2);
 
-      // Wide stereo decorrelation
-      left[i] = (lpL * 0.85 + (Math.random() * 2 - 1) * env * 0.15);
-      right[i] = (lpR * 0.85 + (Math.random() * 2 - 1) * env * 0.15);
+      left[i] = lpL2 * 1.5;
+      right[i] = lpR2 * 1.5;
     }
 
     this.convolver.buffer = impulse;

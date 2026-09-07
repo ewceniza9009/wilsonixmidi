@@ -677,9 +677,15 @@
 
 .chord-station-header {
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.station-title-group {
+  display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
 }
 
 .station-badge {
@@ -689,26 +695,57 @@
   letter-spacing: 1px;
 }
 
+.genre-tag {
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: var(--accent-amber);
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  letter-spacing: 0.5px;
+}
+
+.bank-selector-scroll {
+  width: 100%;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+}
+
 .bank-selector {
   display: flex;
-  gap: 4px;
+  gap: 6px;
+  width: max-content;
 }
 
 .bank-btn {
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   color: var(--text-secondary);
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 4px 8px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 5px 10px;
   border-radius: var(--radius-sm);
   cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bank-btn:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  border-color: var(--border-medium);
 }
 
 .bank-btn.active {
   background: var(--accent-amber);
-  color: var(--text-inverse);
+  color: #000;
   border-color: var(--accent-amber);
+  box-shadow: 0 0 10px var(--accent-amber-glow);
 }
 
 .chord-pads-grid {

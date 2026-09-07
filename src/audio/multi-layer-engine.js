@@ -50,7 +50,7 @@ export const COMBI_PRESETS = {
     layers: [
       { id: 0, name: "Synthage Grand", inst: "acoustic_grand_piano", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 1, name: "Triton Warm Strings", inst: "string_ensemble_1", fx: "chorus_lush", gain: 0.65, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Dyno Bell Tine", inst: "electric_piano_1", fx: "delay_tape", gain: 0.55, pan: 0.2, oct: 0, minVel: 30, maxVel: 127, enabled: true },
+      { id: 2, name: "Dyno Bell Tine", inst: "electric_piano_1", fx: "clean", gain: 0.55, pan: 0.15, oct: 0, minVel: 30, maxVel: 127, enabled: true },
       { id: 3, name: "Shreddage Lead Guitar", inst: "distortion_guitar", fx: "tube_warm", gain: 0.75, pan: 0, oct: 0, minVel: 95, maxVel: 127, enabled: false },
     ],
   },

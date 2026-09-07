@@ -34,12 +34,26 @@
   border-radius: var(--radius-full);
 }
 
-/* Horizontal scrollable devices container */
+/* Responsive Studio FX Rack Grid - ZERO Horizontal Scrolling */
 .devices-scroll-bay {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  overflow-x: auto;
-  padding-bottom: 6px;
+  overflow-x: hidden;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1150px) {
+  .devices-scroll-bay {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 650px) {
+  .devices-scroll-bay {
+    grid-template-columns: 1fr;
+  }
 }
 
 .ableton-device-box {
@@ -48,8 +62,8 @@
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  min-width: 170px;
-  flex-shrink: 0;
+  min-width: 0;
+  width: 100%;
   overflow: hidden;
   box-shadow: var(--shadow-sm);
 }
@@ -94,11 +108,27 @@
   justify-content: center;
 }
 
+#dev-piano-acoustics {
+  grid-column: span 2;
+}
+
+@media (max-width: 1150px) {
+  #dev-piano-acoustics {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 650px) {
+  #dev-piano-acoustics {
+    grid-column: span 1;
+  }
+}
+
 .knob-group {
   display: flex;
   align-items: center;
   justify-content: space-around;
-  gap: 12px;
+  gap: 6px;
   width: 100%;
 }
 
