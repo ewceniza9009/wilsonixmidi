@@ -30,9 +30,9 @@ export class AudioCore {
 
     this.sampleRate = this.ctx.sampleRate;
 
-    // Create Master Bus with +12dB boost for live gig volume (slider defaults to 50%)
+    // Master bus: slider 0-100% maps to 0-3x gain, defaults to 50% (1.5x)
     this.masterGain = this.ctx.createGain();
-    this.masterGain.gain.value = 2.0;
+    this.masterGain.gain.value = 1.5;
 
     // Fast Peak Analyser for meters & oscilloscope
     this.analyser = this.ctx.createAnalyser();
@@ -56,21 +56,22 @@ export class AudioCore {
     this.dcBlocker.type = "highpass";
     this.dcBlocker.frequency.value = 20;
 
-    // Soft clipper: rounds off any crackle peaks before the limiter
-    this.softClip = this.ctx.createWaveShaper();
-    const clipCurve = new Float32Array(256);
-    for (let i = 0; i < 256; i++) {
-      const x = (i * 2) / 256 - 1;
-      clipCurve[i] = Math.tanh(x * 1.8) * 0.95;
-    }
-    this.softClip.curve = clipCurve;
-    this.softClip.oversample = "4x";
+    // Master bus glue compressor: slow optical-style leveling that transparently
+    // contains sustained stacked chords BEFORE the limiter, so the limiter only
+    // catches true transient peaks and never pumps or distorts
+    this.busComp = this.ctx.createDynamicsCompressor();
+    this.busComp.threshold.value = -14.0;
+    this.busComp.knee.value = 18.0;
+    this.busComp.ratio.value = 2.0;
+    this.busComp.attack.value = 0.030;
+    this.busComp.release.value = 0.400;
 
-    // Routing: FX Rack -> Master Gain -> DC Blocker -> SoftClip -> Analyser -> HardwareLimiter -> Destination
+    // Routing: FX Rack -> Master Gain -> DC Blocker -> BusComp -> Analyser -> HardwareLimiter -> Destination
+    // (No waveshaper on the master bus: tanh saturation was adding grit to sustained chords)
     this.fxRack.output.connect(this.masterGain);
     this.masterGain.connect(this.dcBlocker);
-    this.dcBlocker.connect(this.softClip);
-    this.softClip.connect(this.analyser);
+    this.dcBlocker.connect(this.busComp);
+    this.busComp.connect(this.analyser);
     this.analyser.connect(this.hardwareLimiter);
     this.hardwareLimiter.connect(this.ctx.destination);
 
@@ -119,7 +120,7 @@ export class AudioCore {
 
   setMasterVolume(val) {
     if (!this.masterGain || !this.ctx) return;
-    const v = Math.max(0, Math.min(4.0, val * 4.0));
+    const v = Math.max(0, Math.min(3.0, val * 3.0));
     this.masterGain.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02);
   }
 }

@@ -466,6 +466,16 @@
   box-shadow: 0 0 10px var(--accent-amber-glow);
 }
 
+.strip-layer-name {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--accent-amber);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 2px 8px 0;
+}
+
 /* 4-Layer Strips Rack */
 .layer-strips-rack {
   display: grid;

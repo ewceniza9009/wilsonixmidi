@@ -56,6 +56,7 @@ export class MultiLayerUI {
                 </button>
                 <span class="strip-num">LAYER ${idx + 1}</span>
               </div>
+              <div class="strip-layer-name" data-layer="${idx}" title="${layer.name}">${layer.name}</div>
 
               <!-- Instrument Picker -->
               <div class="strip-inst-picker">
@@ -192,6 +193,18 @@ export class MultiLayerUI {
 
       const fxSelect = this.container.querySelector(`.layer-fx-select[data-layer="${i}"]`);
       if (fxSelect && l.fx) fxSelect.value = l.fx;
+
+      const instSelect = this.container.querySelector(`.layer-inst-select[data-layer="${i}"]`);
+      if (instSelect && l.inst) instSelect.value = l.inst;
+
+      const nameEl = this.container.querySelector(`.strip-layer-name[data-layer="${i}"]`);
+      if (nameEl && l.name) {
+        nameEl.innerText = l.name;
+        nameEl.title = l.name;
+      }
+
+      const strip = document.getElementById(`layer-strip-${i}`);
+      if (strip) strip.classList.toggle("active", !!l.enabled);
     });
   }
 }

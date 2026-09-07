@@ -9,7 +9,7 @@ import { TRITON_BANKS } from "../triton/triton-soundbanks.js";
 import { TRITON_ALGORITHMS } from "../triton/triton-effects-matrix.js";
 import { synthEngine } from "../audio/synth-engine.js";
 import { audioCore } from "../audio/audio-core.js";
-import { multiLayerEngine } from "../audio/multi-layer-engine.js";
+import { multiLayerEngine, COMBI_PRESETS } from "../audio/multi-layer-engine.js";
 
 export class TritonWorkstationUI {
   constructor(containerId) {
@@ -23,12 +23,27 @@ export class TritonWorkstationUI {
     this.applyTritonProgram(this.activeProg);
   }
 
-  render() {
-    if (!this.container) return;
+  isCombiBank() {
+    return this.activeBankId === "COMBI";
+  }
 
+  // Normalized grid list for the active bank (combi presets get display numbers)
+  getGridPrograms() {
+    if (this.isCombiBank()) {
+      const list = Object.values(COMBI_PRESETS).map((c, i) => ({
+        ...c,
+        num: String(i + 1).padStart(3, "0"),
+      }));
+      if (!this.searchQuery) return list;
+      const q = this.searchQuery.toLowerCase();
+      return list.filter(
+        p =>
+          p.name.toLowerCase().includes(q) ||
+          (p.category || "").toLowerCase().includes(q)
+      );
+    }
     const currentBank = TRITON_BANKS[this.activeBankId] || TRITON_BANKS.USER_A;
-    let programs = currentBank.programs;
-
+    let programs = currentBank.programs || [];
     if (this.searchQuery) {
       programs = programs.filter(
         p =>
@@ -36,6 +51,24 @@ export class TritonWorkstationUI {
           p.category.toLowerCase().includes(this.searchQuery.toLowerCase())
       );
     }
+    return programs;
+  }
+
+  isGridCellActive(p) {
+    if (this.isCombiBank()) {
+      try {
+        return multiLayerEngine.activeCombi.id === p.id;
+      } catch (e) {
+        return false;
+      }
+    }
+    return this.activeProg.id === p.id;
+  }
+
+  render() {
+    if (!this.container) return;
+
+    const programs = this.getGridPrograms();
 
     this.container.innerHTML = `
       <div class="triton-hardware-chassis">
@@ -160,6 +193,15 @@ export class TritonWorkstationUI {
         `
           )
           .join("")}
+          <button class="triton-bank-card ${this.activeBankId === "COMBI" ? "active" : ""}" data-bank="COMBI">
+            <div class="bank-thumb-preview">
+              <div class="mini-triton-icon"></div>
+            </div>
+            <div class="bank-meta">
+              <span class="bank-card-title">COMBI</span>
+              <span class="bank-card-desc">4-Timbre Stacks</span>
+            </div>
+          </button>
       </div>
 
       <!-- TouchView 4-Column Program Grid (Matches Image 2) -->
@@ -167,7 +209,7 @@ export class TritonWorkstationUI {
         ${programs
           .map(
             p => `
-          <div class="triton-prog-cell ${this.activeProg.id === p.id ? "active" : ""}" data-prog-id="${p.id}">
+          <div class="triton-prog-cell ${this.isGridCellActive(p) ? "active" : ""}" data-prog-id="${p.id}">
             <span class="prog-bank-code">${this.activeBankId.replace("_", " ")}</span>
             <span class="prog-num">${p.num}</span>
             <span class="prog-name-label">${p.name}</span>
@@ -377,6 +419,22 @@ export class TritonWorkstationUI {
     this.container.querySelectorAll(".triton-prog-cell").forEach(cell => {
       cell.addEventListener("click", () => {
         const progId = cell.getAttribute("data-prog-id");
+        // COMBI bank: trigger 4-timbre stack + update LCD
+        if (this.isCombiBank()) {
+          const cp = COMBI_PRESETS[progId];
+          if (cp) {
+            multiLayerEngine.setCombiPreset(progId);
+            const lcdTitle = document.getElementById("triton-lcd-title");
+            const lcdBankCat = document.getElementById("triton-lcd-bank-cat");
+            const lcdCat = document.getElementById("triton-lcd-category");
+            if (lcdTitle) lcdTitle.innerText = cp.name;
+            if (lcdBankCat) lcdBankCat.innerText = `BANK: COMBI`;
+            if (lcdCat) lcdCat.innerText = `CATEGORY: ${(cp.category || "").toUpperCase()}`;
+            this.container.querySelectorAll(".triton-prog-cell").forEach(c => c.classList.remove("active"));
+            cell.classList.add("active");
+          }
+          return;
+        }
         const bank = TRITON_BANKS[this.activeBankId] || TRITON_BANKS.USER_A;
         const prog = bank.programs.find(p => p.id === progId);
         if (prog) {
@@ -649,21 +707,13 @@ export class TritonWorkstationUI {
     const searchInput = document.getElementById("triton-search-input");
     searchInput?.addEventListener("input", e => {
       this.searchQuery = e.target.value;
-      const bank = TRITON_BANKS[this.activeBankId] || TRITON_BANKS.USER_A;
-      let programs = bank.programs;
-      if (this.searchQuery) {
-        programs = programs.filter(
-          p =>
-            p.name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-            p.category.toLowerCase().includes(this.searchQuery.toLowerCase())
-        );
-      }
+      const programs = this.getGridPrograms();
       const grid = this.container.querySelector(".touchview-program-grid");
       if (grid) {
         grid.innerHTML = programs
           .map(
             p => `
-          <div class="triton-prog-cell ${this.activeProg.id === p.id ? "active" : ""}" data-prog-id="${p.id}">
+          <div class="triton-prog-cell ${this.isGridCellActive(p) ? "active" : ""}" data-prog-id="${p.id}">
             <span class="prog-bank-code">${this.activeBankId.replace("_", " ")}</span>
             <span class="prog-num">${p.num}</span>
             <span class="prog-name-label">${p.name}</span>

@@ -105,8 +105,8 @@ export class FxRackManager {
         this.rotary.setBypass(true);
         this.delay.setBypass(true);
         this.reverb.setBypass(false);
-        this.reverb.setMix(0.14);
-        this.reverb.setDecay(1.8);
+        this.reverb.setMix(0.10);
+        this.reverb.setDecay(1.5);
         break;
 
       case "distortion_guitar":

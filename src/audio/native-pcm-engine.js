@@ -126,7 +126,7 @@ export class LayerInsertProcessor {
       this.wetGain.gain.setValueAtTime(1.0, ctx.currentTime);
     } else {
       this.dryGain.gain.setValueAtTime(1.0, ctx.currentTime);
-      this.wetGain.gain.setValueAtTime(0.20, ctx.currentTime);
+      this.wetGain.gain.setValueAtTime(0.15, ctx.currentTime);
     }
 
     switch (this.currentFx) {
@@ -553,6 +553,10 @@ export class NativePcmEngine {
     this.pitchBendSemitones = 0;
     this.modWheelAmount = 0;
 
+    // Global polyphony cap: prevents voice pileup crackle + crash on very fast playing
+    this.voiceQueue = [];
+    this.MAX_VOICES = 28;
+
     this.loadingSoundfonts = new Set();
     this.isReady = false;
 
@@ -605,6 +609,27 @@ export class NativePcmEngine {
               ch1.set(ch0);
             }
           }
+          // Normalize quiet soundfont samples to 0.9 peak so voices run at sane
+          // levels without extreme downstream boost (which amplified noise + limiter crush)
+          try {
+            let peak = 0;
+            for (let c = 0; c < buf.numberOfChannels; c++) {
+              const d = buf.getChannelData(c);
+              for (let i = 0; i < d.length; i += 3) {
+                const a = Math.abs(d[i]);
+                if (a > peak) peak = a;
+              }
+            }
+            if (peak > 0.02) {
+              const g = Math.min(15, 0.9 / peak);
+              if (g > 1.001 || g < 0.999) {
+                for (let c = 0; c < buf.numberOfChannels; c++) {
+                  const d = buf.getChannelData(c);
+                  for (let i = 0; i < d.length; i++) d[i] *= g;
+                }
+              }
+            }
+          } catch (e) {}
           resolve(buf);
         };
 
@@ -721,10 +746,12 @@ export class NativePcmEngine {
     ]);
     this.isReady = true;
 
-    // 2. Load essential multi-layer soundfonts immediately (Strings, EP, Organ, Brass, Sax, Bass)
+    // 2. Load essential multi-layer soundfonts immediately (Strings, Organ, Brass, Sax, Bass)
+    // EP + piano come from the studio WAV banks (no MP3 grain), preloaded here instead
+    this.loadAbletunesInstrument("fm_piano");
+    this.loadAbletunesInstrument("upright_piano");
     const prioritySoundfonts = [
       "string_ensemble_1",
-      "electric_piano_1",
       "drawbar_organ",
       "brass_section",
       "alto_sax",
@@ -813,22 +840,39 @@ export class NativePcmEngine {
     const instMap = this.decodedBuffers.get(instId);
     const ctx = this.ctx;
 
-    // Load ONLY 4 core anchors (C2, C3, C4, C5) - ultra-lightweight ~5MB total, 0% CPU/RAM crash
-    const coreAnchors = bank.samples.filter(s => 
-      (s.m === 36 || s.m === 48 || s.m === 60 || s.m === 72) && s.v === "vl2"
-    );
+    // Load ALL vl2 anchors: full pitch coverage (every 4-6 semitones) so pitch-shift
+    // artifacts stay inaudible; velocity requests fall back to the nearest vl2 anchor
+    const coreAnchors = bank.samples.filter(s => s.v === "vl2");
 
-    for (const sample of coreAnchors) {
-      try {
-        const url = `${bank.path}/${sample.f}`;
-        const resp = await fetch(url);
-        if (!resp.ok) continue;
-        const arrayBuf = await resp.arrayBuffer();
-        const audioBuf = await this.decodeAudioBuffer(ctx, arrayBuf);
-        const processedBuf = this.createCrossfadedLoopBuffer(ctx, audioBuf, instId);
-        instMap.set(sample.m, processedBuf);
-        instMap.set(`${sample.m}_${sample.v}`, processedBuf);
-      } catch (e) {}
+    const BATCH = 4;
+    for (let i = 0; i < coreAnchors.length; i += BATCH) {
+      const batch = coreAnchors.slice(i, i + BATCH);
+      await Promise.all(
+        batch.map(async (sample) => {
+          try {
+            const url = `${bank.path}/${sample.f}`;
+            const resp = await fetch(url);
+            if (!resp.ok) return;
+            const arrayBuf = await resp.arrayBuffer();
+            const audioBuf = await this.decodeAudioBuffer(ctx, arrayBuf);
+            // FM bank carries a low -48dB shimmer bed in its final seconds that stacks
+            // audibly under sustain: fade the last 1.5s to silence (release character kept)
+            if (bankKey === "fm_piano" && audioBuf && audioBuf.length > ctx.sampleRate) {
+              const fadeLen = Math.min(Math.floor(ctx.sampleRate * 1.5), Math.floor(audioBuf.length * 0.25));
+              for (let c = 0; c < audioBuf.numberOfChannels; c++) {
+                const d = audioBuf.getChannelData(c);
+                for (let i = 0; i < fadeLen; i++) {
+                  const t = i / fadeLen;
+                  d[audioBuf.length - fadeLen + i] *= 0.5 * (1 + Math.cos(t * Math.PI));
+                }
+              }
+            }
+            const processedBuf = this.createCrossfadedLoopBuffer(ctx, audioBuf, instId);
+            instMap.set(sample.m, processedBuf);
+            instMap.set(`${sample.m}_${sample.v}`, processedBuf);
+          } catch (e) {}
+        })
+      );
     }
     console.log(`[Abletunes Engine] Loaded lightweight studio anchors: ${bank.name} (${instMap.size} anchors in RAM)`);
   }
@@ -860,20 +904,21 @@ export class NativePcmEngine {
 
   findNearestAnchor(instId, targetMidi, velocity = 95) {
     const INST_ALIASES = {
-      // 1. Acoustic Pianos
-      synthage_grand: "acoustic_grand_piano",
-      whitney_ballad: "acoustic_grand_piano",
-      ballad_master: "acoustic_grand_piano",
-      m1_piano_16: "acoustic_grand_piano",
-      abletunes_upright: "acoustic_grand_piano",
-      acoustic_grand_piano: "acoustic_grand_piano",
+      // 1. Acoustic Pianos -> studio upright WAV multisamples (clean source, no MP3 grain)
+      synthage_grand: "abletunes_upright",
+      whitney_ballad: "abletunes_upright",
+      ballad_master: "abletunes_upright",
+      m1_piano_16: "abletunes_upright",
+      abletunes_upright: "abletunes_upright",
+      acoustic_grand_piano: "abletunes_upright",
 
-      // 2. Electric Pianos, FM Tines
-      electric_piano_1: "electric_piano_1",
-      triton_dyno_ep: "electric_piano_1",
-      abletunes_fm_piano: "electric_piano_1",
-      abletunes_fm_dx7: "electric_piano_1",
-      m1_fresh_air: "electric_piano_1",
+      // 2. Electric Pianos, FM Tines -> studio DX7 FM WAV multisamples (clean source, no MP3 grain)
+      rhodes_stage_mp3: "electric_piano_1",
+      electric_piano_1: "abletunes_fm_piano",
+      triton_dyno_ep: "abletunes_fm_piano",
+      abletunes_fm_piano: "abletunes_fm_piano",
+      abletunes_fm_dx7: "abletunes_fm_piano",
+      m1_fresh_air: "abletunes_fm_piano",
 
       // 3. Real Electric & Acoustic Guitars
       distortion_guitar: "distortion_guitar",
@@ -1044,7 +1089,9 @@ export class NativePcmEngine {
             try {
               oldV.voiceGain.gain.cancelScheduledValues(now);
               oldV.voiceGain.gain.setTargetAtTime(0, now, 0.003);
-              oldV.src.stop(now + 0.025);
+              oldV.src.stop(now + 0.015);
+              const qi = this.voiceQueue.indexOf(oldV);
+              if (qi !== -1) this.voiceQueue.splice(qi, 1);
             } catch (e) {}
           } else {
             remaining.push(oldV);
@@ -1054,6 +1101,35 @@ export class NativePcmEngine {
           this.activeVoices.set(midiNote, remaining);
         } else {
           this.activeVoices.delete(midiNote);
+        }
+      }
+    }
+
+    // 0b. Same-note re-trigger must also steal still-ringing SUSTAINED copies,
+    // otherwise sustain + re-press stacks identical pitches -> beating/static dirt
+    if (this.sustainedVoices.has(midiNote)) {
+      const susList = this.sustainedVoices.get(midiNote);
+      if (susList && susList.length > 0) {
+        const keep = [];
+        susList.forEach(oldV => {
+          const isSameLayer = (layerIndex !== null && layerIndex !== undefined && oldV.layerIndex === layerIndex);
+          const isSameInst = (oldV.instId === instId);
+          if (isSameLayer || (layerIndex === null && isSameInst)) {
+            try {
+              oldV.voiceGain.gain.cancelScheduledValues(now);
+              oldV.voiceGain.gain.setTargetAtTime(0, now, 0.003);
+              oldV.src.stop(now + 0.015);
+              const qi = this.voiceQueue.indexOf(oldV);
+              if (qi !== -1) this.voiceQueue.splice(qi, 1);
+            } catch (e) {}
+          } else {
+            keep.push(oldV);
+          }
+        });
+        if (keep.length > 0) {
+          this.sustainedVoices.set(midiNote, keep);
+        } else {
+          this.sustainedVoices.delete(midiNote);
         }
       }
     }
@@ -1089,33 +1165,36 @@ export class NativePcmEngine {
     voiceGain.channelCountMode = "explicit";
     voiceGain.channelInterpretation = "speakers";
 
+    // Sources are peak-normalized at load, so trims stay near unity for balanced combis
     const INST_TRIM_GAINS = {
-      acoustic_grand_piano: 2.0,
-      abletunes_upright: 2.0,
-      m1_piano_16: 2.0,
-      electric_piano_1: 1.9,
-      abletunes_fm_piano: 1.9,
-      string_ensemble_1: 1.8,
-      m1_universe: 1.8,
-      m1_choir: 1.8,
-      acoustic_guitar_nylon: 1.9,
-      electric_guitar_clean: 1.9,
-      alto_sax: 1.8,
-      brass_section: 1.9,
-      drawbar_organ: 1.9,
-      synth_bass_1: 1.9,
-      m1_slap_bass: 1.9,
-      distortion_guitar: 1.8,
-      overdriven_guitar: 1.8,
+      acoustic_grand_piano: 1.0,
+      abletunes_upright: 1.0,
+      m1_piano_16: 1.0,
+      electric_piano_1: 1.0,
+      abletunes_fm_piano: 1.0,
+      string_ensemble_1: 1.0,
+      m1_universe: 1.0,
+      m1_choir: 1.0,
+      acoustic_guitar_nylon: 1.0,
+      electric_guitar_clean: 1.0,
+      alto_sax: 0.95,
+      brass_section: 1.0,
+      drawbar_organ: 1.0,
+      synth_bass_1: 1.05,
+      m1_slap_bass: 1.05,
+      distortion_guitar: 1.0,
+      overdriven_guitar: 1.0,
     };
-    const resolvedId = this.findNearestAnchor(instId, midiNote, velocity)?.instKey || instId;
-    const trim = INST_TRIM_GAINS[instId] || INST_TRIM_GAINS[resolvedId] || 1.20;
+    const trim = INST_TRIM_GAINS[instId] || 1.0;
 
-    // In Combi mode (multiple simultaneous layers), scale by 0.55 so 4 layers sum loud for live gig
-    const combiScale = (layerIndex !== null && layerIndex !== undefined) ? 0.55 : 1.0;
+    // In Combi mode (multiple simultaneous layers), scale so 4 layers sum with limiter headroom
+    const combiScale = (layerIndex !== null && layerIndex !== undefined) ? 0.42 : 1.0;
 
-    // Clean, punchy, uncompressed studio volume scaling - LOUD for live performance
-    const peakGain = (1.0 + velNorm * 0.50) * customGain * trim * combiScale;
+    // Gig loudness lives in the master slider - voices stay clean here
+    // Density compensation: as sustained voices pile up, each new voice scales
+    // down so the stack sum stays bounded instead of collapsing into overdrive grain
+    const densityScale = 1 / Math.sqrt(1 + this.voiceQueue.length / 6);
+    const peakGain = (0.45 + velNorm * 0.25) * customGain * trim * combiScale * densityScale;
 
     // 100% Click-free, pop-free attack envelope using exponential ramp (no step artifacts)
     voiceGain.gain.setValueAtTime(0.0001, now);
@@ -1153,10 +1232,23 @@ export class NativePcmEngine {
       velNorm,
     };
 
+    // Global polyphony cap: steal oldest voices first so fast runs can't pile up and crackle
+    while (this.voiceQueue.length >= this.MAX_VOICES) {
+      const oldest = this.voiceQueue.shift();
+      if (!oldest) break;
+      try {
+        oldest.voiceGain.gain.cancelScheduledValues(now);
+        oldest.voiceGain.gain.setTargetAtTime(0, now, 0.003);
+        oldest.src.stop(now + 0.015);
+      } catch (e) {}
+      this.removeVoice(oldest.midiNote, oldest);
+    }
+
     if (!this.activeVoices.has(midiNote)) {
       this.activeVoices.set(midiNote, []);
     }
     this.activeVoices.get(midiNote).push(voiceRecord);
+    this.voiceQueue.push(voiceRecord);
 
     // Cleanup when sample finishes naturally
     src.onended = () => {
@@ -1167,6 +1259,8 @@ export class NativePcmEngine {
   }
 
   removeVoice(midiNote, voiceRecord) {
+    const qi = this.voiceQueue.indexOf(voiceRecord);
+    if (qi !== -1) this.voiceQueue.splice(qi, 1);
     const list = this.activeVoices.get(midiNote);
     if (list) {
       const idx = list.indexOf(voiceRecord);
