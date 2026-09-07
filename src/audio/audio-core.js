@@ -13,9 +13,8 @@ export class AudioCore {
     this.analyser = null;
     this.isUnlocked = false;
 
-    // Latency telemetry
-    this.reportedLatencyMs = 0;
-    this.sampleRate = 48000;
+    // Pre-allocated buffer for zero GC overhead during 60/120fps metering
+    this.peakBuffer = new Uint8Array(128);
   }
 
   init() {
@@ -31,22 +30,23 @@ export class AudioCore {
 
     this.sampleRate = this.ctx.sampleRate;
 
-    // Create Master Bus with punchy full-scale loudness
+    // Create Master Bus with punchy full-scale loudness (+4dB Studio Boost)
     this.masterGain = this.ctx.createGain();
-    this.masterGain.gain.value = 1.0;
+    this.masterGain.gain.value = 1.45;
 
     // Fast Peak Analyser for meters & oscilloscope
     this.analyser = this.ctx.createAnalyser();
     this.analyser.fftSize = 256;
     this.analyser.smoothingTimeConstant = 0.6;
+    this.peakBuffer = new Uint8Array(this.analyser.frequencyBinCount);
 
-    // Transparent Hardware Output Ceiling Limiter (prevents DAC distortion while keeping pure dynamic range)
+    // Transparent Hardware Output Safety Limiter (Prevents DAC clipping with zero waveform modulation & zero squashing)
     this.hardwareLimiter = this.ctx.createDynamicsCompressor();
-    this.hardwareLimiter.threshold.value = -0.5;  // Transparent safety ceiling at -0.5 dB
-    this.hardwareLimiter.knee.value = 4.0;        // Smooth musical knee
-    this.hardwareLimiter.ratio.value = 8.0;       // Swift ceiling catch against hard clipping
-    this.hardwareLimiter.attack.value = 0.002;    // 2ms ultra-fast transient catch
-    this.hardwareLimiter.release.value = 0.050;   // 50ms fast recovery
+    this.hardwareLimiter.threshold.value = -1.5; // Transparent safety ceiling
+    this.hardwareLimiter.knee.value = 10.0;      // Musical soft knee
+    this.hardwareLimiter.ratio.value = 3.5;       // Transparent dynamic control without volume squashing
+    this.hardwareLimiter.attack.value = 0.004;   // 4ms fast musical transient catch
+    this.hardwareLimiter.release.value = 0.080;  // 80ms snappy recovery (zero bass buzz/ripple, zero volume ducking)
 
     // Initialize FX Rack
     this.fxRack = new FxRackManager(this.ctx);
@@ -89,12 +89,12 @@ export class AudioCore {
   }
 
   getPeakLevel() {
-    if (!this.analyser) return 0;
-    const data = new Uint8Array(this.analyser.frequencyBinCount);
-    this.analyser.getByteTimeDomainData(data);
+    if (!this.analyser || !this.peakBuffer) return 0;
+    this.analyser.getByteTimeDomainData(this.peakBuffer);
     let max = 0;
-    for (let i = 0; i < data.length; i++) {
-      const val = Math.abs(data[i] - 128) / 128;
+    const len = this.peakBuffer.length;
+    for (let i = 0; i < len; i += 4) {
+      const val = Math.abs(this.peakBuffer[i] - 128) / 128;
       if (val > max) max = val;
     }
     return max;

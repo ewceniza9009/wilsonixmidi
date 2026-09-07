@@ -58,6 +58,11 @@ export class LayerInsertProcessor {
     this.input = ctx.createGain();
     this.currentFx = "clean";
 
+    // Set 2-channel stereo explicitly
+    this.input.channelCount = 2;
+    this.input.channelCountMode = "explicit";
+    this.input.channelInterpretation = "speakers";
+
     // Sub-processors
     this.dryGain = ctx.createGain();
     this.wetGain = ctx.createGain();
@@ -66,6 +71,18 @@ export class LayerInsertProcessor {
 
     this.effectChainInput = ctx.createGain();
     this.effectChainOutput = ctx.createGain();
+
+    this.dryGain.channelCount = 2;
+    this.dryGain.channelCountMode = "explicit";
+    this.dryGain.channelInterpretation = "speakers";
+
+    this.wetGain.channelCount = 2;
+    this.wetGain.channelCountMode = "explicit";
+    this.wetGain.channelInterpretation = "speakers";
+
+    this.effectChainOutput.channelCount = 2;
+    this.effectChainOutput.channelCountMode = "explicit";
+    this.effectChainOutput.channelInterpretation = "speakers";
 
     // Direct Dry path
     this.input.connect(this.dryGain);
@@ -109,28 +126,28 @@ export class LayerInsertProcessor {
       this.wetGain.gain.setValueAtTime(1.0, ctx.currentTime);
     } else {
       this.dryGain.gain.setValueAtTime(1.0, ctx.currentTime);
-      this.wetGain.gain.setValueAtTime(0.65, ctx.currentTime);
+      this.wetGain.gain.setValueAtTime(0.20, ctx.currentTime);
     }
 
     switch (this.currentFx) {
       case "chorus_lush":
       case "chorus_vintage": {
-        // True Studio Dimension D Stereo Chorus (Dual out-of-phase lines - Zero comb filtering / Zero metallic ring)
+        // True Studio Dimension D Stereo Chorus (Gentle stereo spread - Zero ear-to-ear flanging)
         const isLush = this.currentFx === "chorus_lush";
         const delayL = ctx.createDelay(0.1);
         const delayR = ctx.createDelay(0.1);
-        delayL.delayTime.value = isLush ? 0.016 : 0.012;
-        delayR.delayTime.value = isLush ? 0.022 : 0.017;
+        delayL.delayTime.value = isLush ? 0.015 : 0.013;
+        delayR.delayTime.value = isLush ? 0.0175 : 0.0155;
 
         const lfo = ctx.createOscillator();
         lfo.type = "sine";
-        lfo.frequency.value = isLush ? 1.0 : 0.7;
+        lfo.frequency.value = isLush ? 0.8 : 0.6;
 
         const lfoGainL = ctx.createGain();
         const lfoGainR = ctx.createGain();
-        const depth = isLush ? 0.0030 : 0.0020;
+        const depth = isLush ? 0.0008 : 0.0005;
         lfoGainL.gain.value = depth;
-        lfoGainR.gain.value = -depth;
+        lfoGainR.gain.value = depth * 0.75;
 
         lfo.connect(lfoGainL);
         lfo.connect(lfoGainR);
@@ -165,10 +182,10 @@ export class LayerInsertProcessor {
         const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : ctx.createGain();
         const lfo = ctx.createOscillator();
         lfo.type = "sine";
-        lfo.frequency.value = this.currentFx === "autopan_fast" ? 4.2 : 1.8;
+        lfo.frequency.value = this.currentFx === "autopan_fast" ? 2.5 : 1.2;
         if (ctx.createStereoPanner) {
           const lfoGain = ctx.createGain();
-          lfoGain.gain.value = 0.95;
+          lfoGain.gain.value = 0.25; // Gentle subtle spread, never bouncing hard left-to-right
           lfo.connect(lfoGain);
           lfoGain.connect(panner.pan);
           lfo.start();
@@ -185,16 +202,16 @@ export class LayerInsertProcessor {
         filter.type = "peaking";
         filter.frequency.value = 850;
         filter.Q.value = 1.0;
-        filter.gain.value = 1.8;
+        filter.gain.value = 1.4;
 
         const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : ctx.createGain();
         const lfo = ctx.createOscillator();
         lfo.type = "sine";
-        lfo.frequency.value = this.currentFx === "rotary_fast" ? 6.2 : 1.1;
+        lfo.frequency.value = this.currentFx === "rotary_fast" ? 4.2 : 0.9;
 
         if (ctx.createStereoPanner) {
           const lfoGain = ctx.createGain();
-          lfoGain.gain.value = 0.85;
+          lfoGain.gain.value = 0.25;
           lfo.connect(lfoGain);
           lfoGain.connect(panner.pan);
           lfo.start();
@@ -328,10 +345,18 @@ export class LayerInsertProcessor {
 
       case "delay_tape":
       case "delay_dub": {
-        const delay = ctx.createDelay(2.0);
-        delay.delayTime.value = this.currentFx === "delay_dub" ? 0.42 : 0.28;
-        const feedback = ctx.createGain();
-        feedback.gain.value = this.currentFx === "delay_dub" ? 0.45 : 0.35;
+        const delayL = ctx.createDelay(2.0);
+        const delayR = ctx.createDelay(2.0);
+        const dt = this.currentFx === "delay_dub" ? 0.42 : 0.28;
+        delayL.delayTime.value = dt;
+        delayR.delayTime.value = dt * 1.333;
+
+        const feedbackL = ctx.createGain();
+        const feedbackR = ctx.createGain();
+        const fb = this.currentFx === "delay_dub" ? 0.45 : 0.35;
+        feedbackL.gain.value = fb;
+        feedbackR.gain.value = fb;
+
         const hp = ctx.createBiquadFilter();
         hp.type = "highpass";
         hp.frequency.value = 140; // Block DC buildup
@@ -340,19 +365,29 @@ export class LayerInsertProcessor {
         lp.frequency.value = 3200;
 
         this.effectChainInput.connect(hp);
-        hp.connect(delay);
-        delay.connect(lp);
-        lp.connect(feedback);
-        feedback.connect(delay);
-        lp.connect(this.effectChainOutput);
-        this.activeFxNodes.push(delay, hp, lp, feedback);
+        hp.connect(lp);
+        lp.connect(delayL);
+        lp.connect(delayR);
+
+        delayL.connect(feedbackL);
+        feedbackL.connect(delayL);
+
+        delayR.connect(feedbackR);
+        feedbackR.connect(delayR);
+
+        const merger = ctx.createChannelMerger(2);
+        delayL.connect(merger, 0, 0);
+        delayR.connect(merger, 0, 1);
+        merger.connect(this.effectChainOutput);
+
+        this.activeFxNodes.push(delayL, delayR, hp, lp, feedbackL, feedbackR, merger);
         break;
       }
 
       case "reverb_hall":
       case "reverb_plate":
       case "reverb_room": {
-        // Pure Feedforward Multi-Tap Diffuse Network (Mathematically 0% feedback ringing or comb filtering)
+        // True Stereo Diffuse Reverb Network with L+R balanced spread
         const d1 = ctx.createDelay(0.2);
         d1.delayTime.value = 0.024;
         const d2 = ctx.createDelay(0.2);
@@ -367,9 +402,13 @@ export class LayerInsertProcessor {
         const g3 = ctx.createGain();
         g3.gain.value = 0.18;
 
-        const lpf = ctx.createBiquadFilter();
-        lpf.type = "lowpass";
-        lpf.frequency.value = this.currentFx === "reverb_plate" ? 6500 : 4500;
+        const lpfL = ctx.createBiquadFilter();
+        lpfL.type = "lowpass";
+        lpfL.frequency.value = this.currentFx === "reverb_plate" ? 6500 : 4500;
+
+        const lpfR = ctx.createBiquadFilter();
+        lpfR.type = "lowpass";
+        lpfR.frequency.value = this.currentFx === "reverb_plate" ? 6500 : 4500;
 
         const hpf = ctx.createBiquadFilter();
         hpf.type = "highpass";
@@ -384,12 +423,18 @@ export class LayerInsertProcessor {
         d2.connect(g2);
         d3.connect(g3);
 
-        g1.connect(lpf);
-        g2.connect(lpf);
-        g3.connect(lpf);
+        // Balance left and right stereo field
+        g1.connect(lpfL);
+        g2.connect(lpfR);
+        g3.connect(lpfL);
+        g3.connect(lpfR);
 
-        lpf.connect(this.effectChainOutput);
-        this.activeFxNodes.push(hpf, d1, d2, d3, g1, g2, g3, lpf);
+        const merger = ctx.createChannelMerger(2);
+        lpfL.connect(merger, 0, 0);
+        lpfR.connect(merger, 0, 1);
+        merger.connect(this.effectChainOutput);
+
+        this.activeFxNodes.push(hpf, d1, d2, d3, g1, g2, g3, lpfL, lpfR, merger);
         break;
       }
 
@@ -448,12 +493,11 @@ export class LayerInsertProcessor {
 
       case "tremolo_pulse": {
         const gainNode = ctx.createGain();
-        gainNode.gain.value = 0.65;
         const lfo = ctx.createOscillator();
         lfo.type = "sine";
-        lfo.frequency.value = 5.0;
+        lfo.frequency.value = 3.8;
         const lfoGain = ctx.createGain();
-        lfoGain.gain.value = 0.30;
+        lfoGain.gain.value = 0.35;
         lfo.connect(lfoGain);
         lfoGain.connect(gainNode.gain);
         lfo.start();
@@ -516,13 +560,47 @@ export class NativePcmEngine {
   decodeAudioBuffer(ctx, arrayBuf) {
     return new Promise((resolve, reject) => {
       try {
+        const handleDecoded = (buf) => {
+          if (!buf) {
+            resolve(buf);
+            return;
+          }
+          // Always guarantee 100% true 2-channel stereo with equal L+R presence on headphones
+          if (buf.numberOfChannels === 1) {
+            const stereoBuf = ctx.createBuffer(2, buf.length, buf.sampleRate);
+            const monoData = buf.getChannelData(0);
+            stereoBuf.getChannelData(0).set(monoData);
+            stereoBuf.getChannelData(1).set(monoData);
+            resolve(stereoBuf);
+            return;
+          }
+
+          // If buffer is 2-channel but channel 1 (Right) is silent or missing energy, clone channel 0 to channel 1
+          if (buf.numberOfChannels >= 2) {
+            const ch0 = buf.getChannelData(0);
+            const ch1 = buf.getChannelData(1);
+            let ch0Sum = 0;
+            let ch1Sum = 0;
+            const sampleLen = Math.min(2000, ch0.length);
+            for (let i = 0; i < sampleLen; i += 10) {
+              ch0Sum += Math.abs(ch0[i]);
+              ch1Sum += Math.abs(ch1[i]);
+            }
+            if (ch0Sum > 0.001 && ch1Sum < 0.00005) {
+              // Right channel is empty/silent in MP3 encoding: duplicate left to right
+              ch1.set(ch0);
+            }
+          }
+          resolve(buf);
+        };
+
         const res = ctx.decodeAudioData(
           arrayBuf,
-          buf => resolve(buf),
+          handleDecoded,
           err => reject(err)
         );
         if (res && typeof res.then === "function") {
-          res.then(resolve).catch(reject);
+          res.then(handleDecoded).catch(reject);
         }
       } catch (err) {
         reject(err);
@@ -531,17 +609,17 @@ export class NativePcmEngine {
   }
 
   createCrossfadedLoopBuffer(ctx, originalBuf, instId) {
-    // All sustained continuous instruments: Strings, Synths, Leads, Pads, Choirs, Organs, Brass, Horns, Sax, Basses
+    // All sustained continuous instruments: Strings, Synths, Leads, Pads, Choirs, Organs, Brass, Horns, Basses
+    // (Acoustic Saxophone, Pianos, EPs, Guitars use authentic full unlooped acoustic breath/decay for 100% pure tone)
     const isContinuousInst = [
       "string_ensemble_1", "m1_universe", "m1_choir", "m1_fresh_air",
-      "drawbar_organ", "m1_organ_2", "brass_section", "alto_sax", "synth_bass_1",
+      "drawbar_organ", "m1_organ_2", "brass_section", "synth_bass_1",
       "distortion_guitar", "overdriven_guitar", "supersaw_lead", "fat_brass_horns"
     ].includes(instId) || 
     instId?.includes("organ") || 
     instId?.includes("string") || 
     instId?.includes("pad") || 
     instId?.includes("choir") || 
-    instId?.includes("sax") || 
     instId?.includes("brass") ||
     instId?.includes("synth") ||
     instId?.includes("lead") ||
@@ -549,45 +627,64 @@ export class NativePcmEngine {
     instId?.includes("universe") ||
     instId?.includes("fresh_air");
 
-    if (!isContinuousInst || !originalBuf || originalBuf.duration < 0.25) {
+    if (!isContinuousInst || !originalBuf || originalBuf.duration < 0.6) {
       return originalBuf;
     }
 
-    const numChannels = originalBuf.numberOfChannels;
+    const numChannels = Math.max(2, originalBuf.numberOfChannels);
     const sampleRate = originalBuf.sampleRate;
     const totalSamples = originalBuf.length;
 
-    // Crossfade window: smooth equal-power sine/cosine blending (constant acoustic energy, zero phase clicks)
-    const fadeSamples = Math.min(Math.floor(sampleRate * 0.20), Math.floor(totalSamples * 0.25));
-    const loopStartSample = Math.min(Math.floor(sampleRate * 0.25), Math.floor(totalSamples * 0.20)); // Start after initial attack transient
+    // Generous 300ms smooth Hanning crossfade window
+    const fadeSamples = Math.min(Math.floor(sampleRate * 0.30), Math.floor(totalSamples * 0.25));
+    const loopStartSample = Math.min(Math.floor(sampleRate * 0.25), Math.floor(totalSamples * 0.20));
     const loopEndSample = totalSamples - fadeSamples;
 
-    if (loopEndSample <= loopStartSample + fadeSamples) {
+    if (loopEndSample <= loopStartSample + fadeSamples * 2) {
       return originalBuf;
     }
 
     const newBuf = ctx.createBuffer(numChannels, loopEndSample, sampleRate);
 
     for (let ch = 0; ch < numChannels; ch++) {
-      const srcData = originalBuf.getChannelData(ch);
-      const dstData = newBuf.getChannelData(ch);
+      const srcCh = Math.min(ch, originalBuf.numberOfChannels - 1);
+      const src = originalBuf.getChannelData(srcCh);
+      const dst = newBuf.getChannelData(ch);
 
-      // 1. Copy original unmolested samples up to fade start
-      for (let i = 0; i < loopEndSample - fadeSamples; i++) {
-        dstData[i] = srcData[i];
+      // 1. Copy initial onset transient untouched
+      for (let i = 0; i < loopStartSample; i++) {
+        dst[i] = src[i];
       }
 
-      // 2. Seamlessly crossfade tail with loop start head
+      // 2. Crossfade loop tail smoothly into loop head
       for (let i = 0; i < fadeSamples; i++) {
-        const outIdx = loopEndSample - fadeSamples + i;
-        const inIdx = loopStartSample + i;
-
-        // Equal-power crossfade curve: cos^2(t) + sin^2(t) = 1.0 (constant loudness, 0% clicks)
         const t = i / fadeSamples;
-        const gainOut = Math.cos(t * Math.PI * 0.5);
-        const gainIn = Math.sin(t * Math.PI * 0.5);
+        const gainTail = 0.5 * (1.0 + Math.cos(t * Math.PI)); // 1.0 down to 0.0
+        const gainHead = 0.5 * (1.0 - Math.cos(t * Math.PI)); // 0.0 up to 1.0
 
-        dstData[outIdx] = srcData[outIdx] * gainOut + srcData[inIdx] * gainIn;
+        const headIdx = loopStartSample + i;
+        const tailIdx = loopEndSample + i;
+        dst[headIdx] = src[tailIdx] * gainTail + src[headIdx] * gainHead;
+      }
+
+      // 3. Copy body of loop untouched
+      for (let i = loopStartSample + fadeSamples; i < loopEndSample; i++) {
+        dst[i] = src[i];
+      }
+    }
+
+    // Ensure stereo balance on created buffer
+    if (newBuf.numberOfChannels >= 2) {
+      const ch0 = newBuf.getChannelData(0);
+      const ch1 = newBuf.getChannelData(1);
+      let ch0Sum = 0;
+      let ch1Sum = 0;
+      for (let i = 0; i < Math.min(1000, ch0.length); i += 10) {
+        ch0Sum += Math.abs(ch0[i]);
+        ch1Sum += Math.abs(ch1[i]);
+      }
+      if (ch0Sum > 0.001 && ch1Sum < 0.00005) {
+        ch1.set(ch0);
       }
     }
 
@@ -599,8 +696,11 @@ export class NativePcmEngine {
   }
 
   async initBuffers() {
-    // 1. Instantly decode acoustic grand piano FIRST (< 15ms) so piano is immediate
-    await this.decodeEmbeddedAnchors("acoustic_grand_piano");
+    // 1. Instantly decode acoustic grand piano AND saxophone FIRST (< 15ms) for immediate zero-delay play
+    await Promise.all([
+      this.decodeEmbeddedAnchors("acoustic_grand_piano"),
+      this.decodeEmbeddedAnchors("alto_sax"),
+    ]);
     this.isReady = true;
 
     // 2. Load essential multi-layer soundfonts immediately (Strings, EP, Organ, Brass, Sax, Bass)
@@ -912,6 +1012,36 @@ export class NativePcmEngine {
     const basePlaybackRate = Math.pow(2, semitoneDiff / 12);
     const bentPlaybackRate = basePlaybackRate * Math.pow(2, this.pitchBendSemitones / 12);
 
+    // 0. Rapid re-trigger voice stealing for the SAME layer or instrument on this note:
+    // If there is already an active voice on this exact note for this layer/instrument, fade it out cleanly in 4ms
+    // to completely prevent voice stacking, phase-comb cancellation, static, and clipping!
+    if (this.activeVoices.has(midiNote)) {
+      const oldList = this.activeVoices.get(midiNote);
+      if (oldList && oldList.length > 0) {
+        const remaining = [];
+        oldList.forEach(oldV => {
+          const isSameLayer = (layerIndex !== null && layerIndex !== undefined && oldV.layerIndex === layerIndex);
+          const isSameInst = (oldV.instId === instId);
+          if (isSameLayer || (layerIndex === null && isSameInst)) {
+            try {
+              const cur = Math.max(0.0001, oldV.voiceGain.gain.value);
+              oldV.voiceGain.gain.cancelScheduledValues(now);
+              oldV.voiceGain.gain.setValueAtTime(cur, now);
+              oldV.voiceGain.gain.linearRampToValueAtTime(0.0001, now + 0.004);
+              oldV.src.stop(now + 0.006);
+            } catch (e) {}
+          } else {
+            remaining.push(oldV);
+          }
+        });
+        if (remaining.length > 0) {
+          this.activeVoices.set(midiNote, remaining);
+        } else {
+          this.activeVoices.delete(midiNote);
+        }
+      }
+    }
+
     // 1. Audio Buffer Source
     const src = ctx.createBufferSource();
     src.buffer = anchorData.buffer;
@@ -927,45 +1057,54 @@ export class NativePcmEngine {
       src.loop = false;
     }
 
-    // 2. Dynamic Time-Variant Filter (TVF): Clean acoustic warmth (eliminates high-frequency digital hiss)
+    // 2. Dynamic Time-Variant Filter (TVF): Clean acoustic warmth (eliminates high-frequency digital hiss & MP3 grain)
     const filter = ctx.createBiquadFilter();
     filter.type = "lowpass";
-    const minCutoff = 5500;
-    const maxCutoff = 16000;
+    const isSax = instId === "alto_sax" || instId?.includes("sax");
+    const minCutoff = isSax ? 3800 : 5500;
+    const maxCutoff = isSax ? 7500 : 16000;
     const dynamicCutoff = minCutoff + velNorm * (maxCutoff - minCutoff);
     filter.frequency.setValueAtTime(dynamicCutoff, now);
-    filter.Q.setValueAtTime(0.35, now);
+    filter.Q.setValueAtTime(isSax ? 0.15 : 0.35, now);
 
-    // 3. Time-Variant Amplifier (TVA): Full-bodied, punchy studio loudness calibration
+    // 3. Time-Variant Amplifier (TVA): Maximum loudness, punchy studio presence
     const voiceGain = ctx.createGain();
+    voiceGain.channelCount = 2;
+    voiceGain.channelCountMode = "explicit";
+    voiceGain.channelInterpretation = "speakers";
 
     const INST_TRIM_GAINS = {
-      acoustic_grand_piano: 2.10,
-      abletunes_upright: 2.10,
-      m1_piano_16: 2.10,
-      electric_piano_1: 1.90,
-      abletunes_fm_piano: 1.90,
-      string_ensemble_1: 1.75,
-      m1_universe: 1.75,
-      m1_choir: 1.75,
-      acoustic_guitar_nylon: 1.80,
-      electric_guitar_clean: 1.70,
-      alto_sax: 1.65,
-      brass_section: 1.65,
-      drawbar_organ: 1.60,
-      synth_bass_1: 1.80,
-      m1_slap_bass: 1.80,
-      distortion_guitar: 1.40,
-      overdriven_guitar: 1.40,
+      acoustic_grand_piano: 2.50,
+      abletunes_upright: 2.50,
+      m1_piano_16: 2.50,
+      electric_piano_1: 2.35,
+      abletunes_fm_piano: 2.35,
+      string_ensemble_1: 2.20,
+      m1_universe: 2.20,
+      m1_choir: 2.20,
+      acoustic_guitar_nylon: 2.30,
+      electric_guitar_clean: 2.20,
+      alto_sax: 1.75,
+      brass_section: 2.25,
+      drawbar_organ: 2.20,
+      synth_bass_1: 2.35,
+      m1_slap_bass: 2.35,
+      distortion_guitar: 1.90,
+      overdriven_guitar: 1.90,
     };
     const resolvedId = this.findNearestAnchor(instId, midiNote, velocity)?.instKey || instId;
-    const trim = INST_TRIM_GAINS[instId] || INST_TRIM_GAINS[resolvedId] || 1.80;
+    const trim = INST_TRIM_GAINS[instId] || INST_TRIM_GAINS[resolvedId] || 2.20;
 
-    // High-energy, loud, punchy volume scaling (Solid baseline so light touches are clearly audible)
-    const peakGain = (0.65 + velNorm * 0.55) * customGain * trim;
+    // High-energy, loud, punchy studio volume scaling (+5dB presence boost)
+    const peakGain = (0.75 + velNorm * 0.50) * customGain * trim;
 
-    // Instant 0.00ms touch-to-sound attack across all instruments and layers
-    voiceGain.gain.setValueAtTime(peakGain, now);
+    // 100% Click-free, pop-free attack envelope (starts at 0.0001 to prevent DC jump)
+    voiceGain.gain.setValueAtTime(0.0001, now);
+    if (isSax) {
+      voiceGain.gain.linearRampToValueAtTime(peakGain, now + 0.008);
+    } else {
+      voiceGain.gain.linearRampToValueAtTime(peakGain, now + 0.004);
+    }
 
     // Voice Audio Chain: Source -> TVF -> TVA -> (Layer Insert Bus | Master Rack)
     src.connect(filter);
@@ -988,6 +1127,7 @@ export class NativePcmEngine {
       voiceGain,
       instId,
       midiNote,
+      layerIndex,
       basePlaybackRate,
       baseGain: peakGain,
       baseCutoff: dynamicCutoff,
@@ -1096,12 +1236,13 @@ export class NativePcmEngine {
         voices.forEach(v => {
           try {
             const isString = v.instId === "string_ensemble_1" || v.instId?.includes("string") || v.instId?.includes("pad");
-            const relTime = isString ? 0.55 : 0.12;
-            const curGain = v.voiceGain.gain.value || v.baseGain || 0.4;
+            const isSax = v.instId === "alto_sax" || v.instId?.includes("sax");
+            const relTime = isString ? 0.45 : (isSax ? 0.16 : 0.08);
+            const curGain = Math.max(0.0001, v.voiceGain.gain.value);
             v.voiceGain.gain.cancelScheduledValues(now);
             v.voiceGain.gain.setValueAtTime(curGain, now);
-            v.voiceGain.gain.linearRampToValueAtTime(0.0, now + relTime);
-            v.src.stop(now + relTime + 0.04);
+            v.voiceGain.gain.linearRampToValueAtTime(0.0001, now + relTime);
+            v.src.stop(now + relTime + 0.02);
           } catch (e) {}
         });
       });
@@ -1128,13 +1269,14 @@ export class NativePcmEngine {
           // 100% Click-free, pop-free acoustic damper release to EXACT 0.0
           try {
             const isString = v.instId === "string_ensemble_1" || v.instId?.includes("string") || v.instId?.includes("pad");
-            const relTime = isString ? 0.65 : 0.12;
-            const curGain = v.voiceGain.gain.value || v.baseGain || 0.4;
+            const isSax = v.instId === "alto_sax" || v.instId?.includes("sax");
+            const relTime = isString ? 0.45 : (isSax ? 0.16 : 0.08);
+            const curGain = Math.max(0.0001, v.voiceGain.gain.value);
             v.voiceGain.gain.cancelScheduledValues(now);
             v.voiceGain.gain.setValueAtTime(curGain, now);
-            v.voiceGain.gain.linearRampToValueAtTime(0.0, now + relTime);
+            v.voiceGain.gain.linearRampToValueAtTime(0.0001, now + relTime);
             // Stop source after gain is at absolute zero (zero DC jump, zero pops, zero feedback clicks)
-            v.src.stop(now + relTime + 0.05);
+            v.src.stop(now + relTime + 0.02);
           } catch (e) {}
         }
       } else {
@@ -1152,13 +1294,14 @@ export class NativePcmEngine {
   allNotesOff() {
     const now = this.ctx.currentTime;
     const silence = (voices) => {
-      const relTime = 0.04;
+      const relTime = 0.03;
       voices.forEach(v => {
         try {
+          const curGain = Math.max(0.0001, v.voiceGain.gain.value);
           v.voiceGain.gain.cancelScheduledValues(now);
-          v.voiceGain.gain.setValueAtTime(v.voiceGain.gain.value, now);
-          v.voiceGain.gain.linearRampToValueAtTime(0.0, now + relTime);
-          v.src.stop(now + relTime + 0.03);
+          v.voiceGain.gain.setValueAtTime(curGain, now);
+          v.voiceGain.gain.linearRampToValueAtTime(0.0001, now + relTime);
+          v.src.stop(now + relTime + 0.02);
         } catch (e) {}
       });
     };
@@ -1169,3 +1312,4 @@ export class NativePcmEngine {
     this.sustainedVoices.clear();
   }
 }
+

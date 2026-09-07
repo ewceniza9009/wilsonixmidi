@@ -12,9 +12,9 @@ export class AutoPan {
     this.dryGain = ctx.createGain();
     this.wetGain = ctx.createGain();
 
-    this.rate = 2.1; // Hz - Iconic Stevie Wonder / D'Angelo sway speed
-    this.depth = 0.92; // Full wide stereo throw (-0.92 to +0.92)
-    this.mix = 1.0; // 100% stereo sweep when engaged
+    this.rate = 1.0; // Hz - Gentle subtle sway
+    this.depth = 0.35; // Gentle stereo movement (never extreme hard left/right)
+    this.mix = 0.50;
     this.enabled = false;
 
     this.buildNetwork();

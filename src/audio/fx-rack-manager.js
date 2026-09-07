@@ -86,8 +86,8 @@ export class FxRackManager {
         this.phaser.setBypass(true);
         this.rotary.setBypass(true);
         this.delay.setBypass(true);
-        this.chorus.setBypass(true); // Master chorus bypassed: piano is crystal clear; strings/EP use dedicated layer chorus!
-        this.reverb.setBypass(false); // Lexicon 480L Studio Concert Hall Reverb
+        this.chorus.setBypass(true);
+        this.reverb.setBypass(false);
         this.reverb.setMix(0.25);
         this.reverb.setDecay(2.8);
         this.masterEq.setLowGain(1.0);
@@ -97,20 +97,15 @@ export class FxRackManager {
       case "triton_ep":
       case "rnb_ep":
       case "triton_dyno_ep":
-        // Authentic 1973 Rhodes Suitcase 88 Neo-Soul / R&B (Stereo Auto-Pan Tremolo + Chorus)
         this.setPresetTrim(1.0);
         this.tube.setBypass(true);
-        this.autopan.setBypass(false); // Iconic hypnotic stereo pan sway
-        this.autopan.setRate(2.4);
-        this.autopan.setDepth(0.95);
-        this.autopan.setMix(1.0);
-        this.chorus.setBypass(false);
-        this.chorus.setMix(0.55);
+        this.autopan.setBypass(true);
+        this.chorus.setBypass(true);
         this.phaser.setBypass(true);
         this.rotary.setBypass(true);
         this.delay.setBypass(true);
         this.reverb.setBypass(false);
-        this.reverb.setMix(0.30);
+        this.reverb.setMix(0.22);
         this.reverb.setDecay(2.2);
         break;
 
@@ -119,16 +114,14 @@ export class FxRackManager {
       case "shreddage_lead_guitar":
         this.setPresetTrim(1.0);
         this.tube.setBypass(false);
-        this.tube.setDrive(0.55); // Dynamic guitar overdrive
-        this.tube.setMix(0.60);
+        this.tube.setDrive(0.50);
+        this.tube.setMix(0.55);
         this.tube.setTone(5000);
         this.autopan.setBypass(true);
         this.chorus.setBypass(true);
         this.phaser.setBypass(true);
         this.rotary.setBypass(true);
-        this.delay.setBypass(false);
-        this.delay.setMix(0.35);
-        this.delay.setFeedback(0.40);
+        this.delay.setBypass(true);
         this.reverb.setBypass(false);
         this.reverb.setMix(0.20);
         this.reverb.setDecay(1.8);
@@ -138,16 +131,14 @@ export class FxRackManager {
       case "m1_rock_organ":
       case "drawbar_organ":
         this.setPresetTrim(1.0);
-        this.tube.setBypass(true); // Clean organ pre-amp
+        this.tube.setBypass(true);
         this.autopan.setBypass(true);
         this.chorus.setBypass(true);
         this.phaser.setBypass(true);
-        this.rotary.setBypass(false); // Rich Leslie Rotary swirl
-        this.rotary.setSpeed("fast");
-        this.rotary.setMix(0.85);
+        this.rotary.setBypass(true);
         this.delay.setBypass(true);
         this.reverb.setBypass(false);
-        this.reverb.setMix(0.25);
+        this.reverb.setMix(0.22);
         this.reverb.setDecay(2.0);
         break;
 
@@ -162,12 +153,10 @@ export class FxRackManager {
         this.phaser.setBypass(true);
         this.rotary.setBypass(true);
         this.delay.setBypass(true);
-        this.chorus.setBypass(false); // Deep ensemble chorus
-        this.chorus.setMix(0.60);
-        this.chorus.setRate(0.85);
-        this.reverb.setBypass(false); // Cathedral Reverb
-        this.reverb.setMix(0.35);
-        this.reverb.setDecay(3.0);
+        this.chorus.setBypass(true);
+        this.reverb.setBypass(false);
+        this.reverb.setMix(0.30);
+        this.reverb.setDecay(2.8);
         break;
 
       case "synth_lead":
@@ -175,15 +164,14 @@ export class FxRackManager {
       case "brass_section":
       case "m1_fresh_air":
         this.setPresetTrim(1.0);
-        this.tube.setBypass(true); // Pure clean brass / synth
+        this.tube.setBypass(true);
         this.autopan.setBypass(true);
         this.phaser.setBypass(true);
-        this.chorus.setBypass(false);
-        this.chorus.setMix(0.40);
+        this.chorus.setBypass(true);
         this.rotary.setBypass(true);
         this.delay.setBypass(true);
         this.reverb.setBypass(false);
-        this.reverb.setMix(0.22);
+        this.reverb.setMix(0.20);
         this.reverb.setDecay(2.0);
         break;
 

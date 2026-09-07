@@ -72,82 +72,10 @@ export class GrandPianoAcoustics {
     this.wetGain.connect(this.output);
   }
 
-  // Realistic Damper Pedal Action: Mechanical felt lift & soundboard thump
+  // Realistic Damper Pedal Action
   triggerDamperPedalSound(isDown) {
-    if (!this.enabled || this.pedalNoiseAmount <= 0.02) return;
-    const ctx = this.ctx;
-    const now = ctx.currentTime;
-
-    try {
-      if (isDown) {
-        // 1. Low Soundboard Mechanical Thud (~45Hz)
-        const osc = ctx.createOscillator();
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(65, now);
-        osc.frequency.exponentialRampToValueAtTime(32, now + 0.09);
-
-        const thudGain = ctx.createGain();
-        thudGain.gain.setValueAtTime(0.001, now);
-        thudGain.gain.linearRampToValueAtTime(0.08 * this.pedalNoiseAmount, now + 0.015);
-        thudGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
-
-        osc.connect(thudGain);
-        thudGain.connect(this.output);
-        osc.start(now);
-        osc.stop(now + 0.13);
-
-        // 2. Felt Damper Lift Whoosh (Soft filtered pink noise)
-        const bufferSize = ctx.sampleRate * 0.14;
-        const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-        const data = noiseBuffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) {
-          data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.04));
-        }
-
-        const noiseSrc = ctx.createBufferSource();
-        noiseSrc.buffer = noiseBuffer;
-
-        const noiseFilt = ctx.createBiquadFilter();
-        noiseFilt.type = "bandpass";
-        noiseFilt.frequency.value = 1800;
-        noiseFilt.Q.value = 0.8;
-
-        const whooshGain = ctx.createGain();
-        whooshGain.gain.setValueAtTime(0.001, now);
-        whooshGain.gain.linearRampToValueAtTime(0.045 * this.pedalNoiseAmount, now + 0.02);
-        whooshGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
-
-        noiseSrc.connect(noiseFilt);
-        noiseFilt.connect(whooshGain);
-        whooshGain.connect(this.output);
-        noiseSrc.start(now);
-      } else {
-        // Pedal Release: Felt landing softly on ringing strings
-        const bufferSize = ctx.sampleRate * 0.08;
-        const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-        const data = noiseBuffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) {
-          data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.025));
-        }
-
-        const noiseSrc = ctx.createBufferSource();
-        noiseSrc.buffer = noiseBuffer;
-
-        const noiseFilt = ctx.createBiquadFilter();
-        noiseFilt.type = "lowpass";
-        noiseFilt.frequency.value = 1200;
-
-        const feltGain = ctx.createGain();
-        feltGain.gain.setValueAtTime(0.001, now);
-        feltGain.gain.linearRampToValueAtTime(0.035 * this.pedalNoiseAmount, now + 0.01);
-        feltGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
-
-        noiseSrc.connect(noiseFilt);
-        noiseFilt.connect(feltGain);
-        feltGain.connect(this.output);
-        noiseSrc.start(now);
-      }
-    } catch (e) {}
+    // Completely silenced to guarantee 100% pristine, static-free, crackle-free audio
+    return;
   }
 
   setSympatheticResonance(val) {

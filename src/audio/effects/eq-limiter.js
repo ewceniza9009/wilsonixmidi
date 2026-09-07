@@ -36,7 +36,7 @@ export class StudioEqLimiter {
 
     // 4. Transparent Master Polish & Gain Stage (100% full dynamic range, zero squashing)
     this.masterTrim = ctx.createGain();
-    this.masterTrim.gain.value = 1.15;
+    this.masterTrim.gain.value = 1.0;
 
     // Direct clean connection: Input -> LowShelf -> MidPeak -> HighShelf -> Trim -> Output
     this.input.connect(this.lowShelf);

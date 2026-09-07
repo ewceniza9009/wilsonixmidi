@@ -467,127 +467,17 @@ export class TritonWorkstationUI {
       const isGuitarDist = name.includes("distortion") || name.includes("*dist") || name.includes("feedback") || name.includes("overdrive") || ifx.includes("distortion") || ifx.includes("overdrive");
       const isPhaser = ifx.includes("phaser") || name.includes("sweeper") || name.includes("throats");
 
-      if (isRotary) {
-        fx.setPresetTrim(0.92);
-        fx.rotary.setBypass(false);
-        fx.rotary.setSpeed("fast");
-        fx.rotary.setMix(1.0);
-        fx.tube.setBypass(false);
-        fx.tube.setDrive(0.25);
-        fx.tube.setMix(0.70);
-        fx.autopan.setBypass(true);
-        fx.chorus.setBypass(true);
-        fx.phaser.setBypass(true);
-        fx.delay.setBypass(true);
-        fx.reverb.setBypass(false);
-        fx.reverb.setMix(0.28);
-      } else if (isGuitarDist) {
-        fx.setPresetTrim(0.85);
-        fx.tube.setBypass(false);
-        fx.tube.setDrive(0.65);
-        fx.tube.setMix(1.0);
-        fx.tube.setTone(4500);
-        fx.autopan.setBypass(true);
-        fx.chorus.setBypass(true);
-        fx.rotary.setBypass(true);
-        fx.phaser.setBypass(true);
-        fx.delay.setBypass(false);
-        fx.delay.setMix(0.40);
-        fx.delay.setFeedback(0.45);
-        fx.reverb.setBypass(false);
-        fx.reverb.setMix(0.25);
-      } else if (isLeadSynth) {
-        // Aggressive, distinct Synth Lead: Tube Saturation + 6-Stage Phaser + Ping-Pong Delay
-        fx.setPresetTrim(0.88);
-        fx.tube.setBypass(false);
-        fx.tube.setDrive(0.45);
-        fx.tube.setMix(0.80);
-        fx.autopan.setBypass(true);
-        fx.phaser.setBypass(false);
-        fx.phaser.setMix(0.75);
-        fx.phaser.setRate(0.85);
-        fx.chorus.setBypass(true);
-        fx.rotary.setBypass(true);
-        fx.delay.setBypass(false);
-        fx.delay.setMix(0.35);
-        fx.delay.setFeedback(0.40);
-        fx.reverb.setBypass(false);
-        fx.reverb.setMix(0.28);
-      } else if (isEp) {
-        fx.setPresetTrim(1.0);
-        fx.tube.setBypass(true);
-        fx.autopan.setBypass(false);
-        fx.autopan.setRate(2.4);
-        fx.autopan.setDepth(0.95);
-        fx.autopan.setMix(1.0);
-        fx.chorus.setBypass(false);
-        fx.chorus.setMix(0.55);
-        fx.phaser.setBypass(true);
-        fx.rotary.setBypass(true);
-        fx.delay.setBypass(true);
-        fx.reverb.setBypass(false);
-        fx.reverb.setMix(0.30);
-      } else if (isPhaser) {
-        fx.setPresetTrim(0.95);
-        fx.phaser.setBypass(false);
-        fx.phaser.setRate(0.75);
-        fx.phaser.setMix(0.85);
-        fx.tube.setBypass(true);
-        fx.autopan.setBypass(true);
-        fx.chorus.setBypass(false);
-        fx.chorus.setMix(0.40);
-        fx.rotary.setBypass(true);
-        fx.delay.setBypass(true);
-        fx.reverb.setBypass(false);
-        fx.reverb.setMix(0.35);
-      } else if (cat.includes("strings") || cat.includes("pad") || cat.includes("choir")) {
-        fx.setPresetTrim(0.95);
-        fx.tube.setBypass(true);
-        fx.autopan.setBypass(true);
-        fx.phaser.setBypass(true);
-        fx.rotary.setBypass(true);
-        fx.delay.setBypass(true);
-        fx.chorus.setBypass(false);
-        fx.chorus.setMix(0.65);
-        fx.chorus.setRate(0.85);
-        fx.reverb.setBypass(false);
-        fx.reverb.setMix(0.42);
-        fx.reverb.setDecay(3.4);
-      } else if (cat.includes("brass")) {
-        fx.setPresetTrim(0.92);
-        fx.tube.setBypass(false);
-        fx.tube.setDrive(0.20);
-        fx.tube.setMix(0.45);
-        fx.autopan.setBypass(true);
-        fx.phaser.setBypass(true);
-        fx.chorus.setBypass(true);
-        fx.rotary.setBypass(true);
-        fx.delay.setBypass(true);
-        fx.reverb.setBypass(false);
-        fx.reverb.setMix(0.25);
-      } else if (cat.includes("woodwind")) {
-        fx.setPresetTrim(0.95);
-        fx.tube.setBypass(true);
-        fx.autopan.setBypass(true);
-        fx.phaser.setBypass(true);
-        fx.chorus.setBypass(true);
-        fx.rotary.setBypass(true);
-        fx.delay.setBypass(true);
-        fx.reverb.setBypass(false);
-        fx.reverb.setMix(0.30);
-      } else {
-        // Clean Acoustic Grand Piano
-        fx.setPresetTrim(1.0);
-        fx.tube.setBypass(true);
-        fx.autopan.setBypass(true);
-        fx.phaser.setBypass(true);
-        fx.chorus.setBypass(true);
-        fx.rotary.setBypass(true);
-        fx.delay.setBypass(true);
-        fx.reverb.setBypass(false);
-        fx.reverb.setMix(0.28);
-        fx.reverb.setDecay(2.4);
-      }
+      // All programs default to 100% clean, pristine studio output (Zero distortion, zero unwanted static)
+      fx.setPresetTrim(1.0);
+      fx.tube.setBypass(true);
+      fx.autopan.setBypass(true);
+      fx.phaser.setBypass(true);
+      fx.chorus.setBypass(true);
+      fx.rotary.setBypass(true);
+      fx.delay.setBypass(true);
+      fx.reverb.setBypass(false);
+      fx.reverb.setMix(0.20);
+      fx.reverb.setDecay(2.0);
 
       // Sync Ableton device bay power buttons immediately
       const fxDevs = ["autopan", "chorus", "tube", "phaser", "rotary", "delay", "reverb"];
@@ -827,56 +717,45 @@ export class TritonWorkstationUI {
         fx.masterEq.setHighGain(3.5);
       }
     } else if (prog.m1Type === "universe") {
-      // Iconic Korg M1 Universe (Celestial Space Choir Pad)
+      // Iconic Korg M1 Universe (Strings & Space)
       multiLayerEngine.setSingleInstrument("string_ensemble_1");
       if (fx) {
         fx.tube.setBypass(true);
-        fx.autopan.setBypass(false);
-        fx.autopan.setRate(0.4);
-        fx.autopan.setDepth(0.6);
-        fx.autopan.setMix(0.6);
-        fx.chorus.setBypass(false);
-        fx.chorus.setMix(0.68);
-        fx.chorus.setRate(0.85);
+        fx.autopan.setBypass(true);
+        fx.chorus.setBypass(true);
         fx.reverb.setBypass(false);
-        fx.reverb.setMix(0.48);
-        fx.reverb.setDecay(3.8);
+        fx.reverb.setMix(0.30);
+        fx.reverb.setDecay(2.8);
         fx.delay.setBypass(true);
         fx.phaser.setBypass(true);
         fx.rotary.setBypass(true);
       }
     } else if (prog.m1Type === "slapbass") {
       // Iconic Korg M1 Slap Bass
-      multiLayerEngine.setSingleInstrument("drawbar_organ");
+      multiLayerEngine.setSingleInstrument("synth_bass_1");
       if (fx) {
-        fx.tube.setBypass(false);
-        fx.tube.setDrive(0.22);
-        fx.tube.setMix(0.50);
+        fx.tube.setBypass(true);
         fx.autopan.setBypass(true);
         fx.chorus.setBypass(true);
         fx.reverb.setBypass(false);
-        fx.reverb.setMix(0.15);
+        fx.reverb.setMix(0.12);
         fx.reverb.setDecay(1.0);
         fx.delay.setBypass(true);
         fx.phaser.setBypass(true);
         fx.rotary.setBypass(true);
-        fx.masterEq.setLowGain(3.5);
-        fx.masterEq.setHighGain(2.0);
+        fx.masterEq.setLowGain(2.0);
+        fx.masterEq.setHighGain(1.0);
       }
     } else if (prog.m1Type === "lore") {
-      // Iconic Korg M1 Lore (Celtic Breath)
+      // Iconic Korg M1 Lore (Alto Sax / Breathy Woodwind) - 100% True Stereo Center, Pure Breath, Zero Panning
       multiLayerEngine.setSingleInstrument("alto_sax");
       if (fx) {
         fx.tube.setBypass(true);
-        fx.autopan.setBypass(false);
-        fx.autopan.setRate(1.2);
-        fx.autopan.setDepth(0.6);
-        fx.autopan.setMix(0.7);
-        fx.chorus.setBypass(false);
-        fx.chorus.setMix(0.50);
+        fx.autopan.setBypass(true);
+        fx.chorus.setBypass(true);
         fx.reverb.setBypass(false);
-        fx.reverb.setMix(0.38);
-        fx.reverb.setDecay(3.0);
+        fx.reverb.setMix(0.20);
+        fx.reverb.setDecay(2.2);
         fx.delay.setBypass(true);
         fx.phaser.setBypass(true);
         fx.rotary.setBypass(true);
@@ -887,11 +766,10 @@ export class TritonWorkstationUI {
       if (fx) {
         fx.tube.setBypass(true);
         fx.autopan.setBypass(true);
-        fx.chorus.setBypass(false);
-        fx.chorus.setMix(0.65);
+        fx.chorus.setBypass(true);
         fx.reverb.setBypass(false);
-        fx.reverb.setMix(0.42);
-        fx.reverb.setDecay(3.4);
+        fx.reverb.setMix(0.28);
+        fx.reverb.setDecay(2.8);
         fx.delay.setBypass(true);
         fx.phaser.setBypass(true);
         fx.rotary.setBypass(true);
@@ -902,14 +780,11 @@ export class TritonWorkstationUI {
       if (fx) {
         fx.tube.setBypass(true);
         fx.autopan.setBypass(true);
-        fx.chorus.setBypass(false);
-        fx.chorus.setMix(0.55);
-        fx.delay.setBypass(false);
-        fx.delay.setMix(0.30);
+        fx.chorus.setBypass(true);
+        fx.delay.setBypass(true);
         fx.reverb.setBypass(false);
-        fx.reverb.setMix(0.35);
-        fx.phaser.setBypass(true);
-        fx.rotary.setBypass(true);
+        fx.reverb.setMix(0.25);
+        fx.reverb.setDecay(2.4);
       }
     }
   }

@@ -58,17 +58,20 @@ export class PingPongDelay {
     this.dampR.type = "lowpass";
     this.dampR.frequency.value = 3600;
 
-    // Cross ping-pong wiring with clean, bounded feedback:
-    // Input -> DelayL -> DampL -> FeedbackL -> DelayR
-    // DelayR -> DampR -> FeedbackR -> DelayL
+    // Dual balanced stereo delay wiring (Zero ear-to-ear ping-pong bouncing):
+    // Input -> DelayL & DelayR in parallel
+    // DelayL -> DampL -> FeedbackL -> DelayL
+    // DelayR -> DampR -> FeedbackR -> DelayR
     this.dcBlocker.connect(this.delayL);
+    this.dcBlocker.connect(this.delayR);
+
     this.delayL.connect(this.dampL);
     this.dampL.connect(this.feedbackL);
-    this.feedbackL.connect(this.delayR);
+    this.feedbackL.connect(this.delayL);
 
     this.delayR.connect(this.dampR);
     this.dampR.connect(this.feedbackR);
-    this.feedbackR.connect(this.delayL);
+    this.feedbackR.connect(this.delayR);
 
     // Stereo Merger
     const merger = ctx.createChannelMerger(2);
