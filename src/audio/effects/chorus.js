@@ -13,7 +13,7 @@ export class KorgStereoChorus {
     this.wetGain = ctx.createGain();
 
     this.rate = 0.8; // Hz - Gentle ensemble warmth
-    this.depth = 0.0009; // 0.9ms subtle studio width (zero ear-to-ear flanger swing)
+    this.depth = 0.0005; // 0.5ms ultra-subtle studio width (zero warble, zero flutter)
     this.mix = 0.25;
     this.enabled = false;
 

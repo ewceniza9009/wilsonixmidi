@@ -58,19 +58,30 @@ export class PingPongDelay {
     this.dampR.type = "lowpass";
     this.dampR.frequency.value = 3600;
 
+    // Anti-denormal DC blockers in feedback paths - prevents static accumulation
+    this.fbDcL = ctx.createBiquadFilter();
+    this.fbDcL.type = "highpass";
+    this.fbDcL.frequency.value = 30;
+
+    this.fbDcR = ctx.createBiquadFilter();
+    this.fbDcR.type = "highpass";
+    this.fbDcR.frequency.value = 30;
+
     // Dual balanced stereo delay wiring (Zero ear-to-ear ping-pong bouncing):
     // Input -> DelayL & DelayR in parallel
-    // DelayL -> DampL -> FeedbackL -> DelayL
-    // DelayR -> DampR -> FeedbackR -> DelayR
+    // DelayL -> DampL -> FbDcL -> FeedbackL -> DelayL
+    // DelayR -> DampR -> FbDcR -> FeedbackR -> DelayR
     this.dcBlocker.connect(this.delayL);
     this.dcBlocker.connect(this.delayR);
 
     this.delayL.connect(this.dampL);
-    this.dampL.connect(this.feedbackL);
+    this.dampL.connect(this.fbDcL);
+    this.fbDcL.connect(this.feedbackL);
     this.feedbackL.connect(this.delayL);
 
     this.delayR.connect(this.dampR);
-    this.dampR.connect(this.feedbackR);
+    this.dampR.connect(this.fbDcR);
+    this.fbDcR.connect(this.feedbackR);
     this.feedbackR.connect(this.delayR);
 
     // Stereo Merger

@@ -123,8 +123,8 @@ export class GigHudUI {
           <!-- Master Volume Slider -->
           <div class="hud-volume-unit" title="Master Studio Volume Output">
             <span class="hud-vol-icon">🔊</span>
-            <input type="range" id="hud-master-vol" min="0" max="100" value="100" class="hud-vol-slider" />
-            <span class="hud-vol-readout" id="hud-master-vol-val">100%</span>
+            <input type="range" id="hud-master-vol" min="0" max="100" value="50" class="hud-vol-slider" />
+            <span class="hud-vol-readout" id="hud-master-vol-val">50%</span>
           </div>
         </div>
 

@@ -30,9 +30,9 @@ export class AudioCore {
 
     this.sampleRate = this.ctx.sampleRate;
 
-    // Create Master Bus with clean 1.0 unity gain (prevents bus distortion and compressor choking)
+    // Create Master Bus with +12dB boost for live gig volume (slider defaults to 50%)
     this.masterGain = this.ctx.createGain();
-    this.masterGain.gain.value = 1.0;
+    this.masterGain.gain.value = 2.0;
 
     // Fast Peak Analyser for meters & oscilloscope
     this.analyser = this.ctx.createAnalyser();
@@ -42,18 +42,35 @@ export class AudioCore {
 
     // Transparent Hardware Output Safety Limiter (Prevents DAC clipping with zero waveform modulation & zero squashing)
     this.hardwareLimiter = this.ctx.createDynamicsCompressor();
-    this.hardwareLimiter.threshold.value = -0.5; // Transparent safety ceiling
-    this.hardwareLimiter.knee.value = 6.0;       // Musical soft knee
-    this.hardwareLimiter.ratio.value = 12.0;     // Fast peak safety limit without volume squashing/pumping
-    this.hardwareLimiter.attack.value = 0.002;   // 2ms fast musical transient catch
-    this.hardwareLimiter.release.value = 0.040;  // 40ms snappy recovery (zero ducking, zero lag)
+    this.hardwareLimiter.threshold.value = -0.3; // Transparent safety ceiling
+    this.hardwareLimiter.knee.value = 12.0;      // Very soft knee for transparent limiting
+    this.hardwareLimiter.ratio.value = 4.0;       // Gentle ratio - no pumping, no distortion
+    this.hardwareLimiter.attack.value = 0.005;    // 5ms musical transient catch
+    this.hardwareLimiter.release.value = 0.100;   // 100ms smooth recovery (zero pumping)
 
     // Initialize FX Rack
     this.fxRack = new FxRackManager(this.ctx);
 
-    // Routing: FX Rack -> Master Gain -> Analyser -> HardwareLimiter -> Destination
+    // Master DC Blocker: kills any DC offset, denormal, or static from effects chain
+    this.dcBlocker = this.ctx.createBiquadFilter();
+    this.dcBlocker.type = "highpass";
+    this.dcBlocker.frequency.value = 20;
+
+    // Soft clipper: rounds off any crackle peaks before the limiter
+    this.softClip = this.ctx.createWaveShaper();
+    const clipCurve = new Float32Array(256);
+    for (let i = 0; i < 256; i++) {
+      const x = (i * 2) / 256 - 1;
+      clipCurve[i] = Math.tanh(x * 1.8) * 0.95;
+    }
+    this.softClip.curve = clipCurve;
+    this.softClip.oversample = "4x";
+
+    // Routing: FX Rack -> Master Gain -> DC Blocker -> SoftClip -> Analyser -> HardwareLimiter -> Destination
     this.fxRack.output.connect(this.masterGain);
-    this.masterGain.connect(this.analyser);
+    this.masterGain.connect(this.dcBlocker);
+    this.dcBlocker.connect(this.softClip);
+    this.softClip.connect(this.analyser);
     this.analyser.connect(this.hardwareLimiter);
     this.hardwareLimiter.connect(this.ctx.destination);
 
@@ -102,7 +119,7 @@ export class AudioCore {
 
   setMasterVolume(val) {
     if (!this.masterGain || !this.ctx) return;
-    const v = Math.max(0, Math.min(1.0, val));
+    const v = Math.max(0, Math.min(4.0, val * 4.0));
     this.masterGain.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02);
   }
 }

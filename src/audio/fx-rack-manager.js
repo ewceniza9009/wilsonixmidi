@@ -66,8 +66,8 @@ export class FxRackManager {
     this.delay.setBypass(true);
     this.chorus.setBypass(true);
     this.reverb.setBypass(false);
-    this.reverb.setMix(0.20);
-    this.reverb.setDecay(2.0);
+    this.reverb.setMix(0.12);
+    this.reverb.setDecay(1.6);
   }
 
   setPresetTrim(val) {
@@ -88,8 +88,8 @@ export class FxRackManager {
         this.delay.setBypass(true);
         this.chorus.setBypass(true);
         this.reverb.setBypass(false);
-        this.reverb.setMix(0.25);
-        this.reverb.setDecay(2.8);
+        this.reverb.setMix(0.15);
+        this.reverb.setDecay(2.0);
         this.masterEq.setLowGain(1.0);
         this.masterEq.setHighGain(2.2);
         break;
@@ -105,8 +105,8 @@ export class FxRackManager {
         this.rotary.setBypass(true);
         this.delay.setBypass(true);
         this.reverb.setBypass(false);
-        this.reverb.setMix(0.22);
-        this.reverb.setDecay(2.2);
+        this.reverb.setMix(0.14);
+        this.reverb.setDecay(1.8);
         break;
 
       case "distortion_guitar":
@@ -123,8 +123,8 @@ export class FxRackManager {
         this.rotary.setBypass(true);
         this.delay.setBypass(true);
         this.reverb.setBypass(false);
-        this.reverb.setMix(0.20);
-        this.reverb.setDecay(1.8);
+        this.reverb.setMix(0.12);
+        this.reverb.setDecay(1.5);
         break;
 
       case "m1_organ":
@@ -138,8 +138,8 @@ export class FxRackManager {
         this.rotary.setBypass(true);
         this.delay.setBypass(true);
         this.reverb.setBypass(false);
-        this.reverb.setMix(0.22);
-        this.reverb.setDecay(2.0);
+        this.reverb.setMix(0.12);
+        this.reverb.setDecay(1.6);
         break;
 
       case "warm_strings":
@@ -155,8 +155,8 @@ export class FxRackManager {
         this.delay.setBypass(true);
         this.chorus.setBypass(true);
         this.reverb.setBypass(false);
-        this.reverb.setMix(0.30);
-        this.reverb.setDecay(2.8);
+        this.reverb.setMix(0.15);
+        this.reverb.setDecay(2.0);
         break;
 
       case "synth_lead":
@@ -171,8 +171,8 @@ export class FxRackManager {
         this.rotary.setBypass(true);
         this.delay.setBypass(true);
         this.reverb.setBypass(false);
-        this.reverb.setMix(0.20);
-        this.reverb.setDecay(2.0);
+        this.reverb.setMix(0.12);
+        this.reverb.setDecay(1.5);
         break;
 
       default: // Acoustic Concert Grand Piano
@@ -184,8 +184,8 @@ export class FxRackManager {
         this.rotary.setBypass(true);
         this.delay.setBypass(true);
         this.reverb.setBypass(false);
-        this.reverb.setMix(0.22);
-        this.reverb.setDecay(2.2);
+        this.reverb.setMix(0.12);
+        this.reverb.setDecay(1.6);
         this.masterEq.setLowGain(1.0);
         this.masterEq.setHighGain(1.8);
         break;

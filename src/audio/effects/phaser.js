@@ -68,13 +68,13 @@ export class StereoPhaser {
     for (let i = 0; i < 4; i++) {
       const baseF = poleFrequencies[i];
       const gL = ctx.createGain();
-      gL.gain.value = baseF * 0.72; // Wide, deep dynamic phase sweep
+      gL.gain.value = baseF * 0.35; // Gentle phase sweep - no warble
       this.lfo.connect(gL);
       gL.connect(this.leftFilters[i].frequency);
       this.lfoGainsL.push(gL);
 
       const gR = ctx.createGain();
-      gR.gain.value = -baseF * 0.72;
+      gR.gain.value = -baseF * 0.35;
       this.lfo.connect(gR);
       gR.connect(this.rightFilters[i].frequency);
       this.lfoGainsR.push(gR);

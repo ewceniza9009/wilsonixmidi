@@ -49,9 +49,9 @@ export class RotarySpeaker {
     this.hornLfo.type = "sine";
     this.hornLfo.frequency.value = this.hornRate;
 
-    // Doppler pitch modulation depth (subtle & realistic acoustic movement)
+    // Doppler pitch modulation depth (ultra-subtle - no wow, no flutter)
     this.hornDoppler = ctx.createGain();
-    this.hornDoppler.gain.value = 0.0012;
+    this.hornDoppler.gain.value = 0.0006;
     this.hornLfo.connect(this.hornDoppler);
     this.hornDoppler.connect(this.hornDelay.delayTime);
 
