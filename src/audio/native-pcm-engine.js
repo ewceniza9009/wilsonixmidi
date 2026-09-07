@@ -324,35 +324,44 @@ export class LayerInsertProcessor {
       case "reverb_hall":
       case "reverb_plate":
       case "reverb_room": {
-        // Clean multi-tap diffuse reflection network (zero runaway feedback or static ringing)
+        // Pure Feedforward Multi-Tap Diffuse Network (Mathematically 0% feedback ringing or comb filtering)
         const d1 = ctx.createDelay(0.2);
-        d1.delayTime.value = 0.028;
+        d1.delayTime.value = 0.024;
         const d2 = ctx.createDelay(0.2);
-        d2.delayTime.value = 0.045;
+        d2.delayTime.value = 0.048;
         const d3 = ctx.createDelay(0.2);
-        d3.delayTime.value = 0.068;
+        d3.delayTime.value = 0.075;
 
-        const fb = ctx.createGain();
-        fb.gain.value = this.currentFx === "reverb_hall" ? 0.30 : (this.currentFx === "reverb_plate" ? 0.22 : 0.16);
+        const g1 = ctx.createGain();
+        g1.gain.value = 0.35;
+        const g2 = ctx.createGain();
+        g2.gain.value = 0.25;
+        const g3 = ctx.createGain();
+        g3.gain.value = 0.18;
 
         const lpf = ctx.createBiquadFilter();
         lpf.type = "lowpass";
-        lpf.frequency.value = this.currentFx === "reverb_plate" ? 6500 : 4200;
+        lpf.frequency.value = this.currentFx === "reverb_plate" ? 6500 : 4500;
 
         const hpf = ctx.createBiquadFilter();
         hpf.type = "highpass";
-        hpf.frequency.value = 180; // Cut rumble buildup
+        hpf.frequency.value = 180;
 
         this.effectChainInput.connect(hpf);
         hpf.connect(d1);
-        d1.connect(d2);
-        d2.connect(d3);
-        d3.connect(lpf);
-        lpf.connect(fb);
-        fb.connect(d1);
+        hpf.connect(d2);
+        hpf.connect(d3);
+
+        d1.connect(g1);
+        d2.connect(g2);
+        d3.connect(g3);
+
+        g1.connect(lpf);
+        g2.connect(lpf);
+        g3.connect(lpf);
 
         lpf.connect(this.effectChainOutput);
-        this.activeFxNodes.push(hpf, d1, d2, d3, fb, lpf);
+        this.activeFxNodes.push(hpf, d1, d2, d3, g1, g2, g3, lpf);
         break;
       }
 
@@ -814,91 +823,57 @@ export class NativePcmEngine {
     src.buffer = anchorData.buffer;
     src.playbackRate.setValueAtTime(bentPlaybackRate, now);
 
-    // Continuous Sustain Looping: Prevents sound from dying while key is held down
+    // Sustain Looping: ONLY for continuous organs with long buffers
     const bufDuration = anchorData.buffer ? anchorData.buffer.duration : 0;
-    const isSustainingInst = [
-      "string_ensemble_1",
-      "m1_universe",
-      "m1_choir",
-      "drawbar_organ",
-      "m1_organ_2",
-      "brass_section",
-      "alto_sax",
-      "synth_bass_1",
-      "distortion_guitar",
-      "overdriven_guitar",
-      "electric_guitar_clean",
-    ].includes(instId) || instId?.includes("string") || instId?.includes("organ") || instId?.includes("pad") || instId?.includes("brass") || instId?.includes("sax") || instId?.includes("choir") || instId?.includes("bass");
-
-    if (isSustainingInst && bufDuration > 0.35) {
+    const isOrgan = instId === "drawbar_organ" || instId === "m1_organ_2" || instId?.includes("organ");
+    if (isOrgan && bufDuration > 0.8) {
       src.loop = true;
-      src.loopStart = Math.min(0.28, bufDuration * 0.20);
-      src.loopEnd = Math.max(src.loopStart + 0.25, bufDuration * 0.88);
-    } else if (bufDuration > 1.2) {
-      // For pianos and electric pianos: long sustain loop so notes never cut off prematurely while held
-      src.loop = true;
-      src.loopStart = bufDuration * 0.45;
-      src.loopEnd = bufDuration * 0.95;
+      src.loopStart = 0.35;
+      src.loopEnd = Math.max(0.70, bufDuration * 0.88);
     }
 
-    // 2. Dynamic Time-Variant Filter (TVF): Crisp acoustic presence & immediate hammer transient
+    // 2. Dynamic Time-Variant Filter (TVF): Clean acoustic lowpass without harsh resonance
     const filter = ctx.createBiquadFilter();
     filter.type = "lowpass";
-    const minCutoff = 8000;
+    const minCutoff = 10000;
     const maxCutoff = 22000;
     const dynamicCutoff = minCutoff + velNorm * (maxCutoff - minCutoff);
     filter.frequency.setValueAtTime(dynamicCutoff, now);
-    filter.Q.setValueAtTime(0.7, now);
+    filter.Q.setValueAtTime(0.4, now);
 
-    // Dedicated Acoustic Presence for natural Concert Grand warmth and hammer definition (+2.2dB 3.4kHz)
-    let presenceFilter = null;
-    if (instId === "acoustic_grand_piano" || instId?.includes("piano")) {
-      presenceFilter = ctx.createBiquadFilter();
-      presenceFilter.type = "peaking";
-      presenceFilter.frequency.value = 3400;
-      presenceFilter.Q.value = 1.0;
-      presenceFilter.gain.value = 2.2;
-    } else if (instId === "electric_piano_1" || instId?.includes("fm_piano")) {
-      presenceFilter = ctx.createBiquadFilter();
-      presenceFilter.type = "peaking";
-      presenceFilter.frequency.value = 4500;
-      presenceFilter.Q.value = 1.2;
-      presenceFilter.gain.value = 2.5;
-    }
-
-    // 3. Time-Variant Amplifier (TVA): Dynamic Velocity Curve & Instant or Swell Attack
+    // 3. Time-Variant Amplifier (TVA): Full-bodied, punchy studio loudness calibration
     const voiceGain = ctx.createGain();
 
-    // Equal-Perceptual Loudness Calibration (LUFS normalization across all sample banks):
     const INST_TRIM_GAINS = {
-      acoustic_grand_piano: 1.80,   // Boost quiet grand piano samples to full studio loudness
-      string_ensemble_1: 1.65,      // Boost strings
-      electric_piano_1: 1.55,       // Boost EP/FM Tines
-      acoustic_guitar_nylon: 1.60,  // Boost nylon acoustic guitar
-      electric_guitar_clean: 1.25,  // Boost clean guitar
-      alto_sax: 1.15,               // Calibrate sax
-      brass_section: 1.10,          // Calibrate brass
-      drawbar_organ: 0.82,          // Tame naturally loud organ
-      synth_bass_1: 0.90,           // Calibrate punch bass
-      distortion_guitar: 0.50,      // TAME loud screaming distortion guitar to match piano!
-      overdriven_guitar: 0.52,      // TAME overdriven guitar to match piano!
+      acoustic_grand_piano: 2.10,
+      abletunes_upright: 2.10,
+      m1_piano_16: 2.10,
+      electric_piano_1: 1.90,
+      abletunes_fm_piano: 1.90,
+      string_ensemble_1: 1.75,
+      m1_universe: 1.75,
+      m1_choir: 1.75,
+      acoustic_guitar_nylon: 1.80,
+      electric_guitar_clean: 1.70,
+      alto_sax: 1.65,
+      brass_section: 1.65,
+      drawbar_organ: 1.60,
+      synth_bass_1: 1.80,
+      m1_slap_bass: 1.80,
+      distortion_guitar: 1.40,
+      overdriven_guitar: 1.40,
     };
     const resolvedId = this.findNearestAnchor(instId, midiNote, velocity)?.instKey || instId;
-    const trim = INST_TRIM_GAINS[instId] || INST_TRIM_GAINS[resolvedId] || 1.10;
+    const trim = INST_TRIM_GAINS[instId] || INST_TRIM_GAINS[resolvedId] || 1.80;
 
-    // Dynamic velocity scaling with balanced equal-loudness output
-    const peakGain = (0.25 + velNorm * 0.75) * customGain * trim;
+    // High-energy, loud, punchy volume scaling (Solid baseline so light touches are clearly audible)
+    const peakGain = (0.65 + velNorm * 0.55) * customGain * trim;
 
     // Instant 0.00ms touch-to-sound attack across all instruments and layers
     voiceGain.gain.setValueAtTime(peakGain, now);
 
-    // Voice Audio Chain: Source -> (Presence EQ) -> TVF -> TVA -> (Layer Insert Bus | Master Rack)
-    if (presenceFilter) {
-      src.connect(presenceFilter);
-      presenceFilter.connect(filter);
-    } else {
-      src.connect(filter);
-    }
+    // Voice Audio Chain: Source -> TVF -> TVA -> (Layer Insert Bus | Master Rack)
+    src.connect(filter);
     filter.connect(voiceGain);
 
     // Route to layer insert processor if layerIndex is specified
@@ -1008,8 +983,17 @@ export class NativePcmEngine {
   }
 
   setSustainPedal(isDown) {
+    const wasDown = this.sustainPedal;
     this.sustainPedal = !!isDown;
     const now = this.ctx.currentTime;
+
+    if (wasDown !== this.sustainPedal) {
+      try {
+        if (typeof window !== "undefined" && window.__pianoAcoustics) {
+          window.__pianoAcoustics.triggerDamperPedalSound(this.sustainPedal);
+        }
+      } catch (e) {}
+    }
 
     if (!this.sustainPedal) {
       // Releasing damper pedal releases all held sustained notes with smooth click-free acoustic decay

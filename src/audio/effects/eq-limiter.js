@@ -34,25 +34,16 @@ export class StudioEqLimiter {
     this.highShelf.frequency.value = 8500;
     this.highShelf.gain.value = 0.0;
 
-    // 4. Gentle Musical Limiter (clean, transparent, NO brickwall distortion on chords)
-    this.limiter = ctx.createDynamicsCompressor();
-    this.limiter.threshold.value = -10.0; // Start compressing gently at -10dB
-    this.limiter.knee.value = 15.0;       // Very wide smooth knee
-    this.limiter.ratio.value = 2.5;       // Gentle 2.5:1 musical leveling
-    this.limiter.attack.value = 0.012;    // 12ms preserve piano hammer transients
-    this.limiter.release.value = 0.200;   // 200ms smooth musical recovery
-
-    // Master trim gain
+    // 4. Transparent Master Polish & Gain Stage (100% full dynamic range, zero squashing)
     this.masterTrim = ctx.createGain();
-    this.masterTrim.gain.value = 1.0;
+    this.masterTrim.gain.value = 1.15;
 
-    // Direct clean connection: Input -> LowShelf -> MidPeak -> HighShelf -> Trim -> Limiter -> Output
+    // Direct clean connection: Input -> LowShelf -> MidPeak -> HighShelf -> Trim -> Output
     this.input.connect(this.lowShelf);
     this.lowShelf.connect(this.midPeak);
     this.midPeak.connect(this.highShelf);
     this.highShelf.connect(this.masterTrim);
-    this.masterTrim.connect(this.limiter);
-    this.limiter.connect(this.output);
+    this.masterTrim.connect(this.output);
   }
 
   setLowGain(db) {

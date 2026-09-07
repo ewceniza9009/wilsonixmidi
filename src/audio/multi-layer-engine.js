@@ -37,10 +37,10 @@ export const COMBI_PRESETS = {
     name: "★ Whitney 1992 - I Have Nothing (Foster Rig)",
     category: "Power Ballad",
     layers: [
-      { id: 0, name: "David Foster Concert Grand", inst: "acoustic_grand_piano", fx: "clean", gain: 0.95, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Hollywood Warm Strings", inst: "string_ensemble_1", fx: "chorus_lush", gain: 0.28, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Dyno 80s Bell Tine (Foster Ding)", inst: "electric_piano_1", fx: "clean", gain: 0.18, pan: 0.1, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Foster Shimmer Chime (+12)", inst: "electric_piano_1", fx: "reverb_hall", gain: 0.10, pan: -0.1, oct: 1, minVel: 85, maxVel: 127, enabled: false },
+      { id: 0, name: "David Foster Concert Grand", inst: "acoustic_grand_piano", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Hollywood Warm Strings", inst: "string_ensemble_1", fx: "chorus_lush", gain: 0.65, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Dyno 80s Bell Tine (Foster Ding)", inst: "electric_piano_1", fx: "clean", gain: 0.50, pan: 0.1, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Foster Shimmer Chime (+12)", inst: "electric_piano_1", fx: "reverb_hall", gain: 0.40, pan: -0.1, oct: 1, minVel: 75, maxVel: 127, enabled: false },
     ],
   },
   ballad_master: {
@@ -48,10 +48,10 @@ export const COMBI_PRESETS = {
     name: "★ Ballad Master (Synthage + Triton Strings + Tine)",
     category: "Worship / Ballad",
     layers: [
-      { id: 0, name: "Synthage Grand", inst: "acoustic_grand_piano", fx: "clean", gain: 0.90, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Triton Warm Strings", inst: "string_ensemble_1", fx: "chorus_lush", gain: 0.40, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Dyno Bell Tine", inst: "electric_piano_1", fx: "delay_tape", gain: 0.28, pan: 0.2, oct: 0, minVel: 40, maxVel: 127, enabled: true },
-      { id: 3, name: "Shreddage Lead Guitar", inst: "distortion_guitar", fx: "tube_warm", gain: 0.65, pan: 0, oct: 0, minVel: 105, maxVel: 127, enabled: false },
+      { id: 0, name: "Synthage Grand", inst: "acoustic_grand_piano", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Triton Warm Strings", inst: "string_ensemble_1", fx: "chorus_lush", gain: 0.65, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Dyno Bell Tine", inst: "electric_piano_1", fx: "delay_tape", gain: 0.55, pan: 0.2, oct: 0, minVel: 30, maxVel: 127, enabled: true },
+      { id: 3, name: "Shreddage Lead Guitar", inst: "distortion_guitar", fx: "tube_warm", gain: 0.75, pan: 0, oct: 0, minVel: 95, maxVel: 127, enabled: false },
     ],
   },
   celestial_worship: {
@@ -59,10 +59,10 @@ export const COMBI_PRESETS = {
     name: "★ Celestial Worship (Piano + Universe + Choir)",
     category: "Worship / Ambient",
     layers: [
-      { id: 0, name: "Concert Grand", inst: "acoustic_grand_piano", fx: "air_eq", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Triton Warm Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.45, pan: -0.2, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Hollywood Soft Strings", inst: "string_ensemble_1", fx: "chorus_vintage", gain: 0.35, pan: 0.2, oct: 1, minVel: 45, maxVel: 127, enabled: true },
-      { id: 3, name: "Dyno Bell Tine", inst: "electric_piano_1", fx: "autopan_wide", gain: 0.30, pan: 0, oct: 1, minVel: 60, maxVel: 127, enabled: true },
+      { id: 0, name: "Concert Grand", inst: "acoustic_grand_piano", fx: "air_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Triton Warm Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.70, pan: -0.2, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Hollywood Soft Strings", inst: "string_ensemble_1", fx: "chorus_vintage", gain: 0.60, pan: 0.2, oct: 1, minVel: 35, maxVel: 127, enabled: true },
+      { id: 3, name: "Dyno Bell Tine", inst: "electric_piano_1", fx: "autopan_wide", gain: 0.50, pan: 0, oct: 1, minVel: 50, maxVel: 127, enabled: true },
     ],
   },
   m1_90s_house: {
@@ -70,10 +70,10 @@ export const COMBI_PRESETS = {
     name: "★ 90s House Anthem (M1 Piano 16' + Organ 2 + Strings)",
     category: "90s Dance / House",
     layers: [
-      { id: 0, name: "Concert Grand Piano", inst: "acoustic_grand_piano", fx: "punch_comp", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "B3 Rock Organ (Bass)", inst: "drawbar_organ", fx: "rotary_fast", gain: 0.70, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Symphony Strings", inst: "string_ensemble_1", fx: "chorus_lush", gain: 0.35, pan: 0.2, oct: 0, minVel: 40, maxVel: 127, enabled: true },
-      { id: 3, name: "Moog Synth Bass", inst: "synth_bass_1", fx: "warm_eq", gain: 0.40, pan: -0.2, oct: -1, minVel: 85, maxVel: 127, enabled: false },
+      { id: 0, name: "Concert Grand Piano", inst: "acoustic_grand_piano", fx: "punch_comp", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "B3 Rock Organ (Bass)", inst: "drawbar_organ", fx: "rotary_fast", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Symphony Strings", inst: "string_ensemble_1", fx: "chorus_lush", gain: 0.55, pan: 0.2, oct: 0, minVel: 30, maxVel: 127, enabled: true },
+      { id: 3, name: "Moog Synth Bass", inst: "synth_bass_1", fx: "warm_eq", gain: 0.65, pan: -0.2, oct: -1, minVel: 75, maxVel: 127, enabled: false },
     ],
   },
   smooth_rnb: {
@@ -81,10 +81,10 @@ export const COMBI_PRESETS = {
     name: "★ Smooth R&B Soul (Stage EP + Breathy Sax + Strings)",
     category: "R&B / Soul",
     layers: [
-      { id: 0, name: "Suit & Stage EP", inst: "electric_piano_1", fx: "autopan_wide", gain: 0.85, pan: -0.15, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Breathy Alto Sax", inst: "alto_sax", fx: "reverb_room", gain: 0.50, pan: 0.15, oct: 0, minVel: 65, maxVel: 127, enabled: true },
-      { id: 2, name: "Stereo Strings", inst: "string_ensemble_1", fx: "chorus_vintage", gain: 0.30, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Punch Bass (Left)", inst: "synth_bass_1", fx: "punch_comp", gain: 0.45, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: false },
+      { id: 0, name: "Suit & Stage EP", inst: "electric_piano_1", fx: "autopan_wide", gain: 1.0, pan: -0.15, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Breathy Alto Sax", inst: "alto_sax", fx: "reverb_room", gain: 0.70, pan: 0.15, oct: 0, minVel: 50, maxVel: 127, enabled: true },
+      { id: 2, name: "Stereo Strings", inst: "string_ensemble_1", fx: "chorus_vintage", gain: 0.55, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Punch Bass (Left)", inst: "synth_bass_1", fx: "punch_comp", gain: 0.70, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: false },
     ],
   },
   neo_soul_chill: {
@@ -92,10 +92,10 @@ export const COMBI_PRESETS = {
     name: "★ Neo-Soul Chill (DX7 FM + EP + Sax + Sub)",
     category: "R&B / Neo-Soul",
     layers: [
-      { id: 0, name: "Abletunes FM Piano", inst: "abletunes_fm_piano", fx: "chorus_lush", gain: 0.80, pan: -0.1, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Suit & Stage EP", inst: "electric_piano_1", fx: "autopan_fast", gain: 0.60, pan: 0.1, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Breathy Alto Sax", inst: "alto_sax", fx: "delay_tape", gain: 0.45, pan: 0.25, oct: 0, minVel: 70, maxVel: 127, enabled: true },
-      { id: 3, name: "Analog Sub Bass", inst: "synth_bass_1", fx: "warm_eq", gain: 0.45, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 0, name: "Abletunes FM Piano", inst: "abletunes_fm_piano", fx: "chorus_lush", gain: 1.0, pan: -0.1, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Suit & Stage EP", inst: "electric_piano_1", fx: "autopan_fast", gain: 0.75, pan: 0.1, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Breathy Alto Sax", inst: "alto_sax", fx: "delay_tape", gain: 0.65, pan: 0.25, oct: 0, minVel: 50, maxVel: 127, enabled: true },
+      { id: 3, name: "Analog Sub Bass", inst: "synth_bass_1", fx: "warm_eq", gain: 0.70, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
     ],
   },
   gospel_praise: {
@@ -103,10 +103,10 @@ export const COMBI_PRESETS = {
     name: "★ Gospel Praise (Grand Piano + B3 Organ + Brass)",
     category: "Gospel & Praise",
     layers: [
-      { id: 0, name: "Concert Grand", inst: "acoustic_grand_piano", fx: "air_eq", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "B3 Rock Organ", inst: "drawbar_organ", fx: "rotary_fast", gain: 0.55, pan: 0.25, oct: 0, minVel: 25, maxVel: 127, enabled: true },
-      { id: 2, name: "Stereo Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.35, pan: -0.25, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Fat Brass Horns", inst: "brass_section", fx: "tube_warm", gain: 0.45, pan: 0, oct: 0, minVel: 90, maxVel: 127, enabled: false },
+      { id: 0, name: "Concert Grand", inst: "acoustic_grand_piano", fx: "air_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "B3 Rock Organ", inst: "drawbar_organ", fx: "rotary_fast", gain: 0.75, pan: 0.25, oct: 0, minVel: 20, maxVel: 127, enabled: true },
+      { id: 2, name: "Stereo Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.55, pan: -0.25, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Fat Brass Horns", inst: "brass_section", fx: "tube_warm", gain: 0.65, pan: 0, oct: 0, minVel: 75, maxVel: 127, enabled: false },
     ],
   },
   ambient_space: {
@@ -114,10 +114,10 @@ export const COMBI_PRESETS = {
     name: "★ Deep Space Ambient (Universe + Fresh Air + Choir)",
     category: "Ambient / Cinematic",
     layers: [
-      { id: 0, name: "Stereo Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Dyno Bell Chime", inst: "electric_piano_1", fx: "phaser_deep", gain: 0.45, pan: 0.25, oct: 1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Warm Upper Strings", inst: "string_ensemble_1", fx: "chorus_lush", gain: 0.40, pan: -0.25, oct: 1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Stage Electric Piano", inst: "electric_piano_1", fx: "delay_dub", gain: 0.35, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 0, name: "Stereo Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Dyno Bell Chime", inst: "electric_piano_1", fx: "phaser_deep", gain: 0.65, pan: 0.25, oct: 1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Warm Upper Strings", inst: "string_ensemble_1", fx: "chorus_lush", gain: 0.60, pan: -0.25, oct: 1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Stage Electric Piano", inst: "electric_piano_1", fx: "delay_dub", gain: 0.55, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
     ],
   },
   stadium_synth: {
@@ -125,10 +125,10 @@ export const COMBI_PRESETS = {
     name: "★ 80s Stadium Anthem (Fat Brass + Dyno EP + Bass)",
     category: "Pop & Synth",
     layers: [
-      { id: 0, name: "Fat Brass", inst: "brass_section", fx: "phaser_6stage", gain: 0.80, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Dyno Tine EP", inst: "electric_piano_1", fx: "chorus_lush", gain: 0.45, pan: -0.2, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Prodigy Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.50, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Warm Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.30, pan: 0.2, oct: 1, minVel: 1, maxVel: 127, enabled: false },
+      { id: 0, name: "Fat Brass", inst: "brass_section", fx: "phaser_6stage", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Dyno Tine EP", inst: "electric_piano_1", fx: "chorus_lush", gain: 0.65, pan: -0.2, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Prodigy Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.75, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Warm Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.50, pan: 0.2, oct: 1, minVel: 1, maxVel: 127, enabled: false },
     ],
   },
   hard_rock_shred: {
@@ -136,10 +136,10 @@ export const COMBI_PRESETS = {
     name: "★ Hard Rock Shred (Distortion Lead + Overdrive + Bass)",
     category: "Rock / Metal",
     layers: [
-      { id: 0, name: "Distortion Guitar Lead", inst: "distortion_guitar", fx: "tube_lead", gain: 0.80, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Heavy Overdrive Rhythm", inst: "overdriven_guitar", fx: "delay_tape", gain: 0.60, pan: -0.2, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Punch Rock Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.65, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "B3 Rock Organ Pad", inst: "drawbar_organ", fx: "rotary_fast", gain: 0.40, pan: 0.2, oct: 0, minVel: 40, maxVel: 127, enabled: true },
+      { id: 0, name: "Distortion Guitar Lead", inst: "distortion_guitar", fx: "tube_lead", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Heavy Overdrive Rhythm", inst: "overdriven_guitar", fx: "delay_tape", gain: 0.80, pan: -0.2, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Punch Rock Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "B3 Rock Organ Pad", inst: "drawbar_organ", fx: "rotary_fast", gain: 0.60, pan: 0.2, oct: 0, minVel: 30, maxVel: 127, enabled: true },
     ],
   },
   smooth_latin_jazz: {
@@ -147,10 +147,10 @@ export const COMBI_PRESETS = {
     name: "★ Smooth Latin Jazz (Nylon Guitar + Breathy Sax + Grand)",
     category: "Jazz / Fusion",
     layers: [
-      { id: 0, name: "Fantom Nylon Guitar", inst: "acoustic_guitar_nylon", fx: "reverb_room", gain: 0.85, pan: -0.15, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Breathy Alto Sax", inst: "alto_sax", fx: "chorus_vintage", gain: 0.55, pan: 0.15, oct: 0, minVel: 50, maxVel: 127, enabled: true },
-      { id: 2, name: "Concert Grand Chords", inst: "acoustic_grand_piano", fx: "clean", gain: 0.50, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Acoustic Sub Bass", inst: "synth_bass_1", fx: "warm_eq", gain: 0.40, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 0, name: "Fantom Nylon Guitar", inst: "acoustic_guitar_nylon", fx: "reverb_room", gain: 1.0, pan: -0.15, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Breathy Alto Sax", inst: "alto_sax", fx: "chorus_vintage", gain: 0.75, pan: 0.15, oct: 0, minVel: 40, maxVel: 127, enabled: true },
+      { id: 2, name: "Concert Grand Chords", inst: "acoustic_grand_piano", fx: "clean", gain: 0.70, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Acoustic Sub Bass", inst: "synth_bass_1", fx: "warm_eq", gain: 0.65, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
     ],
   },
   synthwave_80s_drive: {
@@ -158,10 +158,10 @@ export const COMBI_PRESETS = {
     name: "★ Cyberpunk Synthwave (Fat Brass + FM Tine + Moog Bass)",
     category: "Synthwave / Retro",
     layers: [
-      { id: 0, name: "Fat Brass Lead", inst: "brass_section", fx: "flanger_stereo", gain: 0.80, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "FM 80s Crystal Bell", inst: "electric_piano_1", fx: "delay_tape", gain: 0.50, pan: 0.2, oct: 1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Moog Prodigy Punch Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.70, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Stereo Chorus Strings", inst: "string_ensemble_1", fx: "chorus_lush", gain: 0.35, pan: -0.2, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 0, name: "Fat Brass Lead", inst: "brass_section", fx: "flanger_stereo", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "FM 80s Crystal Bell", inst: "electric_piano_1", fx: "delay_tape", gain: 0.70, pan: 0.2, oct: 1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Moog Prodigy Punch Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Stereo Chorus Strings", inst: "string_ensemble_1", fx: "chorus_lush", gain: 0.55, pan: -0.2, oct: 0, minVel: 1, maxVel: 127, enabled: true },
     ],
   },
   acoustic_cafe_lounge: {
@@ -169,10 +169,10 @@ export const COMBI_PRESETS = {
     name: "★ Acoustic Cafe Lounge (Nylon Guitar + Sax + Upright)",
     category: "Acoustic / Lounge",
     layers: [
-      { id: 0, name: "Acoustic Nylon Guitar", inst: "acoustic_guitar_nylon", fx: "reverb_room", gain: 0.85, pan: -0.15, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Abletunes Upright Piano", inst: "abletunes_upright", fx: "warm_eq", gain: 0.75, pan: 0.1, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Breathy Alto Saxophone", inst: "alto_sax", fx: "reverb_plate", gain: 0.40, pan: 0.2, oct: 0, minVel: 65, maxVel: 127, enabled: true },
-      { id: 3, name: "Soft Strings Background", inst: "string_ensemble_1", fx: "chorus_vintage", gain: 0.25, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 0, name: "Acoustic Nylon Guitar", inst: "acoustic_guitar_nylon", fx: "reverb_room", gain: 1.0, pan: -0.15, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Abletunes Upright Piano", inst: "abletunes_upright", fx: "warm_eq", gain: 0.90, pan: 0.1, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Breathy Alto Saxophone", inst: "alto_sax", fx: "reverb_plate", gain: 0.65, pan: 0.2, oct: 0, minVel: 50, maxVel: 127, enabled: true },
+      { id: 3, name: "Soft Strings Background", inst: "string_ensemble_1", fx: "chorus_vintage", gain: 0.45, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
     ],
   },
   vintage_funk_fusion: {
@@ -180,10 +180,10 @@ export const COMBI_PRESETS = {
     name: "★ Vintage Funk Fusion (M1 Slap Bass + Rock Organ + Strat)",
     category: "Funk / Fusion",
     layers: [
-      { id: 0, name: "Fender Strat Clean Guitar", inst: "electric_guitar_clean", fx: "chorus_vintage", gain: 0.75, pan: -0.2, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "M1 B3 Rock Organ", inst: "drawbar_organ", fx: "rotary_fast", gain: 0.65, pan: 0.2, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Punch Slap Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.70, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Fat Horn Stabs", inst: "brass_section", fx: "tube_warm", gain: 0.50, pan: 0, oct: 0, minVel: 85, maxVel: 127, enabled: false },
+      { id: 0, name: "Fender Strat Clean Guitar", inst: "electric_guitar_clean", fx: "chorus_vintage", gain: 1.0, pan: -0.2, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "M1 B3 Rock Organ", inst: "drawbar_organ", fx: "rotary_fast", gain: 0.85, pan: 0.2, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Punch Slap Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Fat Horn Stabs", inst: "brass_section", fx: "tube_warm", gain: 0.70, pan: 0, oct: 0, minVel: 75, maxVel: 127, enabled: false },
     ],
   },
   power_ballad_1989: {
@@ -191,10 +191,10 @@ export const COMBI_PRESETS = {
     name: "★ Power Ballad 1989 (Foster Piano + Dyno EP + Warm Strings)",
     category: "Power Ballad",
     layers: [
-      { id: 0, name: "Concert Grand Piano", inst: "acoustic_grand_piano", fx: "air_eq", gain: 0.90, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Dyno 80s Stage EP", inst: "electric_piano_1", fx: "chorus_lush", gain: 0.50, pan: -0.15, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Triton Warm Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.45, pan: 0.15, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Strat Clean Arp", inst: "electric_guitar_clean", fx: "delay_tape", gain: 0.35, pan: 0.25, oct: 0, minVel: 50, maxVel: 127, enabled: true },
+      { id: 0, name: "Concert Grand Piano", inst: "acoustic_grand_piano", fx: "air_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Dyno 80s Stage EP", inst: "electric_piano_1", fx: "chorus_lush", gain: 0.70, pan: -0.15, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Triton Warm Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.65, pan: 0.15, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Strat Clean Arp", inst: "electric_guitar_clean", fx: "delay_tape", gain: 0.55, pan: 0.25, oct: 0, minVel: 40, maxVel: 127, enabled: true },
     ],
   },
   gospel_cathedral: {
@@ -202,10 +202,10 @@ export const COMBI_PRESETS = {
     name: "★ Gospel Cathedral (M1 Organ 2 + Choir + Grand)",
     category: "Gospel & Praise",
     layers: [
-      { id: 0, name: "Concert Grand Piano", inst: "acoustic_grand_piano", fx: "air_eq", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "M1 / B3 Gospel Organ", inst: "drawbar_organ", fx: "rotary_slow", gain: 0.65, pan: 0.2, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Triton Cathedral Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.45, pan: -0.2, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Fat Brass Fanfare", inst: "brass_section", fx: "tube_warm", gain: 0.40, pan: 0, oct: 0, minVel: 95, maxVel: 127, enabled: false },
+      { id: 0, name: "Concert Grand Piano", inst: "acoustic_grand_piano", fx: "air_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "M1 / B3 Gospel Organ", inst: "drawbar_organ", fx: "rotary_slow", gain: 0.85, pan: 0.2, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Triton Cathedral Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.65, pan: -0.2, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Fat Brass Fanfare", inst: "brass_section", fx: "tube_warm", gain: 0.60, pan: 0, oct: 0, minVel: 85, maxVel: 127, enabled: false },
     ],
   },
   cyberpunk_arena: {
@@ -213,10 +213,10 @@ export const COMBI_PRESETS = {
     name: "★ Cyberpunk 2077 Arena (Distortion + Moog Bass + Fresh Air)",
     category: "Rock / Synth",
     layers: [
-      { id: 0, name: "Distortion Heavy Lead", inst: "distortion_guitar", fx: "distortion_metal", gain: 0.75, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Moog Prodigy Punch Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.80, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Fat Brass Swell", inst: "brass_section", fx: "phaser_deep", gain: 0.45, pan: 0.2, oct: 0, minVel: 40, maxVel: 127, enabled: true },
-      { id: 3, name: "Stereo Tine Chime", inst: "electric_piano_1", fx: "delay_dub", gain: 0.35, pan: -0.2, oct: 1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 0, name: "Distortion Heavy Lead", inst: "distortion_guitar", fx: "distortion_metal", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Moog Prodigy Punch Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.90, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Fat Brass Swell", inst: "brass_section", fx: "phaser_deep", gain: 0.65, pan: 0.2, oct: 0, minVel: 30, maxVel: 127, enabled: true },
+      { id: 3, name: "Stereo Tine Chime", inst: "electric_piano_1", fx: "delay_dub", gain: 0.55, pan: -0.2, oct: 1, minVel: 1, maxVel: 127, enabled: true },
     ],
   },
   cinematic_symphony: {
@@ -224,10 +224,10 @@ export const COMBI_PRESETS = {
     name: "★ Cinematic Symphony (Stereo Strings + Fat Brass + Grand)",
     category: "Cinematic / Film",
     layers: [
-      { id: 0, name: "Triton Stereo Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Fat Brass Horns", inst: "brass_section", fx: "air_eq", gain: 0.60, pan: 0.2, oct: 0, minVel: 40, maxVel: 127, enabled: true },
-      { id: 2, name: "Concert Grand Accent", inst: "acoustic_grand_piano", fx: "clean", gain: 0.60, pan: -0.15, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Breathy Alto Saxophone", inst: "alto_sax", fx: "delay_tape", gain: 0.40, pan: 0.15, oct: 0, minVel: 75, maxVel: 127, enabled: true },
+      { id: 0, name: "Triton Stereo Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Fat Brass Horns", inst: "brass_section", fx: "air_eq", gain: 0.80, pan: 0.2, oct: 0, minVel: 30, maxVel: 127, enabled: true },
+      { id: 2, name: "Concert Grand Accent", inst: "acoustic_grand_piano", fx: "clean", gain: 0.80, pan: -0.15, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Breathy Alto Saxophone", inst: "alto_sax", fx: "delay_tape", gain: 0.60, pan: 0.15, oct: 0, minVel: 65, maxVel: 127, enabled: true },
     ],
   },
   chicago_blues_rock: {
@@ -235,10 +235,10 @@ export const COMBI_PRESETS = {
     name: "★ Chicago Blues & Rock (Clean Strat + B3 Organ + Bass)",
     category: "Blues / Rock",
     layers: [
-      { id: 0, name: "Fender Strat Clean Guitar", inst: "electric_guitar_clean", fx: "tube_warm", gain: 0.80, pan: -0.15, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "M1 B3 Rock Organ", inst: "drawbar_organ", fx: "rotary_fast", gain: 0.65, pan: 0.15, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Punch Blues Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.65, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Breathy Blues Sax", inst: "alto_sax", fx: "reverb_room", gain: 0.45, pan: 0.25, oct: 0, minVel: 60, maxVel: 127, enabled: true },
+      { id: 0, name: "Fender Strat Clean Guitar", inst: "electric_guitar_clean", fx: "tube_warm", gain: 1.0, pan: -0.15, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "M1 B3 Rock Organ", inst: "drawbar_organ", fx: "rotary_fast", gain: 0.85, pan: 0.15, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Punch Blues Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Breathy Blues Sax", inst: "alto_sax", fx: "reverb_room", gain: 0.65, pan: 0.25, oct: 0, minVel: 50, maxVel: 127, enabled: true },
     ],
   },
   tokyo_city_pop: {
@@ -246,10 +246,10 @@ export const COMBI_PRESETS = {
     name: "★ Tokyo City Pop (FM Piano + Clean Strat + Sax + EP)",
     category: "Pop / Funk",
     layers: [
-      { id: 0, name: "Abletunes FM Piano", inst: "abletunes_fm_piano", fx: "chorus_lush", gain: 0.80, pan: -0.1, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Fender Strat Clean", inst: "electric_guitar_clean", fx: "autopan_fast", gain: 0.55, pan: 0.2, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Breathy Alto Sax Solo", inst: "alto_sax", fx: "delay_tape", gain: 0.50, pan: 0.1, oct: 0, minVel: 60, maxVel: 127, enabled: true },
-      { id: 3, name: "Punch Synth Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.60, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 0, name: "Abletunes FM Piano", inst: "abletunes_fm_piano", fx: "chorus_lush", gain: 1.0, pan: -0.1, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Fender Strat Clean", inst: "electric_guitar_clean", fx: "autopan_fast", gain: 0.75, pan: 0.2, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Breathy Alto Sax Solo", inst: "alto_sax", fx: "delay_tape", gain: 0.70, pan: 0.1, oct: 0, minVel: 50, maxVel: 127, enabled: true },
+      { id: 3, name: "Punch Synth Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.80, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
     ],
   },
   neo_classical_ambient: {
@@ -257,10 +257,10 @@ export const COMBI_PRESETS = {
     name: "★ Neo-Classical Ambient (Grand + Nylon + Strings)",
     category: "Neo-Classical",
     layers: [
-      { id: 0, name: "SG Hybrid Concert Grand", inst: "acoustic_grand_piano", fx: "air_eq", gain: 0.90, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Fantom Acoustic Nylon", inst: "acoustic_guitar_nylon", fx: "reverb_hall", gain: 0.65, pan: -0.2, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Triton Stereo Strings", inst: "string_ensemble_1", fx: "chorus_lush", gain: 0.40, pan: 0.2, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Breathy Alto Sax", inst: "alto_sax", fx: "delay_dub", gain: 0.35, pan: 0, oct: 0, minVel: 75, maxVel: 127, enabled: false },
+      { id: 0, name: "SG Hybrid Concert Grand", inst: "acoustic_grand_piano", fx: "air_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Fantom Acoustic Nylon", inst: "acoustic_guitar_nylon", fx: "reverb_hall", gain: 0.85, pan: -0.2, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Triton Stereo Strings", inst: "string_ensemble_1", fx: "chorus_lush", gain: 0.65, pan: 0.2, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Breathy Alto Sax", inst: "alto_sax", fx: "delay_dub", gain: 0.55, pan: 0, oct: 0, minVel: 65, maxVel: 127, enabled: false },
     ],
   },
 };

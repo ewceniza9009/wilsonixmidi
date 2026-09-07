@@ -50,7 +50,40 @@ export class FxRackUI {
         </div>
 
         <div class="devices-scroll-bay">
-          <!-- Device 0: 1973 Rhodes Suitcase Auto-Pan & Tremolo -->
+          <!-- Device 0: Grand Piano Physical Acoustics & Resonance Modeling -->
+          <div class="ableton-device-box" id="dev-piano-acoustics">
+            <div class="device-bar">
+              <button class="dev-power-btn active" data-dev="piano-acoustics">ON</button>
+              <span class="dev-name">GRAND PIANO ACOUSTICS & MODELING</span>
+            </div>
+            <div class="dev-body">
+              <div class="knob-group">
+                <button class="piano-lid-toggle" id="piano-lid-btn" title="Concert Grand Lid Position (Open, Half, Closed)">LID: OPEN</button>
+                <div class="rotary-knob" data-param="piano-sympathetic" data-min="0" data-max="1" data-val="0.55" data-unit="%">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">SYMP RESO</span>
+                  <span class="knob-value">55%</span>
+                </div>
+                <div class="rotary-knob" data-param="piano-soundboard" data-min="0" data-max="1" data-val="0.65" data-unit="%">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">SOUNDBOARD</span>
+                  <span class="knob-value">65%</span>
+                </div>
+                <div class="rotary-knob" data-param="piano-hammer" data-min="0" data-max="1" data-val="0.50" data-unit="%">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">HAMMER FELT</span>
+                  <span class="knob-value">50%</span>
+                </div>
+                <div class="rotary-knob" data-param="piano-pedal-noise" data-min="0" data-max="1" data-val="0.40" data-unit="%">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">PEDAL NOISE</span>
+                  <span class="knob-value">40%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Device 1: 1973 Rhodes Suitcase Auto-Pan & Tremolo -->
           <div class="ableton-device-box" id="dev-autopan">
             <div class="device-bar">
               <button class="dev-power-btn" data-dev="autopan">OFF</button>
@@ -77,7 +110,7 @@ export class FxRackUI {
             </div>
           </div>
 
-          <!-- Device 1: Korg Chorus -->
+          <!-- Device 2: Korg Chorus -->
           <div class="ableton-device-box" id="dev-chorus">
             <div class="device-bar">
               <button class="dev-power-btn" data-dev="chorus">OFF</button>
@@ -104,7 +137,7 @@ export class FxRackUI {
             </div>
           </div>
 
-          <!-- Device 2: Algorithmic Reverb -->
+          <!-- Device 3: Algorithmic Reverb -->
           <div class="ableton-device-box" id="dev-reverb">
             <div class="device-bar">
               <button class="dev-power-btn active" data-dev="reverb">ON</button>
@@ -131,7 +164,7 @@ export class FxRackUI {
             </div>
           </div>
 
-          <!-- Device 3: Ping Pong Delay -->
+          <!-- Device 4: Ping Pong Delay -->
           <div class="ableton-device-box" id="dev-delay">
             <div class="device-bar">
               <button class="dev-power-btn" data-dev="delay">OFF</button>
@@ -158,7 +191,7 @@ export class FxRackUI {
             </div>
           </div>
 
-          <!-- Device 4: Leslie Rotary Speaker -->
+          <!-- Device 5: Leslie Rotary Speaker -->
           <div class="ableton-device-box" id="dev-rotary">
             <div class="device-bar">
               <button class="dev-power-btn" data-dev="rotary">OFF</button>
@@ -176,7 +209,7 @@ export class FxRackUI {
             </div>
           </div>
 
-          <!-- Device 5: Tube Warmth & Drive -->
+          <!-- Device 6: Tube Warmth & Drive -->
           <div class="ableton-device-box" id="dev-tube">
             <div class="device-bar">
               <button class="dev-power-btn" data-dev="tube">OFF</button>
@@ -198,7 +231,7 @@ export class FxRackUI {
             </div>
           </div>
 
-          <!-- Device 6: Stereo Phaser -->
+          <!-- Device 7: Stereo Phaser -->
           <div class="ableton-device-box" id="dev-phaser">
             <div class="device-bar">
               <button class="dev-power-btn" data-dev="phaser">OFF</button>
@@ -220,7 +253,7 @@ export class FxRackUI {
             </div>
           </div>
 
-          <!-- Device 7: Studio EQ & Limiter -->
+          <!-- Device 8: Studio EQ & Limiter -->
           <div class="ableton-device-box" id="dev-eq">
             <div class="device-bar">
               <button class="dev-power-btn active" data-dev="eq" disabled>LOCK</button>
@@ -319,6 +352,19 @@ export class FxRackUI {
     const fx = audioCore.fxRack;
 
     switch (param) {
+      case "piano-sympathetic":
+        fx.pianoAcoustics?.setSympatheticResonance(val);
+        break;
+      case "piano-soundboard":
+        fx.pianoAcoustics?.setSoundboardBloom(val);
+        break;
+      case "piano-hammer":
+        fx.pianoAcoustics?.setHammerHardness(val);
+        break;
+      case "piano-pedal-noise":
+        fx.pianoAcoustics?.setPedalNoise(val);
+        break;
+
       case "autopan-rate":
         fx.autopan.setRate(val);
         break;
@@ -401,6 +447,7 @@ export class FxRackUI {
         if (!audioCore.fxRack) return;
         const fx = audioCore.fxRack;
 
+        if (dev === "piano-acoustics") fx.pianoAcoustics?.setBypass(bypassed);
         if (dev === "autopan") fx.autopan.setBypass(bypassed);
         if (dev === "chorus") fx.chorus.setBypass(bypassed);
         if (dev === "reverb") fx.reverb.setBypass(bypassed);
@@ -409,6 +456,16 @@ export class FxRackUI {
         if (dev === "tube") fx.tube.setBypass(bypassed);
         if (dev === "phaser") fx.phaser.setBypass(bypassed);
       });
+    });
+
+    const lidBtn = document.getElementById("piano-lid-btn");
+    lidBtn?.addEventListener("click", () => {
+      if (audioCore.fxRack && audioCore.fxRack.pianoAcoustics) {
+        const cur = audioCore.fxRack.pianoAcoustics.lidPosition;
+        const next = cur === "open" ? "half" : cur === "half" ? "closed" : "open";
+        audioCore.fxRack.pianoAcoustics.setLidPosition(next);
+        lidBtn.innerText = `LID: ${next.toUpperCase()}`;
+      }
     });
 
     const rotaryBtn = document.getElementById("rotary-speed-btn");
@@ -425,6 +482,7 @@ export class FxRackUI {
     const fx = audioCore.fxRack;
 
     const devMap = {
+      "piano-acoustics": fx.pianoAcoustics?.enabled,
       autopan: fx.autopan?.enabled,
       chorus: fx.chorus?.enabled,
       reverb: fx.reverb?.enabled,
@@ -441,6 +499,11 @@ export class FxRackUI {
         btn.innerText = isEnabled ? "ON" : "OFF";
       }
     });
+
+    const lidBtn = document.getElementById("piano-lid-btn");
+    if (lidBtn && fx.pianoAcoustics) {
+      lidBtn.innerText = `LID: ${fx.pianoAcoustics.lidPosition.toUpperCase()}`;
+    }
 
     const rotaryBtn = document.getElementById("rotary-speed-btn");
     if (rotaryBtn && fx.rotary) {

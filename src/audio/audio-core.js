@@ -31,22 +31,22 @@ export class AudioCore {
 
     this.sampleRate = this.ctx.sampleRate;
 
-    // Create Master Bus with safe calibrated headroom & punchy loudness
+    // Create Master Bus with punchy full-scale loudness
     this.masterGain = this.ctx.createGain();
-    this.masterGain.gain.value = 0.95;
+    this.masterGain.gain.value = 1.0;
 
     // Fast Peak Analyser for meters & oscilloscope
     this.analyser = this.ctx.createAnalyser();
     this.analyser.fftSize = 256;
     this.analyser.smoothingTimeConstant = 0.6;
 
-    // Transparent Hardware Output Ceiling Limiter (prevents DAC distortion while allowing full loudness)
+    // Transparent Hardware Output Ceiling Limiter (prevents DAC distortion while keeping pure dynamic range)
     this.hardwareLimiter = this.ctx.createDynamicsCompressor();
-    this.hardwareLimiter.threshold.value = -1.5;  // Peak ceiling threshold
-    this.hardwareLimiter.knee.value = 6.0;        // Smooth transparent knee
-    this.hardwareLimiter.ratio.value = 12.0;      // Studio peak limiter
-    this.hardwareLimiter.attack.value = 0.003;    // Fast 3ms transient catch
-    this.hardwareLimiter.release.value = 0.120;   // 120ms release
+    this.hardwareLimiter.threshold.value = -0.5;  // Transparent safety ceiling at -0.5 dB
+    this.hardwareLimiter.knee.value = 4.0;        // Smooth musical knee
+    this.hardwareLimiter.ratio.value = 8.0;       // Swift ceiling catch against hard clipping
+    this.hardwareLimiter.attack.value = 0.002;    // 2ms ultra-fast transient catch
+    this.hardwareLimiter.release.value = 0.050;   // 50ms fast recovery
 
     // Initialize FX Rack
     this.fxRack = new FxRackManager(this.ctx);

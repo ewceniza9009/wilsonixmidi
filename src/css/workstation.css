@@ -23,7 +23,8 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
+  gap: 10px;
 }
 
 /* Bottom Keyboard Deck (Always pinned, always 100% visible) */
@@ -1107,31 +1108,59 @@
    ========================================================================== */
 
 /* Default: Hide FX rack unless view-fx is active */
-#fx-rack-mount {
+/* ==========================================================================
+   WORKSPACE VIEW SWITCHER DISPLAY RULES (ZERO SCROLLING)
+   ========================================================================== */
+
+#multi-layer-mount,
+#fx-rack-mount,
+#middle-grid-section {
   display: none;
 }
 
-/* Triton Workstation View Mode */
+/* 0. ALL VIEW (Everything stacked & scrollable in workstation bay) */
+#app-root.view-all #triton-workstation-mount,
+#app-root.view-all #multi-layer-mount,
+#app-root.view-all #fx-rack-mount {
+  display: flex !important;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+#app-root.view-all #middle-grid-section {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+/* 1. Triton Workstation View Mode */
+#app-root.view-triton #triton-workstation-mount {
+  display: flex !important;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
 #app-root.view-triton #multi-layer-mount,
 #app-root.view-triton #fx-rack-mount,
 #app-root.view-triton #middle-grid-section {
   display: none !important;
 }
 
-/* Combi Multi-Layer View Mode */
+/* 2. Combi Multi-Layer View Mode (4-Timbre Mixer & Stacker) */
+#app-root.view-combi #multi-layer-mount {
+  display: flex !important;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
 #app-root.view-combi #triton-workstation-mount,
 #app-root.view-combi #fx-rack-mount,
 #app-root.view-combi #middle-grid-section {
   display: none !important;
 }
 
-/* Ableton FX Rack View Mode (100% inside bay, zero scrolling!) */
-#app-root.view-fx #triton-workstation-mount,
-#app-root.view-fx #multi-layer-mount,
-#app-root.view-fx #middle-grid-section {
-  display: none !important;
-}
-
+/* 3. Ableton FX Rack View Mode (100% inside bay, zero scrolling!) */
 #app-root.view-fx #fx-rack-mount {
   display: flex !important;
   flex-direction: column;
@@ -1140,12 +1169,31 @@
   overflow: hidden;
   justify-content: center;
 }
+#app-root.view-fx #triton-workstation-mount,
+#app-root.view-fx #multi-layer-mount,
+#app-root.view-fx #middle-grid-section {
+  display: none !important;
+}
 
 #app-root.view-fx .fx-rack-strip {
   margin: auto 0;
 }
 
-/* Keys Only Mode */
+/* 4. Chord Pads & Looper View Mode */
+#app-root.view-chords #middle-grid-section {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr;
+  flex: 1;
+  min-height: 0;
+  gap: 8px;
+}
+#app-root.view-chords #triton-workstation-mount,
+#app-root.view-chords #multi-layer-mount,
+#app-root.view-chords #fx-rack-mount {
+  display: none !important;
+}
+
+/* 5. Keys Only Mode */
 #app-root.view-keys #studio-workstation-bay {
   display: none !important;
 }
@@ -1164,25 +1212,6 @@
 
 #app-root.view-keys .piano-roll-container.zoom-wide .black-key {
   height: calc((100vh - 130px) * 0.64) !important;
-}
-
-/* Chord Pads View Mode */
-#app-root.view-chords #triton-workstation-mount,
-#app-root.view-chords #multi-layer-mount,
-#app-root.view-chords #fx-rack-mount {
-  display: none !important;
-}
-
-#app-root.view-chords .workstation-middle-grid {
-  grid-template-columns: 1fr 1fr;
-  height: 100%;
-}
-
-/* Looper View Mode */
-#app-root.view-looper #triton-workstation-mount,
-#app-root.view-looper #multi-layer-mount,
-#app-root.view-looper #fx-rack-mount {
-  display: none !important;
 }
 
 /* Mobile Screens (Phones & Small Tablets) */

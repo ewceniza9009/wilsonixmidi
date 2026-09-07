@@ -3,6 +3,7 @@
  * Chains: Tube Drive -> Phaser -> Korg Chorus -> Rotary -> Ping-Pong Delay -> Algorithmic Reverb -> EQ & Limiter
  */
 
+import { GrandPianoAcoustics } from "./effects/piano-acoustics.js";
 import { TubeDrive } from "./effects/tube-drive.js";
 import { AutoPan } from "./effects/auto-pan.js";
 import { StereoPhaser } from "./effects/phaser.js";
@@ -19,6 +20,7 @@ export class FxRackManager {
     this.output = ctx.createGain();
 
     // Instantiate all elite effects
+    this.pianoAcoustics = new GrandPianoAcoustics(ctx);
     this.tube = new TubeDrive(ctx);
     this.autopan = new AutoPan(ctx);
     this.phaser = new StereoPhaser(ctx);
@@ -27,27 +29,24 @@ export class FxRackManager {
     this.delay = new PingPongDelay(ctx);
     this.reverb = new AlgorithmicReverb(ctx);
 
-    // Equal-Loudness Stage: Calibrated preset trim gain & transparent RMS leveler
     this.presetTrimNode = ctx.createGain();
     this.presetTrimNode.gain.value = 1.0;
 
-    this.autoLeveler = ctx.createDynamicsCompressor();
-    this.autoLeveler.threshold.value = -18.0; // Gentle soft-knee threshold
-    this.autoLeveler.knee.value = 10.0;       // Smooth 10dB musical knee
-    this.autoLeveler.ratio.value = 1.4;       // Transparent 1.4:1 leveling
-    this.autoLeveler.attack.value = 0.015;    // 15ms transparent transient preserve
-    this.autoLeveler.release.value = 0.180;   // 180ms smooth musical decay
-
     this.masterEq = new StudioEqLimiter(ctx);
     this.onPresetChangeCallback = null;
+
+    if (typeof window !== "undefined") {
+      window.__pianoAcoustics = this.pianoAcoustics;
+    }
 
     this.chainEffects();
   }
 
   chainEffects() {
-    // Serial chain:
-    // Input -> TubeDrive -> AutoPan -> Phaser -> Chorus -> Rotary -> Delay -> Reverb -> PresetTrim -> AutoLeveler -> MasterEQ -> Output
-    this.input.connect(this.tube.input);
+    // Clean Studio Serial chain (Zero Distortion, Zero Compression squashing):
+    // Input -> GrandPianoAcoustics -> TubeDrive -> AutoPan -> Phaser -> Chorus -> Rotary -> Delay -> Reverb -> PresetTrim -> MasterEQ -> Output
+    this.input.connect(this.pianoAcoustics.input);
+    this.pianoAcoustics.output.connect(this.tube.input);
     this.tube.output.connect(this.autopan.input);
     this.autopan.output.connect(this.phaser.input);
     this.phaser.output.connect(this.chorus.input);
@@ -55,11 +54,11 @@ export class FxRackManager {
     this.rotary.output.connect(this.delay.input);
     this.delay.output.connect(this.reverb.input);
     this.reverb.output.connect(this.presetTrimNode);
-    this.presetTrimNode.connect(this.autoLeveler);
-    this.autoLeveler.connect(this.masterEq.input);
+    this.presetTrimNode.connect(this.masterEq.input);
     this.masterEq.output.connect(this.output);
 
-    // Default: Clean Studio Concert Grand
+    // Default: 100% Clean Studio Concert Grand (Pure pristine samples)
+    this.pianoAcoustics.setBypass(true);
     this.tube.setBypass(true);
     this.autopan.setBypass(true);
     this.phaser.setBypass(true);
@@ -67,7 +66,8 @@ export class FxRackManager {
     this.delay.setBypass(true);
     this.chorus.setBypass(true);
     this.reverb.setBypass(false);
-    this.reverb.setMix(0.28);
+    this.reverb.setMix(0.20);
+    this.reverb.setDecay(2.0);
   }
 
   setPresetTrim(val) {
@@ -117,40 +117,38 @@ export class FxRackManager {
       case "distortion_guitar":
       case "rock_lead":
       case "shreddage_lead_guitar":
-        this.setPresetTrim(0.85);
+        this.setPresetTrim(1.0);
         this.tube.setBypass(false);
-        this.tube.setDrive(0.65); // Warm, dynamic tube overdrive
-        this.tube.setMix(1.0);
-        this.tube.setTone(4500); // 4.5kHz guitar speaker cab roll-off
+        this.tube.setDrive(0.55); // Dynamic guitar overdrive
+        this.tube.setMix(0.60);
+        this.tube.setTone(5000);
         this.autopan.setBypass(true);
         this.chorus.setBypass(true);
         this.phaser.setBypass(true);
         this.rotary.setBypass(true);
         this.delay.setBypass(false);
-        this.delay.setMix(0.40);
-        this.delay.setFeedback(0.45);
+        this.delay.setMix(0.35);
+        this.delay.setFeedback(0.40);
         this.reverb.setBypass(false);
-        this.reverb.setMix(0.25);
+        this.reverb.setMix(0.20);
         this.reverb.setDecay(1.8);
         break;
 
       case "m1_organ":
       case "m1_rock_organ":
       case "drawbar_organ":
-        this.setPresetTrim(0.90);
-        this.tube.setBypass(false);
-        this.tube.setDrive(0.25); // Warm organ pre-amp saturation
-        this.tube.setMix(0.70);
+        this.setPresetTrim(1.0);
+        this.tube.setBypass(true); // Clean organ pre-amp
         this.autopan.setBypass(true);
         this.chorus.setBypass(true);
         this.phaser.setBypass(true);
         this.rotary.setBypass(false); // Rich Leslie Rotary swirl
         this.rotary.setSpeed("fast");
-        this.rotary.setMix(1.0);
+        this.rotary.setMix(0.85);
         this.delay.setBypass(true);
         this.reverb.setBypass(false);
-        this.reverb.setMix(0.32);
-        this.reverb.setDecay(2.2);
+        this.reverb.setMix(0.25);
+        this.reverb.setDecay(2.0);
         break;
 
       case "warm_strings":
@@ -158,41 +156,35 @@ export class FxRackManager {
       case "string_ensemble_1":
       case "m1_universe":
       case "m1_choir":
-        this.setPresetTrim(0.95);
+        this.setPresetTrim(1.0);
         this.tube.setBypass(true);
         this.autopan.setBypass(true);
         this.phaser.setBypass(true);
         this.rotary.setBypass(true);
         this.delay.setBypass(true);
         this.chorus.setBypass(false); // Deep ensemble chorus
-        this.chorus.setMix(0.65);
+        this.chorus.setMix(0.60);
         this.chorus.setRate(0.85);
         this.reverb.setBypass(false); // Cathedral Reverb
-        this.reverb.setMix(0.42);
-        this.reverb.setDecay(3.4);
+        this.reverb.setMix(0.35);
+        this.reverb.setDecay(3.0);
         break;
 
       case "synth_lead":
       case "fat_brass_horns":
       case "brass_section":
       case "m1_fresh_air":
-        this.setPresetTrim(0.90);
-        this.tube.setBypass(false);
-        this.tube.setDrive(0.35);
-        this.tube.setMix(0.60);
+        this.setPresetTrim(1.0);
+        this.tube.setBypass(true); // Pure clean brass / synth
         this.autopan.setBypass(true);
-        this.phaser.setBypass(false); // Analog 6-stage phaser
-        this.phaser.setMix(0.70);
-        this.phaser.setRate(0.8);
+        this.phaser.setBypass(true);
         this.chorus.setBypass(false);
-        this.chorus.setMix(0.45);
+        this.chorus.setMix(0.40);
         this.rotary.setBypass(true);
-        this.delay.setBypass(false);
-        this.delay.setMix(0.30);
-        this.delay.setFeedback(0.35);
+        this.delay.setBypass(true);
         this.reverb.setBypass(false);
-        this.reverb.setMix(0.28);
-        this.reverb.setDecay(2.2);
+        this.reverb.setMix(0.22);
+        this.reverb.setDecay(2.0);
         break;
 
       default: // Acoustic Concert Grand Piano
@@ -204,10 +196,10 @@ export class FxRackManager {
         this.rotary.setBypass(true);
         this.delay.setBypass(true);
         this.reverb.setBypass(false);
-        this.reverb.setMix(0.28);
-        this.reverb.setDecay(2.4);
+        this.reverb.setMix(0.22);
+        this.reverb.setDecay(2.2);
         this.masterEq.setLowGain(1.0);
-        this.masterEq.setHighGain(2.0);
+        this.masterEq.setHighGain(1.8);
         break;
     }
 

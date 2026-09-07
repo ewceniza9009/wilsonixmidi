@@ -153,7 +153,8 @@
   color: var(--text-secondary);
 }
 
-.rotary-speed-toggle {
+.rotary-speed-toggle,
+.piano-lid-toggle {
   background: #374151;
   color: var(--accent-amber);
   border: 1px solid var(--border-medium);
@@ -163,9 +164,11 @@
   border-radius: var(--radius-sm);
   cursor: pointer;
   margin-right: 4px;
+  white-space: nowrap;
 }
 
-.rotary-speed-toggle:active {
+.rotary-speed-toggle:active,
+.piano-lid-toggle:active {
   background: var(--accent-amber);
   color: #000;
 }

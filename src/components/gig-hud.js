@@ -131,6 +131,10 @@ export class GigHudUI {
         <!-- 5. Workspace View Switchers (Zero Scrolling - All in Stage Deck) -->
         <div class="hud-views-unit">
           <nav class="ws-tabs-bar" id="hud-workspace-tabs">
+            <button class="ws-tab-btn" data-view="all" title="View All Modules Stacked (Triton + Combi + FX + Chords)">
+              <span class="tab-icon">🎛️</span>
+              <span class="tab-label">ALL</span>
+            </button>
             <button class="ws-tab-btn active" data-view="triton" title="Korg Triton VST Console">
               <span class="tab-icon">🎹</span>
               <span class="tab-label">TRITON</span>
@@ -329,20 +333,19 @@ export class GigHudUI {
   }
 
   switchPatch(patchId) {
-    // Apply FX preset for the selected patch
-    synthEngine.setPatch(patchId);
-
-    if (patchId === "whitney_ballad" || patchId === "ballad_master") {
-      // COMBI presets: Multi-layer stacked sound (piano + strings + EP + shimmer)
+    if (COMBI_PRESETS[patchId]) {
+      // COMBI presets: Multi-layer stacked sound (e.g. Grand Piano + R&B EP + Strings + Sax + FX)
       multiLayerEngine.setCombiPreset(patchId);
       if (audioCore.fxRack) audioCore.fxRack.applyPreset(patchId);
+      synthEngine.setPatch(patchId);
+
       const layerBtn = document.getElementById("btn-toggle-layer");
       if (layerBtn) {
         layerBtn.classList.add("active");
         layerBtn.innerText = "LAYER: ON";
       }
     } else {
-      // SINGLE INSTRUMENT: Clean solo PCM sound — disable combi layers
+      // SINGLE INSTRUMENT: Solo PCM sound
       const BANK_MAP = {
         synthage_grand: "acoustic_grand_piano",
         triton_dyno_ep: "electric_piano_1",
@@ -363,6 +366,8 @@ export class GigHudUI {
       };
       const resolvedInst = BANK_MAP[patchId] || patchId;
       multiLayerEngine.setSingleInstrument(resolvedInst);
+      if (audioCore.fxRack) audioCore.fxRack.applyPreset(resolvedInst);
+      synthEngine.setPatch(patchId);
 
       const layerBtn = document.getElementById("btn-toggle-layer");
       if (layerBtn) {
