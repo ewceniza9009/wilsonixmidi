@@ -1074,29 +1074,32 @@ export class NativePcmEngine {
     voiceGain.channelInterpretation = "speakers";
 
     const INST_TRIM_GAINS = {
-      acoustic_grand_piano: 2.50,
-      abletunes_upright: 2.50,
-      m1_piano_16: 2.50,
-      electric_piano_1: 2.35,
-      abletunes_fm_piano: 2.35,
-      string_ensemble_1: 2.20,
-      m1_universe: 2.20,
-      m1_choir: 2.20,
-      acoustic_guitar_nylon: 2.30,
-      electric_guitar_clean: 2.20,
-      alto_sax: 1.75,
-      brass_section: 2.25,
-      drawbar_organ: 2.20,
-      synth_bass_1: 2.35,
-      m1_slap_bass: 2.35,
-      distortion_guitar: 1.90,
-      overdriven_guitar: 1.90,
+      acoustic_grand_piano: 1.35,
+      abletunes_upright: 1.35,
+      m1_piano_16: 1.35,
+      electric_piano_1: 1.25,
+      abletunes_fm_piano: 1.25,
+      string_ensemble_1: 1.15,
+      m1_universe: 1.15,
+      m1_choir: 1.15,
+      acoustic_guitar_nylon: 1.20,
+      electric_guitar_clean: 1.20,
+      alto_sax: 1.10,
+      brass_section: 1.20,
+      drawbar_organ: 1.20,
+      synth_bass_1: 1.25,
+      m1_slap_bass: 1.25,
+      distortion_guitar: 1.15,
+      overdriven_guitar: 1.15,
     };
     const resolvedId = this.findNearestAnchor(instId, midiNote, velocity)?.instKey || instId;
-    const trim = INST_TRIM_GAINS[instId] || INST_TRIM_GAINS[resolvedId] || 2.20;
+    const trim = INST_TRIM_GAINS[instId] || INST_TRIM_GAINS[resolvedId] || 1.20;
 
-    // High-energy, loud, punchy studio volume scaling (+5dB presence boost)
-    const peakGain = (0.75 + velNorm * 0.50) * customGain * trim;
+    // In Combi mode (multiple simultaneous layers), scale by 0.45 so 4 layers sum cleanly without blowing headroom
+    const combiScale = (layerIndex !== null && layerIndex !== undefined) ? 0.45 : 1.0;
+
+    // Clean, punchy, uncompressed studio volume scaling
+    const peakGain = (0.75 + velNorm * 0.40) * customGain * trim * combiScale;
 
     // 100% Click-free, pop-free attack envelope (starts at 0.0001 to prevent DC jump)
     voiceGain.gain.setValueAtTime(0.0001, now);
