@@ -803,6 +803,18 @@ export class NativePcmEngine {
       "distortion_guitar",
       "overdriven_guitar",
       "electric_guitar_clean",
+      "trumpet",
+      "trombone",
+      "tenor_sax",
+      "flute",
+      "clarinet",
+      "violin",
+      "cello",
+      "choir_aahs",
+      "church_organ",
+      "vibraphone",
+      "electric_piano_2",
+      "acoustic_bass",
     ];
     backgroundSoundfonts.forEach((id, idx) => {
       setTimeout(() => {
@@ -1220,6 +1232,18 @@ export class NativePcmEngine {
       m1_slap_bass: 1.05,
       distortion_guitar: 1.0,
       overdriven_guitar: 1.0,
+      trumpet: 1.05,
+      trombone: 1.05,
+      tenor_sax: 0.95,
+      flute: 1.0,
+      clarinet: 1.0,
+      violin: 1.0,
+      cello: 1.0,
+      choir_aahs: 1.0,
+      church_organ: 1.0,
+      vibraphone: 1.0,
+      electric_piano_2: 1.0,
+      acoustic_bass: 1.05,
     };
     const trim = INST_TRIM_GAINS[instId] || 1.0;
 

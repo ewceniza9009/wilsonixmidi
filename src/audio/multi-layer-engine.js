@@ -30,6 +30,18 @@ export const HD_SOUNDBANKS = {
   overdriven_guitar: { id: "overdriven_guitar", name: "Heavy Overdrive Guitar", category: "Guitar" },
   electric_guitar_clean: { id: "electric_guitar_clean", name: "Fender Strat Clean Guitar", category: "Guitar" },
   acoustic_guitar_nylon: { id: "acoustic_guitar_nylon", name: "Fantom Acoustic Nylon", category: "Guitar" },
+  trumpet: { id: "trumpet", name: "Miles Lead Trumpet", category: "Brass" },
+  trombone: { id: "trombone", name: "Tailgate Trombone", category: "Brass" },
+  tenor_sax: { id: "tenor_sax", name: "Blue Note Tenor Sax", category: "Woodwind" },
+  flute: { id: "flute", name: "Concert Flute", category: "Woodwind" },
+  clarinet: { id: "clarinet", name: "Licorice Stick Clarinet", category: "Woodwind" },
+  violin: { id: "violin", name: "Solo Violin", category: "Strings & Choir" },
+  cello: { id: "cello", name: "Warm Cello", category: "Strings & Choir" },
+  choir_aahs: { id: "choir_aahs", name: "Cathedral Choir Aahs", category: "Strings & Choir" },
+  church_organ: { id: "church_organ", name: "Cathedral Pipe Organ", category: "Organ" },
+  vibraphone: { id: "vibraphone", name: "Cool Vibraphone", category: "Bells & Pad" },
+  electric_piano_2: { id: "electric_piano_2", name: "FM Tine EP Second Voice", category: "Electric Piano" },
+  acoustic_bass: { id: "acoustic_bass", name: "Upright Walking Bass", category: "Bass & Sub" },
 };
 
 export const COMBI_PRESETS = {
