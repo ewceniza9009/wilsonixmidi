@@ -431,6 +431,11 @@ export class MultiLayerEngine {
     this.synthPatch = null;
     this.layers = JSON.parse(JSON.stringify(this.activeCombi.layers));
 
+    // Keyboard split: notes below the split point play bass instead (audible PCM path)
+    this.isSplitMode = false;
+    this.splitPointMidi = 60; // Middle C split
+    this.splitBassInst = "synth_bass_1";
+
     this.onLayerChangeCallback = null;
     this.layerChangeListeners = new Set();
   }
@@ -579,10 +584,22 @@ export class MultiLayerEngine {
     }
   }
 
+  toggleSplitMode(enabled) {
+    this.isSplitMode = enabled !== undefined ? enabled : !this.isSplitMode;
+  }
+
   noteOn(midiNote, velocity = 95) {
     if (!this.pcmEngine) this.init();
     if (audioCore.ctx && audioCore.ctx.state === "suspended") {
       audioCore.ctx.resume();
+    }
+
+    // Split zone: left hand plays bass regardless of mode
+    if (this.isSplitMode && midiNote < this.splitPointMidi) {
+      if (this.pcmEngine) {
+        this.pcmEngine.playNote(this.splitBassInst, midiNote, velocity, 1.0, null);
+      }
+      return;
     }
 
     // ALL MODES use PCM samples — never raw oscillator voices
@@ -612,6 +629,13 @@ export class MultiLayerEngine {
       if (synthEngine.isDualLayer) {
         synthEngine.releaseLayerVoice(midiNote);
       }
+    }
+
+    if (this.isSplitMode && midiNote < this.splitPointMidi) {
+      if (this.pcmEngine) {
+        this.pcmEngine.stopNote(this.splitBassInst, midiNote);
+      }
+      return;
     }
 
     if (this.pcmEngine) {

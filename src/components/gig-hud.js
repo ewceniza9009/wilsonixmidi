@@ -233,12 +233,14 @@ export class GigHudUI {
       }
     });
 
-    // Split toggle
+    // Split toggle (audible PCM path + legacy synth state kept in sync)
     const splitBtn = document.getElementById("btn-toggle-split");
     splitBtn?.addEventListener("click", () => {
-      synthEngine.toggleSplitMode();
-      splitBtn.classList.toggle("active", synthEngine.isSplitMode);
-      splitBtn.innerText = `SPLIT: ${synthEngine.isSplitMode ? "ON" : "OFF"}`;
+      const next = !multiLayerEngine.isSplitMode;
+      multiLayerEngine.toggleSplitMode(next);
+      synthEngine.toggleSplitMode(next);
+      splitBtn.classList.toggle("active", next);
+      splitBtn.innerText = `SPLIT: ${next ? "ON" : "OFF"}`;
     });
 
     // Tap Tempo
