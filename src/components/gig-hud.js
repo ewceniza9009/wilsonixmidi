@@ -7,7 +7,7 @@
  */
 
 import { synthEngine, INSTRUMENT_PATCHES } from "../audio/synth-engine.js";
-import { multiLayerEngine, HD_SOUNDBANKS } from "../audio/multi-layer-engine.js";
+import { multiLayerEngine, HD_SOUNDBANKS, COMBI_PRESETS } from "../audio/multi-layer-engine.js";
 import { audioCore } from "../audio/audio-core.js";
 import { midiManager } from "../midi/midi-manager.js";
 import { licenseManager } from "../security/license-manager.js";
