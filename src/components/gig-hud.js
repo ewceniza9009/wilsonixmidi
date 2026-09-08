@@ -44,7 +44,7 @@ export class GigHudUI {
             <span class="logo-accent">WILSONIX</span> MIDIKEY
           </div>
           <button class="license-badge-btn ${isPro ? "pro" : "demo"}" id="hud-license-btn" title="License Status">
-            ${isPro ? `★ PRO: ${licenseInfo?.licensee || "LICENSED"}` : "⚡ DEMO"}
+            ${isPro ? "★ PRO" : "⚡ DEMO"}
           </button>
         </div>
 
@@ -72,7 +72,7 @@ export class GigHudUI {
         <div class="hud-modes-unit">
           <div class="layer-control-group">
             <button class="mode-pill-btn ${isLayerActive ? "active" : ""}" id="btn-toggle-layer" title="Toggle 2nd Layer Sound">
-              ${isLayerActive ? "LAYER: ON" : "LAYER: OFF"}
+              ${isLayerActive ? "LAYER ON" : "LAYER"}
             </button>
             <select class="hud-layer-select" id="hud-layer-select" title="Choose 2nd Layer Sound">
               ${soundbanksList
@@ -88,7 +88,7 @@ export class GigHudUI {
           </div>
 
           <button class="mode-pill-btn ${synthEngine.isSplitMode ? "active" : ""}" id="btn-toggle-split" title="Split Bass on Left Hand">
-            SPLIT: ${synthEngine.isSplitMode ? "ON" : "OFF"}
+            ${synthEngine.isSplitMode ? "SPLIT ON" : "SPLIT"}
           </button>
         </div>
 
@@ -146,21 +146,26 @@ export class GigHudUI {
             </button>
             <button class="ws-tab-btn" data-view="fx" title="Ableton 7-Device Master FX Rack">
               <span class="tab-icon">🎛️</span>
-              <span class="tab-label">FX RACK</span>
+              <span class="tab-label">FX</span>
             </button>
             <button class="ws-tab-btn" data-view="chords" title="Chord Harmony Pads & Looper">
               <span class="tab-icon">🎼</span>
               <span class="tab-label">CHORDS</span>
             </button>
+            <button class="ws-tab-btn" data-view="grooves" title="Backing Grooves & SFX Soundboard">
+              <span class="tab-icon">🥁</span>
+              <span class="tab-label">GROOVES</span>
+            </button>
             <button class="ws-tab-btn" data-view="keys" title="Keys Focused View">
               <span class="tab-icon">🎹</span>
-              <span class="tab-label">KEYS ONLY</span>
+              <span class="tab-label">KEYS</span>
             </button>
             <button class="ws-tab-btn fullscreen-btn" id="btn-toggle-fullscreen" title="Toggle Fullscreen">
               <span class="tab-icon">⛶</span>
             </button>
           </nav>
         </div>
+
       </header>
     `;
 
@@ -334,7 +339,8 @@ export class GigHudUI {
             "view-keys",
             "view-chords",
             "view-fx",
-            "view-looper"
+            "view-looper",
+            "view-grooves"
           );
           appRoot.classList.add(`view-${view}`);
         }

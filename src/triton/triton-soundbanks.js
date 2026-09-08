@@ -121,4 +121,62 @@ export const TRITON_BANKS = {
       { id: "D003", num: "003", name: "Steel Drums Caribbean", category: "Bells & Mallet", osc1: "sine", osc2: "triangle", r1: 1.0, r2: 3.01, cutoff: 7800, Q: 3.5, attack: 0.001, decay: 1.8, sustain: 0.1, release: 0.3, ifx: "Chorus", mfx: "Plate Reverb" },
     ],
   },
+  NATURE: {
+    id: "NATURE",
+    name: "NATURE AMBIENCE",
+    category: "Elements & Organic",
+    programs: [
+      { id: "NAT01", num: "01", name: "Deep Thunder Strike", category: "Nature Sounds", instId: "nature_thunder", ifx: "Sub Limiter", mfx: "Cathedral Hall" },
+      { id: "NAT02", num: "02", name: "Gentle Rainstorm", category: "Nature Sounds", instId: "nature_rain", ifx: "Airy High EQ", mfx: "Stereo Chorus" },
+      { id: "NAT03", num: "03", name: "Ocean Surf Waves", category: "Nature Sounds", instId: "nature_ocean", ifx: "Auto-Pan", mfx: "Concert Hall" },
+      { id: "NAT04", num: "04", name: "Forest Bird Chirps", category: "Nature Sounds", instId: "nature_birds", ifx: "Stereo Delay", mfx: "Room Reverb" },
+      { id: "NAT05", num: "05", name: "Howling Wind Gusts", category: "Nature Sounds", instId: "nature_wind", ifx: "Resonant Filter", mfx: "Hall Reverb" },
+    ],
+  },
+  HUMAN_VOX: {
+    id: "HUMAN_VOX",
+    name: "HUMAN VOX & CHOIR",
+    category: "Voices & Beatbox",
+    programs: [
+      { id: "VOX01", num: "01", name: "Korg M1 03 Ooh-Ahh", category: "Choir & Vocal", instId: "m1_ooh_ahh", ifx: "Dimension Chorus", mfx: "Cathedral Hall" },
+      { id: "VOX02", num: "02", name: "Cathedral Choir Aahs", category: "Choir & Vocal", instId: "choir_aahs", ifx: "Stereo Ensemble", mfx: "Concert Hall" },
+      { id: "VOX03", num: "03", name: "Vocal Chant 'Yeah!'", category: "Human Voices", instId: "vox_yeah", ifx: "Presence EQ", mfx: "Plate Reverb" },
+      { id: "VOX04", num: "04", name: "Soul Vocal 'Whoa-Oh'", category: "Human Voices", instId: "vox_whoa", ifx: "Tape Delay", mfx: "Hall Reverb" },
+      { id: "VOX05", num: "05", name: "Hype Vocal 'Hey!'", category: "Human Voices", instId: "vox_hey", ifx: "Compressor", mfx: "Room Reverb" },
+      { id: "VOX06", num: "06", name: "Human Beatbox Kit", category: "Human Voices", instId: "vox_beatbox", ifx: "Punch Limiter", mfx: "Studio Plate" },
+    ],
+  },
+  WEIRD_FX: {
+    id: "WEIRD_FX",
+    name: "WEIRD & SCI-FI FX",
+    category: "Glitches & Cyber",
+    programs: [
+      { id: "SFX01", num: "01", name: "Laser Beam Zap", category: "Weird & Sci-Fi FX", instId: "fx_laser", ifx: "Ping-Pong Delay", mfx: "Plate Reverb" },
+      { id: "SFX02", num: "02", name: "Alien Hyperspace Drone", category: "Weird & Sci-Fi FX", instId: "fx_alien", ifx: "Phaser Swirl", mfx: "Cathedral Hall" },
+      { id: "SFX03", num: "03", name: "Bionic Glitch Cascade", category: "Weird & Sci-Fi FX", instId: "fx_bionic", ifx: "Decimator", mfx: "Tape Delay" },
+    ],
+  },
+  DJ_CINEMATIC: {
+    id: "DJ_CINEMATIC",
+    name: "DJ & CINEMATIC FX",
+    category: "Hits & Drops",
+    programs: [
+      { id: "DJ01", num: "01", name: "Vinyl Scratch Cut", category: "DJ & Cinematic FX", instId: "fx_scratch", ifx: "Bandpass EQ", mfx: "Room Reverb" },
+      { id: "DJ02", num: "02", name: "Tape Stop Slow-Down", category: "DJ & Cinematic FX", instId: "fx_tapestop", ifx: "Tape Saturation", mfx: "Hall Reverb" },
+      { id: "DJ03", num: "03", name: "Sub Bass Impact Boom", category: "DJ & Cinematic FX", instId: "fx_subboom", ifx: "Sub Enhancer", mfx: "Concert Hall" },
+      { id: "DJ04", num: "04", name: "Dancehall Reggae Airhorn", category: "DJ & Cinematic FX", instId: "fx_airhorn", ifx: "Echo Delay", mfx: "Plate Reverb" },
+    ],
+  },
+  PERCUSSION: {
+    id: "PERCUSSION",
+    name: "DRUMS & PERCUSSION",
+    category: "Kits & World",
+    programs: [
+      { id: "PRC01", num: "01", name: "TR-808 Analog Drum Kit", category: "Percussion & Drums", instId: "tr808_kit", ifx: "Punch Limiter", mfx: "Plate Reverb" },
+      { id: "PRC02", num: "02", name: "Afro-Cuban Congas", category: "Percussion & Drums", instId: "percussion_conga", ifx: "Mid-Warmth EQ", mfx: "Room Reverb" },
+      { id: "PRC03", num: "03", name: "Latin Shakers & Maracas", category: "Percussion & Drums", instId: "percussion_shaker", ifx: "High-Shelf Air", mfx: "Concert Hall" },
+      { id: "PRC04", num: "04", name: "Brass Section Cowbell", category: "Percussion & Drums", instId: "percussion_cowbell", ifx: "Metallic Resonator", mfx: "Room Reverb" },
+    ],
+  },
 };
+

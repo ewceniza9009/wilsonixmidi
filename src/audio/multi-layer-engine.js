@@ -56,7 +56,38 @@ export const HD_SOUNDBANKS = {
   slap_bass_1: { id: "slap_bass_1", name: "Slap Bass Attack", category: "Bass & Sub" },
   rock_organ: { id: "rock_organ", name: "Rock Organ Shout", category: "Organ" },
   harpsichord: { id: "harpsichord", name: "Baroque Harpsichord", category: "Bells & Pad" },
+
+  // Nature Sounds
+  nature_thunder: { id: "nature_thunder", name: "Deep Thunder Strike", category: "Nature Sounds" },
+  nature_rain: { id: "nature_rain", name: "Gentle Rainstorm Ambience", category: "Nature Sounds" },
+  nature_ocean: { id: "nature_ocean", name: "Ocean Surf Waves", category: "Nature Sounds" },
+  nature_birds: { id: "nature_birds", name: "Forest Bird Chirps", category: "Nature Sounds" },
+  nature_wind: { id: "nature_wind", name: "Howling Wind Gusts", category: "Nature Sounds" },
+
+  // Human Voices
+  vox_yeah: { id: "vox_yeah", name: "Vocal Chant 'Yeah!'", category: "Human Voices" },
+  vox_whoa: { id: "vox_whoa", name: "Soul Vocal 'Whoa-Oh'", category: "Human Voices" },
+  vox_hey: { id: "vox_hey", name: "Hype Vocal 'Hey!'", category: "Human Voices" },
+  vox_beatbox: { id: "vox_beatbox", name: "Human Beatbox Kit", category: "Human Voices" },
+
+  // Weird & Sci-Fi FX
+  fx_laser: { id: "fx_laser", name: "Laser Beam Zap", category: "Weird & Sci-Fi FX" },
+  fx_alien: { id: "fx_alien", name: "Alien Hyperspace Drone", category: "Weird & Sci-Fi FX" },
+  fx_bionic: { id: "fx_bionic", name: "Bionic Glitch Cascade", category: "Weird & Sci-Fi FX" },
+
+  // DJ & Cinematic FX
+  fx_scratch: { id: "fx_scratch", name: "Vinyl Scratch Cut", category: "DJ & Cinematic FX" },
+  fx_tapestop: { id: "fx_tapestop", name: "Tape Stop Slow-Down", category: "DJ & Cinematic FX" },
+  fx_subboom: { id: "fx_subboom", name: "Sub Bass Impact Boom", category: "DJ & Cinematic FX" },
+  fx_airhorn: { id: "fx_airhorn", name: "Dancehall Reggae Airhorn", category: "DJ & Cinematic FX" },
+
+  // Percussions & Drums
+  tr808_kit: { id: "tr808_kit", name: "TR-808 Analog Drum Kit", category: "Percussion & Drums" },
+  percussion_conga: { id: "percussion_conga", name: "Afro-Cuban Congas", category: "Percussion & Drums" },
+  percussion_shaker: { id: "percussion_shaker", name: "Latin Shaker & Maracas", category: "Percussion & Drums" },
+  percussion_cowbell: { id: "percussion_cowbell", name: "Brass Section Cowbell", category: "Percussion & Drums" },
 };
+
 
 export const COMBI_PRESETS = {
   whitney_ballad: {

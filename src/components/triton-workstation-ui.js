@@ -520,7 +520,9 @@ export class TritonWorkstationUI {
     const ifx = (prog.ifx || "").toLowerCase();
     const mfx = (prog.mfx || "").toLowerCase();
 
-    if (name.includes("distortion") || name.includes("*dist") || prog.id === "A042") {
+    if (prog.instId) {
+      instKey = prog.instId;
+    } else if (name.includes("distortion") || name.includes("*dist") || prog.id === "A042") {
       instKey = "distortion_guitar";
     } else if (name.includes("feedback") || name.includes("overdrive") || prog.id === "A037") {
       instKey = "overdriven_guitar";
@@ -540,8 +542,12 @@ export class TritonWorkstationUI {
       instKey = "brass_section";
     } else if (cat.includes("lead") || cat.includes("fast synth") || cat.includes("synthesizer") || cat.includes("hit") || name.includes("lead") || name.includes("trance") || name.includes("saw")) {
       instKey = "brass_section";
-    } else if (cat.includes("strings") || cat.includes("pad") || cat.includes("choir")) {
+    } else if (cat.includes("choir") || cat.includes("vocal") || name.includes("choir") || name.includes("voice") || name.includes("vox") || name.includes("ooh") || name.includes("ahh")) {
+      instKey = "choir_aahs";
+    } else if (cat.includes("strings") || cat.includes("pad")) {
       instKey = "string_ensemble_1";
+    } else if (cat.includes("percussion") || cat.includes("drum")) {
+      instKey = "tr808_kit";
     } else if (cat.includes("piano") || cat.includes("keyboard")) {
       instKey = "acoustic_grand_piano";
     }

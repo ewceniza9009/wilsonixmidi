@@ -15,6 +15,7 @@ import { VirtualKeyboardUI } from "./components/virtual-keyboard.js";
 import { LicenseModalUI } from "./components/license-modal.js";
 import { TritonWorkstationUI } from "./components/triton-workstation-ui.js";
 import { MultiLayerUI } from "./components/multi-layer-ui.js";
+import { GroovePlayerUI } from "./components/groove-player-ui.js";
 import { multiLayerEngine } from "./audio/multi-layer-engine.js";
 
 class MidiKeyEliteApp {
@@ -25,6 +26,7 @@ class MidiKeyEliteApp {
     this.fxRack = null;
     this.chordPads = null;
     this.looper = null;
+    this.grooveStation = null;
     this.virtualKeyboard = null;
     this.licenseModal = null;
     this.unlocked = false;
@@ -135,6 +137,13 @@ class MidiKeyEliteApp {
       console.warn("ChordPads / Looper init:", e);
     }
 
+    // 6b. Groove Station & SFX Performance Soundboard
+    try {
+      this.grooveStation = new GroovePlayerUI("groove-station-mount");
+    } catch (e) {
+      console.warn("GroovePlayerUI init:", e);
+    }
+
     // 7. Ableton Device FX Rack
     try {
       this.fxRack = new FxRackUI("fx-rack-mount");
@@ -174,7 +183,8 @@ class MidiKeyEliteApp {
             "view-keys",
             "view-chords",
             "view-fx",
-            "view-looper"
+            "view-looper",
+            "view-grooves"
           );
           appRoot.classList.add(`view-${view}`);
         }

@@ -12,6 +12,7 @@
 
 import { KORG_PCM_BANKS } from "./korg-pcm-data.js";
 import { ABLETUNES_BANKS } from "./abletunes-manifest.js";
+import { SfxSoundGenerator } from "./sfx-sound-generator.js";
 
 const NOTE_MAP = {
   C: 0, "C#": 1, Db: 1, D: 2, "D#": 3, Eb: 3, E: 4, F: 5, "F#": 6, Gb: 6, G: 7, "G#": 8, Ab: 8, A: 9, "A#": 10, Bb: 10, B: 11
@@ -575,6 +576,7 @@ export class NativePcmEngine {
   constructor(ctx, destinationNode) {
     this.ctx = ctx;
     this.destination = destinationNode;
+    this.sfxGenerator = new SfxSoundGenerator(ctx, destinationNode);
 
     // 4 Dedicated Layer Insert Processors for the 4 Combi Racks
     this.layerInserts = [
@@ -859,6 +861,14 @@ export class NativePcmEngine {
     this.loadAbletunesInstrument("upright_piano");
     const prioritySoundfonts = [
       "choir_aahs",
+      "voice_oohs",
+      "applause",
+      "seashore",
+      "bird_tweet",
+      "breath_noise",
+      "taiko_drum",
+      "synth_drum",
+      "gunshot",
       "string_ensemble_1",
       "drawbar_organ",
       "brass_section",
@@ -1071,12 +1081,36 @@ export class NativePcmEngine {
 
       // 6. Real Human Vocal Choir - 100% DISTINCT from Strings!
       choir_aahs: "choir_aahs",
+      voice_oohs: "voice_oohs",
       m1_choir: "choir_aahs",
-      m1_ooh_ahh: "choir_aahs",
-      ooh_ahh: "choir_aahs",
+      m1_ooh_ahh: "voice_oohs",
+      ooh_ahh: "voice_oohs",
       choir: "choir_aahs",
       choral: "choir_aahs",
       cathedral_choir: "choir_aahs",
+      angelic_oohs: "voice_oohs",
+      vocal_breath: "breath_noise",
+      breath_noise: "breath_noise",
+
+      // Concert Crowd & Applause
+      applause: "applause",
+      concert_applause: "applause",
+      stadium_roar: "applause",
+      crowd_cheer: "applause",
+      ovation: "applause",
+
+      // Real Nature Field Recordings
+      seashore: "seashore",
+      ocean_waves: "seashore",
+      bird_tweet: "bird_tweet",
+      forest_birds: "bird_tweet",
+
+      // Real Acoustic & Synth Drums
+      taiko_drum: "taiko_drum",
+      thunder_taiko: "taiko_drum",
+      synth_drum: "synth_drum",
+      gunshot: "gunshot",
+      sub_boom: "gunshot",
 
       // 7. Strings & Pads
       string_ensemble_1: "string_ensemble_1",
@@ -1229,6 +1263,10 @@ export class NativePcmEngine {
   }
 
   playNote(instId, midiNote, velocity = 95, customGain = 1.0, layerIndex = null) {
+    if (this.sfxGenerator && this.sfxGenerator.isSfxInstrument(instId)) {
+      return this.sfxGenerator.playSfxNote(instId, midiNote, velocity, customGain);
+    }
+
     const anchorData = this.findNearestAnchor(instId, midiNote, velocity);
     if (!anchorData || !anchorData.buffer) {
       return null;
