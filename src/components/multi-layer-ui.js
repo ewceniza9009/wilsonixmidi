@@ -21,26 +21,44 @@ export class MultiLayerUI {
   render() {
     if (!this.container) return;
 
+    const allPresets = Object.values(COMBI_PRESETS);
+    const catOrder = [];
+    allPresets.forEach(cp => {
+      if (cp.category && !catOrder.includes(cp.category)) catOrder.push(cp.category);
+    });
+
     this.container.innerHTML = `
       <div class="combi-layers-console">
-        <!-- Combi Header & Quick Presets -->
+        <!-- Combi Header & Compact Preset Selector -->
         <div class="combi-header-bar">
           <div class="combi-title-group">
             <span class="combi-pill">WORKSTATION COMBI</span>
             <span class="combi-main-title">4-TIMBRE MULTI-LAYER INPUT MATRIX</span>
           </div>
 
-          <div class="combi-preset-strip">
-            ${Object.values(COMBI_PRESETS)
-              .map(
-                cp => `
-              <button class="combi-preset-btn ${multiLayerEngine.activeCombi.id === cp.id ? "active" : ""}"
-                      data-combi="${cp.id}">
-                ${cp.name}
-              </button>
-            `
-              )
-              .join("")}
+          <div class="combi-selector-row">
+            <button class="preset-arrow-btn" id="combi-prev-btn" title="Previous preset">◀</button>
+            <select class="combi-preset-select" id="combi-preset-select" title="Choose combi preset">
+              ${catOrder
+                .map(
+                  cat => `
+                <optgroup label="${cat}">
+                  ${allPresets
+                    .filter(cp => cp.category === cat)
+                    .map(
+                      cp => `
+                    <option value="${cp.id}" ${multiLayerEngine.activeCombi.id === cp.id ? "selected" : ""}>
+                      ${cp.name}
+                    </option>
+                  `
+                    )
+                    .join("")}
+                </optgroup>
+              `
+                )
+                .join("")}
+            </select>
+            <button class="preset-arrow-btn" id="combi-next-btn" title="Next preset">▶</button>
           </div>
         </div>
 
@@ -164,15 +182,23 @@ export class MultiLayerUI {
   }
 
   bindEvents() {
-    // Combi Presets
-    this.container.querySelectorAll(".combi-preset-btn[data-combi]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const combiId = btn.getAttribute("data-combi");
-        multiLayerEngine.setCombiPreset(combiId);
-        this.render();
-        this.bindEvents();
-      });
+    // Combi preset selector + steppers
+    const presetSelect = this.container.querySelector("#combi-preset-select");
+    presetSelect?.addEventListener("change", e => {
+      multiLayerEngine.setCombiPreset(e.target.value);
+      this.render();
+      this.bindEvents();
     });
+    const stepPreset = delta => {
+      const ids = Object.keys(COMBI_PRESETS);
+      const cur = Math.max(0, ids.indexOf(multiLayerEngine.activeCombi.id));
+      const next = ids[(cur + delta + ids.length) % ids.length];
+      multiLayerEngine.setCombiPreset(next);
+      this.render();
+      this.bindEvents();
+    };
+    this.container.querySelector("#combi-prev-btn")?.addEventListener("click", () => stepPreset(-1));
+    this.container.querySelector("#combi-next-btn")?.addEventListener("click", () => stepPreset(1));
 
     // My Presets: save / load / delete
     const rerender = () => {
@@ -281,6 +307,11 @@ export class MultiLayerUI {
   }
 
   updateLayerFaders() {
+    const presetSelect = this.container.querySelector("#combi-preset-select");
+    if (presetSelect && multiLayerEngine.activeCombi?.id) {
+      const exists = [...presetSelect.options].some(o => o.value === multiLayerEngine.activeCombi.id);
+      if (exists) presetSelect.value = multiLayerEngine.activeCombi.id;
+    }
     multiLayerEngine.layers.forEach((l, i) => {
       const fader = this.container.querySelector(`.vertical-fader[data-layer="${i}"]`);
       const readout = document.getElementById(`fader-val-${i}`);
