@@ -28,14 +28,14 @@ export class AlgorithmicReverb {
     this.dryGain.connect(this.output);
     this.dryGain.gain.value = 1.0;
 
-    // 2. Pre-Filters: 160Hz highpass cuts mud/rumble, 6500Hz lowpass prevents harsh sheen
+    // 2. Pre-Filters: 160Hz highpass cuts mud/rumble, 7500Hz lowpass keeps tails clean
     this.preHp = ctx.createBiquadFilter();
     this.preHp.type = "highpass";
     this.preHp.frequency.value = 160;
 
     this.preLp = ctx.createBiquadFilter();
     this.preLp.type = "lowpass";
-    this.preLp.frequency.value = 6500;
+    this.preLp.frequency.value = 7500;
 
     this.input.connect(this.preHp);
     this.preHp.connect(this.preLp);

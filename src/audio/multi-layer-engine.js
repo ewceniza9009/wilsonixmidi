@@ -590,9 +590,7 @@ export class MultiLayerEngine {
 
   noteOn(midiNote, velocity = 95) {
     if (!this.pcmEngine) this.init();
-    if (audioCore.ctx && audioCore.ctx.state === "suspended") {
-      audioCore.ctx.resume();
-    }
+    audioCore.ensureRunning();
 
     // Split zone: left hand plays bass regardless of mode
     if (this.isSplitMode && midiNote < this.splitPointMidi) {
@@ -624,6 +622,7 @@ export class MultiLayerEngine {
   }
 
   noteOff(midiNote) {
+    audioCore.ensureRunning();
     if (this.isSynthMode) {
       synthEngine.noteOff(midiNote);
       if (synthEngine.isDualLayer) {
@@ -668,6 +667,7 @@ export class MultiLayerEngine {
 
   setSustainPedal(isDown) {
     if (!this.pcmEngine) this.init();
+    audioCore.ensureRunning();
     if (this.pcmEngine) this.pcmEngine.setSustainPedal(isDown);
   }
 

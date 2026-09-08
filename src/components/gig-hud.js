@@ -125,6 +125,7 @@ export class GigHudUI {
             <span class="hud-vol-icon">🔊</span>
             <input type="range" id="hud-master-vol" min="0" max="100" value="50" class="hud-vol-slider" />
             <span class="hud-vol-readout" id="hud-master-vol-val">50%</span>
+            <button class="hud-vol-icon" id="hud-diag-btn" title="Record 8s of master output for crackle diagnosis" style="cursor:pointer;background:none;border:none;">⏺</button>
           </div>
         </div>
 
@@ -272,6 +273,17 @@ export class GigHudUI {
       const val = parseInt(e.target.value);
       if (volReadout) volReadout.innerText = `${val}%`;
       audioCore.setMasterVolume(val / 100);
+    });
+
+    // DIAG recorder: tap once to start, play the crackle, tap again to download
+    const diagBtn = document.getElementById("hud-diag-btn");
+    diagBtn?.addEventListener("click", () => {
+      if (audioCore.isDiagRecording) {
+        audioCore.stopDiagRecord();
+        if (diagBtn) diagBtn.innerText = "⏺";
+      } else {
+        if (audioCore.startDiagRecord() && diagBtn) diagBtn.innerText = "⏹";
+      }
     });
 
     // License modal trigger

@@ -87,11 +87,25 @@ export class AudioCore {
       this.ctx.resume().then(() => {
         this.isUnlocked = true;
         this.updateLatencyMetrics();
-      });
+      }).catch(() => {});
     } else {
       this.isUnlocked = true;
       this.updateLatencyMetrics();
     }
+  }
+
+  // Watchdog: browsers suspend audio on tab switch/bluetooth changes and it
+  // never comes back on its own (total silence that feels like a crash)
+  ensureRunning() {
+    try {
+      if (!this.ctx) {
+        this.init();
+        return;
+      }
+      if (this.ctx.state === "suspended") {
+        this.ctx.resume().catch(() => {});
+      }
+    } catch (e) {}
   }
 
   updateLatencyMetrics() {
@@ -122,6 +136,58 @@ export class AudioCore {
     if (!this.masterGain || !this.ctx) return;
     const v = Math.max(0, Math.min(3.0, val * 3.0));
     this.masterGain.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02);
+  }
+
+  // DIAG recorder: taps post-limiter master output so crackle reports can be
+  // analyzed as real waveforms instead of guessed at
+  startDiagRecord() {
+    try {
+      if (!this.ctx || this.diagRecorder) return false;
+      this.diagDest = this.ctx.createMediaStreamDestination();
+      this.hardwareLimiter.connect(this.diagDest);
+      this.diagChunks = [];
+      this.diagRecorder = new MediaRecorder(this.diagDest.stream);
+      this.diagRecorder.ondataavailable = e => {
+        if (e.data && e.data.size > 0) this.diagChunks.push(e.data);
+      };
+      this.diagRecorder.start(250);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  stopDiagRecord() {
+    try {
+      if (!this.diagRecorder) return;
+      const rec = this.diagRecorder;
+      rec.onstop = () => {
+        try {
+          const blob = new Blob(this.diagChunks || [], { type: rec.mimeType || "audio/webm" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "wilsonix-diag.webm";
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          }, 2000);
+        } catch (e) {}
+        try {
+          this.hardwareLimiter.disconnect(this.diagDest);
+        } catch (e) {}
+        this.diagRecorder = null;
+        this.diagDest = null;
+        this.diagChunks = [];
+      };
+      rec.stop();
+    } catch (e) {}
+  }
+
+  get isDiagRecording() {
+    return !!this.diagRecorder;
   }
 }
 

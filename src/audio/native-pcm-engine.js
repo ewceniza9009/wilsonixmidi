@@ -557,6 +557,20 @@ export class NativePcmEngine {
     this.voiceQueue = [];
     this.MAX_VOICES = 28;
 
+    // Shared felt-hammer transient: 60ms exponentially-decaying noise burst,
+    // bandpassed per-note to imitate grand hammer strike on piano voices
+    try {
+      const hlen = Math.floor(ctx.sampleRate * 0.06);
+      this.hammerBuf = ctx.createBuffer(1, hlen, ctx.sampleRate);
+      const hd = this.hammerBuf.getChannelData(0);
+      for (let i = 0; i < hlen; i++) {
+        const t = i / hlen;
+        hd[i] = (Math.random() * 2 - 1) * Math.exp(-t * 9);
+      }
+    } catch (e) {
+      this.hammerBuf = null;
+    }
+
     this.loadingSoundfonts = new Set();
     this.isReady = false;
 
@@ -660,25 +674,43 @@ export class NativePcmEngine {
     });
   }
 
+  // Graceful end-fade for buffers that stay unlooped: a loud tail hitting file
+  // end is an audible chop, so slope the last moments to silence instead
+  fadeBufferEnd(buf, seconds) {
+    try {
+      if (!buf) return buf;
+      const fadeLen = Math.min(Math.floor(buf.sampleRate * seconds), Math.floor(buf.length * 0.25));
+      if (fadeLen < 32) return buf;
+      for (let c = 0; c < buf.numberOfChannels; c++) {
+        const d = buf.getChannelData(c);
+        for (let i = 0; i < fadeLen; i++) {
+          const t = i / fadeLen;
+          d[buf.length - fadeLen + i] *= 0.5 * (1 + Math.cos(t * Math.PI));
+        }
+      }
+    } catch (e) {}
+    return buf;
+  }
+
   createCrossfadedLoopBuffer(ctx, originalBuf, instId) {
     // Sustain loops via best-match search (sampler-style): find the loop start whose
     // waveform best matches the loop end, so the splice is seamless with only a 25ms
-    // equal-power blend. Samples with no clean match (decaying pianos) stay unlooped
-    // and decay naturally instead of click-looping.
+    // equal-power blend. Samples with no clean match decay with a graceful end-fade
+    // instead of chopping off at file end.
     if (!originalBuf || originalBuf.duration < 0.6) {
-      return originalBuf;
+      return this.fadeBufferEnd(originalBuf, 0.15);
     }
     const numChannels = Math.max(2, originalBuf.numberOfChannels);
     const sampleRate = originalBuf.sampleRate;
     const totalSamples = originalBuf.length;
 
-    const fadeSamples = Math.min(Math.floor(sampleRate * 0.025), Math.floor(totalSamples * 0.03));
+    const fadeSamples = Math.min(Math.floor(sampleRate * 0.06), Math.floor(totalSamples * 0.06));
     const loopEndSample = totalSamples - fadeSamples;
-    const minLoopLen = Math.min(Math.floor(sampleRate * 0.4), Math.floor(totalSamples * 0.2));
+    const minLoopLen = Math.min(Math.floor(sampleRate * 0.5), Math.floor(totalSamples * 0.2));
     const searchFrom = Math.floor(totalSamples * 0.15);
     const searchTo = loopEndSample - minLoopLen;
     if (searchTo <= searchFrom || fadeSamples < 64) {
-      return originalBuf;
+      return this.fadeBufferEnd(originalBuf, 0.3);
     }
 
     let loopStartSample = -1;
@@ -693,34 +725,30 @@ export class NativePcmEngine {
       }
       const rms = Math.sqrt(sum / Math.max(1, cnt));
       if (rms < 0.001) {
-        return originalBuf;
+        return this.fadeBufferEnd(originalBuf, 0.3);
       }
       const W = Math.min(1024, fadeSamples * 2);
       const endBase = loopEndSample - W;
-      // Loose threshold + loudest-match preference: sustained chords ring long and
-      // full instead of fading into a whisper; the 25ms blend hides the splice
-      const threshold = rms * 0.45;
-      let bestRms = -1;
+      // Earliest clean match wins: longest loop = fewest splices per second, and
+      // never a hot tonal slice replayed forever (that whistles like amp feedback).
+      // Loose threshold so decaying pianos/EPs get tail loops and ring like real
+      // damper-held strings (5-30s) instead of dying at the 3s file end.
+      const threshold = rms * 0.55;
       for (let s = searchFrom; s <= searchTo; s += 256) {
         let diff = 0;
-        let lvl = 0;
         for (let i = 0; i < W; i += 2) {
           const d = ref[s + i] - ref[endBase + i];
           diff += d * d;
-          lvl += ref[s + i] * ref[s + i];
         }
         diff = Math.sqrt(diff / (W / 2));
         if (diff < threshold) {
-          const startRms = Math.sqrt(lvl / (W / 2));
-          if (startRms > bestRms) {
-            bestRms = startRms;
-            loopStartSample = s;
-          }
+          loopStartSample = s;
+          break;
         }
       }
     } catch (e) {}
     if (loopStartSample < 0) {
-      return originalBuf;
+      return this.fadeBufferEnd(originalBuf, 0.3);
     }
 
     const newBuf = ctx.createBuffer(numChannels, loopEndSample, sampleRate);
@@ -1263,11 +1291,11 @@ export class NativePcmEngine {
     } else {
       voiceGain.gain.setTargetAtTime(peakGain, now, 0.002);
     }
-    // Bounded sustain: full hold ~5s, then slow exponential die-out (~9s to silence).
+    // Bounded sustain: full hold ~8s, then slow exponential die-out (~14s to silence).
     // Releasing keys/sustain overrides this instantly via its own release envelope.
-    voiceGain.gain.setTargetAtTime(0.0001, now + 5.0, 1.5);
+    voiceGain.gain.setTargetAtTime(0.0001, now + 8.0, 2.0);
     try {
-      src.stop(now + 12);
+      src.stop(now + 18);
     } catch (e) {}
 
     // Voice Audio Chain: Source -> TVF -> TVA -> (Layer Insert Bus | Master Rack)
@@ -1283,6 +1311,27 @@ export class NativePcmEngine {
 
     // Instant sample-0 hardware playback
     src.start(0);
+
+    // Felt-hammer layer for piano voices: short bandpassed thock under the attack,
+    // velocity-scaled like a real action (soft touch = felt, hard hit = wood crack)
+    try {
+      const isPianoHammer = instId === "abletunes_upright" || instId === "acoustic_grand_piano" || instId === "m1_piano_16";
+      if (isPianoHammer && this.hammerBuf) {
+        const hsrc = ctx.createBufferSource();
+        hsrc.buffer = this.hammerBuf;
+        const hbp = ctx.createBiquadFilter();
+        hbp.type = "bandpass";
+        hbp.frequency.value = 1800 + velNorm * 1400;
+        hbp.Q.value = 0.9;
+        const hg = ctx.createGain();
+        hg.gain.setValueAtTime(0.12 * velNorm * velNorm, now);
+        hsrc.connect(hbp);
+        hbp.connect(hg);
+        hg.connect(dest);
+        hsrc.start(now);
+        hsrc.stop(now + 0.08);
+      }
+    } catch (e) {}
 
     // Voice record
     const voiceRecord = {
@@ -1443,6 +1492,28 @@ export class NativePcmEngine {
             this.sustainedVoices.set(midiNote, []);
           }
           this.sustainedVoices.get(midiNote).push(v);
+          // Bound the sustain pool so marathon pedal use can't pile up unbounded voices
+          try {
+            let totalSus = 0;
+            this.sustainedVoices.forEach(list => { totalSus += list.length; });
+            while (totalSus > 24) {
+              let oldest = null;
+              let oldestKey = null;
+              for (const [key, list] of this.sustainedVoices) {
+                if (list.length > 0) {
+                  oldest = list[0];
+                  oldestKey = key;
+                  break;
+                }
+              }
+              if (!oldest) break;
+              oldest.voiceGain.gain.cancelScheduledValues(now);
+              oldest.voiceGain.gain.setTargetAtTime(0, now, 0.005);
+              oldest.src.stop(now + 0.05);
+              this.removeVoice(oldestKey, oldest);
+              totalSus--;
+            }
+          } catch (e) {}
         } else {
           // 100% Click-free, pop-free acoustic damper release with exponential decay
           try {
