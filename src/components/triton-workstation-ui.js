@@ -228,7 +228,9 @@ export class TritonWorkstationUI {
     const isChorus = fx?.chorus?.enabled;
     const isTube = fx?.tube?.enabled;
     const isPhaser = fx?.phaser?.enabled;
+    const isFlanger = fx?.flanger?.enabled;
     const isRotary = fx?.rotary?.enabled;
+    const isTremolo = fx?.tremolo?.enabled;
     const isDelay = fx?.delay?.enabled;
     const isReverb = fx?.reverb?.enabled;
 
@@ -307,6 +309,32 @@ export class TritonWorkstationUI {
               <div class="slot-knobs">
                 <button class="rotary-speed-btn-triton" id="triton-rotary-speed">${fx?.rotary?.speedMode === "fast" ? "FAST (TREMOLO)" : "SLOW (CHORALE)"}</button>
                 <div class="slot-param"><span>DRIVE/MIX</span><input type="range" class="fx-slider" data-fx-param="rotary-mix" min="0" max="1" step="0.05" value="0.65"/></div>
+              </div>
+            </div>
+
+            <!-- IFX 6: Stereo Tape Flanger -->
+            <div class="ifx-slot-card">
+              <div class="slot-bar">
+                <span class="slot-tag">IFX 6</span>
+                <span class="slot-name">022: Stereo Tape Flanger</span>
+                <button class="slot-toggle ${isFlanger ? "active" : ""}" data-fx="flanger">${isFlanger ? "ON" : "OFF"}</button>
+              </div>
+              <div class="slot-knobs">
+                <div class="slot-param"><span>RATE</span><input type="range" class="fx-slider" data-fx-param="flanger-rate" min="0.1" max="5.0" step="0.1" value="${fx?.flanger?.rate || 0.45}"/></div>
+                <div class="slot-param"><span>MIX</span><input type="range" class="fx-slider" data-fx-param="flanger-mix" min="0" max="1" step="0.05" value="${fx?.flanger?.mix || 0.45}"/></div>
+              </div>
+            </div>
+
+            <!-- IFX 7: Vintage Optical Tremolo -->
+            <div class="ifx-slot-card">
+              <div class="slot-bar">
+                <span class="slot-tag">IFX 7</span>
+                <span class="slot-name">021: Vintage Optical Tremolo</span>
+                <button class="slot-toggle ${isTremolo ? "active" : ""}" data-fx="tremolo">${isTremolo ? "ON" : "OFF"}</button>
+              </div>
+              <div class="slot-knobs">
+                <div class="slot-param"><span>RATE</span><input type="range" class="fx-slider" data-fx-param="tremolo-rate" min="0.2" max="12.0" step="0.1" value="${fx?.tremolo?.rate || 4.5}"/></div>
+                <div class="slot-param"><span>DEPTH</span><input type="range" class="fx-slider" data-fx-param="tremolo-depth" min="0" max="1" step="0.05" value="${fx?.tremolo?.depth || 0.55}"/></div>
               </div>
             </div>
           </div>
@@ -613,7 +641,11 @@ export class TritonWorkstationUI {
       case "tube-tone": fx.tube?.setTone(val); break;
       case "phaser-rate": fx.phaser?.setRate(val); break;
       case "phaser-mix": fx.phaser?.setMix(val); break;
+      case "flanger-rate": fx.flanger?.setRate(val); break;
+      case "flanger-mix": fx.flanger?.setMix(val); break;
       case "rotary-mix": fx.rotary?.setMix(val); break;
+      case "tremolo-rate": fx.tremolo?.setRate(val); break;
+      case "tremolo-depth": fx.tremolo?.setDepth(val); break;
       case "delay-mix": fx.delay?.setMix(val); break;
       case "delay-feedback": fx.delay?.setFeedback(val); break;
       case "reverb-mix": fx.reverb?.setMix(val); break;

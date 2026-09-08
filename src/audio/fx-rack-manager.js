@@ -7,8 +7,10 @@ import { GrandPianoAcoustics } from "./effects/piano-acoustics.js";
 import { TubeDrive } from "./effects/tube-drive.js";
 import { AutoPan } from "./effects/auto-pan.js";
 import { StereoPhaser } from "./effects/phaser.js";
+import { StereoFlanger } from "./effects/flanger.js";
 import { KorgStereoChorus } from "./effects/chorus.js";
 import { RotarySpeaker } from "./effects/rotary.js";
+import { TremoloPulse } from "./effects/tremolo.js";
 import { PingPongDelay } from "./effects/delay.js";
 import { AlgorithmicReverb } from "./effects/reverb.js";
 import { StudioEqLimiter } from "./effects/eq-limiter.js";
@@ -24,8 +26,10 @@ export class FxRackManager {
     this.tube = new TubeDrive(ctx);
     this.autopan = new AutoPan(ctx);
     this.phaser = new StereoPhaser(ctx);
+    this.flanger = new StereoFlanger(ctx);
     this.chorus = new KorgStereoChorus(ctx);
     this.rotary = new RotarySpeaker(ctx);
+    this.tremolo = new TremoloPulse(ctx);
     this.delay = new PingPongDelay(ctx);
     this.reverb = new AlgorithmicReverb(ctx);
 
@@ -44,14 +48,16 @@ export class FxRackManager {
 
   chainEffects() {
     // Clean Studio Serial chain (Zero Distortion, Zero Compression squashing):
-    // Input -> GrandPianoAcoustics -> TubeDrive -> AutoPan -> Phaser -> Chorus -> Rotary -> Delay -> Reverb -> PresetTrim -> MasterEQ -> Output
+    // Input -> GrandPianoAcoustics -> TubeDrive -> AutoPan -> Phaser -> Flanger -> Chorus -> Rotary -> Tremolo -> Delay -> Reverb -> PresetTrim -> MasterEQ -> Output
     this.input.connect(this.pianoAcoustics.input);
     this.pianoAcoustics.output.connect(this.tube.input);
     this.tube.output.connect(this.autopan.input);
     this.autopan.output.connect(this.phaser.input);
-    this.phaser.output.connect(this.chorus.input);
+    this.phaser.output.connect(this.flanger.input);
+    this.flanger.output.connect(this.chorus.input);
     this.chorus.output.connect(this.rotary.input);
-    this.rotary.output.connect(this.delay.input);
+    this.rotary.output.connect(this.tremolo.input);
+    this.tremolo.output.connect(this.delay.input);
     this.delay.output.connect(this.reverb.input);
     this.reverb.output.connect(this.presetTrimNode);
     this.presetTrimNode.connect(this.masterEq.input);
@@ -62,7 +68,9 @@ export class FxRackManager {
     this.tube.setBypass(true);
     this.autopan.setBypass(true);
     this.phaser.setBypass(true);
+    this.flanger.setBypass(true);
     this.rotary.setBypass(true);
+    this.tremolo.setBypass(true);
     this.delay.setBypass(true);
     this.chorus.setBypass(true);
     this.reverb.setBypass(false);
@@ -77,6 +85,9 @@ export class FxRackManager {
   }
 
   applyPreset(presetName) {
+    // Newer units default bypassed on every preset change (cases below may enable them)
+    this.flanger.setBypass(true);
+    this.tremolo.setBypass(true);
     switch (presetName) {
       case "whitney_ballad":
       case "foster_ballad":

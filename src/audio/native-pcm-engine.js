@@ -49,6 +49,7 @@ export const LAYER_FX_OPTIONS = {
   punch_comp: { id: "punch_comp", name: "Punch Limiter / Compressor" },
   lofi_vinyl: { id: "lofi_vinyl", name: "Lo-Fi Vintage Vinyl / Warmth" },
   tremolo_pulse: { id: "tremolo_pulse", name: "Opto-Tremolo Pulse" },
+  shred_stack: { id: "shred_stack", name: "Shreddage High-Gain Stack" },
 };
 
 export class LayerInsertProcessor {
@@ -120,7 +121,7 @@ export class LayerInsertProcessor {
     }
 
     // Default balance
-    const isSerialInsert = ["air_eq", "warm_eq", "punch_comp", "tube_warm", "tube_lead", "distortion_metal", "lofi_vinyl"].includes(this.currentFx);
+    const isSerialInsert = ["air_eq", "warm_eq", "punch_comp", "tube_warm", "tube_lead", "distortion_metal", "lofi_vinyl", "shred_stack"].includes(this.currentFx);
     if (isSerialInsert) {
       this.dryGain.gain.setValueAtTime(0.0, ctx.currentTime);
       this.wetGain.gain.setValueAtTime(1.0, ctx.currentTime);
@@ -279,6 +280,47 @@ export class LayerInsertProcessor {
         dist.connect(cab);
         cab.connect(this.effectChainOutput);
         this.activeFxNodes.push(hp, dist, cab);
+        break;
+      }
+
+      case "shred_stack": {
+        // Tight modern Shreddage chain: DC block -> Tube Screamer mid-push ->
+        // high-gain saturation -> tight lowcut -> 4x12 cab simulation
+        const dc = ctx.createBiquadFilter();
+        dc.type = "highpass";
+        dc.frequency.value = 80;
+
+        const scream = ctx.createBiquadFilter();
+        scream.type = "peaking";
+        scream.frequency.value = 2800;
+        scream.Q.value = 1.0;
+        scream.gain.value = 6.0;
+
+        const shred = ctx.createWaveShaper();
+        const n_samples = 4096;
+        const curve = new Float32Array(n_samples);
+        for (let i = 0; i < n_samples; ++i) {
+          const x = (i * 2) / n_samples - 1;
+          curve[i] = Math.tanh(x * 4.2) * 0.78;
+        }
+        shred.curve = curve;
+        shred.oversample = "4x";
+
+        const tight = ctx.createBiquadFilter();
+        tight.type = "highpass";
+        tight.frequency.value = 110;
+
+        const cab = ctx.createBiquadFilter();
+        cab.type = "lowpass";
+        cab.frequency.value = 3600;
+
+        this.effectChainInput.connect(dc);
+        dc.connect(scream);
+        scream.connect(shred);
+        shred.connect(tight);
+        tight.connect(cab);
+        cab.connect(this.effectChainOutput);
+        this.activeFxNodes.push(dc, scream, shred, tight, cab);
         break;
       }
 
@@ -843,6 +885,12 @@ export class NativePcmEngine {
       "vibraphone",
       "electric_piano_2",
       "acoustic_bass",
+      "soprano_sax",
+      "muted_trumpet",
+      "acoustic_guitar_steel",
+      "slap_bass_1",
+      "rock_organ",
+      "harpsichord",
     ];
     backgroundSoundfonts.forEach((id, idx) => {
       setTimeout(() => {
@@ -1272,6 +1320,12 @@ export class NativePcmEngine {
       vibraphone: 1.0,
       electric_piano_2: 1.0,
       acoustic_bass: 1.05,
+      soprano_sax: 0.95,
+      muted_trumpet: 1.0,
+      acoustic_guitar_steel: 1.0,
+      slap_bass_1: 1.05,
+      rock_organ: 1.0,
+      harpsichord: 1.0,
     };
     const trim = INST_TRIM_GAINS[instId] || 1.0;
 

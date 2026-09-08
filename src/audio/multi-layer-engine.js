@@ -42,6 +42,12 @@ export const HD_SOUNDBANKS = {
   vibraphone: { id: "vibraphone", name: "Cool Vibraphone", category: "Bells & Pad" },
   electric_piano_2: { id: "electric_piano_2", name: "FM Tine EP Second Voice", category: "Electric Piano" },
   acoustic_bass: { id: "acoustic_bass", name: "Upright Walking Bass", category: "Bass & Sub" },
+  soprano_sax: { id: "soprano_sax", name: "Sweet Soprano Sax", category: "Woodwind" },
+  muted_trumpet: { id: "muted_trumpet", name: "Harmon Mute Trumpet", category: "Brass" },
+  acoustic_guitar_steel: { id: "acoustic_guitar_steel", name: "Steel-String Acoustic", category: "Guitar" },
+  slap_bass_1: { id: "slap_bass_1", name: "Slap Bass Attack", category: "Bass & Sub" },
+  rock_organ: { id: "rock_organ", name: "Rock Organ Shout", category: "Organ" },
+  harpsichord: { id: "harpsichord", name: "Baroque Harpsichord", category: "Bells & Pad" },
 };
 
 export const COMBI_PRESETS = {
@@ -417,6 +423,72 @@ export const COMBI_PRESETS = {
       { id: 1, name: "Gospel Piano Drive", inst: "acoustic_grand_piano", fx: "punch_comp", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 2, name: "Shout Brass Fanfare", inst: "brass_section", fx: "tube_warm", gain: 0.75, pan: 0, oct: 0, minVel: 70, maxVel: 127, enabled: true },
       { id: 3, name: "Mass Choir Lift", inst: "m1_choir", fx: "reverb_hall", gain: 0.65, pan: 0, oct: 0, minVel: 40, maxVel: 127, enabled: true },
+    ],
+  },
+  yamaha_cfx_stage: {
+    id: "yamaha_cfx_stage",
+    name: "CFX Stage Grand (Bright Grand + Strings + Shimmer)",
+    category: "Piano / Stage",
+    layers: [
+      { id: 0, name: "Bright Stage Grand", inst: "acoustic_grand_piano", fx: "air_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Live Concert Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.60, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "FM Sparkle Top", inst: "abletunes_fm_piano", fx: "clean", gain: 0.40, pan: 0.05, oct: 1, minVel: 50, maxVel: 127, enabled: true },
+      { id: 3, name: "Stage Sub Bass", inst: "acoustic_bass", fx: "warm_eq", gain: 0.70, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+    ],
+  },
+  sweet_soprano_ballad: {
+    id: "sweet_soprano_ballad",
+    name: "Sweet Soprano Ballad (Soprano Lead + Grand + Pad)",
+    category: "Ballad / Smooth",
+    layers: [
+      { id: 0, name: "Concert Grand Bed", inst: "acoustic_grand_piano", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Sweet Soprano Lead", inst: "soprano_sax", fx: "reverb_hall", gain: 0.85, pan: 0, oct: 0, minVel: 40, maxVel: 127, enabled: true },
+      { id: 2, name: "Velvet Warm Pad", inst: "string_ensemble_1", fx: "clean", gain: 0.50, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Upright Bass Walk", inst: "acoustic_bass", fx: "warm_eq", gain: 0.70, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+    ],
+  },
+  unplugged_morning: {
+    id: "unplugged_morning",
+    name: "Unplugged Morning (Steel Guitar + Upright Bass + Nylon)",
+    category: "Acoustic / Unplugged",
+    layers: [
+      { id: 0, name: "Steel-String Strum", inst: "acoustic_guitar_steel", fx: "reverb_room", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Upright Bass Root", inst: "acoustic_bass", fx: "warm_eq", gain: 0.80, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Nylon Fingerpick", inst: "acoustic_guitar_nylon", fx: "clean", gain: 0.60, pan: 0.05, oct: 0, minVel: 30, maxVel: 127, enabled: true },
+      { id: 3, name: "Morning Flute Air", inst: "flute", fx: "reverb_hall", gain: 0.50, pan: 0, oct: 1, minVel: 60, maxVel: 127, enabled: false },
+    ],
+  },
+  sunday_pipe_praise: {
+    id: "sunday_pipe_praise",
+    name: "Sunday Pipe Praise (Pipe Organ + Choir + Trumpet)",
+    category: "Gospel / Worship",
+    layers: [
+      { id: 0, name: "Cathedral Pipe Organ", inst: "church_organ", fx: "reverb_hall", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Aahs Choir Swell", inst: "choir_aahs", fx: "reverb_hall", gain: 0.70, pan: 0, oct: 0, minVel: 20, maxVel: 127, enabled: true },
+      { id: 2, name: "Grand Piano Accent", inst: "acoustic_grand_piano", fx: "clean", gain: 0.70, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Trumpet Fanfare Lift", inst: "trumpet", fx: "clean", gain: 0.65, pan: 0, oct: 0, minVel: 75, maxVel: 127, enabled: true },
+    ],
+  },
+  yacht_rock_79: {
+    id: "yacht_rock_79",
+    name: "Yacht Rock 79 (FM EP + Steel Guitar + Muted Horns)",
+    category: "Pop / Yacht Rock",
+    layers: [
+      { id: 0, name: "Yacht FM EP", inst: "abletunes_fm_piano", fx: "chorus_lush", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Steel Guitar Licks", inst: "acoustic_guitar_steel", fx: "clean", gain: 0.65, pan: 0.05, oct: 0, minVel: 30, maxVel: 127, enabled: true },
+      { id: 2, name: "Muted Horn Stabs", inst: "muted_trumpet", fx: "reverb_room", gain: 0.65, pan: 0, oct: 0, minVel: 75, maxVel: 127, enabled: true },
+      { id: 3, name: "Slap Pocket Bass", inst: "slap_bass_1", fx: "punch_comp", gain: 0.80, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+    ],
+  },
+  shreddage_arena: {
+    id: "shreddage_arena",
+    name: "Shreddage Arena (High-Gain Lead + Rhythm + Punch Bass)",
+    category: "Rock / Metal",
+    layers: [
+      { id: 0, name: "Shreddage Lead Guitar", inst: "distortion_guitar", fx: "shred_stack", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Overdrive Rhythm Double", inst: "overdriven_guitar", fx: "tube_warm", gain: 0.80, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Punch Arena Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Arena Rock Organ Pad", inst: "drawbar_organ", fx: "clean", gain: 0.50, pan: 0, oct: 0, minVel: 30, maxVel: 127, enabled: true },
     ],
   },
 };
