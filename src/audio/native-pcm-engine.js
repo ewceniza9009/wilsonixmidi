@@ -964,9 +964,9 @@ export class NativePcmEngine {
     const instMap = this.decodedBuffers.get(instId);
     const ctx = this.ctx;
 
-    // Load ALL vl2 anchors: full pitch coverage (every 4-6 semitones) so pitch-shift
-    // artifacts stay inaudible; velocity requests fall back to the nearest vl2 anchor
-    const coreAnchors = bank.samples.filter(s => s.v === "vl2");
+    // Load ALL velocity layers (vl1/vl2/vl3) at every anchor pitch: true touch
+    // dynamics (soft felt -> hard hammer) instead of one layer played louder
+    const coreAnchors = bank.samples.slice();
 
     const BATCH = 4;
     for (let i = 0; i < coreAnchors.length; i += BATCH) {
@@ -998,7 +998,7 @@ export class NativePcmEngine {
         })
       );
     }
-    console.log(`[Abletunes Engine] Loaded lightweight studio anchors: ${bank.name} (${instMap.size} anchors in RAM)`);
+    console.log(`[Abletunes Engine] Loaded full studio bank: ${bank.name} (${instMap.size} anchors in RAM)`);
   }
 
   async decodeEmbeddedAnchors(instId) {
@@ -1273,12 +1273,23 @@ export class NativePcmEngine {
       src.loop = false;
     }
 
-    // 2. Dynamic Time-Variant Filter (TVF): Open and clear - no muffling
+    // 2. Dynamic Time-Variant Filter (TVF): Open and clear - no muffling.
+    // Measured: harmonically-rich MP3 families carry -55 to -64dB of encoder hash
+    // above 6kHz that normalizing lifts into audible static, so those families get
+    // a lower ceiling (their musical energy lives below 10kHz anyway).
     const filter = ctx.createBiquadFilter();
     filter.type = "lowpass";
     const isSax = instId === "alto_sax" || instId?.includes("sax");
-    const minCutoff = isSax ? 5500 : 9000;
-    const maxCutoff = isSax ? 14000 : 20000;
+    const isHashy = !isSax && (
+      instId?.includes("string") || instId?.includes("brass") ||
+      instId?.includes("trumpet") || instId?.includes("trombone") ||
+      instId?.includes("choir") || instId?.includes("violin") ||
+      instId?.includes("cello") || instId?.includes("flute") ||
+      instId?.includes("clarinet") || instId?.includes("universe") ||
+      instId?.includes("fresh_air") || instId?.includes("pad")
+    );
+    const minCutoff = isSax ? 5500 : (isHashy ? 6000 : 9000);
+    const maxCutoff = isSax ? 14000 : (isHashy ? 9500 : 20000);
     const dynamicCutoff = minCutoff + velNorm * (maxCutoff - minCutoff);
     filter.frequency.setValueAtTime(dynamicCutoff, now);
     filter.Q.setValueAtTime(isSax ? 0.10 : 0.20, now);
@@ -1392,6 +1403,7 @@ export class NativePcmEngine {
       src,
       filter,
       voiceGain,
+      dest,
       instId,
       midiNote,
       layerIndex,
@@ -1578,6 +1590,30 @@ export class NativePcmEngine {
             v.voiceGain.gain.setTargetAtTime(0, now, tau);
             const stopTime = isString ? 0.5 : (isSax ? 0.2 : 0.1);
             v.src.stop(now + stopTime);
+          } catch (e) {}
+          // Damper resonance: piano/EP keys bloom a whisper of sympathetic ring
+          // on release (same buffer, -22dB, gone in ~0.6s) instead of dry silence
+          try {
+            const pianoFam = ["abletunes_upright", "acoustic_grand_piano", "m1_piano_16", "abletunes_fm_piano", "electric_piano_1", "rhodes_stage_mp3"];
+            if (!v.isReso && pianoFam.includes(v.instId) && v.src.buffer) {
+              const rSrc = this.ctx.createBufferSource();
+              rSrc.buffer = v.src.buffer;
+              rSrc.playbackRate.setValueAtTime(v.basePlaybackRate || 1.0, now);
+              const rFilter = this.ctx.createBiquadFilter();
+              rFilter.type = "lowpass";
+              rFilter.frequency.setValueAtTime(Math.min(12000, (v.baseCutoff || 9000) * 0.8), now);
+              rFilter.Q.setValueAtTime(0.5, now);
+              const rGain = this.ctx.createGain();
+              const resoPeak = Math.min(0.06, (v.baseGain || 0.5) * 0.08);
+              rGain.gain.setValueAtTime(0.0001, now);
+              rGain.gain.setTargetAtTime(resoPeak, now, 0.005);
+              rGain.gain.setTargetAtTime(0.0001, now + 0.08, 0.12);
+              rSrc.connect(rFilter);
+              rFilter.connect(rGain);
+              rGain.connect(v.dest || this.destination);
+              rSrc.start(now);
+              rSrc.stop(now + 0.7);
+            }
           } catch (e) {}
         }
       } else {

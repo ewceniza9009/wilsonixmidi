@@ -34,7 +34,7 @@ export class MultiLayerUI {
             ${Object.values(COMBI_PRESETS)
               .map(
                 cp => `
-              <button class="combi-preset-btn ${multiLayerEngine.activeCombi.id === cp.id ? "active" : ""}" 
+              <button class="combi-preset-btn ${multiLayerEngine.activeCombi.id === cp.id ? "active" : ""}"
                       data-combi="${cp.id}">
                 ${cp.name}
               </button>
@@ -42,6 +42,46 @@ export class MultiLayerUI {
               )
               .join("")}
           </div>
+        </div>
+
+        <!-- My Presets (localStorage) -->
+        <div class="user-presets-bar">
+          <span class="combi-pill">MY PRESETS</span>
+          <input id="user-preset-name" class="user-preset-input" maxlength="40" placeholder="Stack name..." />
+          <button class="combi-preset-btn" id="save-user-preset-btn">+ SAVE CURRENT STACK</button>
+          <div class="user-preset-list">
+            ${multiLayerEngine.getUserPresets()
+              .map(
+                up => `
+              <span class="user-preset-chip ${multiLayerEngine.activeCombi.id === up.id ? "active" : ""}">
+                <button class="user-preset-load" data-user-preset="${up.id}" title="Load ${up.name}">${up.name}</button>
+                <button class="user-preset-del" data-user-del="${up.id}" title="Delete">✕</button>
+              </span>
+            `
+              )
+              .join("")}
+          </div>
+        </div>
+
+        <!-- Gig Setlist (localStorage, ordered) -->
+        <div class="setlist-bar">
+          <span class="combi-pill">SETLIST</span>
+          <button class="combi-preset-btn" id="setlist-add-btn">+ ADD CURRENT</button>
+          <button class="combi-preset-btn" id="setlist-clear-btn">CLEAR</button>
+          <ol class="setlist-list">
+            ${multiLayerEngine.getSetlist()
+              .map(
+                (entry, i) => `
+              <li class="setlist-entry" data-setlist-idx="${i}">
+                <button class="setlist-load" data-setlist-load="${i}" title="Load">${i + 1}. ${entry.name || entry.id}</button>
+                <button class="setlist-move" data-setlist-move="${i}|-1" title="Move up">▲</button>
+                <button class="setlist-move" data-setlist-move="${i}|1" title="Move down">▼</button>
+                <button class="setlist-del" data-setlist-del="${i}" title="Remove">✕</button>
+              </li>
+            `
+              )
+              .join("")}
+          </ol>
         </div>
 
         <!-- 4 Layer Channel Strips (Ableton / Workstation Style) -->
@@ -125,12 +165,68 @@ export class MultiLayerUI {
 
   bindEvents() {
     // Combi Presets
-    this.container.querySelectorAll(".combi-preset-btn").forEach(btn => {
+    this.container.querySelectorAll(".combi-preset-btn[data-combi]").forEach(btn => {
       btn.addEventListener("click", () => {
         const combiId = btn.getAttribute("data-combi");
         multiLayerEngine.setCombiPreset(combiId);
         this.render();
         this.bindEvents();
+      });
+    });
+
+    // My Presets: save / load / delete
+    const rerender = () => {
+      this.render();
+      this.bindEvents();
+    };
+    this.container.querySelector("#save-user-preset-btn")?.addEventListener("click", () => {
+      const input = this.container.querySelector("#user-preset-name");
+      multiLayerEngine.saveUserPreset(input?.value);
+      rerender();
+    });
+    this.container.querySelectorAll("[data-user-preset]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        multiLayerEngine.applyUserPreset(btn.getAttribute("data-user-preset"));
+        rerender();
+      });
+    });
+    this.container.querySelectorAll("[data-user-del]").forEach(btn => {
+      btn.addEventListener("click", e => {
+        e.stopPropagation();
+        multiLayerEngine.deleteUserPreset(btn.getAttribute("data-user-del"));
+        rerender();
+      });
+    });
+
+    // Setlist: add current / load / reorder / remove / clear
+    this.container.querySelector("#setlist-add-btn")?.addEventListener("click", () => {
+      const list = multiLayerEngine.getSetlist();
+      list.push(multiLayerEngine.currentStackSnapshot());
+      multiLayerEngine.saveSetlist(list);
+      rerender();
+    });
+    this.container.querySelector("#setlist-clear-btn")?.addEventListener("click", () => {
+      multiLayerEngine.saveSetlist([]);
+      rerender();
+    });
+    this.container.querySelectorAll("[data-setlist-load]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const idx = parseInt(btn.getAttribute("data-setlist-load"));
+        multiLayerEngine.applySetlistEntry(multiLayerEngine.getSetlist()[idx]);
+        rerender();
+      });
+    });
+    this.container.querySelectorAll("[data-setlist-move]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const [idx, delta] = btn.getAttribute("data-setlist-move").split("|").map(Number);
+        multiLayerEngine.moveSetlistEntry(idx, delta);
+        rerender();
+      });
+    });
+    this.container.querySelectorAll("[data-setlist-del]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        multiLayerEngine.removeSetlistEntry(parseInt(btn.getAttribute("data-setlist-del")));
+        rerender();
       });
     });
 

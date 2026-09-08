@@ -476,6 +476,106 @@
   padding: 2px 8px 0;
 }
 
+/* My Presets + Gig Setlist bars */
+.user-presets-bar,
+.setlist-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.user-preset-input {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  min-width: 140px;
+}
+
+.user-preset-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.user-preset-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 2px 2px 2px 8px;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.user-preset-chip.active {
+  border-color: var(--accent-amber);
+}
+
+.user-preset-load {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 4px 2px;
+}
+
+.user-preset-chip.active .user-preset-load {
+  color: var(--accent-amber);
+}
+
+.user-preset-del,
+.setlist-del,
+.setlist-move {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.65rem;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.setlist-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.setlist-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 2px 2px 2px 8px;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.setlist-load {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 4px 2px;
+}
+
 /* 4-Layer Strips Rack */
 .layer-strips-rack {
   display: grid;

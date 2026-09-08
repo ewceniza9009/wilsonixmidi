@@ -322,6 +322,7 @@ export class TritonWorkstationUI {
               <div class="slot-knobs">
                 <div class="slot-param"><span>RATE</span><input type="range" class="fx-slider" data-fx-param="flanger-rate" min="0.1" max="5.0" step="0.1" value="${fx?.flanger?.rate || 0.45}"/></div>
                 <div class="slot-param"><span>MIX</span><input type="range" class="fx-slider" data-fx-param="flanger-mix" min="0" max="1" step="0.05" value="${fx?.flanger?.mix || 0.45}"/></div>
+                <div class="slot-param"><span>FEEDBACK</span><input type="range" class="fx-slider" data-fx-param="flanger-feedback" min="0" max="0.5" step="0.05" value="${fx?.flanger?.feedback || 0.22}"/></div>
               </div>
             </div>
 
@@ -335,6 +336,7 @@ export class TritonWorkstationUI {
               <div class="slot-knobs">
                 <div class="slot-param"><span>RATE</span><input type="range" class="fx-slider" data-fx-param="tremolo-rate" min="0.2" max="12.0" step="0.1" value="${fx?.tremolo?.rate || 4.5}"/></div>
                 <div class="slot-param"><span>DEPTH</span><input type="range" class="fx-slider" data-fx-param="tremolo-depth" min="0" max="1" step="0.05" value="${fx?.tremolo?.depth || 0.55}"/></div>
+                <div class="slot-param"><span>MIX</span><input type="range" class="fx-slider" data-fx-param="tremolo-mix" min="0" max="1" step="0.05" value="${fx?.tremolo?.mix || 0.6}"/></div>
               </div>
             </div>
           </div>
@@ -353,6 +355,7 @@ export class TritonWorkstationUI {
               <div class="slot-knobs">
                 <div class="slot-param"><span>RETURN LEVEL</span><input type="range" class="fx-slider" data-fx-param="delay-mix" min="0" max="1" step="0.05" value="${fx?.delay?.mix || 0.25}"/></div>
                 <div class="slot-param"><span>FEEDBACK</span><input type="range" class="fx-slider" data-fx-param="delay-feedback" min="0" max="0.7" step="0.05" value="${fx?.delay?.feedback || 0.3}"/></div>
+                <div class="slot-param"><span>DIVISION</span><input type="range" class="fx-slider" data-fx-param="delay-division" min="0.125" max="1.0" step="0.125" value="${fx?.delay?.division || 0.375}"/></div>
               </div>
             </div>
 
@@ -366,6 +369,7 @@ export class TritonWorkstationUI {
               <div class="slot-knobs">
                 <div class="slot-param"><span>RETURN LEVEL</span><input type="range" class="fx-slider" data-fx-param="reverb-mix" min="0" max="1" step="0.05" value="${fx?.reverb?.mix || 0.25}"/></div>
                 <div class="slot-param"><span>DECAY</span><input type="range" class="fx-slider" data-fx-param="reverb-decay" min="0.5" max="5.0" step="0.1" value="${fx?.reverb?.decay || 2.2}"/></div>
+                <div class="slot-param"><span>ROOM SIZE</span><input type="range" class="fx-slider" data-fx-param="reverb-size" min="0.05" max="1.0" step="0.05" value="0.45"/></div>
               </div>
             </div>
 
@@ -648,8 +652,12 @@ export class TritonWorkstationUI {
       case "tremolo-depth": fx.tremolo?.setDepth(val); break;
       case "delay-mix": fx.delay?.setMix(val); break;
       case "delay-feedback": fx.delay?.setFeedback(val); break;
+      case "delay-division": fx.delay?.setDivision(val); break;
       case "reverb-mix": fx.reverb?.setMix(val); break;
       case "reverb-decay": fx.reverb?.setDecay(val); break;
+      case "reverb-size": fx.reverb?.setRoomSize(val); break;
+      case "flanger-feedback": fx.flanger?.setFeedback(val); break;
+      case "tremolo-mix": fx.tremolo?.setMix(val); break;
       case "eq-low": fx.masterEq?.setLowGain(val); break;
       case "eq-mid": fx.masterEq?.setMidGain(val); break;
       case "eq-high": fx.masterEq?.setHighGain(val); break;

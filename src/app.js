@@ -41,6 +41,14 @@ class MidiKeyEliteApp {
       console.warn("Pre-arm audio:", e);
     }
 
+    // 0b. Restore working session (survives accidental refresh mid-gig)
+    let restoredSession = null;
+    try {
+      restoredSession = multiLayerEngine.restoreSession();
+    } catch (e) {
+      console.warn("Session restore:", e);
+    }
+
     // 1. Immediate Audio Unlock Setup (Bound synchronously FIRST so clicks ALWAYS work)
     const unlockGesture = () => {
       if (!this.unlocked) {
@@ -89,6 +97,20 @@ class MidiKeyEliteApp {
       });
     } catch (e) {
       console.warn("GigHudUI init:", e);
+    }
+
+    // 3b. Apply restored master volume to engine + slider UI
+    try {
+      const pct = restoredSession && typeof restoredSession.masterPct === "number"
+        ? restoredSession.masterPct
+        : 50;
+      multiLayerEngine.setMasterVolumePct(pct);
+      const volSlider = document.getElementById("hud-master-vol");
+      const volReadout = document.getElementById("hud-master-vol-val");
+      if (volSlider) volSlider.value = pct;
+      if (volReadout) volReadout.innerText = `${pct}%`;
+    } catch (e) {
+      console.warn("Volume restore:", e);
     }
 
     // 4. Korg Triton Hardware TouchView Console

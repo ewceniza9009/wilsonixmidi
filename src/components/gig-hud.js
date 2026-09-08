@@ -272,7 +272,7 @@ export class GigHudUI {
     volSlider?.addEventListener("input", e => {
       const val = parseInt(e.target.value);
       if (volReadout) volReadout.innerText = `${val}%`;
-      audioCore.setMasterVolume(val / 100);
+      multiLayerEngine.setMasterVolumePct(val);
     });
 
     // DIAG recorder: tap once to start, play the crackle, tap again to download

@@ -527,6 +527,68 @@ export class MultiLayerEngine {
     for (const cb of this.layerChangeListeners) {
       try { cb(this.layers); } catch (e) {}
     }
+    this.saveSessionSoon();
+  }
+
+  setMasterVolumePct(pct) {
+    this._masterPct = Math.max(0, Math.min(100, Math.round(pct)));
+    try {
+      audioCore.setMasterVolume(this._masterPct / 100);
+    } catch (e) {}
+    this.saveSessionSoon();
+  }
+
+  // ---- Crash/refresh-proof session: autosaved working state, restored on boot ----
+  saveSessionSoon() {
+    try {
+      clearTimeout(this._sessTimer);
+    } catch (e) {}
+    this._sessTimer = setTimeout(() => this.saveSessionNow(), 400);
+  }
+
+  saveSessionNow() {
+    try {
+      if (typeof localStorage === "undefined") return;
+      localStorage.setItem("wilsonix_session_v1", JSON.stringify({
+        layers: this.layers,
+        isCombiMode: this.isCombiMode,
+        activeCombiId: this.activeCombi?.id || null,
+        activeCombiName: this.activeCombi?.name || null,
+        activeSingleInst: this.activeSingleInst,
+        masterPct: this._masterPct ?? 50,
+      }));
+    } catch (e) {}
+  }
+
+  restoreSession() {
+    try {
+      if (typeof localStorage === "undefined") return null;
+      const raw = localStorage.getItem("wilsonix_session_v1");
+      if (!raw) return null;
+      const s = JSON.parse(raw);
+      if (!s || !Array.isArray(s.layers) || s.layers.length !== 4) return null;
+      if (!s.layers.every(l => l && typeof l.inst === "string")) return null;
+      this.layers = s.layers;
+      this.isCombiMode = s.isCombiMode !== false;
+      this.isSynthMode = false;
+      if (this.isCombiMode && s.activeCombiId) {
+        this.activeCombi = COMBI_PRESETS[s.activeCombiId] || {
+          id: s.activeCombiId,
+          name: s.activeCombiName || "Restored Stack",
+          layers: this.layers,
+        };
+      } else if (!this.isCombiMode && s.activeSingleInst) {
+        this.activeSingleInst = s.activeSingleInst;
+      }
+      if (typeof s.masterPct === "number") {
+        this._masterPct = Math.max(0, Math.min(100, Math.round(s.masterPct)));
+      }
+      this.init();
+      this.syncLayerFx();
+      return s;
+    } catch (e) {
+      return null;
+    }
   }
 
   init() {
@@ -755,6 +817,122 @@ export class MultiLayerEngine {
 
   panic() {
     if (this.pcmEngine) this.pcmEngine.allNotesOff();
+  }
+
+  // ---- User presets + gig setlist (localStorage: sync, offline, zero deps) ----
+  getUserPresets() {
+    try {
+      const raw = typeof localStorage !== "undefined" ? localStorage.getItem("wilsonix_user_presets") : null;
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  saveUserPresets(list) {
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem("wilsonix_user_presets", JSON.stringify(list));
+      }
+    } catch (e) {}
+  }
+
+  saveUserPreset(name) {
+    const clean = (name || "My Stack").trim().slice(0, 40) || "My Stack";
+    const list = this.getUserPresets();
+    const entry = {
+      id: "user_" + Date.now(),
+      name: clean,
+      layers: JSON.parse(JSON.stringify(this.layers)),
+    };
+    list.push(entry);
+    this.saveUserPresets(list);
+    this.notifyLayerChange();
+    return entry;
+  }
+
+  applyUserPreset(id) {
+    const found = this.getUserPresets().find(p => p.id === id);
+    if (!found || !Array.isArray(found.layers)) return false;
+    this.activeCombi = { id: found.id, name: found.name, layers: found.layers };
+    this.isCombiMode = true;
+    this.isSynthMode = false;
+    this.layers = JSON.parse(JSON.stringify(found.layers));
+    this.init();
+    this.syncLayerFx();
+    this.notifyLayerChange();
+    return true;
+  }
+
+  deleteUserPreset(id) {
+    this.saveUserPresets(this.getUserPresets().filter(p => p.id !== id));
+    this.notifyLayerChange();
+  }
+
+  getSetlist() {
+    try {
+      const raw = typeof localStorage !== "undefined" ? localStorage.getItem("wilsonix_setlist") : null;
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  saveSetlist(list) {
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem("wilsonix_setlist", JSON.stringify(list));
+      }
+    } catch (e) {}
+    this.notifyLayerChange();
+  }
+
+  currentStackSnapshot() {
+    const activeId = this.activeCombi?.id || "";
+    const isUser = this.isCombiMode && typeof activeId === "string" && activeId.startsWith("user_");
+    if (isUser) {
+      return { kind: "user", id: activeId, name: this.activeCombi.name };
+    }
+    if (this.isCombiMode) {
+      return { kind: "combi", id: activeId, name: this.activeCombi.name };
+    }
+    return {
+      kind: "single",
+      id: this.activeSingleInst,
+      name: HD_SOUNDBANKS[this.activeSingleInst]?.name || this.activeSingleInst,
+    };
+  }
+
+  applySetlistEntry(entry) {
+    if (!entry) return false;
+    if (entry.kind === "user") return this.applyUserPreset(entry.id);
+    if (entry.kind === "single") {
+      this.setSingleInstrument(entry.id);
+      return true;
+    }
+    if (COMBI_PRESETS[entry.id]) {
+      this.setCombiPreset(entry.id);
+      return true;
+    }
+    return false;
+  }
+
+  moveSetlistEntry(fromIdx, delta) {
+    const list = this.getSetlist();
+    const toIdx = fromIdx + delta;
+    if (fromIdx < 0 || fromIdx >= list.length || toIdx < 0 || toIdx >= list.length) return;
+    const [item] = list.splice(fromIdx, 1);
+    list.splice(toIdx, 0, item);
+    this.saveSetlist(list);
+  }
+
+  removeSetlistEntry(idx) {
+    const list = this.getSetlist();
+    if (idx < 0 || idx >= list.length) return;
+    list.splice(idx, 1);
+    this.saveSetlist(list);
   }
 }
 
