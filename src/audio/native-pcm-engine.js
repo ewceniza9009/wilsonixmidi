@@ -845,24 +845,32 @@ export class NativePcmEngine {
   }
 
   async initBuffers() {
-    // 1. Instantly decode acoustic grand piano AND saxophone FIRST (< 15ms) for immediate zero-delay play
+    // 1. Instantly decode acoustic grand piano, alto sax, AND choir anchors FIRST (< 15ms) for immediate zero-delay play
     await Promise.all([
       this.decodeEmbeddedAnchors("acoustic_grand_piano"),
       this.decodeEmbeddedAnchors("alto_sax"),
+      this.decodeEmbeddedAnchors("choir_aahs"),
     ]);
     this.isReady = true;
 
-    // 2. Load essential multi-layer soundfonts immediately (Strings, Organ, Brass, Sax, Bass)
+    // 2. Load essential multi-layer soundfonts immediately (Choir, Strings, Organ, Brass, Sax, Bass)
     // EP + piano come from the studio WAV banks (no MP3 grain), preloaded here instead
     this.loadAbletunesInstrument("fm_piano");
     this.loadAbletunesInstrument("upright_piano");
     const prioritySoundfonts = [
+      "choir_aahs",
       "string_ensemble_1",
       "drawbar_organ",
       "brass_section",
       "alto_sax",
       "synth_bass_1",
       "acoustic_guitar_nylon",
+      "acoustic_guitar_steel",
+      "acoustic_bass",
+      "flute",
+      "trumpet",
+      "vibraphone",
+      "distortion_guitar",
     ];
     prioritySoundfonts.forEach(id => {
       this.loadSoundfont(id);
@@ -1061,21 +1069,57 @@ export class NativePcmEngine {
       moog_punch_bass: "synth_bass_1",
       m1_slap_bass: "synth_bass_1",
 
-      // 6. Strings, Pads & Celestial Choirs
+      // 6. Real Human Vocal Choir - 100% DISTINCT from Strings!
+      choir_aahs: "choir_aahs",
+      m1_choir: "choir_aahs",
+      m1_ooh_ahh: "choir_aahs",
+      ooh_ahh: "choir_aahs",
+      choir: "choir_aahs",
+      choral: "choir_aahs",
+      cathedral_choir: "choir_aahs",
+
+      // 7. Strings & Pads
       string_ensemble_1: "string_ensemble_1",
       triton_warm_strings: "string_ensemble_1",
+      symphonic_strings: "string_ensemble_1",
+      m1_symphonic: "string_ensemble_1",
+      m1_strings: "string_ensemble_1",
       m1_universe: "string_ensemble_1",
-      m1_choir: "string_ensemble_1",
 
-      // 7. Brass, Horns & Synth Leads
+      // 8. Brass, Horns & Synth Leads
       brass_section: "brass_section",
       fat_brass_horns: "brass_section",
       supersaw_lead: "brass_section",
+      m1_brass_1: "brass_section",
+      brass_1: "brass_section",
 
-      // 8. Woodwinds & Alto Sax
+      // 9. Woodwinds & Alto Sax
       alto_sax: "alto_sax",
       breathy_alto_sax: "alto_sax",
       m1_lore: "alto_sax",
+      m1_flute: "flute",
+      m1_pan_flute: "flute",
+      pan_flute: "flute",
+
+      // 10. Doctor Mix M1 Instruments
+      m1_guitar_1: "acoustic_guitar_steel",
+      guitar_1: "acoustic_guitar_steel",
+      m1_12string: "acoustic_guitar_steel",
+      string_12: "acoustic_guitar_steel",
+      m1_fretless: "acoustic_bass",
+      fretless: "acoustic_bass",
+      m1_bottle_bell: "vibraphone",
+      bottle_bell: "vibraphone",
+      m1_kalimba: "harpsichord",
+      kalimba: "harpsichord",
+      m1_koto: "harpsichord",
+      koto: "harpsichord",
+      m1_bell_ring: "vibraphone",
+      bell_ring: "vibraphone",
+      m1_pick_bass: "slap_bass_1",
+      pick_bass: "slap_bass_1",
+      m1_synth_bass_1: "synth_bass_1",
+      m1_solo_synth: "brass_section",
     };
     if (instId && INST_ALIASES[instId]) {
       instId = INST_ALIASES[instId];
@@ -1280,19 +1324,31 @@ export class NativePcmEngine {
     const filter = ctx.createBiquadFilter();
     filter.type = "lowpass";
     const isSax = instId === "alto_sax" || instId?.includes("sax");
-    const isHashy = !isSax && (
+    const isChoir = instId === "choir_aahs" || instId === "m1_choir" || instId === "m1_ooh_ahh" || instId?.includes("choir");
+    const isHashy = !isSax && !isChoir && (
       instId?.includes("string") || instId?.includes("brass") ||
       instId?.includes("trumpet") || instId?.includes("trombone") ||
-      instId?.includes("choir") || instId?.includes("violin") ||
-      instId?.includes("cello") || instId?.includes("flute") ||
-      instId?.includes("clarinet") || instId?.includes("universe") ||
-      instId?.includes("fresh_air") || instId?.includes("pad")
+      instId?.includes("violin") || instId?.includes("cello") ||
+      instId?.includes("flute") || instId?.includes("clarinet") ||
+      instId?.includes("universe") || instId?.includes("fresh_air") ||
+      instId?.includes("pad")
     );
-    const minCutoff = isSax ? 5500 : (isHashy ? 6000 : 9000);
-    const maxCutoff = isSax ? 14000 : (isHashy ? 9500 : 20000);
+    const minCutoff = isSax ? 5500 : (isChoir ? 650 : (isHashy ? 6000 : 9000));
+    const maxCutoff = isSax ? 14000 : (isChoir ? 3800 : (isHashy ? 9500 : 20000));
     const dynamicCutoff = minCutoff + velNorm * (maxCutoff - minCutoff);
-    filter.frequency.setValueAtTime(dynamicCutoff, now);
-    filter.Q.setValueAtTime(isSax ? 0.10 : 0.20, now);
+
+    if (isChoir) {
+      // Authentic Korg M1 03 Ooh-Ahh Dual-Formant Morph:
+      // Starts as a warm, rounded "Ooh" vowel formant (~550Hz, resonant Q)
+      // then blooms smoothly over 180ms into open, heavenly airy "Aah" choir (~3400Hz)
+      filter.frequency.setValueAtTime(480 + velNorm * 180, now);
+      filter.Q.setValueAtTime(2.2, now);
+      filter.frequency.setTargetAtTime(2800 + velNorm * 1200, now + 0.04, 0.12);
+      filter.Q.setTargetAtTime(0.8, now + 0.04, 0.12);
+    } else {
+      filter.frequency.setValueAtTime(dynamicCutoff, now);
+      filter.Q.setValueAtTime(isSax ? 0.10 : 0.20, now);
+    }
 
     // 3. Time-Variant Amplifier (TVA): Maximum loudness, punchy studio presence
     const voiceGain = ctx.createGain();
@@ -1309,7 +1365,8 @@ export class NativePcmEngine {
       abletunes_fm_piano: 1.0,
       string_ensemble_1: 1.0,
       m1_universe: 1.0,
-      m1_choir: 1.0,
+      m1_choir: 1.15,
+      choir_aahs: 1.15,
       acoustic_guitar_nylon: 1.0,
       electric_guitar_clean: 1.0,
       alto_sax: 0.95,
@@ -1326,7 +1383,6 @@ export class NativePcmEngine {
       clarinet: 1.0,
       violin: 1.0,
       cello: 1.0,
-      choir_aahs: 1.0,
       church_organ: 1.0,
       vibraphone: 1.0,
       electric_piano_2: 1.0,
@@ -1344,14 +1400,15 @@ export class NativePcmEngine {
     const combiScale = (layerIndex !== null && layerIndex !== undefined) ? 0.42 : 1.0;
 
     // Gig loudness lives in the master slider - voices stay clean here
-    // Density compensation: as sustained voices pile up, each new voice scales
-    // down so the stack sum stays bounded instead of collapsing into overdrive grain
     const densityScale = 1 / Math.sqrt(1 + this.voiceQueue.length / 6);
     const peakGain = (0.45 + velNorm * 0.25) * customGain * trim * combiScale * densityScale;
 
     // 100% Click-free, pop-free attack envelope using exponential ramp (no step artifacts)
     voiceGain.gain.setValueAtTime(0.0001, now);
-    if (isSax) {
+    if (isChoir) {
+      // Soft natural vocal choir swell (not sudden piano thud)
+      voiceGain.gain.setTargetAtTime(peakGain, now, 0.06);
+    } else if (isSax) {
       voiceGain.gain.setTargetAtTime(peakGain, now, 0.003);
     } else {
       voiceGain.gain.setTargetAtTime(peakGain, now, 0.002);
@@ -1529,12 +1586,13 @@ export class NativePcmEngine {
       this.sustainedVoices.forEach(voices => {
         voices.forEach(v => {
           try {
+            const isChoir = v.instId === "choir_aahs" || v.instId === "m1_choir" || v.instId === "m1_ooh_ahh" || v.instId?.includes("choir");
             const isString = v.instId === "string_ensemble_1" || v.instId?.includes("string") || v.instId?.includes("pad");
             const isSax = v.instId === "alto_sax" || v.instId?.includes("sax");
-            const tau = isString ? 0.08 : (isSax ? 0.03 : 0.015);
+            const tau = isChoir ? 0.20 : (isString ? 0.08 : (isSax ? 0.03 : 0.015));
             v.voiceGain.gain.cancelScheduledValues(now);
             v.voiceGain.gain.setTargetAtTime(0, now, tau);
-            const stopTime = isString ? 0.5 : (isSax ? 0.2 : 0.1);
+            const stopTime = isChoir ? 1.4 : (isString ? 0.5 : (isSax ? 0.2 : 0.1));
             v.src.stop(now + stopTime);
           } catch (e) {}
         });
@@ -1583,12 +1641,13 @@ export class NativePcmEngine {
         } else {
           // 100% Click-free, pop-free acoustic damper release with exponential decay
           try {
+            const isChoir = v.instId === "choir_aahs" || v.instId === "m1_choir" || v.instId === "m1_ooh_ahh" || v.instId?.includes("choir");
             const isString = v.instId === "string_ensemble_1" || v.instId?.includes("string") || v.instId?.includes("pad");
             const isSax = v.instId === "alto_sax" || v.instId?.includes("sax");
-            const tau = isString ? 0.08 : (isSax ? 0.03 : 0.015);
+            const tau = isChoir ? 0.20 : (isString ? 0.08 : (isSax ? 0.03 : 0.015));
             v.voiceGain.gain.cancelScheduledValues(now);
             v.voiceGain.gain.setTargetAtTime(0, now, tau);
-            const stopTime = isString ? 0.5 : (isSax ? 0.2 : 0.1);
+            const stopTime = isChoir ? 1.4 : (isString ? 0.5 : (isSax ? 0.2 : 0.1));
             v.src.stop(now + stopTime);
           } catch (e) {}
           // Damper resonance: piano/EP keys bloom a whisper of sympathetic ring

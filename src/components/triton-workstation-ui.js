@@ -769,109 +769,393 @@ export class TritonWorkstationUI {
 
   applyM1Program(prog) {
     const fx = audioCore.fxRack;
-    if (prog.m1Type === "organ2") {
-      // Iconic Korg M1 Organ 2
-      multiLayerEngine.setSingleInstrument("drawbar_organ");
+    const mType = prog.m1Type || "";
+
+    // Reset all FX to clean baseline first to prevent unwanted bleed
+    if (fx) {
+      fx.tube.setBypass(true);
+      fx.autopan.setBypass(true);
+      fx.chorus.setBypass(true);
+      fx.phaser.setBypass(true);
+      fx.flanger.setBypass(true);
+      fx.rotary.setBypass(true);
+      fx.tremolo.setBypass(true);
+      fx.delay.setBypass(true);
+      fx.reverb.setBypass(false);
+      fx.masterEq.setLowGain(0);
+      fx.masterEq.setMidGain(0);
+      fx.masterEq.setHighGain(0);
+    }
+
+    if (mType === "ooh_ahh" || mType === "choir") {
+      // ★ 03 Ooh-Ahh: Queen "I'm Going Slightly Mad" / Korg M1 Signature Vocal Choir
+      // Genuine PCM human choir + dual "Ooh"-to-"Ahh" formant morph + M1 Stereo Chorus + Cathedral Hall
+      multiLayerEngine.setSingleInstrument("choir_aahs");
       if (fx) {
-        fx.rotary.setBypass(true);
-        fx.tube.setBypass(false);
-        fx.tube.setDrive(0.18);
-        fx.tube.setMix(0.40);
-        fx.autopan.setBypass(true);
         fx.chorus.setBypass(false);
         fx.chorus.setMix(0.45);
-        fx.chorus.setRate(0.85);
+        fx.chorus.setRate(0.95);
         fx.reverb.setBypass(false);
-        fx.reverb.setMix(0.22);
-        fx.reverb.setDecay(1.6);
-        fx.delay.setBypass(true);
-        fx.phaser.setBypass(true);
+        fx.reverb.setMix(0.35);
+        fx.reverb.setDecay(3.2);
+        fx.reverb.setRoomSize(0.85);
+        fx.masterEq.setLowGain(1.0);
+        fx.masterEq.setMidGain(1.5);
+        fx.masterEq.setHighGain(3.2);
       }
-    } else if (prog.m1Type === "piano16") {
-      // Iconic Korg M1 Piano 16'
+    } else if (mType === "universe") {
+      // ★ 00 Universe: Ethereal composite texture (Vocal Choir + Warm Strings + Crystal Bell Chimes)
+      multiLayerEngine.isCombiMode = true;
+      multiLayerEngine.isSynthMode = false;
+      multiLayerEngine.layers = [
+        { id: 0, name: "M1 Ooh-Ahh Vocal Choir", inst: "choir_aahs", fx: "chorus_lush", gain: 0.75, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+        { id: 1, name: "Triton Warm Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.65, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+        { id: 2, name: "Celestial Bell Shimmer", inst: "electric_piano_1", fx: "clean", gain: 0.45, pan: 0.10, oct: 1, minVel: 30, maxVel: 127, enabled: true },
+        { id: 3, name: "Crystal Space Chime", inst: "vibraphone", fx: "reverb_hall", gain: 0.35, pan: -0.10, oct: 1, minVel: 50, maxVel: 127, enabled: true },
+      ];
+      multiLayerEngine.init();
+      multiLayerEngine.syncLayerFx();
+      multiLayerEngine.notifyLayerChange();
+      if (fx) {
+        fx.reverb.setBypass(false);
+        fx.reverb.setMix(0.38);
+        fx.reverb.setDecay(3.6);
+        fx.reverb.setRoomSize(0.90);
+        fx.chorus.setBypass(false);
+        fx.chorus.setMix(0.40);
+        fx.chorus.setRate(0.80);
+      }
+    } else if (mType === "piano16") {
+      // ★ 01 Piano 16': Madonna "Vogue" / Black Box 90s House Piano
       multiLayerEngine.setSingleInstrument("acoustic_grand_piano");
       if (fx) {
-        fx.tube.setBypass(true);
-        fx.autopan.setBypass(true);
         fx.chorus.setBypass(false);
-        fx.chorus.setMix(0.45);
-        fx.chorus.setRate(1.2);
+        fx.chorus.setMix(0.42);
+        fx.chorus.setRate(1.25);
         fx.reverb.setBypass(false);
-        fx.reverb.setMix(0.28);
-        fx.reverb.setDecay(2.4);
-        fx.delay.setBypass(true);
-        fx.phaser.setBypass(true);
-        fx.rotary.setBypass(true);
+        fx.reverb.setMix(0.26);
+        fx.reverb.setDecay(2.2);
         fx.masterEq.setLowGain(-1.0);
-        fx.masterEq.setMidGain(3.0);
-        fx.masterEq.setHighGain(3.5);
+        fx.masterEq.setMidGain(3.5);
+        fx.masterEq.setHighGain(3.8);
       }
-    } else if (prog.m1Type === "universe") {
-      // Iconic Korg M1 Universe (Strings & Space)
+    } else if (mType === "brass1") {
+      // ★ 02 Brass 1: Punchy 80s/90s analog horn section
+      multiLayerEngine.setSingleInstrument("brass_section");
+      if (fx) {
+        fx.chorus.setBypass(false);
+        fx.chorus.setMix(0.28);
+        fx.chorus.setRate(0.65);
+        fx.reverb.setBypass(false);
+        fx.reverb.setMix(0.22);
+        fx.reverb.setDecay(1.8);
+        fx.masterEq.setLowGain(2.0);
+        fx.masterEq.setMidGain(1.5);
+      }
+    } else if (mType === "guitar1") {
+      // ★ 04 Guitar 1: Clean acoustic/electric 6-string finger pluck
+      multiLayerEngine.setSingleInstrument("acoustic_guitar_steel");
+      if (fx) {
+        fx.reverb.setBypass(false);
+        fx.reverb.setMix(0.20);
+        fx.reverb.setDecay(1.6);
+        fx.masterEq.setHighGain(2.0);
+      }
+    } else if (mType === "bottle_bell") {
+      // ★ 05 Bottle Bell: Blowing over glass bottle chime
+      multiLayerEngine.setSingleInstrument("vibraphone");
+      if (fx) {
+        fx.delay.setBypass(false);
+        fx.delay.setMix(0.28);
+        fx.delay.setDivision(0.375);
+        fx.delay.setFeedback(0.35);
+        fx.reverb.setBypass(false);
+        fx.reverb.setMix(0.30);
+        fx.reverb.setDecay(3.0);
+      }
+    } else if (mType === "fretless") {
+      // ★ 06 Fretless: Singing fretless bass with expressive chorus mwah
+      multiLayerEngine.setSingleInstrument("acoustic_bass");
+      if (fx) {
+        fx.chorus.setBypass(false);
+        fx.chorus.setMix(0.42);
+        fx.chorus.setRate(1.1);
+        fx.reverb.setBypass(false);
+        fx.reverb.setMix(0.18);
+        fx.reverb.setDecay(1.4);
+        fx.masterEq.setLowGain(3.5);
+        fx.masterEq.setMidGain(2.2);
+      }
+    } else if (mType === "symphonic" || mType === "strings") {
+      // ★ 07 Symphonic / 27 Strings: Full orchestral strings
       multiLayerEngine.setSingleInstrument("string_ensemble_1");
       if (fx) {
-        fx.tube.setBypass(true);
-        fx.autopan.setBypass(true);
-        fx.chorus.setBypass(true);
+        fx.chorus.setBypass(false);
+        fx.chorus.setMix(0.35);
+        fx.chorus.setRate(0.75);
         fx.reverb.setBypass(false);
         fx.reverb.setMix(0.30);
         fx.reverb.setDecay(2.8);
-        fx.delay.setBypass(true);
-        fx.phaser.setBypass(true);
-        fx.rotary.setBypass(true);
       }
-    } else if (prog.m1Type === "slapbass") {
-      // Iconic Korg M1 Slap Bass
+    } else if (mType === "pan_flute") {
+      // ★ 08 Pan Flute: Breathy Andean pan pipes with echo
+      multiLayerEngine.setSingleInstrument("flute");
+      if (fx) {
+        fx.delay.setBypass(false);
+        fx.delay.setMix(0.30);
+        fx.delay.setDivision(0.375);
+        fx.delay.setFeedback(0.32);
+        fx.reverb.setBypass(false);
+        fx.reverb.setMix(0.28);
+        fx.reverb.setDecay(2.6);
+        fx.masterEq.setHighGain(2.5);
+      }
+    } else if (mType === "drums1") {
+      // ★ 09 Drums #1: 16-bit gated drum kit
       multiLayerEngine.setSingleInstrument("synth_bass_1");
       if (fx) {
-        fx.tube.setBypass(true);
-        fx.autopan.setBypass(true);
-        fx.chorus.setBypass(true);
+        fx.reverb.setBypass(false);
+        fx.reverb.setMix(0.15);
+        fx.reverb.setDecay(1.0);
+      }
+    } else if (mType === "epiano") {
+      // ★ 11 E. Piano: Classic chorused bell tine EP
+      multiLayerEngine.setSingleInstrument("electric_piano_1");
+      if (fx) {
+        fx.chorus.setBypass(false);
+        fx.chorus.setMix(0.48);
+        fx.chorus.setRate(1.0);
+        fx.reverb.setBypass(false);
+        fx.reverb.setMix(0.25);
+        fx.reverb.setDecay(2.2);
+      }
+    } else if (mType === "trumpet") {
+      // ★ 12 Trumpet: Brilliant solo lead trumpet
+      multiLayerEngine.setSingleInstrument("trumpet");
+      if (fx) {
+        fx.reverb.setBypass(false);
+        fx.reverb.setMix(0.22);
+        fx.reverb.setDecay(1.8);
+        fx.masterEq.setHighGain(2.2);
+      }
+    } else if (mType === "nimbus") {
+      // ★ 13 Nimbus: Deep celestial cloud pad with shimmer
+      multiLayerEngine.setSingleInstrument("string_ensemble_1");
+      if (fx) {
+        fx.phaser.setBypass(false);
+        fx.phaser.setMix(0.35);
+        fx.phaser.setRate(0.30);
+        fx.delay.setBypass(false);
+        fx.delay.setMix(0.24);
+        fx.delay.setDivision(0.375);
+        fx.reverb.setBypass(false);
+        fx.reverb.setMix(0.35);
+        fx.reverb.setDecay(3.5);
+      }
+    } else if (mType === "dist_guitar") {
+      // ★ 14 Dist Guitar: Heavy 80s rock power chord distortion
+      multiLayerEngine.setSingleInstrument("distortion_guitar");
+      if (fx) {
+        fx.tube.setBypass(false);
+        fx.tube.setDrive(0.75);
+        fx.tube.setMix(0.85);
+        fx.reverb.setBypass(false);
+        fx.reverb.setMix(0.20);
+        fx.reverb.setDecay(1.5);
+      }
+    } else if (mType === "vibes") {
+      // ★ 15 Vibes: Acoustic vibraphone with tremolo rotor
+      multiLayerEngine.setSingleInstrument("vibraphone");
+      if (fx) {
+        fx.tremolo.setBypass(false);
+        fx.tremolo.setRate(4.5);
+        fx.tremolo.setDepth(0.55);
+        fx.tremolo.setMix(0.50);
+        fx.reverb.setBypass(false);
+        fx.reverb.setMix(0.25);
+        fx.reverb.setDecay(2.4);
+      }
+    } else if (mType === "pick_bass") {
+      // ★ 16 Pick Bass: Punchy rock picked electric bass
+      multiLayerEngine.setSingleInstrument("slap_bass_1");
+      if (fx) {
+        fx.tube.setBypass(false);
+        fx.tube.setDrive(0.20);
+        fx.tube.setMix(0.30);
         fx.reverb.setBypass(false);
         fx.reverb.setMix(0.12);
         fx.reverb.setDecay(1.0);
-        fx.delay.setBypass(true);
-        fx.phaser.setBypass(true);
-        fx.rotary.setBypass(true);
-        fx.masterEq.setLowGain(2.0);
-        fx.masterEq.setHighGain(1.0);
+        fx.masterEq.setLowGain(2.5);
       }
-    } else if (prog.m1Type === "lore") {
-      // Iconic Korg M1 Lore (Alto Sax / Breathy Woodwind) - 100% True Stereo Center, Pure Breath, Zero Panning
-      multiLayerEngine.setSingleInstrument("alto_sax");
+    } else if (mType === "flute") {
+      // ★ 18 Flute: Organic acoustic concert flute
+      multiLayerEngine.setSingleInstrument("flute");
+      if (fx) {
+        fx.reverb.setBypass(false);
+        fx.reverb.setMix(0.25);
+        fx.reverb.setDecay(2.2);
+        fx.masterEq.setHighGain(2.0);
+      }
+    } else if (mType === "dream_pad") {
+      // ★ 20 Dream Pad: Lush warm analog pad with slow chorus swell
+      multiLayerEngine.setSingleInstrument("string_ensemble_1");
+      if (fx) {
+        fx.phaser.setBypass(false);
+        fx.phaser.setRate(0.22);
+        fx.phaser.setMix(0.40);
+        fx.reverb.setBypass(false);
+        fx.reverb.setMix(0.35);
+        fx.reverb.setDecay(3.5);
+      }
+    } else if (mType === "magic_piano") {
+      // ★ 21 Magic Piano: Concert Grand + Crystal Bell Chime layer
+      multiLayerEngine.isCombiMode = true;
+      multiLayerEngine.isSynthMode = false;
+      multiLayerEngine.layers = [
+        { id: 0, name: "M1 Concert Grand", inst: "acoustic_grand_piano", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+        { id: 1, name: "Magic Bell Chime", inst: "electric_piano_1", fx: "reverb_hall", gain: 0.65, pan: 0.05, oct: 1, minVel: 30, maxVel: 127, enabled: true },
+        { id: 2, name: "Celestial Glass Shimmer", inst: "vibraphone", fx: "clean", gain: 0.40, pan: -0.05, oct: 1, minVel: 60, maxVel: 127, enabled: true },
+        { id: 3, name: "Soft Warm Pad", inst: "string_ensemble_1", fx: "clean", gain: 0.35, pan: 0, oct: 0, minVel: 70, maxVel: 127, enabled: false },
+      ];
+      multiLayerEngine.init();
+      multiLayerEngine.syncLayerFx();
+      multiLayerEngine.notifyLayerChange();
+      if (fx) {
+        fx.chorus.setBypass(false);
+        fx.chorus.setMix(0.35);
+        fx.chorus.setRate(1.1);
+        fx.reverb.setBypass(false);
+        fx.reverb.setMix(0.30);
+        fx.reverb.setDecay(2.8);
+      }
+    } else if (mType === "string12") {
+      // ★ 24 12-String: Shimmering doubled 12-string acoustic guitar
+      multiLayerEngine.setSingleInstrument("acoustic_guitar_steel");
+      if (fx) {
+        fx.chorus.setBypass(false);
+        fx.chorus.setMix(0.52);
+        fx.chorus.setRate(1.35);
+        fx.reverb.setBypass(false);
+        fx.reverb.setMix(0.20);
+        fx.reverb.setDecay(1.8);
+        fx.masterEq.setHighGain(3.0);
+      }
+    } else if (mType === "kalimba") {
+      // ★ 25 Kalimba: African thumb piano (mbira) with resonant metal tines
+      multiLayerEngine.setSingleInstrument("harpsichord");
+      if (fx) {
+        fx.delay.setBypass(false);
+        fx.delay.setMix(0.25);
+        fx.delay.setDivision(0.375);
+        fx.delay.setFeedback(0.30);
+        fx.reverb.setBypass(false);
+        fx.reverb.setMix(0.22);
+        fx.reverb.setDecay(1.8);
+      }
+    } else if (mType === "abass") {
+      // ★ 26 A. Bass: Warm upright acoustic double bass
+      multiLayerEngine.setSingleInstrument("acoustic_bass");
+      if (fx) {
+        fx.tube.setBypass(false);
+        fx.tube.setDrive(0.15);
+        fx.tube.setMix(0.25);
+        fx.reverb.setBypass(false);
+        fx.reverb.setMix(0.14);
+        fx.reverb.setDecay(1.2);
+        fx.masterEq.setLowGain(3.0);
+      }
+    } else if (mType === "koto") {
+      // ★ 34 Koto Trem: Japanese plucked zither with rapid tremolo
+      multiLayerEngine.setSingleInstrument("harpsichord");
+      if (fx) {
+        fx.tremolo.setBypass(false);
+        fx.tremolo.setRate(8.0);
+        fx.tremolo.setDepth(0.65);
+        fx.tremolo.setMix(0.48);
+        fx.reverb.setBypass(false);
+        fx.reverb.setMix(0.24);
+        fx.reverb.setDecay(2.0);
+      }
+    } else if (mType === "bell_ring") {
+      // ★ 35 Bell Ring: Shimmering metallic bell chime ring
+      multiLayerEngine.setSingleInstrument("vibraphone");
+      if (fx) {
+        fx.flanger.setBypass(false);
+        fx.flanger.setMix(0.38);
+        fx.flanger.setRate(0.45);
+        fx.flanger.setFeedback(0.28);
+        fx.reverb.setBypass(false);
+        fx.reverb.setMix(0.35);
+        fx.reverb.setDecay(3.5);
+      }
+    } else if (mType === "synth_bass1" || mType === "slapbass") {
+      // ★ 36 Synth Bass 1 / Slap Bass: Punchy analog synth bass
+      multiLayerEngine.setSingleInstrument("synth_bass_1");
       if (fx) {
         fx.tube.setBypass(true);
-        fx.autopan.setBypass(true);
-        fx.chorus.setBypass(true);
+        fx.reverb.setBypass(false);
+        fx.reverb.setMix(0.12);
+        fx.reverb.setDecay(1.0);
+        fx.masterEq.setLowGain(2.5);
+        fx.masterEq.setHighGain(1.0);
+      }
+    } else if (mType === "solo_synth") {
+      // ★ 38 Solo Synth: Singing analog lead synth with delay
+      multiLayerEngine.setSingleInstrument("brass_section");
+      if (fx) {
+        fx.delay.setBypass(false);
+        fx.delay.setMix(0.28);
+        fx.delay.setDivision(0.375);
+        fx.delay.setFeedback(0.35);
+        fx.reverb.setBypass(false);
+        fx.reverb.setMix(0.25);
+        fx.reverb.setDecay(2.6);
+      }
+    } else if (mType === "organ2") {
+      // ★ 39 Pop (Organ 2): Robin S "Show Me Love" Organ Bass
+      multiLayerEngine.setSingleInstrument("drawbar_organ");
+      if (fx) {
+        fx.tube.setBypass(false);
+        fx.tube.setDrive(0.22);
+        fx.tube.setMix(0.45);
+        fx.chorus.setBypass(false);
+        fx.chorus.setMix(0.48);
+        fx.chorus.setRate(0.90);
+        fx.reverb.setBypass(false);
+        fx.reverb.setMix(0.22);
+        fx.reverb.setDecay(1.6);
+      }
+    } else if (mType === "magician") {
+      // ★ 40 Magician: Fantasy motion soundscape with breath & bells
+      multiLayerEngine.isCombiMode = true;
+      multiLayerEngine.isSynthMode = false;
+      multiLayerEngine.layers = [
+        { id: 0, name: "Breathy Woodwind Flute", inst: "flute", fx: "clean", gain: 0.85, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+        { id: 1, name: "Celestial Crystal Bell", inst: "vibraphone", fx: "reverb_hall", gain: 0.70, pan: 0.05, oct: 1, minVel: 20, maxVel: 127, enabled: true },
+        { id: 2, name: "M1 Ooh-Ahh Vocal Pad", inst: "choir_aahs", fx: "chorus_lush", gain: 0.65, pan: 0, oct: 0, minVel: 30, maxVel: 127, enabled: true },
+        { id: 3, name: "Deep Space Reverb", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.50, pan: 0, oct: 0, minVel: 50, maxVel: 127, enabled: true },
+      ];
+      multiLayerEngine.init();
+      multiLayerEngine.syncLayerFx();
+      multiLayerEngine.notifyLayerChange();
+      if (fx) {
+        fx.delay.setBypass(false);
+        fx.delay.setMix(0.30);
+        fx.delay.setDivision(0.375);
+        fx.reverb.setBypass(false);
+        fx.reverb.setMix(0.35);
+        fx.reverb.setDecay(3.8);
+      }
+    } else if (mType === "lore") {
+      multiLayerEngine.setSingleInstrument("alto_sax");
+      if (fx) {
         fx.reverb.setBypass(false);
         fx.reverb.setMix(0.20);
         fx.reverb.setDecay(2.2);
-        fx.delay.setBypass(true);
-        fx.phaser.setBypass(true);
-        fx.rotary.setBypass(true);
       }
-    } else if (prog.m1Type === "choir" || prog.m1Type === "strings") {
-      // Iconic Korg M1 Choir / Symphony Strings
-      multiLayerEngine.setSingleInstrument("string_ensemble_1");
-      if (fx) {
-        fx.tube.setBypass(true);
-        fx.autopan.setBypass(true);
-        fx.chorus.setBypass(true);
-        fx.reverb.setBypass(false);
-        fx.reverb.setMix(0.28);
-        fx.reverb.setDecay(2.8);
-        fx.delay.setBypass(true);
-        fx.phaser.setBypass(true);
-        fx.rotary.setBypass(true);
-      }
-    } else if (prog.m1Type === "freshair") {
-      // Iconic Korg M1 Fresh Air
+    } else if (mType === "freshair") {
       multiLayerEngine.setSingleInstrument("electric_piano_1");
       if (fx) {
-        fx.tube.setBypass(true);
-        fx.autopan.setBypass(true);
-        fx.chorus.setBypass(true);
-        fx.delay.setBypass(true);
         fx.reverb.setBypass(false);
         fx.reverb.setMix(0.25);
         fx.reverb.setDecay(2.4);
