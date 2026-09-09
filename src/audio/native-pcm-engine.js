@@ -1713,9 +1713,13 @@ export class NativePcmEngine {
       filter.Q.setValueAtTime(2.2, now);
       filter.frequency.setTargetAtTime(2800 + velNorm * 1200, now + 0.04, 0.12);
       filter.Q.setTargetAtTime(0.8, now + 0.04, 0.12);
+    } else if (isSax) {
+      filter.frequency.setValueAtTime(3600, now);
+      filter.frequency.exponentialRampToValueAtTime(dynamicCutoff, now + 0.045);
+      filter.Q.setValueAtTime(0.05, now);
     } else {
       filter.frequency.setValueAtTime(dynamicCutoff, now);
-      filter.Q.setValueAtTime(isSax ? 0.05 : 0.20, now);
+      filter.Q.setValueAtTime(0.20, now);
     }
 
     // 3. Time-Variant Amplifier (TVA): Maximum loudness, punchy studio presence
@@ -1777,8 +1781,8 @@ export class NativePcmEngine {
       // Soft natural vocal choir swell (not sudden piano thud)
       voiceGain.gain.setTargetAtTime(peakGain, now, 0.06);
     } else if (isSax) {
-      // Smooth wind reed breath pressure swell (40ms smooth rise - 0% hammer click)
-      voiceGain.gain.setTargetAtTime(peakGain, now, 0.040);
+      // Smooth wind reed breath pressure swell (50ms smooth rise - no mechanical clack)
+      voiceGain.gain.setTargetAtTime(peakGain, now, 0.050);
     } else {
       voiceGain.gain.setTargetAtTime(peakGain, now, 0.002);
     }

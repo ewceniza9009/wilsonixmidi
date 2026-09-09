@@ -745,15 +745,16 @@
 
 .bank-selector-scroll {
   width: 100%;
-  overflow-x: auto;
+  overflow-y: auto;
   padding-bottom: 2px;
   scrollbar-width: thin;
 }
 
 .bank-selector {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  width: max-content;
+  width: 100%;
 }
 
 .bank-btn {
