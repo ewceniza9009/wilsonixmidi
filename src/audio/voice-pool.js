@@ -56,13 +56,15 @@ export class PolyphonicVoice {
     // Oscs -> Mixers -> Filter -> VoiceGain -> Destination
     this.osc1.connect(this.gain1);
     this.osc2.connect(this.gain2);
-    this.osc3.connect(this.gain3);
+this.osc3.connect(this.gain3);
+    this._osc3Connected = true;
 
     this.gain1.connect(this.filter);
     this.gain2.connect(this.filter);
     this.gain3.connect(this.filter);
 
     this.filter.connect(this.voiceGain);
+    this._filterConnected = true;
     this.voiceGain.connect(this.destination);
 
     // Start oscillators once at boot time; envelope gating controls volume
@@ -77,6 +79,14 @@ export class PolyphonicVoice {
     const wasBusy = this.isBusy;
     this.isBusy = true;
     this.isSustained = false;
+
+    // If this voice was physically decoupled from the graph while silent
+    // (see release()/forceStop()), re-insert it BEFORE the attack ramps in.
+    // The envelope is 0.0001/0 until now+0.002, so reconnecting is click-free.
+    if (!this._filterConnected) {
+      try { this.filter.connect(this.voiceGain); } catch (e) {}
+      this._filterConnected = true;
+    }
 
     const ctx = this.ctx;
     const now = ctx.currentTime;
@@ -108,7 +118,29 @@ export class PolyphonicVoice {
     // Component balances (clean, balanced timbre mix without velocity-squaring)
     this.gain1.gain.setValueAtTime(instrumentConfig.gain1 || 0.7, now);
     this.gain2.gain.setValueAtTime(instrumentConfig.gain2 || 0.3, now);
-    this.gain3.gain.setValueAtTime(instrumentConfig.gain3 || 0.15, now);
+
+    // Decouple the sub oscillator whenever a program sets its gain to ZERO
+    // (organs/EPs/strings disable the sub entirely). A connected osc3 costs
+    // render time every quantum even at gain 0 -- physically dropping it keeps
+    // sustained sounding voices as lean as possible.
+    const osc3Gain = Number(instrumentConfig.gain3) || 0;
+    const osc3On = osc3Gain > 0.0001;
+    if (osc3On && !this._osc3Connected) {
+      // Reconnecting a running oscillator at gain>0 would step in mid-phase --
+      // fade the sub in over a few ms so the transition is click-free.
+      this.gain3.gain.setValueAtTime(0.0, now);
+      try { this.osc3.connect(this.gain3); } catch (e) {}
+      this._osc3Connected = true;
+      this.gain3.gain.setTargetAtTime(osc3Gain, now, 0.004);
+    } else if (osc3On) {
+      this.gain3.gain.setValueAtTime(osc3Gain, now);
+    } else {
+      this.gain3.gain.setValueAtTime(0.0, now);
+      if (this._osc3Connected) {
+        try { this.osc3.disconnect(this.gain3); } catch (e) {}
+        this._osc3Connected = false;
+      }
+    }
 
     const attack = Math.max(0.0015, instrumentConfig.attack || 0.002);
     const peakGain = (0.35 + velRatio * 0.65) * (instrumentConfig.masterGain || 0.85);
@@ -161,6 +193,13 @@ export class PolyphonicVoice {
     // Smooth, guaranteed exponential decay to absolute zero
     this.voiceGain.gain.cancelScheduledValues(now);
     this.voiceGain.gain.setTargetAtTime(0.0, now, tau);
+    // Force an EXACT digital zero once the fade completes. setTargetAtTime only
+    // approaches zero asymptotically (~-52dB residual at 6*tau), and disconnecting
+    // the voice's sub-graph over a barely-audible hair of signal is what leaked
+    // the soft "static hiss" across dense chord changes. Pinning an unambiguous
+    // 0.0 makes the subsequent physical disconnect a silent, sample-exact cut.
+    const fadeSec = Math.max(0.08, tau * 6);
+    this.voiceGain.gain.setValueAtTime(0.0, now + fadeSec);
 
     // Free the voice only after it has physically faded to inaudibility AND the
     // same generation still owns it (a reused/retriggered note must never be
@@ -169,20 +208,42 @@ export class PolyphonicVoice {
       if (gen === this._gen && !this.isSustained) {
         this.isBusy = false;
         this.activeMidiNote = null;
+        // Fully silent now (exact zero since fadeSec): physically remove this
+        // voice's sub-graph from the render pull so an idle voice costs ZERO
+        // render time, not just a zeroed gain still being synthesized every
+        // quantum. Sustained warm sounds (organs, pads) release in waves --
+        // this frees the render thread in real time instead of leaving 96 dead
+        // oscillators running.
+        if (this._filterConnected) {
+          try { this.filter.disconnect(this.voiceGain); } catch (e) {}
+          this._filterConnected = false;
+        }
       }
-    }, Math.max(220, tau * 6 * 1000));
+    }, (fadeSec + 0.04) * 1000);
   }
 
   forceStop() {
     const now = this.ctx.currentTime;
     this._gen++;
+    const gen = this._gen;
     this.isBusy = false;
     this.isSustained = false;
     this.activeMidiNote = null;
+    // Fade out fast, then pin an exact zero so the physical disconnect that
+    // follows is sample-exact silence (no residual -52dB step = no hiss).
+    const fadeSec = 0.09;
     try {
       this.voiceGain.gain.cancelScheduledValues(now);
       this.voiceGain.gain.setTargetAtTime(0.0, now, 0.015);
+      this.voiceGain.gain.setValueAtTime(0.0, now + fadeSec);
     } catch (e) {}
+    setTimeout(() => {
+      if (gen !== this._gen) return; // retriggered -- never kill the new note
+      if (this._filterConnected) {
+        try { this.filter.disconnect(this.voiceGain); } catch (e) {}
+        this._filterConnected = false;
+      }
+    }, (fadeSec + 0.05) * 1000);
   }
 
   // Permanently silence this voice's oscillators. Only safe for pools whose
@@ -233,9 +294,17 @@ export class VoicePoolManager {
 
     // Prefer stealing a voice whose note has been RELEASED (only its tail is
     // ringing) so a note the player is still holding is NEVER cut off mid-sustain.
-    const tail = this.voices
-      .filter(v => v.isBusy && v.activeMidiNote !== null && !isHeld(v.activeMidiNote))
-      .sort((a, b) => a.startTime - b.startTime)[0];
+    // Single O(n) pass -- no temporary array allocation, no sort, no GC churn
+    // during sustained dense playing (organs/pads love doing this).
+    let tail = null;
+    let tailOldest = Infinity;
+    for (let i = 0; i < this.voices.length; i++) {
+      const v = this.voices[i];
+      if (v.isBusy && v.activeMidiNote !== null && !isHeld(v.activeMidiNote) && v.startTime < tailOldest) {
+        tail = v;
+        tailOldest = v.startTime;
+      }
+    }
     if (tail) return tail;
 
     // Only when literally every voice is a held note, steal the longest-sounding one.

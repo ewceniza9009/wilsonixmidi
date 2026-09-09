@@ -54,24 +54,91 @@ export class FxRackManager {
     this.chainEffects();
   }
 
+  // Wires an effect into the chain through a HARD-BYPASS slot.
+  //
+  // WHY: the render thread must finish each audio quantum in real-time. Wiring
+  // every effect permanently in series meant ALL 15 effects (two 4x-oversampled
+  // waveshapers, spring/algorithmic reverbs, feedback delays, LFO banks...)
+  // kept processing every quantum even when "bypassed" -- bypass only zeroed an
+  // internal wet gain. That guaranteed render-thread overload -> the
+  // hard-silence dropouts that sound like stutter/garble.
+  //
+  // HOW: audio flows through a dry continuity wire past the effect. The effect's
+  // send tap is physically DISCONNECTED from the graph while bypassed, so the
+  // browser stops pulling the effect's whole internal network (near-zero DSP).
+  // Engaging restores the exact same signal path as before, with the same
+  // internal dry/wet gains -> tone is bit-identical to the original wiring.
+  _installBypassSlot(effect, sourceNode, targetNode) {
+    const ctx = this.ctx;
+
+    const dryGain = ctx.createGain();
+    dryGain.gain.value = 1.0;
+    sourceNode.connect(dryGain);
+    dryGain.connect(targetNode);
+
+    const wetGain = ctx.createGain();
+    wetGain.gain.value = 0.0;
+    const tap = ctx.createGain();
+    tap.connect(effect.input);
+    effect.output.connect(wetGain);
+    wetGain.connect(targetNode);
+
+    let engaged = false;
+    const setEngaged = on => {
+      if (on === engaged) return;
+      engaged = on;
+      const now = ctx.currentTime;
+      dryGain.gain.setTargetAtTime(on ? 0.0 : 1.0, now, 0.015);
+      wetGain.gain.setTargetAtTime(on ? 1.0 : 0.0, now, 0.015);
+      try {
+        sourceNode.disconnect(tap);
+      } catch (e) {}
+      if (on) sourceNode.connect(tap);
+    };
+    setEngaged(false);
+
+    // Route every setBypass caller (rack presets, FX UI, engine patches)
+    // through the hard-bypass so they disconnect the physical link too.
+    const originalSetBypass = effect.setBypass ? effect.setBypass.bind(effect) : null;
+    effect.setBypass = bypassed => {
+      if (originalSetBypass) originalSetBypass(bypassed);
+      setEngaged(!bypassed);
+    };
+
+    return { effect, setEngaged };
+  }
+
   chainEffects() {
-    // Clean Studio Serial chain:
-    // Input -> PianoAcoustics -> TubeDrive -> AutoPan -> Phaser -> Flanger -> Chorus -> Rotary -> Tremolo -> Slapback -> Delay -> SpringReverb -> GatedReverb -> AlgorithmicReverb -> TapeSaturation -> PresetTrim -> MasterEQ -> Output
-    this.input.connect(this.pianoAcoustics.input);
-    this.pianoAcoustics.output.connect(this.tube.input);
-    this.tube.output.connect(this.autopan.input);
-    this.autopan.output.connect(this.phaser.input);
-    this.phaser.output.connect(this.flanger.input);
-    this.flanger.output.connect(this.chorus.input);
-    this.chorus.output.connect(this.rotary.input);
-    this.rotary.output.connect(this.tremolo.input);
-    this.tremolo.output.connect(this.slapback.input);
-    this.slapback.output.connect(this.delay.input);
-    this.delay.output.connect(this.springReverb.input);
-    this.springReverb.output.connect(this.gatedReverb.input);
-    this.gatedReverb.output.connect(this.reverb.input);
-    this.reverb.output.connect(this.tapeSat.input);
-    this.tapeSat.output.connect(this.presetTrimNode);
+    // Clean Studio Serial chain, hard-bypassed per slot:
+    // Input -> PianoAcoustics -> TubeDrive -> AutoPan -> Phaser -> Flanger ->
+    // Chorus -> Rotary -> Tremolo -> Slapback -> Delay -> SpringReverb ->
+    // GatedReverb -> AlgorithmicReverb -> TapeSaturation -> PresetTrim ->
+    // MasterEQ -> Output
+    const chain = [
+      this.pianoAcoustics,
+      this.tube,
+      this.autopan,
+      this.phaser,
+      this.flanger,
+      this.chorus,
+      this.rotary,
+      this.tremolo,
+      this.slapback,
+      this.delay,
+      this.springReverb,
+      this.gatedReverb,
+      this.reverb,
+      this.tapeSat,
+    ];
+
+    let cursor = this.input;
+    chain.forEach(effect => {
+      const junction = this.ctx.createGain();
+      this._installBypassSlot(effect, cursor, junction);
+      cursor = junction;
+    });
+
+    cursor.connect(this.presetTrimNode);
     this.presetTrimNode.connect(this.masterEq.input);
     this.masterEq.output.connect(this.output);
 
