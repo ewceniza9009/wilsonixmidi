@@ -154,6 +154,7 @@ export class GroovePlayerUI {
             <div class="panel-subhead">
               <span>⚡ LIVE SOUND EFFECTS & VOX PADS</span>
               <span class="panel-hint">Instant zero-latency trigger pads</span>
+              <button class="sfx-cancel-btn" id="btn-sfx-cancel" title="Stop all running sound effects & long samples">⏹ CANCEL FX</button>
             </div>
 
             <!-- SFX Category Tabs -->
@@ -164,6 +165,7 @@ export class GroovePlayerUI {
               <button class="sfx-cat-btn ${this.activeSfxCategory === "vox" ? "active" : ""}" data-sfx-cat="vox">🗣️ HUMAN VOX</button>
               <button class="sfx-cat-btn ${this.activeSfxCategory === "nature" ? "active" : ""}" data-sfx-cat="nature">🌿 NATURE SOUNDS</button>
               <button class="sfx-cat-btn ${this.activeSfxCategory === "percussion" ? "active" : ""}" data-sfx-cat="percussion">🥁 PERCUSSIONS</button>
+              <button class="sfx-cat-btn ${this.activeSfxCategory === "drums" ? "active" : ""}" data-sfx-cat="drums">🪘 REAL DRUM KIT</button>
               <button class="sfx-cat-btn ${this.activeSfxCategory === "dj" ? "active" : ""}" data-sfx-cat="dj">🎧 DJ & CINEMATIC</button>
               <button class="sfx-cat-btn ${this.activeSfxCategory === "weird" ? "active" : ""}" data-sfx-cat="weird">🛸 WEIRD SCI-FI</button>
             </div>
@@ -199,9 +201,10 @@ export class GroovePlayerUI {
         { id: "m1_ooh_ahh", icon: "🎶", name: "Korg M1 Ooh-Ahh", desc: "Doctor Mix authentic dual-formant choir" },
         { id: "choir_aahs", icon: "⛪", name: "Cathedral Choir Aahs", desc: "Multi-sampled angelic sacred choir" },
         { id: "voice_oohs", icon: "✨", name: "Angelic Voice Oohs", desc: "Warm recorded human 'Ooh' voices" },
-        { id: "vox_breath", icon: "💨", name: "Human Vocal Sigh", desc: "Real vocal breath & atmospheric air" },
-        { id: "vox_hey", icon: "🔥", name: "Hype Vocal 'Hey!'", desc: "Rich throat formant vocal shout" },
-        { id: "vox_yeah", icon: "🎤", name: "Vocal 'Yeah!'", desc: "Expressive harmonic vocal call" },
+        { id: "vox_breath", icon: "💨", name: "Human Breath", desc: "Real recorded breath & atmospheric air" },
+        { id: "vox_hey", icon: "🔥", name: "Hype Vocal 'Hey!'", desc: "Real recorded group vocal shout" },
+        { id: "vox_yeah", icon: "🎤", name: "Vocal 'Yeah!'", desc: "Real recorded passionate shout" },
+        { id: "vox_sigh", icon: "😮‍💨", name: "Real Human Sigh", desc: "Genuine field-recorded woman sigh" },
         { id: "vox_beatbox_kick", icon: "🥊", name: "Beatbox Kick", desc: "Vocal throat sub kick" },
         { id: "vox_beatbox_snare", icon: "💥", name: "Beatbox Snare", desc: "Vocal crack snare 'kchhh'" },
         { id: "vox_beatbox_hat", icon: "🎩", name: "Beatbox Hat", desc: "Vocal crisp hat 'ts-ts'" },
@@ -209,7 +212,8 @@ export class GroovePlayerUI {
       nature: [
         { id: "nature_ocean", icon: "🌊", name: "Ocean Waves", desc: "Real multi-sampled tidal surf swell" },
         { id: "nature_birds", icon: "🐦", name: "Forest Birdsong", desc: "Real field recording of wild birds" },
-        { id: "nature_thunder", icon: "⛈️", name: "Thunder & Taiko", desc: "Deep acoustic thunder & bass strike" },
+        { id: "nature_thunder", icon: "⛈️", name: "Thunder Clap & Lightning", desc: "REAL field-recorded thunder clap with lightning crack" },
+        { id: "nature_thunderstorm", icon: "🌩️", name: "Full Thunderstorm", desc: "REAL full rainstorm with rolling thunder" },
         { id: "nature_rain", icon: "🌧️", name: "Rainstorm", desc: "Continuous soothing natural rainfall" },
         { id: "nature_wind", icon: "💨", name: "Wind Gusts", desc: "Atmospheric resonant breeze" },
       ],
@@ -223,16 +227,39 @@ export class GroovePlayerUI {
         { id: "percussion_conga_hi", icon: "🪘", name: "High Conga Slap", desc: "Afro-Cuban slap tone" },
         { id: "percussion_shaker", icon: "🪇", name: "Latin Shaker", desc: "Dynamic forward & back shake" },
       ],
+      drums: [
+        { id: "drum_kick", icon: "🥁", name: "Acoustic Kick", desc: "REAL studio kick drum hit" },
+        { id: "drum_snare", icon: "🥁", name: "Acoustic Snare", desc: "REAL 14in brass snare crack" },
+        { id: "drum_hhclosed", icon: "🥁", name: "Closed Hi-Hat", desc: "REAL tight closed-hat tick" },
+        { id: "drum_hhopen", icon: "🥁", name: "Open Hi-Hat", desc: "REAL sizzling open-hat wash" },
+        { id: "drum_crash", icon: "🥁", name: "Crash Cymbal", desc: "REAL 18in crash splash" },
+        { id: "drum_ride", icon: "🥁", name: "Ride Cymbal", desc: "REAL ride cymbal ring" },
+      ],
       dj: [
         { id: "fx_subboom", icon: "💣", name: "Cinematic Sub-Boom", desc: "Real sub-bass explosive impact" },
         { id: "fx_scratch", icon: "💿", name: "Vinyl Scratch", desc: "Hip-hop turntable needle scrub" },
         { id: "fx_tapestop", icon: "🛑", name: "Tape Stop", desc: "Analog motor speed-down" },
         { id: "fx_airhorn", icon: "🎺", name: "Reggae Airhorn", desc: "Stadium dancehall blast" },
+        { id: "fx_siren", icon: "🚨", name: "Police Siren", desc: "REAL police siren wail" },
+        { id: "fx_whistle", icon: "🥅", name: "Referee Whistle", desc: "REAL sharp referee whistle blast" },
+        { id: "fx_cheer", icon: "📣", name: "Crowd Cheer", desc: "REAL excited audience cheer" },
+        { id: "fx_boom", icon: "💥", name: "Explosion Boom", desc: "REAL heavy explosion impact" },
+        { id: "fx_partyhorn", icon: "🎉", name: "Party Horn", desc: "REAL blower party horn" },
+        { id: "fx_scratchreal", icon: "💿", name: "Real Vinyl Scratch", desc: "REAL turntable needle scrub" },
       ],
       weird: [
         { id: "fx_laser", icon: "⚡", name: "Laser Beam Zap", desc: "Resonant sci-fi pitch drop" },
         { id: "fx_alien", icon: "👽", name: "Alien Drone", desc: "Metallic modulation hyperspace" },
         { id: "fx_bionic", icon: "🤖", name: "Bionic Glitch", desc: "High-speed frequency cascade" },
+        { id: "fx_heartbeat", icon: "🫀", name: "Human Heartbeat", desc: "REAL deep heartbeat pound" },
+        { id: "fx_sonar", icon: "📡", name: "Submarine Sonar", desc: "REAL sonar ping" },
+        { id: "fx_ufo", icon: "🛸", name: "UFO Whoosh", desc: "REAL UFO flyby whoosh" },
+        { id: "fx_static", icon: "📻", name: "Radio Static", desc: "REAL crackling radio static" },
+        { id: "fx_ghost", icon: "👻", name: "Ghostly Whisper", desc: "REAL eerie ghost whispering" },
+        { id: "fx_robot", icon: "🤖", name: "Cyber Robot Voice", desc: "REAL robotic voice FX" },
+        { id: "fx_zombie", icon: "🧟", name: "Zombie Moan", desc: "REAL groaning zombie moan" },
+        { id: "fx_mystic", icon: "🔮", name: "Mystical Whisper", desc: "REAL mysterious chanting whisper" },
+        { id: "fx_laserreal", icon: "✨", name: "Retro Laser Shot", desc: "REAL 80s arcade laser zap" },
       ],
     };
 
@@ -319,7 +346,29 @@ export class GroovePlayerUI {
       });
     });
 
+    // 5b. Cancel / stop all running sound effects & long samples
+    this.container.querySelector("#btn-sfx-cancel")?.addEventListener("click", () => {
+      audioCore.ensureRunning();
+      this.cancelLongSfx();
+    });
+
     this.bindSfxPads();
+  }
+
+  toggleRealSample(instId, midi, vel, gain) {
+    const pcm = multiLayerEngine.pcmEngine;
+    if (!pcm) return;
+    if (pcm.hasActiveSfxSample(instId)) {
+      pcm.stopSfxSamples(instId);
+      return;
+    }
+    pcm.playNote(instId, midi, vel, gain);
+  }
+
+  cancelLongSfx() {
+    multiLayerEngine.pcmEngine?.stopSfxSamples();
+    if (this.sfxGen) this.sfxGen.stopAll();
+    synthesizerYouEngine.stopAll();
   }
 
   bindSfxPads() {
@@ -385,13 +434,13 @@ export class GroovePlayerUI {
         multiLayerEngine.pcmEngine?.playNote("breath_noise", 60, 105, 1.2);
         break;
       case "vox_hey":
-        // Layer hype concert crowd shout with formant chant (zero mosquito buzz)
-        multiLayerEngine.pcmEngine?.playNote("applause", 76, 90, 0.7);
-        this.sfxGen.triggerVocalChant("hey", 60, 105, 1.1);
+        this.toggleRealSample("vox_hey_r", 60, 118, 1.3);
         break;
       case "vox_yeah":
-        multiLayerEngine.pcmEngine?.playNote("voice_oohs", 62, 85, 0.6);
-        this.sfxGen.triggerVocalChant("yeah", 60, 105, 1.1);
+        this.toggleRealSample("vox_yeah_r", 62, 118, 1.3);
+        break;
+      case "vox_sigh":
+        this.toggleRealSample("vox_sigh_r", 60, 110, 1.3);
         break;
       case "vox_beatbox_kick":
         this.sfxGen.triggerBeatbox("kick", 110, 1.0);
@@ -412,8 +461,11 @@ export class GroovePlayerUI {
         multiLayerEngine.pcmEngine?.playNote("bird_tweet", 72, 95, 1.0);
         break;
       case "nature_thunder":
-        multiLayerEngine.pcmEngine?.playNote("taiko_drum", 48, 125, 1.3);
-        this.sfxGen.triggerThunder(110, 1.0);
+        this.toggleRealSample("thunder_clap", 60, 125, 1.5);
+        this.toggleRealSample("lightning_bolt", 72, 95, 0.9);
+        break;
+      case "nature_thunderstorm":
+        this.toggleRealSample("thunder_storm", 60, 120, 1.5);
         break;
       case "nature_rain":
         this.sfxGen.triggerRain(4.5, 95, 1.0);
@@ -448,6 +500,26 @@ export class GroovePlayerUI {
         this.sfxGen.triggerShaker(95, 1.0);
         break;
 
+      // 4b. REAL Acoustic Drum Kit (field-recorded one-shots)
+      case "drum_kick":
+        this.toggleRealSample("drum_kick_r", 60, 122, 1.3);
+        break;
+      case "drum_snare":
+        this.toggleRealSample("drum_snare_r", 60, 118, 1.3);
+        break;
+      case "drum_hhclosed":
+        this.toggleRealSample("drum_hhclosed_r", 60, 110, 1.1);
+        break;
+      case "drum_hhopen":
+        this.toggleRealSample("drum_hhopen_r", 60, 116, 1.2);
+        break;
+      case "drum_crash":
+        this.toggleRealSample("drum_crash_r", 60, 125, 1.3);
+        break;
+      case "drum_ride":
+        this.toggleRealSample("drum_ride_r", 60, 122, 1.3);
+        break;
+
       // 5. DJ & Cinematic
       case "fx_subboom":
         multiLayerEngine.pcmEngine?.playNote("gunshot", 48, 125, 1.4);
@@ -462,6 +534,24 @@ export class GroovePlayerUI {
       case "fx_airhorn":
         this.sfxGen.triggerReggaeAirhorn(100, 1.0);
         break;
+      case "fx_siren":
+        this.toggleRealSample("dj_siren_r", 60, 122, 1.3);
+        break;
+      case "fx_whistle":
+        this.toggleRealSample("dj_whistle_r", 60, 115, 1.25);
+        break;
+      case "fx_cheer":
+        this.toggleRealSample("dj_cheer_r", 60, 125, 1.3);
+        break;
+      case "fx_boom":
+        this.toggleRealSample("fx_boom_r", 48, 125, 1.5);
+        break;
+      case "fx_partyhorn":
+        this.toggleRealSample("dj_partyhorn_r", 60, 118, 1.25);
+        break;
+      case "fx_scratchreal":
+        this.toggleRealSample("dj_scratch_r", 60, 118, 1.3);
+        break;
 
       // 6. Weird Sci-Fi
       case "fx_laser":
@@ -472,6 +562,33 @@ export class GroovePlayerUI {
         break;
       case "fx_bionic":
         this.sfxGen.triggerBionicGlitch(100, 1.0);
+        break;
+      case "fx_heartbeat":
+        this.toggleRealSample("fx_heartbeat_r", 60, 122, 1.3);
+        break;
+      case "fx_sonar":
+        this.toggleRealSample("fx_sonar_r", 60, 118, 1.25);
+        break;
+      case "fx_ufo":
+        this.toggleRealSample("fx_ufo_r", 60, 122, 1.3);
+        break;
+      case "fx_static":
+        this.toggleRealSample("fx_static_r", 60, 118, 1.25);
+        break;
+      case "fx_ghost":
+        this.toggleRealSample("fx_ghost_r", 60, 112, 1.2);
+        break;
+      case "fx_robot":
+        this.toggleRealSample("fx_robot_r", 60, 118, 1.25);
+        break;
+      case "fx_zombie":
+        this.toggleRealSample("fx_zombie_r", 60, 112, 1.2);
+        break;
+      case "fx_mystic":
+        this.toggleRealSample("fx_mystic_r", 60, 118, 1.25);
+        break;
+      case "fx_laserreal":
+        this.toggleRealSample("fx_laser_r", 60, 118, 1.25);
         break;
 
       // 7. Genuine Saxophone Effects (Authentic Studio Acoustic Soundfonts)

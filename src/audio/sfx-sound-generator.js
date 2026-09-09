@@ -12,7 +12,35 @@ export class SfxSoundGenerator {
     this.ctx = ctx;
     this.destination = destinationNode;
     this.noiseBuffer = null;
+    this._longFx = new Set();
     this.initNoiseBuffer();
+  }
+
+  trackSfx(nodes, endsInSeconds = 30) {
+    if (!nodes || !nodes.length) return;
+    const unit = { nodes };
+    this._longFx.add(unit);
+    setTimeout(() => this._longFx.delete(unit), (endsInSeconds + 0.5) * 1000);
+  }
+
+  stopAll() {
+    const now = this.ctx.currentTime;
+    this._longFx.forEach(unit => {
+      unit.nodes.forEach(node => {
+        try {
+          if (node && typeof node.stop === "function") {
+            try { node.stop(now + 0.03); } catch (e) {}
+          }
+          if (node && node.gain && typeof node.gain.cancelScheduledValues === "function") {
+            try {
+              node.gain.cancelScheduledValues(now);
+              node.gain.setTargetAtTime(0, now, 0.03);
+            } catch (e) {}
+          }
+        } catch (e) {}
+      });
+    });
+    this._longFx.clear();
   }
 
   getDest(destNode = null) {
@@ -120,6 +148,7 @@ export class SfxSoundGenerator {
 
     noise.start(now);
     noise.stop(now + duration + 0.1);
+    this.trackSfx([noise, gain], duration);
     return noise;
   }
 
@@ -147,6 +176,7 @@ export class SfxSoundGenerator {
 
     noise.start(now);
     noise.stop(now + duration + 0.1);
+    this.trackSfx([noise, gain], duration);
     return noise;
   }
 
@@ -203,6 +233,7 @@ export class SfxSoundGenerator {
 
     noise.start(now);
     noise.stop(now + duration + 0.1);
+    this.trackSfx([noise, gain], duration);
     return noise;
   }
 
@@ -445,6 +476,7 @@ export class SfxSoundGenerator {
     osc1.stop(now + 3.1);
     osc2.stop(now + 3.1);
     lfo.stop(now + 3.1);
+    this.trackSfx([osc1, osc2, lfo, gain], 3.2);
 
     return { osc1, osc2 };
   }
@@ -1959,6 +1991,7 @@ export class SfxSoundGenerator {
 
   isSfxInstrument(instId) {
     if (!instId) return false;
+    if (instId.endsWith("_r")) return false;
     return (
       instId === "kalimba" ||
       instId === "m1_kalimba" ||

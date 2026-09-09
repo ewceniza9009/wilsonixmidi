@@ -1173,6 +1173,33 @@ export class NativePcmEngine {
       this.loadSoundfont("string_ensemble_1");
       this.loadSoundfont("brass_section");
       this.loadSoundfont("flute");
+      this.loadSoundfont("thunder_clap");
+      this.loadSoundfont("lightning_bolt");
+      this.loadSoundfont("thunder_storm");
+      this.loadSoundfont("vox_hey_r");
+      this.loadSoundfont("vox_yeah_r");
+      this.loadSoundfont("vox_sigh_r");
+      this.loadSoundfont("drum_kick_r");
+      this.loadSoundfont("drum_snare_r");
+      this.loadSoundfont("drum_hhclosed_r");
+      this.loadSoundfont("drum_hhopen_r");
+      this.loadSoundfont("drum_crash_r");
+      this.loadSoundfont("drum_ride_r");
+      this.loadSoundfont("dj_siren_r");
+      this.loadSoundfont("dj_whistle_r");
+      this.loadSoundfont("dj_cheer_r");
+      this.loadSoundfont("dj_scratch_r");
+      this.loadSoundfont("fx_boom_r");
+      this.loadSoundfont("dj_partyhorn_r");
+      this.loadSoundfont("fx_heartbeat_r");
+      this.loadSoundfont("fx_sonar_r");
+      this.loadSoundfont("fx_ufo_r");
+      this.loadSoundfont("fx_static_r");
+      this.loadSoundfont("fx_ghost_r");
+      this.loadSoundfont("fx_robot_r");
+      this.loadSoundfont("fx_laser_r");
+      this.loadSoundfont("fx_zombie_r");
+      this.loadSoundfont("fx_mystic_r");
     };
 
     if (typeof window !== "undefined" && "requestIdleCallback" in window) {
@@ -2055,6 +2082,56 @@ export class NativePcmEngine {
     } else {
       this.activeVoices.delete(midiNote);
     }
+  }
+
+  hasActiveSfxSample(instId = null) {
+    const matches = (v) => {
+      if (!v || !v.instId) return false;
+      if (instId) return v.instId === instId;
+      if (v.instId.endsWith("_r")) return true;
+      return v.instId === "thunder_clap" || v.instId === "lightning_bolt" || v.instId === "thunder_storm";
+    };
+    for (const list of this.activeVoices.values()) {
+      for (const v of list) if (matches(v)) return true;
+    }
+    for (const list of this.sustainedVoices.values()) {
+      for (const v of list) if (matches(v)) return true;
+    }
+    return false;
+  }
+
+  stopSfxSamples(instId = null) {
+    const now = this.ctx.currentTime;
+    const matches = (v) => {
+      if (!v || !v.instId) return false;
+      if (instId) return v.instId === instId;
+      if (v.instId.endsWith("_r")) return true;
+      return v.instId === "thunder_clap" || v.instId === "lightning_bolt" || v.instId === "thunder_storm";
+    };
+    const silence = (map) => {
+      const keptKeys = [];
+      map.forEach((voices, key) => {
+        const keep = [];
+        voices.forEach(v => {
+          if (matches(v)) {
+            try {
+              v.voiceGain.gain.cancelScheduledValues(now);
+              v.voiceGain.gain.setTargetAtTime(0, now, 0.01);
+              v.src.stop(now + 0.05);
+              const qi = this.voiceQueue.indexOf(v);
+              if (qi !== -1) this.voiceQueue.splice(qi, 1);
+            } catch (e) {}
+          } else {
+            keep.push(v);
+          }
+        });
+        if (keep.length > 0) map.set(key, keep);
+        else keptKeys.push(key);
+      });
+      keptKeys.forEach(k => map.delete(k));
+    };
+    silence(this.activeVoices);
+    silence(this.sustainedVoices);
   }
 
   allNotesOff() {

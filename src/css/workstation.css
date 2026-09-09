@@ -1904,8 +1904,9 @@
 
 .sfx-cat-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 5px;
-  overflow-x: auto;
+  overflow-y: auto;
   padding-bottom: 6px;
   margin-bottom: 8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
@@ -1936,6 +1937,27 @@
   color: #fff;
   border-color: transparent;
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+}
+
+.sfx-cancel-btn {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  padding: 4px 9px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  margin-left: auto;
+  transition: all 0.15s ease;
+}
+
+.sfx-cancel-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fff;
+  border-color: rgba(239, 68, 68, 0.6);
 }
 
 .sfx-pads-container {
