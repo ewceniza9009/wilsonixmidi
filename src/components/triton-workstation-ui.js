@@ -551,6 +551,14 @@ export class TritonWorkstationUI {
 
     if (prog.instId) {
       instKey = prog.instId;
+    } else if (prog.id === "A006") {
+      // SG Hybrid Piano = HYBRID grand: acoustic attack + electric bell shimmer.
+      // Routes to the Rhodes-style EP sample so it sounds clearly DIFFERENT from
+      // the other pianos instead of collapsing onto the same acoustic grand.
+      instKey = "electric_piano_1";
+    } else if (prog.id === "A036") {
+      // Velo Piano ST = real velocity-layered acoustic grand piano
+      instKey = "acoustic_grand_piano";
     } else if (name.includes("distortion") || name.includes("*dist") || prog.id === "A042") {
       instKey = "distortion_guitar";
     } else if (name.includes("feedback") || name.includes("overdrive") || prog.id === "A037") {

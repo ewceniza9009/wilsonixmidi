@@ -87,7 +87,7 @@ export class TritonVirtualAnalogEngine {
       sustainLevel: prog.sustain ?? 0.65,
       release: prog.release ?? 0.35,
       isPercussive,
-      masterGain: 0.30,
+      masterGain: 0.72,
     };
   }
 
