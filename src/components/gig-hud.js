@@ -204,22 +204,27 @@ export class GigHudUI {
 
     // Sync layerBtn with multiLayerEngine state changes from anywhere (Mixer rack, Presets, etc.)
     multiLayerEngine.addLayerChangeListener(layers => {
-      const isLayer1Active = multiLayerEngine.isCombiMode && (layers[1]?.enabled ?? false);
+      const isLayer1Active = (multiLayerEngine.isCombiMode && (layers[1]?.enabled ?? false)) || multiLayerEngine.isDualLayerActive;
       if (layerBtn) {
         layerBtn.classList.toggle("active", isLayer1Active);
         layerBtn.innerText = isLayer1Active ? "LAYER: ON" : "LAYER: OFF";
       }
       if (layerSelect && layers[1]?.inst) {
-        layerSelect.value = layers[1].inst;
+        const instVal = layers[1].inst;
+        const exists = Array.from(layerSelect.options).some(o => o.value === instVal);
+        if (exists) {
+          layerSelect.value = instVal;
+        } else if (instVal === "choir_aahs") {
+          layerSelect.value = "m1_ooh_ahh";
+        }
       }
     });
 
     layerBtn?.addEventListener("click", () => {
-      const isCurrentlyActive = multiLayerEngine.isCombiMode && (multiLayerEngine.layers[1]?.enabled ?? false);
+      const isCurrentlyActive = (multiLayerEngine.isCombiMode && (multiLayerEngine.layers[1]?.enabled ?? false)) || multiLayerEngine.isDualLayerActive;
       const newState = !isCurrentlyActive;
 
-      multiLayerEngine.toggleCombiMode(true);
-      multiLayerEngine.toggleLayer(1, newState);
+      multiLayerEngine.setDualLayerEnabled(newState);
       synthEngine.toggleDualLayer(newState);
 
       layerBtn.classList.toggle("active", newState);
@@ -228,9 +233,7 @@ export class GigHudUI {
 
     layerSelect?.addEventListener("change", e => {
       const bankId = e.target.value;
-      multiLayerEngine.toggleCombiMode(true);
-      multiLayerEngine.setLayerInstrument(1, bankId);
-      multiLayerEngine.toggleLayer(1, true);
+      multiLayerEngine.setDualLayerInstrument(bankId);
       synthEngine.toggleDualLayer(true);
 
       if (layerBtn) {
@@ -390,12 +393,6 @@ export class GigHudUI {
       multiLayerEngine.setSingleInstrument(resolvedInst);
       if (audioCore.fxRack) audioCore.fxRack.applyPreset(resolvedInst);
       synthEngine.setPatch(patchId);
-
-      const layerBtn = document.getElementById("btn-toggle-layer");
-      if (layerBtn) {
-        layerBtn.classList.remove("active");
-        layerBtn.innerText = "LAYER: OFF";
-      }
     }
 
     const soundSelect = document.getElementById("hud-sound-select");

@@ -45,3 +45,6 @@ Thumbs.db
 # Temporary / Scratch
 scratch/
 .system_generated/
+
+src-tauri/target
+src-tauri/WixTools

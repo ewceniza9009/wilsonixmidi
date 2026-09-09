@@ -11,6 +11,7 @@
     "gen-license": "node tools/license-generator.js"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4",
     "vite": "^6.2.0"
   },
   "dependencies": {

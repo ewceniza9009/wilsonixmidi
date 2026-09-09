@@ -760,9 +760,132 @@ export class SfxSoundGenerator {
     return { o1, o2 };
   }
 
+  // =========================================================================
+  // 7. AUTHENTIC ACOUSTIC KALIMBA (AFRICAN THUMB PIANO / MBIRA)
+  // Physical model of clamped spring-steel tines on a hollow resonant wooden soundbox.
+  // Combines thumb flesh impact, hollow box cavity resonance, pure fundamental sine bell,
+  // and authentic inharmonic cantilever tine overtones (2.756x and 5.404x f0).
+  // =========================================================================
+
+  triggerKalimba(midiNote = 60, velocity = 95, customGain = 1.0) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = Math.max(0.1, Math.min(1.0, velocity / 127));
+    const f0 = 440 * Math.pow(2, (midiNote - 69) / 12);
+
+    // 1. Tine Mode 1 (Fundamental tone): Pure, rounded, bell-like sine
+    const osc1 = ctx.createOscillator();
+    osc1.type = "sine";
+    osc1.frequency.setValueAtTime(f0, now);
+
+    const gain1 = ctx.createGain();
+    const decay1 = 1.6 + vel * 0.8;
+    gain1.gain.setValueAtTime(0.0001, now);
+    gain1.gain.linearRampToValueAtTime(0.75 * vel * customGain, now + 0.003); // ultra-fast attack
+    gain1.gain.exponentialRampToValueAtTime(0.0001, now + decay1);
+
+    // 2. Tine Mode 2 (Signature Inharmonic Cantilever Overtone ~ 2.756x f0):
+    // Authentic thumb-piano metallic chime overtone
+    const osc2 = ctx.createOscillator();
+    osc2.type = "sine";
+    osc2.frequency.setValueAtTime(f0 * 2.756, now);
+
+    const gain2 = ctx.createGain();
+    const decay2 = 0.40 + vel * 0.25;
+    gain2.gain.setValueAtTime(0.0001, now);
+    gain2.gain.linearRampToValueAtTime(0.35 * vel * customGain, now + 0.002);
+    gain2.gain.exponentialRampToValueAtTime(0.0001, now + decay2);
+
+    // 3. Tine Mode 3 (High metallic strike shimmer ~ 5.404x f0):
+    const osc3 = ctx.createOscillator();
+    osc3.type = "sine";
+    osc3.frequency.setValueAtTime(f0 * 5.404, now);
+
+    const gain3 = ctx.createGain();
+    gain3.gain.setValueAtTime(0.0001, now);
+    gain3.gain.linearRampToValueAtTime(0.18 * vel * customGain, now + 0.001);
+    gain3.gain.exponentialRampToValueAtTime(0.0001, now + 0.08); // short metallic ping
+
+    // 4. Thumb Flesh & Wooden Soundbox Impact Transient:
+    // Low woody thump around 220Hz -> 80Hz + flesh tap click
+    const woodThump = ctx.createOscillator();
+    woodThump.type = "sine";
+    woodThump.frequency.setValueAtTime(240, now);
+    woodThump.frequency.exponentialRampToValueAtTime(80, now + 0.045);
+
+    const woodGain = ctx.createGain();
+    woodGain.gain.setValueAtTime(0.0001, now);
+    woodGain.gain.linearRampToValueAtTime(0.32 * vel * customGain, now + 0.002);
+    woodGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+
+    // Flesh tap click (bandpassed transient at 3.6kHz)
+    const clickNoise = this.createNoiseSource(false);
+    const clickFilter = ctx.createBiquadFilter();
+    clickFilter.type = "bandpass";
+    clickFilter.frequency.setValueAtTime(3600, now);
+    clickFilter.Q.setValueAtTime(3.0, now);
+
+    const clickGain = ctx.createGain();
+    clickGain.gain.setValueAtTime(0.0001, now);
+    clickGain.gain.linearRampToValueAtTime(0.24 * vel * customGain, now + 0.001);
+    clickGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.018);
+
+    // 5. Wooden Body Resonator Filter (Acoustic cavity boost at 440Hz)
+    const bodyFilter = ctx.createBiquadFilter();
+    bodyFilter.type = "peaking";
+    bodyFilter.frequency.setValueAtTime(440, now);
+    bodyFilter.Q.setValueAtTime(1.8, now);
+    bodyFilter.gain.setValueAtTime(4.5, now);
+
+    // Audio routing
+    osc1.connect(gain1);
+    gain1.connect(bodyFilter);
+
+    osc2.connect(gain2);
+    gain2.connect(bodyFilter);
+
+    osc3.connect(gain3);
+    gain3.connect(bodyFilter);
+
+    woodThump.connect(woodGain);
+    woodGain.connect(bodyFilter);
+
+    clickNoise.connect(clickFilter);
+    clickFilter.connect(clickGain);
+    clickGain.connect(bodyFilter);
+
+    bodyFilter.connect(this.destination);
+
+    // Trigger
+    osc1.start(now);
+    osc2.start(now);
+    osc3.start(now);
+    woodThump.start(now);
+    clickNoise.start(now);
+
+    const stopTime = now + decay1 + 0.1;
+    osc1.stop(stopTime);
+    osc2.stop(now + decay2 + 0.05);
+    osc3.stop(now + 0.1);
+    woodThump.stop(now + 0.06);
+    clickNoise.stop(now + 0.03);
+
+    return {
+      stopNote: (relTime = ctx.currentTime) => {
+        try {
+          gain1.gain.cancelScheduledValues(relTime);
+          gain1.gain.setTargetAtTime(0, relTime, 0.08); // natural finger mute
+          osc1.stop(relTime + 0.15);
+        } catch (e) {}
+      }
+    };
+  }
+
   isSfxInstrument(instId) {
     if (!instId) return false;
     return (
+      instId === "kalimba" ||
+      instId === "m1_kalimba" ||
       instId.startsWith("nature_") ||
       instId.startsWith("vox_") ||
       instId.startsWith("fx_") ||
@@ -775,6 +898,10 @@ export class SfxSoundGenerator {
 
   playSfxNote(instId, midiNote = 60, velocity = 95, customGain = 1.0) {
     switch (instId) {
+      // 0. Kalimba / Mbira Thumb Piano
+      case "kalimba":
+      case "m1_kalimba":
+        return this.triggerKalimba(midiNote, velocity, customGain);
       // 1. Nature Sounds
       case "nature_thunder":
         return this.triggerThunder(velocity, customGain);

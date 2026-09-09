@@ -536,7 +536,13 @@ export class TritonWorkstationUI {
       instKey = "drawbar_organ";
     } else if (cat.includes("electric piano") || cat.includes("ep") || name.includes("ep") || name.includes("tine") || name.includes("r&b") || name.includes("fm piano")) {
       instKey = "electric_piano_1";
-    } else if (cat.includes("woodwind") || name.includes("sax") || name.includes("harmonica") || name.includes("flute")) {
+    } else if (name.includes("kalimba") || cat.includes("kalimba") || name.includes("mbira")) {
+      instKey = "kalimba";
+    } else if (name.includes("flute") || cat.includes("flute")) {
+      instKey = "flute";
+    } else if (name.includes("clarinet") || cat.includes("clarinet")) {
+      instKey = "clarinet";
+    } else if (cat.includes("woodwind") || name.includes("sax") || name.includes("harmonica")) {
       instKey = "alto_sax";
     } else if (cat.includes("brass") || name.includes("brass") || name.includes("trombone")) {
       instKey = "brass_section";
@@ -1048,15 +1054,15 @@ export class TritonWorkstationUI {
       }
     } else if (mType === "kalimba") {
       // ★ 25 Kalimba: African thumb piano (mbira) with resonant metal tines
-      multiLayerEngine.setSingleInstrument("harpsichord");
+      multiLayerEngine.setSingleInstrument("kalimba");
       if (fx) {
         fx.delay.setBypass(false);
-        fx.delay.setMix(0.25);
+        fx.delay.setMix(0.18);
         fx.delay.setDivision(0.375);
-        fx.delay.setFeedback(0.30);
+        fx.delay.setFeedback(0.25);
         fx.reverb.setBypass(false);
-        fx.reverb.setMix(0.22);
-        fx.reverb.setDecay(1.8);
+        fx.reverb.setMix(0.18);
+        fx.reverb.setDecay(1.6);
       }
     } else if (mType === "abass") {
       // ★ 26 A. Bass: Warm upright acoustic double bass

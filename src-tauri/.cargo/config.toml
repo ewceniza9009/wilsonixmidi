@@ -1,0 +1,8 @@
+[build]
+rustflags = [
+  "-C", "target-feature=+crt-static",
+  "-L", "C:/PROGRA~1/MICROS~4/2022/ENTERP~1/VC/Tools/MSVC/1444~1.352/lib/x64",
+  "-L", "C:/PROGRA~2/WI3CF2~1/10/Lib/100261~1.0/ucrt/x64",
+  "-L", "C:/PROGRA~2/WI3CF2~1/10/Lib/100261~1.0/um/x64",
+  "-C", "link-args=/NODEFAULTLIB:msvcrt",
+]

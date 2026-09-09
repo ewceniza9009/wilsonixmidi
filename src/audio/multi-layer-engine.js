@@ -25,7 +25,8 @@ export const HD_SOUNDBANKS = {
   m1_fretless: { id: "m1_fretless", name: "Korg M1 Fretless Bass", category: "Bass & Sub" },
   m1_pan_flute: { id: "m1_pan_flute", name: "Korg M1 Pan Flute", category: "Woodwind" },
   m1_bottle_bell: { id: "m1_bottle_bell", name: "Korg M1 Bottle Bell", category: "Bells & Mallet" },
-  m1_kalimba: { id: "m1_kalimba", name: "Korg M1 Kalimba", category: "Bells & Mallet" },
+  m1_kalimba: { id: "m1_kalimba", name: "Korg M1 Kalimba (Thumb Piano)", category: "Bells & Mallet" },
+  kalimba: { id: "kalimba", name: "Acoustic Mbira Kalimba", category: "Bells & Mallet" },
   m1_12string: { id: "m1_12string", name: "Korg M1 12-String", category: "Guitar" },
   m1_fresh_air: { id: "m1_fresh_air", name: "Korg M1 Fresh Air (Airy Bell)", category: "Bells & Pad" },
   m1_slap_bass: { id: "m1_slap_bass", name: "Korg M1 Slap Bass (90s Funk)", category: "Bass & Sub" },
@@ -541,6 +542,7 @@ export class MultiLayerEngine {
     this.activeSingleInst = "acoustic_grand_piano";
     this.synthPatch = null;
     this.layers = JSON.parse(JSON.stringify(this.activeCombi.layers));
+    this.isDualLayerActive = false; // Dedicated dual-layer toggle state for live stage performance
 
     // Keyboard split: notes below the split point play bass instead (audible PCM path)
     this.isSplitMode = false;
@@ -640,13 +642,114 @@ export class MultiLayerEngine {
     }
   }
 
+  resolveBankKey(instKey) {
+    if (!instKey) return "acoustic_grand_piano";
+    const BANK_MAP = {
+      synthage_grand: "acoustic_grand_piano",
+      whitney_ballad: "acoustic_grand_piano",
+      triton_dyno_ep: "electric_piano_1",
+      triton_warm_strings: "string_ensemble_1",
+      m1_rock_organ: "drawbar_organ",
+      fantom_nylon_pluck: "acoustic_guitar_nylon",
+      moog_punch_bass: "synth_bass_1",
+      supersaw_lead: "brass_section",
+      abletunes_fm_dx7: "abletunes_fm_piano",
+      fat_brass_horns: "brass_section",
+      breathy_alto_sax: "alto_sax",
+      m1_fresh_air: "electric_piano_1",
+      m1_universe: "string_ensemble_1",
+      m1_choir: "choir_aahs",
+      m1_ooh_ahh: "choir_aahs",
+      ooh_ahh: "choir_aahs",
+      choir_aahs: "choir_aahs",
+      voice_oohs: "choir_aahs",
+      m1_piano_16: "acoustic_grand_piano",
+      m1_organ_2: "drawbar_organ",
+      m1_slap_bass: "synth_bass_1",
+      m1_symphonic: "string_ensemble_1",
+      m1_guitar_1: "acoustic_guitar_steel",
+      m1_fretless: "acoustic_bass",
+      m1_pan_flute: "flute",
+      pan_flute: "flute",
+      m1_flute: "flute",
+      flute: "flute",
+      m1_bottle_bell: "vibraphone",
+      m1_kalimba: "kalimba",
+      kalimba: "kalimba",
+      m1_12string: "acoustic_guitar_steel",
+      m1_koto: "harpsichord",
+      m1_bell_ring: "vibraphone",
+    };
+    return BANK_MAP[instKey] || instKey;
+  }
+
   setSingleInstrument(instKey) {
     this.isSynthMode = false;
-    this.isCombiMode = false;
-    if (HD_SOUNDBANKS[instKey] || instKey === "acoustic_grand_piano") {
-      this.activeSingleInst = instKey;
-      this.init();
+    const resolved = this.resolveBankKey(instKey);
+    this.activeSingleInst = resolved;
+
+    // Synchronize Layer 0 with the active single instrument
+    if (this.layers[0]) {
+      this.layers[0].inst = resolved;
+      this.layers[0].name = HD_SOUNDBANKS[resolved]?.name || HD_SOUNDBANKS[instKey]?.name || resolved;
+      this.layers[0].enabled = true;
     }
+
+    // If dual layer is active and layer 1 is enabled, stay in Combi mode so Layer 0 + Layer 1 play together!
+    if (this.isDualLayerActive && this.layers[1]?.enabled) {
+      this.isCombiMode = true;
+      if (this.layers[2]) this.layers[2].enabled = false;
+      if (this.layers[3]) this.layers[3].enabled = false;
+    } else {
+      this.isCombiMode = false;
+    }
+
+    this.init();
+    this.notifyLayerChange();
+  }
+
+  setDualLayerEnabled(enabled) {
+    this.isDualLayerActive = enabled !== undefined ? !!enabled : !this.isDualLayerActive;
+    this.isSynthMode = false;
+
+    if (this.isDualLayerActive) {
+      // Ensure Layer 0 is enabled and matches current single instrument
+      if (this.layers[0]) {
+        const primaryInst = this.resolveBankKey(this.activeSingleInst || "acoustic_grand_piano");
+        this.layers[0].inst = primaryInst;
+        this.layers[0].name = HD_SOUNDBANKS[primaryInst]?.name || primaryInst;
+        this.layers[0].enabled = true;
+      }
+      // Ensure Layer 1 is enabled with designated layer sound
+      if (this.layers[1]) {
+        this.layers[1].enabled = true;
+        if (!this.layers[1].inst) {
+          this.layers[1].inst = "choir_aahs";
+        }
+      }
+      // Disable layers 2 & 3 so dual layer is clean 2-instrument layer
+      if (this.layers[2]) this.layers[2].enabled = false;
+      if (this.layers[3]) this.layers[3].enabled = false;
+
+      this.isCombiMode = true;
+    } else {
+      if (this.layers[1]) {
+        this.layers[1].enabled = false;
+      }
+      this.isCombiMode = false;
+    }
+
+    this.init();
+    this.notifyLayerChange();
+  }
+
+  setDualLayerInstrument(instKey) {
+    const resolved = this.resolveBankKey(instKey);
+    if (this.layers[1]) {
+      this.layers[1].inst = resolved;
+      this.layers[1].name = HD_SOUNDBANKS[resolved]?.name || HD_SOUNDBANKS[instKey]?.name || resolved;
+    }
+    this.setDualLayerEnabled(true);
   }
 
   setSynthProgram(patchConfig) {
@@ -681,6 +784,7 @@ export class MultiLayerEngine {
       this.activeCombi = COMBI_PRESETS[presetId];
       this.isCombiMode = true;
       this.isSynthMode = false;
+      this.isDualLayerActive = false; // explicitly loaded a full 4-layer combi
       this.layers = JSON.parse(JSON.stringify(this.activeCombi.layers));
       this.init();
       this.syncLayerFx();
@@ -703,6 +807,10 @@ export class MultiLayerEngine {
   }
 
   toggleLayer(layerIndex, enabled) {
+    if (layerIndex === 1) {
+      this.setDualLayerEnabled(enabled);
+      return;
+    }
     if (this.layers[layerIndex]) {
       this.layers[layerIndex].enabled = enabled !== undefined ? enabled : !this.layers[layerIndex].enabled;
       this.isCombiMode = true;
@@ -727,38 +835,12 @@ export class MultiLayerEngine {
   }
 
   setLayerInstrument(layerIndex, instKey) {
+    if (layerIndex === 1) {
+      this.setDualLayerInstrument(instKey);
+      return;
+    }
     if (this.layers[layerIndex] && instKey) {
-      const BANK_MAP = {
-        synthage_grand: "acoustic_grand_piano",
-        whitney_ballad: "acoustic_grand_piano",
-        triton_dyno_ep: "electric_piano_1",
-        triton_warm_strings: "string_ensemble_1",
-        m1_rock_organ: "drawbar_organ",
-        fantom_nylon_pluck: "acoustic_guitar_nylon",
-        moog_punch_bass: "synth_bass_1",
-        supersaw_lead: "brass_section",
-        abletunes_fm_dx7: "abletunes_fm_piano",
-        fat_brass_horns: "brass_section",
-        breathy_alto_sax: "alto_sax",
-        m1_fresh_air: "electric_piano_1",
-        m1_universe: "string_ensemble_1",
-        m1_choir: "choir_aahs",
-        m1_ooh_ahh: "choir_aahs",
-        choir_aahs: "choir_aahs",
-        m1_piano_16: "acoustic_grand_piano",
-        m1_organ_2: "drawbar_organ",
-        m1_slap_bass: "synth_bass_1",
-        m1_symphonic: "string_ensemble_1",
-        m1_guitar_1: "acoustic_guitar_steel",
-        m1_fretless: "acoustic_bass",
-        m1_pan_flute: "flute",
-        m1_bottle_bell: "vibraphone",
-        m1_kalimba: "harpsichord",
-        m1_12string: "acoustic_guitar_steel",
-        m1_koto: "harpsichord",
-        m1_bell_ring: "vibraphone",
-      };
-      const resolvedKey = BANK_MAP[instKey] || instKey;
+      const resolvedKey = this.resolveBankKey(instKey);
       this.layers[layerIndex].inst = resolvedKey;
       this.layers[layerIndex].name = HD_SOUNDBANKS[resolvedKey]?.name || HD_SOUNDBANKS[instKey]?.name || instKey;
       this.isCombiMode = true;

@@ -1,6 +1,8 @@
 /**
- * Elite Virtual Keyboard UI Instrument
- * Interactive piano keybed for laptops with:
+ * Elite Virtual Keyboard UI Instrument (88-Key Concert Grand Layout)
+ * Interactive piano keybed for laptops & touchscreens with:
+ * - Full 88 Keys (A0 = MIDI 21 to C8 = MIDI 108)
+ * - Zero-lag GPU hardware-accelerated visuals with state deduplication
  * - Dynamic vertical hit velocity (Top = Pianissimo soft touch, Bottom = Fortissimo punchy bite)
  * - Real-time vertical key slide articulation (Y-axis timbre modulation & filter swell)
  * - Horizontal legato glissando
@@ -9,6 +11,7 @@
  * - Live Velocity & Dynamic Accent HUD
  * - Smart Chord Voicings (Single key 7th, 9th/11th Neo-Soul, and Diminished)
  * - QWERTY Layout Switcher (Melody Q-P vs DAW Home-Row)
+ * - Auto-centering on Middle C (C4)
  */
 
 import { synthEngine } from "../audio/synth-engine.js";
@@ -22,16 +25,23 @@ const WHITE_NOTES = [0, 2, 4, 5, 7, 9, 11];
 export class VirtualKeyboardUI {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
-    this.startMidi = 36; // C2
-    this.endMidi = 84; // C6 (49 keys default)
+    this.startMidi = 21; // A0 (Standard 88-Key Grand Piano)
+    this.endMidi = 108; // C8
     this.activeTouches = new Map(); // TouchId -> { midi, rect, chordNotes }
     this.keyElements = new Map(); // MidiNote -> DOMElement
+    this.labelElements = new Map(); // MidiNote -> DOMElement
+    this.keyStates = new Uint8Array(128); // Fast state deduplication cache
     this.activeMouseChord = null;
 
     this.render();
     this.bindMouseAndTouch();
     this.bindWheels();
     this.updateHudState();
+
+    // Auto-center view on Middle C (C4 = MIDI 60) on startup
+    requestAnimationFrame(() => {
+      this.centerOnMiddleC(false);
+    });
 
     // Subscribe to engine note triggers for bidirectional feedback
     synthEngine.onNoteChangeCallback = (midiNote, isPressed, velocity) => {
@@ -146,13 +156,13 @@ export class VirtualKeyboardUI {
             </button>
           </div>
 
-          <!-- Key Zoom Controls for Mobile / Android Touch -->
+          <!-- Key Zoom Controls for 88 Keys -->
           <div class="key-zoom-unit">
             <span class="zoom-label">KEYS:</span>
             <div class="zoom-pill-group">
               <button class="zoom-btn active" data-zoom="wide">WIDE (TOUCH)</button>
               <button class="zoom-btn" data-zoom="compact">COMPACT</button>
-              <button class="zoom-btn" data-zoom="full">FULL ROLL</button>
+              <button class="zoom-btn" data-zoom="full">88 FULL</button>
             </div>
           </div>
 
@@ -168,7 +178,7 @@ export class VirtualKeyboardUI {
           </div>
         </div>
 
-        <!-- Interactive Piano Bed -->
+        <!-- Interactive Piano Bed (88 Keys) -->
         <div class="piano-roll-container zoom-wide" id="piano-roll-container">
           <div class="piano-bed" id="piano-keys-track">
             ${this.buildKeysHtml()}
@@ -177,11 +187,14 @@ export class VirtualKeyboardUI {
       </div>
     `;
 
-    // Cache key element references
+    // Cache key and label element references
     this.keyElements.clear();
+    this.labelElements.clear();
     for (let m = this.startMidi; m <= this.endMidi; m++) {
       const el = document.getElementById(`key-midi-${m}`);
       if (el) this.keyElements.set(m, el);
+      const labelEl = document.getElementById(`key-label-${m}`);
+      if (labelEl) this.labelElements.set(m, labelEl);
     }
 
     this.bindHudButtons();
@@ -451,10 +464,12 @@ export class VirtualKeyboardUI {
 
     octDown?.addEventListener("click", () => {
       qwertyKeyboard.shiftOctave(-1);
+      this.scrollToMidi((qwertyKeyboard.baseOctave + 1) * 12 + 4, true);
     });
 
     octUp?.addEventListener("click", () => {
       qwertyKeyboard.shiftOctave(1);
+      this.scrollToMidi((qwertyKeyboard.baseOctave + 1) * 12 + 4, true);
     });
 
     chordBtn?.addEventListener("click", () => {
@@ -485,6 +500,7 @@ export class VirtualKeyboardUI {
     panicBtn?.addEventListener("click", () => {
       multiLayerEngine.panic();
       synthEngine.panic();
+      this.keyStates.fill(0);
       for (const el of this.keyElements.values()) {
         el.classList.remove("active");
       }
@@ -505,7 +521,7 @@ export class VirtualKeyboardUI {
       });
     });
 
-    // Mobile Key Zoom Mode Switcher
+    // Mobile / Screen Key Zoom Mode Switcher
     const rollContainer = document.getElementById("piano-roll-container");
     const zoomBtns = this.container.querySelectorAll(".zoom-btn");
     zoomBtns.forEach(btn => {
@@ -516,9 +532,37 @@ export class VirtualKeyboardUI {
         if (rollContainer) {
           rollContainer.classList.remove("zoom-wide", "zoom-compact", "zoom-full");
           rollContainer.classList.add(`zoom-${mode}`);
+          if (mode === "full") {
+            rollContainer.scrollTo({ left: 0, behavior: "smooth" });
+          } else {
+            this.centerOnMiddleC(true);
+          }
         }
       });
     });
+  }
+
+  scrollToMidi(midiNote, smooth = true) {
+    const el = this.keyElements.get(midiNote);
+    const container = document.getElementById("piano-roll-container");
+    if (!el || !container) return;
+
+    const elLeft = el.offsetLeft;
+    const elWidth = el.offsetWidth;
+    const containerWidth = container.clientWidth;
+    const currentScroll = container.scrollLeft;
+
+    if (elLeft < currentScroll + 40 || elLeft + elWidth > currentScroll + containerWidth - 40) {
+      const targetScroll = Math.max(0, elLeft - (containerWidth / 2) + (elWidth / 2));
+      container.scrollTo({
+        left: targetScroll,
+        behavior: smooth ? "smooth" : "auto",
+      });
+    }
+  }
+
+  centerOnMiddleC(smooth = false) {
+    this.scrollToMidi(60, smooth); // Middle C = 60
   }
 
   updateQwertyLabels() {
@@ -532,27 +576,32 @@ export class VirtualKeyboardUI {
     }
 
     for (let m = this.startMidi; m <= this.endMidi; m++) {
-      const labelEl = document.getElementById(`key-label-${m}`);
+      const labelEl = this.labelElements?.get(m);
       if (labelEl) {
         if (show && midiToKey.has(m)) {
-          labelEl.innerText = midiToKey.get(m);
-          labelEl.style.display = "block";
+          const text = midiToKey.get(m);
+          if (labelEl.innerText !== text) labelEl.innerText = text;
+          if (labelEl.style.display !== "block") labelEl.style.display = "block";
         } else {
-          labelEl.innerText = "";
-          labelEl.style.display = "none";
+          if (labelEl.innerText !== "") labelEl.innerText = "";
+          if (labelEl.style.display !== "none") labelEl.style.display = "none";
         }
       }
     }
   }
 
   setKeyVisualState(midiNote, isPressed, velocity = 95) {
+    if (midiNote < this.startMidi || midiNote > this.endMidi) return;
+    const isNowPressed = !!isPressed;
+    const wasPressed = this.keyStates[midiNote] > 0;
+    if (wasPressed === isNowPressed) return; // Drop redundant DOM updates to eliminate lag
+
+    this.keyStates[midiNote] = isNowPressed ? (velocity || 95) : 0;
     const el = this.keyElements.get(midiNote);
     if (!el) return;
 
-    if (isPressed) {
+    if (isNowPressed) {
       el.classList.add("active");
-      const alpha = Math.max(0.4, velocity / 127);
-      el.style.setProperty("--glow-intensity", alpha);
     } else {
       el.classList.remove("active");
     }

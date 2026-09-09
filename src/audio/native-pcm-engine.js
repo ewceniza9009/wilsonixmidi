@@ -737,13 +737,20 @@ export class NativePcmEngine {
   }
 
   createCrossfadedLoopBuffer(ctx, originalBuf, instId) {
-    // Sustain loops via best-match search (sampler-style): find the loop start whose
-    // waveform best matches the loop end, so the splice is seamless with only a 25ms
-    // equal-power blend. Samples with no clean match decay with a graceful end-fade
-    // instead of chopping off at file end.
-    if (!originalBuf || originalBuf.duration < 0.6) {
-      return this.fadeBufferEnd(originalBuf, 0.15);
+    if (!originalBuf) return originalBuf;
+
+    // Only continuous bowing/blowing/drone pad instruments should loop when sustained.
+    // Percussive & decaying instruments (pianos, EPs, DX7, guitars, basses, bells) must decay naturally
+    // to prevent metallic buzzing, dirty feedback, and comb filtering during pedal sustain.
+    const isDroneInstrument = instId && (
+      instId.includes("string") || instId.includes("pad") || instId.includes("choir") ||
+      instId.includes("organ") || instId.includes("voice") || instId.includes("universe")
+    );
+
+    if (!isDroneInstrument || originalBuf.duration < 0.8) {
+      return this.fadeBufferEnd(originalBuf, 0.4);
     }
+
     const numChannels = Math.max(2, originalBuf.numberOfChannels);
     const sampleRate = originalBuf.sampleRate;
     const totalSamples = originalBuf.length;
@@ -760,7 +767,6 @@ export class NativePcmEngine {
     let loopStartSample = -1;
     try {
       const ref = originalBuf.getChannelData(0);
-      // Overall RMS for the match-quality threshold
       let sum = 0;
       let cnt = 0;
       for (let i = searchFrom; i < loopEndSample; i += 7) {
@@ -773,11 +779,7 @@ export class NativePcmEngine {
       }
       const W = Math.min(1024, fadeSamples * 2);
       const endBase = loopEndSample - W;
-      // Earliest clean match wins: longest loop = fewest splices per second, and
-      // never a hot tonal slice replayed forever (that whistles like amp feedback).
-      // Loose threshold so decaying pianos/EPs get tail loops and ring like real
-      // damper-held strings (5-30s) instead of dying at the 3s file end.
-      const threshold = rms * 0.55;
+      const threshold = rms * 0.45;
       for (let s = searchFrom; s <= searchTo; s += 256) {
         let diff = 0;
         for (let i = 0; i < W; i += 2) {
@@ -855,66 +857,22 @@ export class NativePcmEngine {
     ]);
     this.isReady = true;
 
-    // 2. Load essential multi-layer soundfonts immediately (Choir, Strings, Organ, Brass, Sax, Bass)
-    // EP + piano come from the studio WAV banks (no MP3 grain), preloaded here instead
+    // 2. Preload studio WAV banks for FM Piano and Upright
     this.loadAbletunesInstrument("fm_piano");
     this.loadAbletunesInstrument("upright_piano");
-    const prioritySoundfonts = [
-      "choir_aahs",
-      "voice_oohs",
-      "applause",
-      "seashore",
-      "bird_tweet",
-      "breath_noise",
-      "taiko_drum",
-      "synth_drum",
-      "gunshot",
-      "string_ensemble_1",
-      "drawbar_organ",
-      "brass_section",
-      "alto_sax",
-      "synth_bass_1",
-      "acoustic_guitar_nylon",
-      "acoustic_guitar_steel",
-      "acoustic_bass",
-      "flute",
-      "trumpet",
-      "vibraphone",
-      "distortion_guitar",
-    ];
-    prioritySoundfonts.forEach(id => {
-      this.loadSoundfont(id);
-    });
 
-    // 3. Background preload for remaining soundfonts
-    const backgroundSoundfonts = [
-      "distortion_guitar",
-      "overdriven_guitar",
-      "electric_guitar_clean",
-      "trumpet",
-      "trombone",
-      "tenor_sax",
-      "flute",
-      "clarinet",
-      "violin",
-      "cello",
-      "choir_aahs",
-      "church_organ",
-      "vibraphone",
-      "electric_piano_2",
-      "acoustic_bass",
-      "soprano_sax",
-      "muted_trumpet",
-      "acoustic_guitar_steel",
-      "slap_bass_1",
-      "rock_organ",
-      "harpsichord",
-    ];
-    backgroundSoundfonts.forEach((id, idx) => {
-      setTimeout(() => {
-        this.loadSoundfont(id);
-      }, 500 + idx * 400);
-    });
+    // 3. Preload essential starting soundfonts non-blockingly (on idle)
+    // All other soundfonts load on-demand when selected, avoiding main-thread freezes
+    const idlePreload = () => {
+      this.loadSoundfont("string_ensemble_1");
+      this.loadSoundfont("flute");
+    };
+
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      window.requestIdleCallback(idlePreload);
+    } else {
+      setTimeout(idlePreload, 1200);
+    }
   }
 
   async loadSoundfont(instId) {
@@ -1083,12 +1041,12 @@ export class NativePcmEngine {
       choir_aahs: "choir_aahs",
       voice_oohs: "voice_oohs",
       m1_choir: "choir_aahs",
-      m1_ooh_ahh: "voice_oohs",
-      ooh_ahh: "voice_oohs",
+      m1_ooh_ahh: "choir_aahs",
+      ooh_ahh: "choir_aahs",
       choir: "choir_aahs",
       choral: "choir_aahs",
       cathedral_choir: "choir_aahs",
-      angelic_oohs: "voice_oohs",
+      angelic_oohs: "choir_aahs",
       vocal_breath: "breath_noise",
       breath_noise: "breath_noise",
 
@@ -1144,8 +1102,8 @@ export class NativePcmEngine {
       fretless: "acoustic_bass",
       m1_bottle_bell: "vibraphone",
       bottle_bell: "vibraphone",
-      m1_kalimba: "harpsichord",
-      kalimba: "harpsichord",
+      m1_kalimba: "kalimba",
+      kalimba: "kalimba",
       m1_koto: "harpsichord",
       koto: "harpsichord",
       m1_bell_ring: "vibraphone",
@@ -1206,7 +1164,17 @@ export class NativePcmEngine {
     let instMap = this.decodedBuffers.get(instId);
     if (!instMap || instMap.size === 0) {
       this.loadSoundfont(instId);
-      instMap = this.decodedBuffers.get("acoustic_grand_piano");
+      const str = String(instId || "").toLowerCase();
+      if (str.includes("choir") || str.includes("ooh") || str.includes("ahh") || str.includes("voice")) {
+        instMap = this.decodedBuffers.get("choir_aahs");
+      } else if (str.includes("flute") || str.includes("woodwind") || str.includes("sax") || str.includes("clarinet")) {
+        instMap = this.decodedBuffers.get("flute") || this.decodedBuffers.get("alto_sax");
+      } else if (str.includes("string") || str.includes("pad")) {
+        instMap = this.decodedBuffers.get("string_ensemble_1");
+      }
+      if (!instMap || instMap.size === 0) {
+        instMap = this.decodedBuffers.get("acoustic_grand_piano");
+      }
     }
 
     if (!instMap || instMap.size === 0) {
@@ -1687,30 +1655,6 @@ export class NativePcmEngine {
             v.voiceGain.gain.setTargetAtTime(0, now, tau);
             const stopTime = isChoir ? 1.4 : (isString ? 0.5 : (isSax ? 0.2 : 0.1));
             v.src.stop(now + stopTime);
-          } catch (e) {}
-          // Damper resonance: piano/EP keys bloom a whisper of sympathetic ring
-          // on release (same buffer, -22dB, gone in ~0.6s) instead of dry silence
-          try {
-            const pianoFam = ["abletunes_upright", "acoustic_grand_piano", "m1_piano_16", "abletunes_fm_piano", "electric_piano_1", "rhodes_stage_mp3"];
-            if (!v.isReso && pianoFam.includes(v.instId) && v.src.buffer) {
-              const rSrc = this.ctx.createBufferSource();
-              rSrc.buffer = v.src.buffer;
-              rSrc.playbackRate.setValueAtTime(v.basePlaybackRate || 1.0, now);
-              const rFilter = this.ctx.createBiquadFilter();
-              rFilter.type = "lowpass";
-              rFilter.frequency.setValueAtTime(Math.min(12000, (v.baseCutoff || 9000) * 0.8), now);
-              rFilter.Q.setValueAtTime(0.5, now);
-              const rGain = this.ctx.createGain();
-              const resoPeak = Math.min(0.06, (v.baseGain || 0.5) * 0.08);
-              rGain.gain.setValueAtTime(0.0001, now);
-              rGain.gain.setTargetAtTime(resoPeak, now, 0.005);
-              rGain.gain.setTargetAtTime(0.0001, now + 0.08, 0.12);
-              rSrc.connect(rFilter);
-              rFilter.connect(rGain);
-              rGain.connect(v.dest || this.destination);
-              rSrc.start(now);
-              rSrc.stop(now + 0.7);
-            }
           } catch (e) {}
         }
       } else {
