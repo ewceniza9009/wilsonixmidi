@@ -1,13 +1,15 @@
 /**
- * Workstation 8-Pad Harmony & Chord Trigger Bank
- * Triggers lush multi-note voicings across 10 authentic musical genres
+ * Workstation Chord Harmony & Trigger Bank
+ * - BASIC CHORDS (LEARN): all 12 major + all 12 minor triads starting keyboard
+ * - 12-pad voicing banks across 10 authentic musical genres
  * (Worship Ballad, Neo-Soul, Gospel Praise, 90s R&B, Jazz Fusion, Pop Anthems, City Pop, Lofi Chill, Latin Bossa, Synthwave)
- * with single laptop keys (1-8) or touch.
+ * with single laptop keys (1-12) or touch.
  */
 
 import { multiLayerEngine } from "../audio/multi-layer-engine.js";
 
 export const CHORD_GENRES = [
+  { id: "basic_chords", name: "BASIC CHORDS (LEARN)", icon: "🌱" },
   { id: "worship_ballad", name: "WORSHIP & BALLAD", icon: "🕊️" },
   { id: "neo_soul", name: "NEO-SOUL", icon: "✨" },
   { id: "gospel_praise", name: "GOSPEL PRAISE", icon: "🙌" },
@@ -21,6 +23,33 @@ export const CHORD_GENRES = [
 ];
 
 export const CHORD_BANKS = {
+  // 🌱 BASIC CHORDS (LEARN) - every major & minor chord for all 12 notes
+  basic_chords: [
+    { name: "C Maj (C E G)", notes: [36, 48, 52, 55], key: "1" },
+    { name: "C Min (C Eb G)", notes: [36, 48, 51, 55], key: "2" },
+    { name: "C# Maj (C# F G#)", notes: [37, 49, 53, 56], key: "3" },
+    { name: "C# Min (C# E G#)", notes: [37, 49, 52, 56], key: "4" },
+    { name: "D Maj (D F# A)", notes: [38, 50, 54, 57], key: "5" },
+    { name: "D Min (D F A)", notes: [38, 50, 53, 57], key: "6" },
+    { name: "D# Maj (D# G A#)", notes: [39, 51, 55, 58], key: "7" },
+    { name: "D# Min (D# F# A#)", notes: [39, 51, 54, 58], key: "8" },
+    { name: "E Maj (E G# B)", notes: [40, 52, 56, 59], key: "9" },
+    { name: "E Min (E G B)", notes: [40, 52, 55, 59], key: "10" },
+    { name: "F Maj (F A C)", notes: [41, 53, 57, 60], key: "11" },
+    { name: "F Min (F Ab C)", notes: [41, 53, 56, 60], key: "12" },
+    { name: "F# Maj (F# A# C#)", notes: [42, 54, 58, 61], key: "13" },
+    { name: "F# Min (F# A C#)", notes: [42, 54, 57, 61], key: "14" },
+    { name: "G Maj (G B D)", notes: [43, 55, 59, 62], key: "15" },
+    { name: "G Min (G Bb D)", notes: [43, 55, 58, 62], key: "16" },
+    { name: "G# Maj (G# C D#)", notes: [44, 56, 60, 63], key: "17" },
+    { name: "G# Min (G# B D#)", notes: [44, 56, 59, 63], key: "18" },
+    { name: "A Maj (A C# E)", notes: [45, 57, 61, 64], key: "19" },
+    { name: "A Min (A C E)", notes: [45, 57, 60, 64], key: "20" },
+    { name: "A# Maj (A# D F)", notes: [46, 58, 62, 65], key: "21" },
+    { name: "A# Min (A# C# F)", notes: [46, 58, 61, 65], key: "22" },
+    { name: "B Maj (B D# F#)", notes: [47, 59, 63, 66], key: "23" },
+    { name: "B Min (B D F#)", notes: [47, 59, 62, 66], key: "24" },
+  ],
   worship_ballad: [
     { name: "D2 (add9)", notes: [38, 50, 57, 62, 64, 69], key: "1" },
     { name: "G/B", notes: [35, 47, 55, 59, 62, 67], key: "2" },
@@ -30,6 +59,10 @@ export const CHORD_BANKS = {
     { name: "D/F#", notes: [42, 49, 54, 57, 62, 66], key: "6" },
     { name: "Em7(9)", notes: [40, 47, 52, 55, 59, 62], key: "7" },
     { name: "A9sus4", notes: [45, 52, 57, 62, 64, 69], key: "8" },
+    { name: "Bm7(add11)", notes: [35, 47, 52, 57, 59, 64], key: "9" },
+    { name: "G(add2)", notes: [43, 50, 55, 59, 62, 64], key: "10" },
+    { name: "A7sus4", notes: [45, 52, 55, 57, 62, 64], key: "11" },
+    { name: "Em11", notes: [40, 47, 54, 57, 62, 64], key: "12" },
   ],
   neo_soul: [
     { name: "Cmaj9", notes: [36, 48, 55, 59, 62, 64], key: "1" },
@@ -40,6 +73,10 @@ export const CHORD_BANKS = {
     { name: "Fmaj7#11", notes: [41, 53, 60, 64, 65, 71], key: "6" },
     { name: "E7(#9)", notes: [40, 52, 58, 62, 67, 75], key: "7" },
     { name: "Abmaj9", notes: [44, 51, 55, 58, 60, 63], key: "8" },
+    { name: "C#m7(9)", notes: [37, 49, 52, 56, 59, 63], key: "9" },
+    { name: "F#m9", notes: [42, 49, 54, 57, 61, 64], key: "10" },
+    { name: "Gmaj13", notes: [43, 47, 55, 59, 62, 66], key: "11" },
+    { name: "Dbmaj9", notes: [37, 49, 53, 56, 60, 63], key: "12" },
   ],
   gospel_praise: [
     { name: "Db2 (add9)", notes: [37, 49, 56, 61, 63, 68], key: "1" },
@@ -50,6 +87,10 @@ export const CHORD_BANKS = {
     { name: "Fm7", notes: [41, 53, 60, 63, 68, 72], key: "6" },
     { name: "Bb7alt", notes: [46, 52, 56, 62, 67, 70], key: "7" },
     { name: "Eb9sus", notes: [39, 51, 58, 61, 65, 70], key: "8" },
+    { name: "Ebm9", notes: [39, 51, 54, 58, 61, 65], key: "9" },
+    { name: "Abmaj7#11", notes: [44, 51, 55, 58, 62, 67], key: "10" },
+    { name: "Fm9", notes: [41, 48, 53, 56, 60, 63], key: "11" },
+    { name: "C7(b9)", notes: [36, 48, 55, 58, 61, 65], key: "12" },
   ],
   rnb_90s: [
     { name: "F#m9", notes: [42, 49, 54, 57, 61, 64], key: "1" },
@@ -60,6 +101,10 @@ export const CHORD_BANKS = {
     { name: "G#m7", notes: [44, 51, 54, 59, 63, 66], key: "6" },
     { name: "F#m11", notes: [42, 49, 52, 56, 61, 64], key: "7" },
     { name: "B7(b13)", notes: [47, 55, 57, 63, 67, 71], key: "8" },
+    { name: "Fmaj7", notes: [41, 53, 57, 60, 64], key: "9" },
+    { name: "Dm9", notes: [38, 50, 57, 60, 64, 65], key: "10" },
+    { name: "Dbmaj7", notes: [37, 49, 53, 56, 60, 63], key: "11" },
+    { name: "C#m7", notes: [37, 49, 52, 56, 59], key: "12" },
   ],
   jazz_fusion: [
     { name: "Fmaj9#11", notes: [41, 48, 55, 60, 64, 65, 71], key: "1" },
@@ -70,6 +115,10 @@ export const CHORD_BANKS = {
     { name: "Ab7#11", notes: [44, 50, 56, 62, 66, 70], key: "6" },
     { name: "Dbmaj9", notes: [37, 49, 56, 60, 63, 68], key: "7" },
     { name: "C7alt", notes: [48, 54, 58, 62, 66, 70], key: "8" },
+    { name: "Em11", notes: [40, 52, 55, 59, 62, 66], key: "9" },
+    { name: "Gb7(#11)", notes: [42, 49, 55, 58, 62, 67], key: "10" },
+    { name: "Bmaj7#11", notes: [35, 47, 51, 54, 59, 66], key: "11" },
+    { name: "Cmaj7#11", notes: [36, 48, 55, 59, 62, 64], key: "12" },
   ],
   pop_anthems: [
     { name: "C (I)", notes: [36, 48, 55, 60, 64, 67], key: "1" },
@@ -80,6 +129,10 @@ export const CHORD_BANKS = {
     { name: "Dm7 (ii)", notes: [38, 50, 57, 60, 65, 69], key: "6" },
     { name: "Gsus4", notes: [43, 50, 55, 60, 62, 67], key: "7" },
     { name: "G7 (V7)", notes: [43, 50, 53, 59, 62, 67], key: "8" },
+    { name: "C/E (I6)", notes: [40, 48, 55, 60, 64], key: "9" },
+    { name: "D (II)", notes: [38, 50, 57, 62, 66, 69], key: "10" },
+    { name: "Bb (IV-bVI)", notes: [34, 46, 53, 58, 62, 65], key: "11" },
+    { name: "F#m (iii)", notes: [42, 54, 57, 61, 66], key: "12" },
   ],
   city_pop: [
     { name: "Fmaj7", notes: [41, 48, 53, 57, 60, 64], key: "1" },
@@ -90,6 +143,10 @@ export const CHORD_BANKS = {
     { name: "G13", notes: [43, 50, 53, 57, 62, 65], key: "6" },
     { name: "Em7", notes: [40, 47, 52, 55, 59, 62], key: "7" },
     { name: "A7alt", notes: [45, 51, 55, 61, 65, 69], key: "8" },
+    { name: "C7sus", notes: [36, 48, 55, 58, 62, 65], key: "9" },
+    { name: "F#m11", notes: [42, 49, 54, 57, 61, 64], key: "10" },
+    { name: "D7(add9)", notes: [38, 50, 54, 57, 62, 64], key: "11" },
+    { name: "Bb13", notes: [46, 53, 57, 60, 65, 69], key: "12" },
   ],
   lofi_chill: [
     { name: "Ebmaj9", notes: [39, 46, 51, 55, 58, 62], key: "1" },
@@ -100,6 +157,10 @@ export const CHORD_BANKS = {
     { name: "Abmaj7#11", notes: [44, 51, 55, 58, 62, 67], key: "6" },
     { name: "G7(#9)", notes: [43, 49, 53, 58, 66, 70], key: "7" },
     { name: "Bb7(b9)", notes: [46, 52, 56, 60, 65, 68], key: "8" },
+    { name: "Am9", notes: [45, 52, 55, 59, 64, 67], key: "9" },
+    { name: "Fmaj7(9)", notes: [41, 48, 53, 57, 60, 64], key: "10" },
+    { name: "Bmaj7", notes: [47, 51, 54, 58], key: "11" },
+    { name: "C#m7", notes: [37, 49, 52, 56, 61, 64], key: "12" },
   ],
   latin_bossa: [
     { name: "Dm7(9)", notes: [38, 50, 57, 60, 64, 65], key: "1" },
@@ -110,6 +171,10 @@ export const CHORD_BANKS = {
     { name: "G7(b9)", notes: [43, 49, 53, 59, 62, 65], key: "6" },
     { name: "Em7(b5)", notes: [40, 46, 52, 55, 58, 62], key: "7" },
     { name: "A7(b13)", notes: [45, 52, 55, 61, 65, 69], key: "8" },
+    { name: "Am7(9)", notes: [45, 52, 57, 60, 64, 67], key: "9" },
+    { name: "Dm7(b5)", notes: [38, 50, 53, 56, 60, 65], key: "10" },
+    { name: "Gm11", notes: [43, 50, 53, 57, 62, 65], key: "11" },
+    { name: "Bb13", notes: [46, 53, 57, 58, 62, 65], key: "12" },
   ],
   synthwave_retro: [
     { name: "Am(add9)", notes: [45, 52, 57, 60, 64, 71], key: "1" },
@@ -120,13 +185,17 @@ export const CHORD_BANKS = {
     { name: "Em7", notes: [40, 47, 52, 55, 59, 64], key: "6" },
     { name: "Bbmaj7", notes: [46, 53, 57, 60, 65, 69], key: "7" },
     { name: "E7sus4", notes: [40, 47, 52, 57, 59, 64], key: "8" },
+    { name: "Fmaj7(add11)", notes: [41, 53, 57, 60, 64, 71], key: "9" },
+    { name: "Cmaj7", notes: [36, 48, 55, 59, 62, 64], key: "10" },
+    { name: "G(add9)", notes: [43, 50, 55, 59, 62, 67], key: "11" },
+    { name: "Dsus4", notes: [38, 50, 55, 57, 62], key: "12" },
   ],
 };
 
 export class ChordPadsUI {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
-    this.activeBank = "worship_ballad";
+    this.activeBank = "basic_chords";
     this.activeNotesMap = new Map(); // PadIndex -> Array of active midi notes
 
     this.render();

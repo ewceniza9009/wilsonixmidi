@@ -17,7 +17,6 @@
 import { synthEngine } from "../audio/synth-engine.js";
 import { multiLayerEngine } from "../audio/multi-layer-engine.js";
 import { qwertyKeyboard } from "../midi/qwerty-keyboard.js";
-import { whitneyDemoPlayer } from "../audio/whitney-demo-player.js";
 
 const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const WHITE_NOTES = [0, 2, 4, 5, 7, 9, 11];
@@ -57,33 +56,12 @@ export class VirtualKeyboardUI {
       notes.forEach(m => this.setKeyVisualState(m, isPressed, velocity));
     };
 
-    whitneyDemoPlayer.onNoteTriggerCallback = (midi, isPressed, vel) => {
-      this.setKeyVisualState(midi, isPressed, vel);
-    };
-
     // Chord pads -> virtual key highlight bridge
     window.addEventListener("wilsonix-keys-visual", e => {
       const { notes, pressed, velocity } = e.detail || {};
       if (!Array.isArray(notes)) return;
       notes.forEach(m => this.setKeyVisualState(m, !!pressed, velocity || 95));
     });
-
-    whitneyDemoPlayer.onProgressCallback = (elapsed) => {
-      const btn = document.getElementById("hud-whitney-demo-btn");
-      const hudBtn = document.getElementById("hud-whitney-play-btn");
-      const isPlaying = whitneyDemoPlayer.isPlaying;
-      const sec = Math.min(30, Math.floor(elapsed / 1000));
-      const secStr = sec < 10 ? `0${sec}` : `${sec}`;
-      const text = isPlaying ? `⏹ STOP (00:${secStr} / 00:30)` : `▶ WHITNEY 30s DEMO`;
-      if (btn) {
-        btn.innerText = text;
-        btn.classList.toggle("playing", isPlaying);
-      }
-      if (hudBtn) {
-        hudBtn.innerText = isPlaying ? `⏹ STOP (${secStr}s)` : `▶ WHITNEY 30s`;
-        hudBtn.classList.toggle("playing", isPlaying);
-      }
-    };
   }
 
   render() {
@@ -125,13 +103,6 @@ export class VirtualKeyboardUI {
           <div class="layout-hud-unit">
             <button class="hud-btn layout-btn" id="hud-layout-btn" title="Switch QWERTY Layout (F2)">
               LAYOUT: ${qwertyKeyboard.layoutMode === "melody" ? "MELODY (Q-P)" : "DAW (A-')"}
-            </button>
-          </div>
-
-          <!-- Whitney 30s Interactive Demo Player -->
-          <div class="demo-song-unit">
-            <button class="hud-btn demo-play-btn" id="hud-whitney-demo-btn" title="Listen to Whitney Houston's 'I Have Nothing' First 30s with Full Foster Voicing">
-              ▶ WHITNEY 30s DEMO
             </button>
           </div>
 
@@ -481,15 +452,6 @@ export class VirtualKeyboardUI {
       qwertyKeyboard.cycleLayoutMode();
       this.updateHudState();
       this.updateQwertyLabels();
-    });
-
-    const demoBtn = document.getElementById("hud-whitney-demo-btn");
-    demoBtn?.addEventListener("click", () => {
-      if (whitneyDemoPlayer.isPlaying) {
-        whitneyDemoPlayer.stop();
-      } else {
-        whitneyDemoPlayer.play();
-      }
     });
 
     sustainBtn?.addEventListener("click", () => {

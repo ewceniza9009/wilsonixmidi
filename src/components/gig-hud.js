@@ -165,6 +165,10 @@ export class GigHudUI {
               <span class="tab-icon">🎼</span>
               <span class="tab-label">CHORDS</span>
             </button>
+            <button class="ws-tab-btn" data-view="demo" title="30s Interactive Song Clip Demos">
+              <span class="tab-icon">🎬</span>
+              <span class="tab-label">DEMO</span>
+            </button>
             <button class="ws-tab-btn" data-view="grooves" title="Backing Grooves & SFX Soundboard">
               <span class="tab-icon">🥁</span>
               <span class="tab-label">GROOVES</span>
@@ -354,6 +358,7 @@ export class GigHudUI {
             "view-combi",
             "view-keys",
             "view-chords",
+            "view-demo",
             "view-fx",
             "view-looper",
             "view-grooves"

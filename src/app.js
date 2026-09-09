@@ -16,6 +16,7 @@ import { LicenseModalUI } from "./components/license-modal.js";
 import { TritonWorkstationUI } from "./components/triton-workstation-ui.js";
 import { MultiLayerUI } from "./components/multi-layer-ui.js";
 import { GroovePlayerUI } from "./components/groove-player-ui.js";
+import { DemoStationUI } from "./components/demo-station.js";
 import { multiLayerEngine } from "./audio/multi-layer-engine.js";
 
 class MidiKeyEliteApp {
@@ -137,7 +138,14 @@ class MidiKeyEliteApp {
       console.warn("ChordPads / Looper init:", e);
     }
 
-    // 6b. Groove Station & SFX Performance Soundboard
+    // 6b. Demo Station: 30s Interactive Song Clips
+    try {
+      this.demoStation = new DemoStationUI("demo-station-mount");
+    } catch (e) {
+      console.warn("DemoStationUI init:", e);
+    }
+
+    // 6c. Groove Station & SFX Performance Soundboard
     try {
       this.grooveStation = new GroovePlayerUI("groove-station-mount");
     } catch (e) {
@@ -182,6 +190,7 @@ class MidiKeyEliteApp {
             "view-combi",
             "view-keys",
             "view-chords",
+            "view-demo",
             "view-fx",
             "view-looper",
             "view-grooves"
