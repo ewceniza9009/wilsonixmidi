@@ -1126,11 +1126,12 @@ export class NativePcmEngine {
   }
 
   async initBuffers() {
-    // 1. Instantly decode acoustic grand piano, alto sax, AND choir anchors FIRST (< 15ms) for immediate zero-delay play
+    // 1. Instantly decode acoustic grand piano, alto sax, tenor sax, AND choir anchors FIRST (< 15ms) for immediate zero-delay play
     await Promise.all([
       this.decodeEmbeddedAnchors("acoustic_grand_piano"),
-      this.decodeEmbeddedAnchors("alto_sax"),
       this.decodeEmbeddedAnchors("choir_aahs"),
+      this.loadSoundfont("alto_sax"),
+      this.loadSoundfont("tenor_sax"),
     ]);
     this.isReady = true;
 
@@ -1141,7 +1142,10 @@ export class NativePcmEngine {
     // 3. Preload essential starting soundfonts non-blockingly (on idle)
     // All other soundfonts load on-demand when selected, avoiding main-thread freezes
     const idlePreload = () => {
+      this.loadSoundfont("soprano_sax");
+      this.loadSoundfont("breath_noise");
       this.loadSoundfont("string_ensemble_1");
+      this.loadSoundfont("brass_section");
       this.loadSoundfont("flute");
     };
 
@@ -1362,9 +1366,21 @@ export class NativePcmEngine {
       m1_brass_1: "brass_section",
       brass_1: "brass_section",
 
-      // 9. Woodwinds & Alto Sax
+      // 9. Woodwinds & Genuine Saxophones
       alto_sax: "alto_sax",
       breathy_alto_sax: "alto_sax",
+      sax_genuine_solo: "alto_sax",
+      sax_solo: "alto_sax",
+      sax_alto_lead: "alto_sax",
+      sax_funk_stab: "alto_sax",
+      sax_fall: "alto_sax",
+      sax_scoop: "alto_sax",
+      tenor_sax: "tenor_sax",
+      sax_sensual: "tenor_sax",
+      sax_blues_growl: "tenor_sax",
+      sax_tenor_blues: "tenor_sax",
+      soprano_sax: "soprano_sax",
+      sax_soprano: "soprano_sax",
       m1_lore: "alto_sax",
       m1_flute: "flute",
       m1_pan_flute: "flute",
@@ -1444,8 +1460,16 @@ export class NativePcmEngine {
       const str = String(instId || "").toLowerCase();
       if (str.includes("choir") || str.includes("ooh") || str.includes("ahh") || str.includes("voice")) {
         instMap = this.decodedBuffers.get("choir_aahs");
-      } else if (str.includes("flute") || str.includes("woodwind") || str.includes("sax") || str.includes("clarinet")) {
-        instMap = this.decodedBuffers.get("flute") || this.decodedBuffers.get("alto_sax");
+      } else if (str.includes("tenor_sax") || str.includes("sensual") || str.includes("blues_growl")) {
+        instMap = this.decodedBuffers.get("tenor_sax") || this.decodedBuffers.get("alto_sax");
+      } else if (str.includes("soprano_sax") || str.includes("soprano")) {
+        instMap = this.decodedBuffers.get("soprano_sax") || this.decodedBuffers.get("alto_sax");
+      } else if (str.includes("sax")) {
+        instMap = this.decodedBuffers.get("alto_sax") || this.decodedBuffers.get("tenor_sax");
+      } else if (str.includes("flute") || str.includes("pan_flute")) {
+        instMap = this.decodedBuffers.get("flute");
+      } else if (str.includes("woodwind") || str.includes("clarinet")) {
+        instMap = this.decodedBuffers.get("clarinet") || this.decodedBuffers.get("alto_sax");
       } else if (str.includes("string") || str.includes("pad")) {
         instMap = this.decodedBuffers.get("string_ensemble_1");
       }
@@ -1524,6 +1548,7 @@ export class NativePcmEngine {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const velNorm = Math.max(0.08, Math.min(1.0, velocity / 127));
+    const isSax = String(instId || "").toLowerCase().includes("sax");
 
     // Pitch ratio: exact if anchor === target, otherwise nearest neighbor
     const semitoneDiff = midiNote - anchorData.anchorMidi;
@@ -1592,7 +1617,31 @@ export class NativePcmEngine {
     // 1. Audio Buffer Source
     const src = ctx.createBufferSource();
     src.buffer = anchorData.buffer;
-    src.playbackRate.setValueAtTime(bentPlaybackRate, now);
+
+    // Expressive lip embouchure scoop & singing vibrato for genuine saxophones
+    let vibLfo = null;
+    if (isSax) {
+      // Natural lip scoop into note pitch (-35 cents settling smoothly over 60ms)
+      const scoopRate = bentPlaybackRate * Math.pow(2, -0.35 / 12);
+      src.playbackRate.setValueAtTime(scoopRate, now);
+      src.playbackRate.exponentialRampToValueAtTime(bentPlaybackRate, now + 0.060);
+
+      // Expressive delayed diaphragm vibrato LFO (swells in naturally after 160ms of holding the note)
+      try {
+        vibLfo = ctx.createOscillator();
+        vibLfo.type = "sine";
+        vibLfo.frequency.setValueAtTime(5.3, now);
+        const vibGain = ctx.createGain();
+        vibGain.gain.setValueAtTime(0.00001, now);
+        vibGain.gain.setValueAtTime(0.00001, now + 0.16);
+        vibGain.gain.linearRampToValueAtTime(bentPlaybackRate * 0.014, now + 0.50);
+        vibLfo.connect(vibGain);
+        vibGain.connect(src.playbackRate);
+        vibLfo.start(now);
+      } catch (e) {}
+    } else {
+      src.playbackRate.setValueAtTime(bentPlaybackRate, now);
+    }
 
     // Infinite Smooth Hold for sustained instruments (Equal-Power Pre-Crossfaded: 0% chop, 0% clicks)
     if (anchorData.buffer && anchorData.buffer._isLoopable) {
@@ -1610,7 +1659,6 @@ export class NativePcmEngine {
     // a lower ceiling (their musical energy lives below 10kHz anyway).
     const filter = ctx.createBiquadFilter();
     filter.type = "lowpass";
-    const isSax = instId === "alto_sax" || instId?.includes("sax");
     const isChoir = instId === "choir_aahs" || instId === "m1_choir" || instId === "m1_ooh_ahh" || instId?.includes("choir");
     const isHashy = !isSax && !isChoir && (
       instId?.includes("string") || instId?.includes("brass") ||
@@ -1620,8 +1668,8 @@ export class NativePcmEngine {
       instId?.includes("universe") || instId?.includes("fresh_air") ||
       instId?.includes("pad")
     );
-    const minCutoff = isSax ? 5500 : (isChoir ? 650 : (isHashy ? 6000 : 9000));
-    const maxCutoff = isSax ? 14000 : (isChoir ? 3800 : (isHashy ? 9500 : 20000));
+    const minCutoff = isSax ? 10000 : (isChoir ? 650 : (isHashy ? 6000 : 9000));
+    const maxCutoff = isSax ? 20000 : (isChoir ? 3800 : (isHashy ? 9500 : 20000));
     const dynamicCutoff = minCutoff + velNorm * (maxCutoff - minCutoff);
 
     if (isChoir) {
@@ -1634,7 +1682,7 @@ export class NativePcmEngine {
       filter.Q.setTargetAtTime(0.8, now + 0.04, 0.12);
     } else {
       filter.frequency.setValueAtTime(dynamicCutoff, now);
-      filter.Q.setValueAtTime(isSax ? 0.10 : 0.20, now);
+      filter.Q.setValueAtTime(isSax ? 0.05 : 0.20, now);
     }
 
     // 3. Time-Variant Amplifier (TVA): Maximum loudness, punchy studio presence
@@ -1656,7 +1704,7 @@ export class NativePcmEngine {
       choir_aahs: 1.15,
       acoustic_guitar_nylon: 1.0,
       electric_guitar_clean: 1.0,
-      alto_sax: 0.95,
+      alto_sax: 1.05,
       brass_section: 1.0,
       drawbar_organ: 1.0,
       synth_bass_1: 1.05,
@@ -1665,7 +1713,7 @@ export class NativePcmEngine {
       overdriven_guitar: 1.0,
       trumpet: 1.05,
       trombone: 1.05,
-      tenor_sax: 0.95,
+      tenor_sax: 1.05,
       flute: 1.0,
       clarinet: 1.0,
       violin: 1.0,
@@ -1674,7 +1722,7 @@ export class NativePcmEngine {
       vibraphone: 1.0,
       electric_piano_2: 1.0,
       acoustic_bass: 1.05,
-      soprano_sax: 0.95,
+      soprano_sax: 1.05,
       muted_trumpet: 1.0,
       acoustic_guitar_steel: 1.0,
       slap_bass_1: 1.05,
@@ -1696,7 +1744,8 @@ export class NativePcmEngine {
       // Soft natural vocal choir swell (not sudden piano thud)
       voiceGain.gain.setTargetAtTime(peakGain, now, 0.06);
     } else if (isSax) {
-      voiceGain.gain.setTargetAtTime(peakGain, now, 0.003);
+      // Smooth wind reed breath pressure swell (40ms smooth rise - 0% hammer click)
+      voiceGain.gain.setTargetAtTime(peakGain, now, 0.040);
     } else {
       voiceGain.gain.setTargetAtTime(peakGain, now, 0.002);
     }
@@ -1749,6 +1798,7 @@ export class NativePcmEngine {
       baseGain: peakGain,
       baseCutoff: dynamicCutoff,
       velNorm,
+      vibLfo,
     };
 
     // Global polyphony cap: steal oldest voices first so fast runs can't pile up and crackle
@@ -1757,8 +1807,8 @@ export class NativePcmEngine {
       if (!oldest) break;
       try {
         oldest.voiceGain.gain.cancelScheduledValues(now);
-        oldest.voiceGain.gain.setTargetAtTime(0, now, 0.003);
-        oldest.src.stop(now + 0.015);
+        oldest.voiceGain.gain.setTargetAtTime(0, now, 0.025);
+        oldest.src.stop(now + 0.15);
       } catch (e) {}
       this.removeVoice(oldest.midiNote, oldest);
     }
@@ -1870,11 +1920,14 @@ export class NativePcmEngine {
             const isChoir = v.instId === "choir_aahs" || v.instId === "m1_choir" || v.instId === "m1_ooh_ahh" || v.instId?.includes("choir");
             const isString = v.instId === "string_ensemble_1" || v.instId?.includes("string") || v.instId?.includes("pad");
             const isSax = v.instId === "alto_sax" || v.instId?.includes("sax");
-            const tau = isChoir ? 0.20 : (isString ? 0.08 : (isSax ? 0.03 : 0.015));
+            const tau = isChoir ? 0.20 : (isString ? 0.08 : (isSax ? 0.12 : 0.015));
             v.voiceGain.gain.cancelScheduledValues(now);
             v.voiceGain.gain.setTargetAtTime(0, now, tau);
-            const stopTime = isChoir ? 1.4 : (isString ? 0.5 : (isSax ? 0.2 : 0.1));
+            const stopTime = isChoir ? 1.4 : (isString ? 0.5 : (isSax ? 0.55 : 0.1));
             v.src.stop(now + stopTime);
+            if (v.vibLfo) {
+              try { v.vibLfo.stop(now + stopTime + 0.1); } catch (e) {}
+            }
           } catch (e) {}
         });
       });
@@ -1913,8 +1966,8 @@ export class NativePcmEngine {
               }
               if (!oldest) break;
               oldest.voiceGain.gain.cancelScheduledValues(now);
-              oldest.voiceGain.gain.setTargetAtTime(0, now, 0.005);
-              oldest.src.stop(now + 0.05);
+              oldest.voiceGain.gain.setTargetAtTime(0, now, 0.025);
+              oldest.src.stop(now + 0.15);
               this.removeVoice(oldestKey, oldest);
               totalSus--;
             }
@@ -1925,11 +1978,15 @@ export class NativePcmEngine {
             const isChoir = v.instId === "choir_aahs" || v.instId === "m1_choir" || v.instId === "m1_ooh_ahh" || v.instId?.includes("choir");
             const isString = v.instId === "string_ensemble_1" || v.instId?.includes("string") || v.instId?.includes("pad");
             const isSax = v.instId === "alto_sax" || v.instId?.includes("sax");
-            const tau = isChoir ? 0.20 : (isString ? 0.08 : (isSax ? 0.03 : 0.015));
+            const isSynth = v.instId?.includes("synth") || v.instId?.includes("supersaw") || v.instId?.includes("trance") || v.instId?.includes("m1_") || v.instId?.includes("electric_piano") || v.instId?.includes("rhodes") || v.instId?.includes("drawbar");
+            const tau = isChoir ? 0.35 : (isString ? 0.18 : (isSynth ? 0.12 : (isSax ? 0.14 : 0.03)));
             v.voiceGain.gain.cancelScheduledValues(now);
             v.voiceGain.gain.setTargetAtTime(0, now, tau);
-            const stopTime = isChoir ? 1.4 : (isString ? 0.5 : (isSax ? 0.2 : 0.1));
+            const stopTime = isChoir ? 2.0 : (isString ? 1.0 : (isSynth ? 0.6 : (isSax ? 0.65 : 0.2)));
             v.src.stop(now + stopTime);
+            if (v.vibLfo) {
+              try { v.vibLfo.stop(now + stopTime + 0.1); } catch (e) {}
+            }
           } catch (e) {}
         }
       } else {

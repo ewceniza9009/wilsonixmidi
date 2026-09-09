@@ -26,6 +26,8 @@ export class GroovePlayerUI {
 
   initSfx() {
     try {
+      audioCore.init();
+      audioCore.ensureRunning();
       if (audioCore.ctx) {
         this.sfxGen = new SfxSoundGenerator(audioCore.ctx, audioCore.masterGain || audioCore.ctx.destination);
         synthesizerYouEngine.preload();
@@ -156,6 +158,7 @@ export class GroovePlayerUI {
 
             <!-- SFX Category Tabs -->
             <div class="sfx-cat-tabs">
+              <button class="sfx-cat-btn ${this.activeSfxCategory === "sax" ? "active" : ""}" data-sfx-cat="sax">🎷 GENUINE SAX</button>
               <button class="sfx-cat-btn ${this.activeSfxCategory === "synthesizer_you" ? "active" : ""}" data-sfx-cat="synthesizer_you">🏄 SYNTH YOU FX</button>
               <button class="sfx-cat-btn ${this.activeSfxCategory === "crowd" ? "active" : ""}" data-sfx-cat="crowd">👏 CONCERT CROWD</button>
               <button class="sfx-cat-btn ${this.activeSfxCategory === "vox" ? "active" : ""}" data-sfx-cat="vox">🗣️ HUMAN VOX</button>
@@ -177,6 +180,14 @@ export class GroovePlayerUI {
 
   renderSfxPads() {
     const sfxMap = {
+      sax: [
+        { id: "sax_genuine_solo", icon: "🎷", name: "Solo Alto Sax", desc: "Genuine expressive solo with natural reed breath & delayed vibrato" },
+        { id: "sax_sensual", icon: "💋", name: "Sensual 80s Sax", desc: "80s Careless Whisper style breathy tenor sax with warm plate reverb" },
+        { id: "sax_blues_growl", icon: "🔥", name: "Dirty Blues Growl", desc: "Authentic throat flutter growl with raspy overtones" },
+        { id: "sax_funk_stab", icon: "💥", name: "Funk Section Stab", desc: "Explosive tight brass & horn section stab for grooves" },
+        { id: "sax_fall", icon: "📉", name: "Big Band Sax Fall", desc: "Classic expressive pitch fall and slide off note" },
+        { id: "sax_scoop", icon: "📈", name: "Sax Pitch Scoop", desc: "Deep expressive pitch scoop into warm acoustic reed sustain" },
+      ],
       synthesizer_you: SYNTHESIZER_YOU_EFFECTS,
       crowd: [
         { id: "applause_clapping", icon: "👏", name: "Concert Clapping", desc: "Real rhythmic concert audience applause" },
@@ -335,6 +346,8 @@ export class GroovePlayerUI {
   }
 
   triggerSfx(sfxId) {
+    audioCore.ensureRunning();
+    if (!this.sfxGen) this.initSfx();
     if (!this.sfxGen) return;
 
     if (sfxId.startsWith("sy_")) {
@@ -460,6 +473,73 @@ export class GroovePlayerUI {
       case "fx_bionic":
         this.sfxGen.triggerBionicGlitch(100, 1.0);
         break;
+
+      // 7. Genuine Saxophone Effects (Authentic Studio Acoustic Soundfonts)
+      case "sax_genuine_solo":
+      case "sax_solo": {
+        const pcm = multiLayerEngine.pcmEngine;
+        if (pcm) {
+          pcm.playNote("breath_noise", 60, 80, 0.4);
+          pcm.playNote("alto_sax", 65, 110, 1.25);
+          setTimeout(() => pcm.playNote("alto_sax", 67, 115, 1.25), 140);
+          setTimeout(() => pcm.playNote("alto_sax", 70, 118, 1.25), 290);
+          setTimeout(() => pcm.playNote("alto_sax", 72, 125, 1.35), 460);
+        }
+        break;
+      }
+      case "sax_sensual": {
+        const pcm = multiLayerEngine.pcmEngine;
+        if (pcm) {
+          pcm.playNote("breath_noise", 60, 90, 0.5);
+          pcm.playNote("tenor_sax", 62, 105, 1.2);
+          setTimeout(() => pcm.playNote("tenor_sax", 65, 110, 1.2), 150);
+          setTimeout(() => pcm.playNote("tenor_sax", 69, 115, 1.25), 300);
+          setTimeout(() => pcm.playNote("tenor_sax", 67, 108, 1.15), 460);
+          setTimeout(() => pcm.playNote("tenor_sax", 65, 115, 1.25), 630);
+        }
+        break;
+      }
+      case "sax_blues_growl": {
+        const pcm = multiLayerEngine.pcmEngine;
+        if (pcm) {
+          pcm.playNote("tenor_sax", 58, 115, 1.25);
+          setTimeout(() => pcm.playNote("tenor_sax", 60, 118, 1.25), 120);
+          setTimeout(() => pcm.playNote("tenor_sax", 63, 122, 1.25), 260);
+          setTimeout(() => pcm.playNote("tenor_sax", 65, 125, 1.3), 420);
+        }
+        break;
+      }
+      case "sax_funk_stab": {
+        const pcm = multiLayerEngine.pcmEngine;
+        if (pcm) {
+          pcm.playNote("alto_sax", 65, 125, 1.2);
+          pcm.playNote("alto_sax", 69, 125, 1.2);
+          pcm.playNote("alto_sax", 72, 127, 1.3);
+          pcm.playNote("brass_section", 53, 120, 0.85);
+          pcm.playNote("brass_section", 65, 120, 0.85);
+        }
+        break;
+      }
+      case "sax_fall": {
+        const pcm = multiLayerEngine.pcmEngine;
+        if (pcm) {
+          pcm.playNote("alto_sax", 76, 125, 1.3);
+          setTimeout(() => pcm.playNote("alto_sax", 74, 115, 1.1), 80);
+          setTimeout(() => pcm.playNote("alto_sax", 72, 105, 0.9), 160);
+          setTimeout(() => pcm.playNote("alto_sax", 69, 90, 0.7), 240);
+          setTimeout(() => pcm.playNote("alto_sax", 65, 75, 0.5), 320);
+        }
+        break;
+      }
+      case "sax_scoop": {
+        const pcm = multiLayerEngine.pcmEngine;
+        if (pcm) {
+          pcm.playNote("breath_noise", 60, 90, 0.5);
+          pcm.playNote("alto_sax", 64, 95, 0.9);
+          setTimeout(() => pcm.playNote("alto_sax", 65, 125, 1.3), 70);
+        }
+        break;
+      }
 
       default:
         break;

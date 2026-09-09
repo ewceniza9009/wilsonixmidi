@@ -58,6 +58,14 @@ export const HD_SOUNDBANKS = {
   rock_organ: { id: "rock_organ", name: "Rock Organ Shout", category: "Organ" },
   harpsichord: { id: "harpsichord", name: "Baroque Harpsichord", category: "Bells & Pad" },
 
+  // Genuine Saxophone & Reed Instruments
+  sax_genuine_solo: { id: "sax_genuine_solo", name: "🎷 Expressive Solo Alto Sax", category: "Woodwind" },
+  sax_sensual: { id: "sax_sensual", name: "🎷 Sensual 80s Breathy Sax", category: "Woodwind" },
+  sax_blues_growl: { id: "sax_blues_growl", name: "🎷 Dirty Blues Sax Growl", category: "Woodwind" },
+  sax_funk_stab: { id: "sax_funk_stab", name: "🎷 Funk Brass & Sax Stab", category: "Woodwind" },
+  sax_fall: { id: "sax_fall", name: "🎷 Big Band Sax Fall", category: "Woodwind" },
+  sax_scoop: { id: "sax_scoop", name: "🎷 Expressive Pitch Scoop Sax", category: "Woodwind" },
+
   // Nature Sounds
   nature_thunder: { id: "nature_thunder", name: "Deep Thunder Strike", category: "Nature Sounds" },
   nature_rain: { id: "nature_rain", name: "Gentle Rainstorm Ambience", category: "Nature Sounds" },
