@@ -31,7 +31,7 @@ export class TritonVirtualAnalogEngine {
     if (!ctx) return;
     // Route through the master FX Rack so program IFX/MFX still apply on top.
     const dest = audioCore.fxRack?.input || ctx.destination;
-    this.pool = new VoicePoolManager(ctx, 32, dest);
+    this.pool = new VoicePoolManager(ctx, 32, dest, this.heldNotes);
   }
 
   setProgram(prog) {
@@ -44,23 +44,26 @@ export class TritonVirtualAnalogEngine {
     const r1 = prog.r1 || 1.0;
     const r2 = prog.r2 || 1.0;
 
-    // Third osc: layered sub for fatness (sine) OR mirrored detune saw for leads
+    // Third osc: for leads = ultra-tight detuned mirror (fatness, no beating rumble).
+    // For every other timbre (EPs, organs, strings, brass) the sub is DISABLED --
+    // a wholetone sine under every voice was the "warm muddy stacking" noise.
     let osc3Type = "sine";
     let osc3Ratio = 0.5;
     const isLead = /(lead|trance|saw|synth|stabb|stab|fast|hit|motion)/i.test((prog.category || "") + " " + (prog.name || ""));
     if (isLead) {
       osc3Type = osc1;
-      osc3Ratio = r1 * 0.99; // Ultra-tight detuned mirror
+      osc3Ratio = r1 * 0.995; // Detuned mirror: slower, softer beating than the old 1%
     }
 
-    // Blend gains: osc1 body, osc2 colour, osc3 sub/mirror
-    let gain1 = 0.46;
+    // Blend gains: osc1 body, osc2 colour, osc3 mirror/sub. Sum kept near 1.0 pre-filter;
+    // the master busPad trim (0.7) + soft limiters provide all the headroom.
+    let gain1 = 0.48;
     let gain2 = 0.34;
-    let gain3 = 0.26;
+    let gain3 = 0.0; // sub disabled for non-leads
     if (isLead) {
-      gain1 = 0.42;
-      gain2 = 0.36;
-      gain3 = 0.30;
+      gain1 = 0.40;
+      gain2 = 0.34;
+      gain3 = 0.26;
     }
 
     const isPercussive = /(stab|hit|pluck|slap|tine|ep|wurly|rhodes|clav|harp|kalimba|mallet|vibes|vibe|bell(?!\s*pad)|piano(?!\s*pad))/i.test((prog.category || "") + " " + (prog.name || ""));
@@ -84,7 +87,7 @@ export class TritonVirtualAnalogEngine {
       sustainLevel: prog.sustain ?? 0.65,
       release: prog.release ?? 0.35,
       isPercussive,
-      masterGain: 0.62,
+      masterGain: 0.30,
     };
   }
 
@@ -95,9 +98,10 @@ export class TritonVirtualAnalogEngine {
 
     const vel = Math.max(1, Math.min(127, velocity));
     // Nudge each voice's base detune by a hair so stacked notes stay phase-rich
+    const sameNote = this.pool.voices.some(v => v.isBusy && v.activeMidiNote === midiNote);
     const voice = this.pool.acquireVoice(midiNote);
     const ratio = Math.pow(2, this.pitchBendSemitones / 12);
-    voice.trigger(midiNote, vel, this.config, ratio);
+    voice.trigger(midiNote, vel, this.config, ratio, sameNote);
   }
 
   noteOff(midiNote) {

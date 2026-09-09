@@ -533,7 +533,6 @@ export class TritonWorkstationUI {
         name.includes("techno") ||
         name.includes("hypersaw") ||
         name.includes("synth") ||
-        name.includes("harmonica") ||
         name.includes("tine") ||
         name.includes("rhodes") ||
         name.includes("r&b") ||
@@ -628,8 +627,8 @@ export class TritonWorkstationUI {
     fx.gatedReverb.setBypass(true);
     fx.tapeSat.setBypass(true);
     fx.reverb.setBypass(false);
-    fx.reverb.setMix(0.16);
-    fx.reverb.setDecay(1.8);
+    fx.reverb.setMix(0.12);
+    fx.reverb.setDecay(1.6);
     fx.masterEq.setLowGain(0);
     fx.masterEq.setMidGain(0);
     fx.masterEq.setHighGain(0);
@@ -638,9 +637,14 @@ export class TritonWorkstationUI {
 
     if (has("overdrive") || has("distortion") || has(" tube")) {
       fx.tube.setBypass(false);
-      fx.tube.setDrive(has("distortion") ? 0.62 : 0.40);
-      fx.tube.setMix(0.55);
-      fx.tube.setTone(4200);
+      if (has("distortion")) {
+        fx.tube.setDrive(0.45);
+        fx.tube.setTone(6000); // bright, not muffled
+      } else {
+        fx.tube.setDrive(0.32);
+        fx.tube.setTone(5500);
+      }
+      fx.tube.setMix(0.50);
     }
     if (has("phaser")) {
       fx.phaser.setBypass(false);

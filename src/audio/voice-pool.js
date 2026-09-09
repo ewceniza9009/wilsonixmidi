@@ -71,7 +71,7 @@ export class PolyphonicVoice {
     this.osc3.start();
   }
 
-  trigger(midiNote, velocity, instrumentConfig, pitchBendRatio = 1.0) {
+  trigger(midiNote, velocity, instrumentConfig, pitchBendRatio = 1.0, sameNote = false) {
     this.activeMidiNote = midiNote;
     this._gen++;
     const wasBusy = this.isBusy;
@@ -96,11 +96,12 @@ export class PolyphonicVoice {
     this.osc2.frequency.setValueAtTime(freq * (instrumentConfig.osc2Ratio || 2.001), now);
     this.osc3.frequency.setValueAtTime(freq * (instrumentConfig.osc3Ratio || 0.5), now);
 
-    // Dynamic Filter (smooth exponential slew so reused resonant voices never zipper)
+    // Dynamic Filter (smooth exponential slew; resonance scaled down ~55% so high-Q
+    // programs don't turn into boxy resonant clipping - the grainy/dirty wall)
     const baseCutoff = instrumentConfig.filterCutoff || 6000;
     const filterEnv = Math.min(18000, baseCutoff * (0.5 + velRatio * 0.8));
     this.filter.type = instrumentConfig.filterType || "lowpass";
-    this.filter.Q.setValueAtTime(Math.min(5.0, instrumentConfig.filterQ || 1.0), now);
+    this.filter.Q.setValueAtTime(Math.min(2.5, Math.max(0.25, (instrumentConfig.filterQ || 1.0) * 0.55)), now);
     this.filter.frequency.cancelScheduledValues(now);
     this.filter.frequency.setTargetAtTime(filterEnv, now, 0.012);
 
@@ -109,25 +110,38 @@ export class PolyphonicVoice {
     this.gain2.gain.setValueAtTime(instrumentConfig.gain2 || 0.3, now);
     this.gain3.gain.setValueAtTime(instrumentConfig.gain3 || 0.15, now);
 
-    const attack = Math.max(0.001, instrumentConfig.attack || 0.002);
+    const attack = Math.max(0.0015, instrumentConfig.attack || 0.002);
     const peakGain = (0.35 + velRatio * 0.65) * (instrumentConfig.masterGain || 0.85);
     const decay = instrumentConfig.decay || 2.2;
     const sustain = peakGain * (instrumentConfig.sustainLevel || 0.35);
+    const decTau = instrumentConfig.isPercussive ? decay * 0.45 : 0.25;
+    const decTarget = instrumentConfig.isPercussive ? 0.0 : sustain;
 
-    // Click-free gating: when a voice is stolen or retriggered while soundING,
-    // duck it smoothly to near-silence first so the held note never gets chopped.
-    const gateT = now + (wasBusy ? 0.055 : 0.0);
+    // NEVER schedule two automation events at the same timestamp (Web Audio treats
+    // coincident events ambiguously) and NEVER hard-snap a sounding voice to zero.
     this.voiceGain.gain.cancelScheduledValues(now);
-    if (wasBusy) {
-      this.voiceGain.gain.setTargetAtTime(0.0, now, 0.01);
+    if (sameNote) {
+      // Legato same-note retrigger (fast repeated keys): blend from the current
+      // level -- no zero gap, no duck, no chop, no latency.
+      const aStart = now + 0.002;
+      this.voiceGain.gain.setTargetAtTime(peakGain, aStart, Math.max(0.002, attack));
+      this.voiceGain.gain.setTargetAtTime(decTarget, aStart + Math.max(0.002, attack) * 3 + 0.004, decTau);
+    } else if (wasBusy) {
+      // Voice steal: quick smooth duck to near-silence (old note never chopped),
+      // then a clean attack wave-in. 50ms is short enough to feel snappy.
+      const zeroAt = now + 0.05;
+      this.voiceGain.gain.setTargetAtTime(0.0, now, 0.012);
+      this.voiceGain.gain.setValueAtTime(0.0, zeroAt);
+      const aStart = zeroAt + 0.004;
+      this.voiceGain.gain.setTargetAtTime(peakGain, aStart, attack);
+      this.voiceGain.gain.setTargetAtTime(decTarget, aStart + attack * 3 + 0.004, decTau);
+    } else {
+      // Idle voice: already silent, just run the attack envelope.
+      const aStart = now + 0.002;
+      this.voiceGain.gain.setValueAtTime(0.0, now);
+      this.voiceGain.gain.setTargetAtTime(peakGain, aStart, attack);
+      this.voiceGain.gain.setTargetAtTime(decTarget, aStart + attack * 3 + 0.004, decTau);
     }
-    this.voiceGain.gain.setValueAtTime(0.0, gateT);
-    this.voiceGain.gain.setTargetAtTime(peakGain, gateT, attack);
-    this.voiceGain.gain.setTargetAtTime(
-      instrumentConfig.isPercussive ? 0.0 : sustain,
-      gateT + attack * 3,
-      instrumentConfig.isPercussive ? decay * 0.45 : 0.25
-    );
   }
 
   release(sustainPedalActive, releaseTime = 0.25) {
@@ -173,12 +187,17 @@ export class PolyphonicVoice {
 }
 
 export class VoicePoolManager {
-  constructor(ctx, poolSize = 32, destinationNode = null) {
+  constructor(ctx, poolSize = 32, destinationNode = null, heldNotes = null) {
     this.ctx = ctx;
     this.poolSize = poolSize;
     this.destination = destinationNode || ctx.destination;
+    this.heldNotes = heldNotes; // Set of currently HELD midi notes (protected from stealing)
     this.voices = [];
     this.initPool();
+  }
+
+  bindHeldNotes(heldNotes) {
+    this.heldNotes = heldNotes;
   }
 
   initPool() {
@@ -188,13 +207,23 @@ export class VoicePoolManager {
   }
 
   acquireVoice(midiNote) {
-    const existing = this.voices.find(v => v.activeMidiNote === midiNote);
+    const existing = this.voices.find(v => v.activeMidiNote === midiNote && v.isBusy);
     if (existing) return existing;
 
     const idle = this.voices.find(v => !v.isBusy);
     if (idle) return idle;
 
-    // Steal oldest voice
+    const held = this.heldNotes;
+    const isHeld = note => !!held && held.has(note);
+
+    // Prefer stealing a voice whose note has been RELEASED (only its tail is
+    // ringing) so a note the player is still holding is NEVER cut off mid-sustain.
+    const tail = this.voices
+      .filter(v => v.isBusy && v.activeMidiNote !== null && !isHeld(v.activeMidiNote))
+      .sort((a, b) => a.startTime - b.startTime)[0];
+    if (tail) return tail;
+
+    // Only when literally every voice is a held note, steal the longest-sounding one.
     let oldest = this.voices[0];
     let oldestTime = oldest.startTime;
     for (let i = 1; i < this.voices.length; i++) {

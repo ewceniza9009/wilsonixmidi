@@ -30,9 +30,9 @@ export class AudioCore {
 
     this.sampleRate = this.ctx.sampleRate;
 
-    // Master bus: slider 0-100% maps to 0-3x gain, defaults to 50% (1.5x)
+    // Master bus: slider 0-100% maps to 0-3x gain, defaults to 50% (1.0x)
     this.masterGain = this.ctx.createGain();
-    this.masterGain.gain.value = 1.5;
+    this.masterGain.gain.value = 1.0;
 
     // Fast Peak Analyser for meters & oscilloscope
     this.analyser = this.ctx.createAnalyser();
@@ -42,11 +42,11 @@ export class AudioCore {
 
     // Transparent Hardware Output Safety Limiter (Prevents DAC clipping with zero waveform modulation & zero squashing)
     this.hardwareLimiter = this.ctx.createDynamicsCompressor();
-    this.hardwareLimiter.threshold.value = -0.3; // Transparent safety ceiling
-    this.hardwareLimiter.knee.value = 12.0;      // Very soft knee for transparent limiting
-    this.hardwareLimiter.ratio.value = 4.0;       // Gentle ratio - no pumping, no distortion
-    this.hardwareLimiter.attack.value = 0.005;    // 5ms musical transient catch
-    this.hardwareLimiter.release.value = 0.100;   // 100ms smooth recovery (zero pumping)
+    this.hardwareLimiter.threshold.value = -1.0;  // Transparent safety ceiling
+    this.hardwareLimiter.knee.value = 18.0;       // Very soft knee for transparent limiting
+    this.hardwareLimiter.ratio.value = 2.5;       // Gentle ratio - no pumping, no distortion
+    this.hardwareLimiter.attack.value = 0.010;    // 10ms musical transient catch
+    this.hardwareLimiter.release.value = 0.150;   // 150ms smooth recovery (zero pumping)
 
     // Initialize FX Rack
     this.fxRack = new FxRackManager(this.ctx);
@@ -55,21 +55,27 @@ export class AudioCore {
     this.dcBlocker = this.ctx.createBiquadFilter();
     this.dcBlocker.type = "highpass";
     this.dcBlocker.frequency.value = 20;
+    // Master-wide fixed headroom trim: keeps stacked chords safely below full-scale
+    // WITHOUT any dynamics processing, so the bus compressors stay completely
+    // transparent (compressors running hot = warm grindy noise)
+    this.busPad = this.ctx.createGain();
+    this.busPad.gain.value = 0.7;
 
     // Master bus glue compressor: slow optical-style leveling that transparently
     // contains sustained stacked chords BEFORE the limiter, so the limiter only
     // catches true transient peaks and never pumps or distorts
     this.busComp = this.ctx.createDynamicsCompressor();
-    this.busComp.threshold.value = -14.0;
-    this.busComp.knee.value = 18.0;
-    this.busComp.ratio.value = 2.0;
-    this.busComp.attack.value = 0.030;
-    this.busComp.release.value = 0.400;
+    this.busComp.threshold.value = -16.0;
+    this.busComp.knee.value = 24.0;
+    this.busComp.ratio.value = 1.6;
+    this.busComp.attack.value = 0.050;
+    this.busComp.release.value = 0.450;
 
-    // Routing: FX Rack -> Master Gain -> DC Blocker -> BusComp -> Analyser -> HardwareLimiter -> Destination
+    // Routing: FX Rack -> Master Gain -> BusPad(trim) -> DC Blocker -> BusComp -> Analyser -> HardwareLimiter -> Destination
     // (No waveshaper on the master bus: tanh saturation was adding grit to sustained chords)
     this.fxRack.output.connect(this.masterGain);
-    this.masterGain.connect(this.dcBlocker);
+    this.masterGain.connect(this.busPad);
+    this.busPad.connect(this.dcBlocker);
     this.dcBlocker.connect(this.busComp);
     this.busComp.connect(this.analyser);
     this.analyser.connect(this.hardwareLimiter);

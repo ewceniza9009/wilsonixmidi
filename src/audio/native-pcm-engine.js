@@ -877,6 +877,7 @@ export class NativePcmEngine {
     // Global polyphony cap: prevents voice pileup crackle + crash on very fast playing
     this.voiceQueue = [];
     this.MAX_VOICES = 28;
+    this.heldNotes = new Set();
 
     // Shared felt-hammer transient: 60ms exponentially-decaying noise burst,
     // bandpassed per-note to imitate grand hammer strike on piano voices
@@ -1549,6 +1550,7 @@ export class NativePcmEngine {
     const now = ctx.currentTime;
     const velNorm = Math.max(0.08, Math.min(1.0, velocity / 127));
     const isSax = String(instId || "").toLowerCase().includes("sax");
+    this.heldNotes.add(midiNote);
 
     // Pitch ratio: exact if anchor === target, otherwise nearest neighbor
     const semitoneDiff = midiNote - anchorData.anchorMidi;
@@ -1749,11 +1751,12 @@ export class NativePcmEngine {
     } else {
       voiceGain.gain.setTargetAtTime(peakGain, now, 0.002);
     }
-    // Bounded sustain: full hold ~8s, then slow exponential die-out (~14s to silence).
+    // Bounded sustain: full hold ~32s, then slow exponential die-out (~40s to silence).
+    // (Notes were hard-fading at 8s even while held -- audible "nulls" mid-note.)
     // Releasing keys/sustain overrides this instantly via its own release envelope.
-    voiceGain.gain.setTargetAtTime(0.0001, now + 8.0, 2.0);
+    voiceGain.gain.setTargetAtTime(0.0001, now + 32.0, 3.5);
     try {
-      src.stop(now + 18);
+      src.stop(now + 40);
     } catch (e) {}
 
     // Voice Audio Chain: Source -> TVF -> TVA -> (Layer Insert Bus | Master Rack)
@@ -1799,12 +1802,29 @@ export class NativePcmEngine {
       baseCutoff: dynamicCutoff,
       velNorm,
       vibLfo,
+      startTime: now,
     };
 
-    // Global polyphony cap: steal oldest voices first so fast runs can't pile up and crackle
+    // Global polyphony cap: when the pool is full, steal the oldest voice that is
+    // NOT currently held. Notes you're still holding are NEVER chopped mid-sustain;
+    // only ringing tails / released notes get stolen.
     while (this.voiceQueue.length >= this.MAX_VOICES) {
-      const oldest = this.voiceQueue.shift();
-      if (!oldest) break;
+      const stealable = this.voiceQueue.filter(v => v && !this.heldNotes.has(v.midiNote));
+      let oldest = stealable[0];
+      for (let i = 1; i < stealable.length; i++) {
+        if (stealable[i].voiceGain.gain.value === undefined) continue;
+        if (!oldest) { oldest = stealable[i]; continue; }
+        if ((stealable[i].startTime || 0) < (oldest.startTime || 0)) oldest = stealable[i];
+      }
+      // Only steal a note the player is holding when literally every voice is held.
+      if (!oldest) {
+        oldest = this.voiceQueue[0];
+        for (let i = 1; i < this.voiceQueue.length; i++) {
+          if (this.voiceQueue[i].startTime < oldest.startTime) oldest = this.voiceQueue[i];
+        }
+      }
+      const qi = this.voiceQueue.indexOf(oldest);
+      if (qi !== -1) this.voiceQueue.splice(qi, 1);
       try {
         oldest.voiceGain.gain.cancelScheduledValues(now);
         oldest.voiceGain.gain.setTargetAtTime(0, now, 0.025);
@@ -1936,6 +1956,7 @@ export class NativePcmEngine {
   }
 
   stopNote(instId, midiNote) {
+    this.heldNotes.delete(midiNote);
     const voices = this.activeVoices.get(midiNote);
     if (!voices || voices.length === 0) return;
 
@@ -1954,7 +1975,7 @@ export class NativePcmEngine {
           try {
             let totalSus = 0;
             this.sustainedVoices.forEach(list => { totalSus += list.length; });
-            while (totalSus > 24) {
+            while (totalSus > 48) {
               let oldest = null;
               let oldestKey = null;
               for (const [key, list] of this.sustainedVoices) {
