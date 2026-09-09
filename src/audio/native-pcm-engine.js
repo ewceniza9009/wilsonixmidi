@@ -1738,7 +1738,7 @@ export class NativePcmEngine {
 
     // Gig loudness lives in the master slider - voices stay clean here
     const densityScale = 1 / Math.sqrt(1 + this.voiceQueue.length / 6);
-    const peakGain = (0.45 + velNorm * 0.25) * customGain * trim * combiScale * densityScale;
+    const peakGain = (0.24 + velNorm * 0.76) * customGain * trim * combiScale * densityScale;
 
     // 100% Click-free, pop-free attack envelope using exponential ramp (no step artifacts)
     voiceGain.gain.setValueAtTime(0.0001, now);
@@ -1776,15 +1776,15 @@ export class NativePcmEngine {
         hsrc.buffer = this.hammerBuf;
         const hbp = ctx.createBiquadFilter();
         hbp.type = "bandpass";
-        hbp.frequency.value = 1800 + velNorm * 1400;
+        hbp.frequency.value = 1400 + velNorm * 1800;
         hbp.Q.value = 0.9;
         const hg = ctx.createGain();
-        hg.gain.setValueAtTime(0.12 * velNorm * velNorm, now);
+        hg.gain.setValueAtTime(0.22 * velNorm * velNorm, now);
         hsrc.connect(hbp);
         hbp.connect(hg);
         hg.connect(dest);
         hsrc.start(now);
-        hsrc.stop(now + 0.08);
+        hsrc.stop(now + 0.10);
       }
     } catch (e) {}
 
