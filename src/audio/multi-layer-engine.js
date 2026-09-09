@@ -86,11 +86,66 @@ export const HD_SOUNDBANKS = {
   tr808_kit: { id: "tr808_kit", name: "TR-808 Analog Drum Kit", category: "Percussion & Drums" },
   percussion_conga: { id: "percussion_conga", name: "Afro-Cuban Congas", category: "Percussion & Drums" },
   percussion_shaker: { id: "percussion_shaker", name: "Latin Shaker & Maracas", category: "Percussion & Drums" },
-  percussion_cowbell: { id: "percussion_cowbell", name: "Brass Section Cowbell", category: "Percussion & Drums" },
+  // Synthesizer You (Ripped Sounds & Loops)
+  sy_surf_spring: { id: "sy_surf_spring", name: "🏄 Synthesizer You - Surf Lead Riff", category: "Synthesizer You (80s)" },
+  sy_chorus_swell: { id: "sy_chorus_swell", name: "🎹 Synthesizer You - Juno Chorus Pad Swell", category: "Synthesizer You (80s)" },
+  sy_bass_riff: { id: "sy_bass_riff", name: "🎸 Synthesizer You - Analog Bass Riff", category: "Synthesizer You (80s)" },
+  sy_gated_snare_1: { id: "sy_gated_snare_1", name: "💥 Synthesizer You - Gated Snare Cannon 1", category: "Synthesizer You (80s)" },
+  sy_gated_snare_2: { id: "sy_gated_snare_2", name: "🥁 Synthesizer You - Gated Snare Cannon 2", category: "Synthesizer You (80s)" },
+  sy_vox_slap_1: { id: "sy_vox_slap_1", name: "🎤 Synthesizer You - Slapback Vox Shout 1", category: "Synthesizer You (80s)" },
+  sy_vox_slap_2: { id: "sy_vox_slap_2", name: "🔥 Synthesizer You - Slapback Vox Shout 2", category: "Synthesizer You (80s)" },
+  sy_vox_slap_3: { id: "sy_vox_slap_3", name: "🎶 Synthesizer You - Slapback Vocal Phrase", category: "Synthesizer You (80s)" },
+  sy_surf_pluck_c4: { id: "sy_surf_pluck_c4", name: "🎸 Synthesizer You - Surf Pluck C4", category: "Synthesizer You (80s)" },
+  sy_kick_punch: { id: "sy_kick_punch", name: "🥊 Synthesizer You - 80s Punch Kick", category: "Synthesizer You (80s)" },
+  sy_riser_sweep: { id: "sy_riser_sweep", name: "🚀 Synthesizer You - FX Riser Sweep", category: "Synthesizer You (80s)" },
+  sy_tape_drop: { id: "sy_tape_drop", name: "🛑 Synthesizer You - Tape Drop FX", category: "Synthesizer You (80s)" },
 };
 
-
 export const COMBI_PRESETS = {
+  synthesizer_you_surf: {
+    id: "synthesizer_you_surf",
+    name: "🏄 Synthesizer You - 80s Surf & Beach Rock Stack",
+    category: "Synthesizer You Signature",
+    layers: [
+      { id: 0, name: "Strat Clean Lead (Spring Drip)", inst: "electric_guitar_clean", fx: "spring_surf", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Juno Stereo Synth Pad", inst: "m1_universe", fx: "analog_juno_chorus", gain: 0.65, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Analog Synth Bass (Tape Sat)", inst: "synth_bass_1", fx: "tape_sat_master", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "80s Gated Snare Drum Kit", inst: "tr808_kit", fx: "gated_cannon", gain: 0.80, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+    ],
+  },
+  synthesizer_you_pad: {
+    id: "synthesizer_you_pad",
+    name: "✨ Synthesizer You - Lush Juno & Vocal Echo Stack",
+    category: "Synthesizer You Signature",
+    layers: [
+      { id: 0, name: "Juno Analog Poly Synth", inst: "m1_universe", fx: "analog_juno_chorus", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Slapback Vocal Shout", inst: "vox_yeah", fx: "slapback_vocal", gain: 0.75, pan: 0.05, oct: 0, minVel: 40, maxVel: 127, enabled: true },
+      { id: 2, name: "Optical Tremolo Synth Pulse", inst: "synth_bass_1", fx: "opto_tremolo_16th", gain: 0.70, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "M1 Fresh Air Shimmer", inst: "m1_fresh_air", fx: "spring_surf", gain: 0.50, pan: 0, oct: 1, minVel: 60, maxVel: 127, enabled: true },
+    ],
+  },
+  synthesizer_you_cannon: {
+    id: "synthesizer_you_cannon",
+    name: "💥 Synthesizer You - 80s Gated Snare & Beat Stack",
+    category: "Synthesizer You Signature",
+    layers: [
+      { id: 0, name: "80s Gated Snare Cannon", inst: "sy_gated_snare_1", fx: "gated_cannon", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Punchy 80s Tape Kick", inst: "sy_kick_punch", fx: "tape_sat_master", gain: 0.95, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Analog Synth Bassline", inst: "sy_bass_riff", fx: "tape_sat_master", gain: 0.80, pan: -0.05, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Surf Pluck Lead", inst: "sy_surf_pluck_c4", fx: "spring_surf", gain: 0.85, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+    ],
+  },
+  synthesizer_you_vocal_dub: {
+    id: "synthesizer_you_vocal_dub",
+    name: "🎤 Synthesizer You - Slapback Vocal & Tape Sat Stack",
+    category: "Synthesizer You Signature",
+    layers: [
+      { id: 0, name: "Slapback Lead Vocal Phrase", inst: "sy_vox_slap_3", fx: "slapback_vocal", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Juno Stereo Chorus Swell", inst: "sy_chorus_swell", fx: "analog_juno_chorus", gain: 0.70, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Optical Tremolo Pulse", inst: "synth_bass_1", fx: "opto_tremolo_16th", gain: 0.75, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Surf Lead Spring Echo", inst: "sy_surf_spring", fx: "spring_surf", gain: 0.60, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+    ],
+  },
   whitney_ballad: {
     id: "whitney_ballad",
     name: "★ Whitney 1992 - I Have Nothing (Foster Rig)",
@@ -371,10 +426,10 @@ export const COMBI_PRESETS = {
     name: "San Francisco Street (Sun Rai Rhodes Bed)",
     category: "Soul-Pop / R&B",
     layers: [
-      { id: 0, name: "Splashed Rhodes 73", inst: "rhodes_stage_mp3", fx: "air_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Rhodes High Shimmer", inst: "rhodes_stage_mp3", fx: "clean", gain: 0.30, pan: 0, oct: 1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 0, name: "Suitcase Rhodes 73", inst: "rhodes_stage_mp3", fx: "autopan_wide", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Rhodes Shimmer Chorus", inst: "rhodes_stage_mp3", fx: "chorus_lush", gain: 0.25, pan: 0, oct: 1, minVel: 1, maxVel: 127, enabled: true },
       { id: 2, name: "Pocket Bass Guitar", inst: "synth_bass_1", fx: "warm_eq", gain: 0.75, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "70s String Whisper", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.35, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Night Air Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.25, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
     ],
   },
   acid_jazz_afterhours: {
@@ -529,6 +584,18 @@ export const COMBI_PRESETS = {
       { id: 1, name: "Overdrive Rhythm Double", inst: "overdriven_guitar", fx: "tube_warm", gain: 0.80, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 2, name: "Punch Arena Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
       { id: 3, name: "Arena Rock Organ Pad", inst: "drawbar_organ", fx: "clean", gain: 0.50, pan: 0, oct: 0, minVel: 30, maxVel: 127, enabled: true },
+    ],
+  },
+
+  synthesizer_you: {
+    id: "synthesizer_you",
+    name: "Synthesizer You (Neo-Soul Tape EP)",
+    category: "Neo-Soul / Chill",
+    layers: [
+      { id: 0, name: "Dark Tape Rhodes", inst: "rhodes_stage_mp3", fx: "tape_lowpass", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Rhodes Stereo Width", inst: "rhodes_stage_mp3", fx: "autopan_wide", gain: 0.30, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Warm Tape Bass", inst: "synth_bass_1", fx: "warm_eq", gain: 0.70, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Tape Compress Pad", inst: "string_ensemble_1", fx: "punch_comp", gain: 0.10, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: false },
     ],
   },
 };

@@ -9,6 +9,16 @@ import { audioCore } from "./audio-core.js";
 
 export const GROOVE_TRACKS = [
   {
+    id: "synthesizer_you",
+    name: "★ Synthesizer You (80s Surf & Synth-Pop)",
+    bpm: 129.2,
+    genre: "Surf / Synth-Pop",
+    bars: 4,
+    color: "#06b6d4",
+    description: "Authentic ripped 80s spring reverb surf lead, gated snare cannon, Juno chorus pads & driving bass groove",
+    sampleUrl: "/samples/synthesizer_you/synthesizer_you_4bar_groove.wav",
+  },
+  {
     id: "house_90s",
     name: "★ 90s House Anthem Beat",
     bpm: 124,
@@ -59,7 +69,7 @@ export class SampleGroovePlayer {
   constructor() {
     this.isPlaying = false;
     this.activeTrackIndex = 0;
-    this.bpm = 124;
+    this.bpm = 129.2;
     this.volume = 0.75;
     this.timerId = null;
     this.currentStep = 0; // 0 to 63 (4 bars of 16th notes = 64 steps)
@@ -71,6 +81,9 @@ export class SampleGroovePlayer {
 
     this.gainNode = null;
     this.outNode = null;
+    this.activeLoopSource = null;
+    this.syGrooveBuffer = null;
+    this.syLoading = false;
   }
 
   init() {
@@ -81,6 +94,7 @@ export class SampleGroovePlayer {
     this.gainNode.gain.value = this.volume;
     this.gainNode.connect(audioCore.masterGain || ctx.destination);
     this.bpm = GROOVE_TRACKS[this.activeTrackIndex].bpm;
+    this.loadSynthesizerYouSample();
   }
 
   setVolume(vol) {
@@ -92,6 +106,11 @@ export class SampleGroovePlayer {
 
   setBpm(bpm) {
     this.bpm = Math.max(50, Math.min(220, bpm));
+    if (this.activeLoopSource && audioCore.ctx) {
+      try {
+        this.activeLoopSource.playbackRate.setValueAtTime(this.bpm / 129.19921875, audioCore.ctx.currentTime);
+      } catch (e) {}
+    }
     if (this.onStateChange) this.onStateChange();
   }
 
@@ -111,15 +130,54 @@ export class SampleGroovePlayer {
 
     this.isPlaying = true;
     this.currentStep = 0;
-    this.nextStepTime = audioCore.ctx.currentTime + 0.05;
+    const ctx = audioCore.ctx;
+    this.nextStepTime = ctx.currentTime + 0.05;
+
+    const track = GROOVE_TRACKS[this.activeTrackIndex];
+    if (track.id === "synthesizer_you") {
+      this.startSynthesizerYouLoop(this.nextStepTime);
+    }
+
     this.scheduleLoop();
 
     if (this.onStateChange) this.onStateChange();
   }
 
+  startSynthesizerYouLoop(startTime) {
+    const ctx = audioCore.ctx;
+    if (!ctx || !this.syGrooveBuffer) return;
+
+    this.stopActiveLoopSource();
+
+    try {
+      const src = ctx.createBufferSource();
+      src.buffer = this.syGrooveBuffer;
+      src.loop = true;
+      src.loopStart = 0;
+      src.loopEnd = this.syGrooveBuffer.duration;
+      src.playbackRate.value = this.bpm / 129.19921875;
+      src.connect(this.gainNode);
+      src.start(startTime);
+      this.activeLoopSource = src;
+    } catch (e) {
+      console.warn("Start loop source failed:", e);
+    }
+  }
+
+  stopActiveLoopSource() {
+    if (this.activeLoopSource) {
+      try {
+        this.activeLoopSource.stop();
+        this.activeLoopSource.disconnect();
+      } catch (e) {}
+      this.activeLoopSource = null;
+    }
+  }
+
   stop() {
     this.isPlaying = false;
     clearTimeout(this.timerId);
+    this.stopActiveLoopSource();
     this.currentStep = 0;
     if (this.onStateChange) this.onStateChange();
     if (this.onStepChange) this.onStepChange(0);
@@ -136,17 +194,25 @@ export class SampleGroovePlayer {
   scheduleLoop() {
     if (!this.isPlaying) return;
     const ctx = audioCore.ctx;
+    if (!ctx) return;
 
-    while (this.nextStepTime < ctx.currentTime + this.scheduleAheadSec) {
+    if (this.nextStepTime < ctx.currentTime - 0.2) {
+      this.nextStepTime = ctx.currentTime;
+    }
+
+    let safety = 0;
+    while (this.nextStepTime < ctx.currentTime + this.scheduleAheadSec && safety < 16) {
       this.scheduleStep(this.currentStep, this.nextStepTime);
       this.advanceStep();
+      safety++;
     }
 
     this.timerId = setTimeout(() => this.scheduleLoop(), this.lookaheadMs);
   }
 
   advanceStep() {
-    const secondsPerBeat = 60.0 / this.bpm;
+    const bpm = Math.max(40, this.bpm || 120);
+    const secondsPerBeat = 60.0 / bpm;
     const stepDuration = 0.25 * secondsPerBeat; // 16th note
     this.nextStepTime += stepDuration;
     this.currentStep = (this.currentStep + 1) % 64;
@@ -157,7 +223,9 @@ export class SampleGroovePlayer {
     const trackId = track.id;
 
     // Trigger rhythm elements according to track genre pattern
-    if (trackId === "house_90s") {
+    if (trackId === "synthesizer_you") {
+      this.playSynthesizerYouPattern(step, time);
+    } else if (trackId === "house_90s") {
       this.playHousePattern(step, time);
     } else if (trackId === "lofi_neosoul") {
       this.playLofiPattern(step, time);
@@ -400,6 +468,69 @@ export class SampleGroovePlayer {
     const isRoll = (step >= 24 && step <= 28) || (step >= 56 && step <= 60);
     this.synthHat(time, true, isRoll ? 0.40 : (step % 2 === 0 ? 0.35 : 0.20));
   }
+
+  playSynthesizerYouPattern(step, time) {
+    // 129.2 BPM 80s Surf & Synth-Pop: Gated Snare Cannon, Punchy Kicks, Analog Bass & Spring Lead
+    if (!this.syGrooveBuffer && !this.syLoading) {
+      this.loadSynthesizerYouSample();
+    }
+
+    // If authentic audio loop is actively running, step sequencer only updates visual UI state (0 duplicate audio)
+    if (this.activeLoopSource) {
+      return;
+    }
+
+    // If buffer just finished decoding and we are at step 0, start the hardware loop immediately
+    if (this.syGrooveBuffer && !this.activeLoopSource && step === 0) {
+      this.startSynthesizerYouLoop(time);
+      return;
+    }
+
+    // Fallback analog synthesis pattern ONLY if buffer is still loading from network:
+    // 4-on-the-floor kick with 80s punch
+    if (step % 4 === 0) {
+      this.synthKick(time, 155, 45, 0.28, 0.95);
+    }
+    // Gated Snare Cannon on steps 4, 12, 20, 28, 36, 44, 52, 60 (beats 2 & 4)
+    if (step % 8 === 4) {
+      this.synthSnare(time, 210, 0.26, 0.90);
+    }
+    // Driving 16th-note hi-hats
+    this.synthHat(time, step % 2 === 0, step % 4 === 2 ? 0.48 : 0.28);
+
+    // Driving 80s synth bass pulse
+    const syBassNotes = [
+      { s: 0, n: 36 }, { s: 3, n: 36 }, { s: 6, n: 36 }, { s: 8, n: 36 }, { s: 11, n: 36 }, { s: 14, n: 38 },
+      { s: 16, n: 41 }, { s: 19, n: 41 }, { s: 22, n: 41 }, { s: 24, n: 41 }, { s: 27, n: 43 }, { s: 30, n: 43 }
+    ];
+    const b = syBassNotes.find(e => e.s === step % 32);
+    if (b) {
+      this.synthBassTone(time, b.n, 0.22, 0.85);
+    }
+  }
+
+  async loadSynthesizerYouSample() {
+    if (this.syGrooveBuffer || this.syLoading) return;
+    this.syLoading = true;
+    try {
+      const ctx = audioCore.ctx;
+      if (!ctx) return;
+      const resp = await fetch("/samples/synthesizer_you/synthesizer_you_4bar_groove.wav");
+      if (resp.ok) {
+        const arrayBuf = await resp.arrayBuffer();
+        this.syGrooveBuffer = await ctx.decodeAudioData(arrayBuf);
+        // If user already pressed play while loading, start the loop right now
+        if (this.isPlaying && GROOVE_TRACKS[this.activeTrackIndex].id === "synthesizer_you" && !this.activeLoopSource) {
+          this.startSynthesizerYouLoop(ctx.currentTime + 0.02);
+        }
+      }
+    } catch (e) {
+      console.warn("Synthesizer You groove load:", e);
+    } finally {
+      this.syLoading = false;
+    }
+  }
 }
 
 export const sampleGroovePlayer = new SampleGroovePlayer();
+

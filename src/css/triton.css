@@ -232,7 +232,7 @@
   align-items: center;
   gap: 6px;
   background: #11141a;
-  border: 1px solid #4b5563;
+  border: 1px solid var(--accent-amber);
   border-radius: var(--radius-sm);
   padding: 4px 10px;
 }
@@ -242,8 +242,13 @@
   border: none;
   color: #fff;
   font-size: 0.75rem;
+  font-weight: 600;
   outline: none;
-  width: 180px;
+  width: 220px;
+}
+
+.triton-search-box input::placeholder {
+  color: #666;
 }
 
 /* /* TouchView Screen Body (Flex: 1, fits exactly in remaining stage space) */
@@ -260,23 +265,36 @@
   overflow: hidden;
 }
 
-/* Banks Row */
+/* Banks Row - Ultra Compact Single Line Toolbar */
 .triton-banks-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 6px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 4px;
+  margin-bottom: 5px;
   flex-shrink: 0;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(56, 189, 248, 0.4) transparent;
+}
+
+.triton-banks-row::-webkit-scrollbar {
+  height: 3px;
+}
+
+.triton-banks-row::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.4);
+  border-radius: 2px;
 }
 
 .triton-bank-card {
   display: flex;
   align-items: center;
-  gap: 6px;
-  background: #1e2430;
-  border: 1px solid #374151;
-  border-radius: var(--radius-sm);
-  padding: 4px 8px;
+  gap: 4px;
+  background: #181e29;
+  border: 1px solid #334155;
+  border-radius: 3px;
+  padding: 3px 6px;
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
@@ -284,20 +302,21 @@
 }
 
 .triton-bank-card:hover {
-  background: #2b3345;
+  background: #252e3e;
+  border-color: #475569;
 }
 
 .triton-bank-card.active {
-  background: linear-gradient(135deg, rgba(2, 132, 199, 0.45), rgba(2, 132, 199, 0.15));
+  background: linear-gradient(135deg, rgba(2, 132, 199, 0.5), rgba(2, 132, 199, 0.2));
   border-color: #38bdf8;
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.4);
 }
 
 .mini-triton-icon {
-  width: 18px;
-  height: 11px;
-  background: #94a3b8;
-  border-radius: 2px;
+  width: 12px;
+  height: 8px;
+  background: #64748b;
+  border-radius: 1px;
   border: 1px solid #475569;
 }
 
@@ -305,16 +324,18 @@
   display: flex;
   flex-direction: column;
   text-align: left;
+  line-height: 1.1;
 }
 
 .bank-card-title {
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 800;
-  color: #f3f4f6;
+  color: #f1f5f9;
+  letter-spacing: 0.3px;
 }
 
 .bank-card-desc {
-  font-size: 0.52rem;
+  font-size: 0.46rem;
   color: #94a3b8;
 }
 
@@ -419,7 +440,50 @@
   gap: 6px;
   flex: 1 1 auto;
   min-width: 220px;
-  max-width: 560px;
+  max-width: 600px;
+}
+
+.combi-search-input {
+  width: 140px;
+  min-width: 100px;
+  background: #11141a;
+  border: 1px solid var(--accent-amber);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 6px 8px;
+  outline: none;
+}
+
+.combi-search-input::placeholder {
+  color: #666;
+}
+
+.combi-search-results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-height: 50px;
+  overflow-y: auto;
+}
+
+.combi-search-chip {
+  background: #1a1e28;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 0.65rem;
+  padding: 3px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.combi-search-chip:hover,
+.combi-search-chip.active {
+  background: var(--accent-amber);
+  color: #000;
+  border-color: var(--accent-amber);
 }
 
 .combi-preset-select {

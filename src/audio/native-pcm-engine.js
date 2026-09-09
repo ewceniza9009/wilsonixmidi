@@ -27,30 +27,48 @@ export function noteNameToMidi(noteStr) {
 }
 
 export const LAYER_FX_OPTIONS = {
-  clean: { id: "clean", name: "Direct Clean (Dry Bypass)" },
-  chorus_lush: { id: "chorus_lush", name: "Dimension D Stereo Chorus" },
-  chorus_vintage: { id: "chorus_vintage", name: "Analog Warm Ensemble" },
-  autopan_wide: { id: "autopan_wide", name: "1973 Suitcase Auto-Pan" },
-  autopan_fast: { id: "autopan_fast", name: "Fast Stereo Panning" },
-  rotary_fast: { id: "rotary_fast", name: "Leslie 122 Rotary (Fast)" },
-  rotary_slow: { id: "rotary_slow", name: "Leslie 122 Rotary (Chorale)" },
-  tube_warm: { id: "tube_warm", name: "12AX7 Tube Saturation" },
-  tube_lead: { id: "tube_lead", name: "Screaming Tube Overdrive" },
-  distortion_metal: { id: "distortion_metal", name: "High-Gain Distortion" },
-  phaser_6stage: { id: "phaser_6stage", name: "Analog 6-Stage Phaser" },
-  phaser_deep: { id: "phaser_deep", name: "Deep Jet Sweep Phaser" },
-  flanger_stereo: { id: "flanger_stereo", name: "Stereo Tape Flanger" },
-  delay_tape: { id: "delay_tape", name: "Ping-Pong Tape Delay" },
-  delay_dub: { id: "delay_dub", name: "Space Dub Echo (Dotted 8th)" },
-  reverb_hall: { id: "reverb_hall", name: "Cathedral Ambient Reverb" },
-  reverb_plate: { id: "reverb_plate", name: "Studio Plate Reverb" },
-  reverb_room: { id: "reverb_room", name: "Warm Acoustic Room Reverb" },
-  air_eq: { id: "air_eq", name: "Air & Presence EQ (+4dB Treble)" },
-  warm_eq: { id: "warm_eq", name: "Warm Vintage EQ (+3dB Bass)" },
-  punch_comp: { id: "punch_comp", name: "Punch Limiter / Compressor" },
-  lofi_vinyl: { id: "lofi_vinyl", name: "Lo-Fi Vintage Vinyl / Warmth" },
-  tremolo_pulse: { id: "tremolo_pulse", name: "Opto-Tremolo Pulse" },
-  shred_stack: { id: "shred_stack", name: "Shreddage High-Gain Stack" },
+  // --- SYNTHESIZER YOU SIGNATURE FX ---
+  spring_surf: { id: "spring_surf", name: "🏄 Spring Reverb (Surf Foundation Drip)", category: "Synthesizer You FX" },
+  analog_juno_chorus: { id: "analog_juno_chorus", name: "🎹 Roland Juno Chorus (Synth Core)", category: "Synthesizer You FX" },
+  slapback_vocal: { id: "slapback_vocal", name: "🎤 Slapback Tape Delay (Vocal Punch)", category: "Synthesizer You FX" },
+  gated_cannon: { id: "gated_cannon", name: "💥 80s Gated Reverb (Snare Cannon)", category: "Synthesizer You FX" },
+  opto_tremolo_16th: { id: "opto_tremolo_16th", name: "⚡ Optical Tremolo (16th Groove Sync)", category: "Synthesizer You FX" },
+  tape_sat_master: { id: "tape_sat_master", name: "📼 Master Bus Tape Saturation & Glue", category: "Synthesizer You FX" },
+
+  // --- STUDIO MODULATION & ENSEMBLE ---
+  clean: { id: "clean", name: "Direct Clean (Dry Bypass)", category: "Clean" },
+  chorus_lush: { id: "chorus_lush", name: "Dimension D Stereo Chorus", category: "Modulation" },
+  chorus_vintage: { id: "chorus_vintage", name: "Analog Warm Ensemble", category: "Modulation" },
+  autopan_wide: { id: "autopan_wide", name: "1973 Suitcase Auto-Pan", category: "Modulation" },
+  autopan_fast: { id: "autopan_fast", name: "Fast Stereo Panning", category: "Modulation" },
+  rotary_fast: { id: "rotary_fast", name: "Leslie 122 Rotary (Fast)", category: "Modulation" },
+  rotary_slow: { id: "rotary_slow", name: "Leslie 122 Rotary (Chorale)", category: "Modulation" },
+  phaser_6stage: { id: "phaser_6stage", name: "Analog 6-Stage Phaser", category: "Modulation" },
+  phaser_deep: { id: "phaser_deep", name: "Deep Jet Sweep Phaser", category: "Modulation" },
+  flanger_stereo: { id: "flanger_stereo", name: "Stereo Tape Flanger", category: "Modulation" },
+  tremolo_pulse: { id: "tremolo_pulse", name: "Opto-Tremolo Pulse", category: "Modulation" },
+  supersaw_unison: { id: "supersaw_unison", name: "Supersaw Unison Detune", category: "Modulation" },
+
+  // --- TIME & SPACE DELAYS & REVERBS ---
+  delay_tape: { id: "delay_tape", name: "Ping-Pong Tape Delay", category: "Delay & Reverb" },
+  delay_dub: { id: "delay_dub", name: "Space Dub Echo (Dotted 8th)", category: "Delay & Reverb" },
+  trance_delay: { id: "trance_delay", name: "Trance Ping-Pong (1/8 Dotted)", category: "Delay & Reverb" },
+  reverb_hall: { id: "reverb_hall", name: "Cathedral Ambient Reverb", category: "Delay & Reverb" },
+  reverb_plate: { id: "reverb_plate", name: "Studio Plate Reverb", category: "Delay & Reverb" },
+  reverb_room: { id: "reverb_room", name: "Warm Acoustic Room Reverb", category: "Delay & Reverb" },
+
+  // --- TUBE DRIVE & SATURATION ---
+  tube_warm: { id: "tube_warm", name: "12AX7 Tube Saturation", category: "Drive & EQ" },
+  tube_lead: { id: "tube_lead", name: "Screaming Tube Overdrive", category: "Drive & EQ" },
+  distortion_metal: { id: "distortion_metal", name: "High-Gain Distortion", category: "Drive & EQ" },
+  shred_stack: { id: "shred_stack", name: "Shreddage High-Gain Stack", category: "Drive & EQ" },
+  air_eq: { id: "air_eq", name: "Air & Presence EQ (+4dB Treble)", category: "Drive & EQ" },
+  warm_eq: { id: "warm_eq", name: "Warm Vintage EQ (+3dB Bass)", category: "Drive & EQ" },
+  punch_comp: { id: "punch_comp", name: "Punch Limiter / Compressor", category: "Dynamics & Special" },
+  lofi_vinyl: { id: "lofi_vinyl", name: "Lo-Fi Vintage Vinyl / Warmth", category: "Dynamics & Special" },
+  tape_lowpass: { id: "tape_lowpass", name: "Tape Lowpass (Warm HF Rolloff)", category: "Dynamics & Special" },
+  trance_gate: { id: "trance_gate", name: "Trance Gate (Rhythmic Slicer)", category: "Dynamics & Special" },
+  sidechain_pump: { id: "sidechain_pump", name: "Sidechain Pump (Ducking)", category: "Dynamics & Special" },
 };
 
 export class LayerInsertProcessor {
@@ -122,7 +140,7 @@ export class LayerInsertProcessor {
     }
 
     // Default balance
-    const isSerialInsert = ["air_eq", "warm_eq", "punch_comp", "tube_warm", "tube_lead", "distortion_metal", "lofi_vinyl", "shred_stack"].includes(this.currentFx);
+    const isSerialInsert = ["air_eq", "warm_eq", "punch_comp", "tube_warm", "tube_lead", "distortion_metal", "lofi_vinyl", "tape_lowpass", "trance_delay", "shred_stack"].includes(this.currentFx);
     if (isSerialInsert) {
       this.dryGain.gain.setValueAtTime(0.0, ctx.currentTime);
       this.wetGain.gain.setValueAtTime(1.0, ctx.currentTime);
@@ -548,6 +566,111 @@ export class LayerInsertProcessor {
         break;
       }
 
+      case "tape_lowpass": {
+        const lp = ctx.createBiquadFilter();
+        lp.type = "lowpass";
+        lp.frequency.value = 6500;
+        lp.Q.value = 0.7;
+        this.effectChainInput.connect(lp);
+        lp.connect(this.effectChainOutput);
+        this.activeFxNodes.push(lp);
+        break;
+      }
+
+      case "trance_gate": {
+        const gainNode = ctx.createGain();
+        gainNode.gain.value = 1.0;
+        const lfo = ctx.createOscillator();
+        lfo.type = "square";
+        lfo.frequency.value = 4.0;
+        const gateGain = ctx.createGain();
+        gateGain.gain.value = 1.0;
+        lfo.connect(gateGain);
+        gateGain.connect(gainNode.gain);
+        lfo.start();
+        this.effectChainInput.connect(gainNode);
+        gainNode.connect(this.effectChainOutput);
+        this.activeFxNodes.push(gainNode, lfo, gateGain);
+        break;
+      }
+
+      case "sidechain_pump": {
+        const gainNode = ctx.createGain();
+        gainNode.gain.value = 1.0;
+        const lfo = ctx.createOscillator();
+        lfo.type = "sine";
+        lfo.frequency.value = 2.0;
+        const lfoGain = ctx.createGain();
+        lfoGain.gain.value = 0.4;
+        lfo.connect(lfoGain);
+        lfoGain.connect(gainNode.gain);
+        lfo.start();
+        this.effectChainInput.connect(gainNode);
+        gainNode.connect(this.effectChainOutput);
+        this.activeFxNodes.push(gainNode, lfo, lfoGain);
+        break;
+      }
+
+      case "trance_delay": {
+        const delayL = ctx.createDelay(1.0);
+        delayL.delayTime.value = 0.375;
+        const delayR = ctx.createDelay(1.0);
+        delayR.delayTime.value = 0.5625;
+        const fbL = ctx.createGain();
+        fbL.gain.value = 0.55;
+        const fbR = ctx.createGain();
+        fbR.gain.value = 0.55;
+        const filter = ctx.createBiquadFilter();
+        filter.type = "lowpass";
+        filter.frequency.value = 5500;
+        const dcL = ctx.createBiquadFilter();
+        dcL.type = "highpass";
+        dcL.frequency.value = 60;
+        const dcR = ctx.createBiquadFilter();
+        dcR.type = "highpass";
+        dcR.frequency.value = 60;
+        const merger = ctx.createChannelMerger(2);
+        this.effectChainInput.connect(filter);
+        filter.connect(delayL);
+        filter.connect(delayR);
+        delayL.connect(fbL);
+        fbL.connect(dcL);
+        dcL.connect(delayL);
+        delayR.connect(fbR);
+        fbR.connect(dcR);
+        dcR.connect(delayR);
+        delayL.connect(merger, 0, 0);
+        delayR.connect(merger, 0, 1);
+        merger.connect(this.effectChainOutput);
+        this.activeFxNodes.push(delayL, delayR, fbL, fbR, filter, dcL, dcR, merger);
+        break;
+      }
+
+      case "supersaw_unison": {
+        const delays = [];
+        const detunes = [-0.08, -0.04, 0.0, 0.04, 0.08];
+        for (const d of detunes) {
+          const del = ctx.createDelay(0.1);
+          del.delayTime.value = 0.012 + Math.abs(d) * 0.005;
+          const pitchLfo = ctx.createOscillator();
+          pitchLfo.type = "sine";
+          pitchLfo.frequency.value = 0.3 + Math.abs(d) * 2;
+          const pitchGain = ctx.createGain();
+          pitchGain.gain.value = 0.0003;
+          pitchLfo.connect(pitchGain);
+          pitchGain.connect(del.delayTime);
+          const g = ctx.createGain();
+          g.gain.value = 0.2;
+          this.effectChainInput.connect(del);
+          del.connect(g);
+          g.connect(this.effectChainOutput);
+          pitchLfo.start();
+          delays.push(del, pitchLfo, pitchGain, g);
+        }
+        this.activeFxNodes.push(...delays);
+        break;
+      }
+
       case "tremolo_pulse": {
         const gainNode = ctx.createGain();
         const lfo = ctx.createOscillator();
@@ -555,6 +678,160 @@ export class LayerInsertProcessor {
         lfo.frequency.value = 3.8;
         const lfoGain = ctx.createGain();
         lfoGain.gain.value = 0.35;
+        lfo.connect(lfoGain);
+        lfoGain.connect(gainNode.gain);
+        lfo.start();
+
+        this.effectChainInput.connect(gainNode);
+        gainNode.connect(this.effectChainOutput);
+        this.activeFxNodes.push(gainNode, lfo, lfoGain);
+        break;
+      }
+
+      case "spring_surf": {
+        const hp = ctx.createBiquadFilter();
+        hp.type = "highpass";
+        hp.frequency.value = 220;
+
+        const drip = ctx.createBiquadFilter();
+        drip.type = "peaking";
+        drip.frequency.value = 3400;
+        drip.Q.value = 4.2;
+        drip.gain.value = 8.5;
+
+        const d1 = ctx.createDelay(0.2);
+        d1.delayTime.value = 0.038;
+        const fb1 = ctx.createGain();
+        fb1.gain.value = 0.45;
+
+        this.effectChainInput.connect(hp);
+        hp.connect(drip);
+        drip.connect(d1);
+        d1.connect(fb1);
+        fb1.connect(d1);
+        d1.connect(this.effectChainOutput);
+        this.activeFxNodes.push(hp, drip, d1, fb1);
+        break;
+      }
+
+      case "slapback_vocal": {
+        const hp = ctx.createBiquadFilter();
+        hp.type = "highpass";
+        hp.frequency.value = 160;
+
+        const lp = ctx.createBiquadFilter();
+        lp.type = "lowpass";
+        lp.frequency.value = 3400;
+
+        const slap = ctx.createDelay(0.3);
+        slap.delayTime.value = 0.095; // 95ms zero feedback
+
+        this.effectChainInput.connect(hp);
+        hp.connect(lp);
+        lp.connect(slap);
+        slap.connect(this.effectChainOutput);
+        this.activeFxNodes.push(hp, lp, slap);
+        break;
+      }
+
+      case "gated_cannon": {
+        const hp = ctx.createBiquadFilter();
+        hp.type = "highpass";
+        hp.frequency.value = 180;
+
+        const lp = ctx.createBiquadFilter();
+        lp.type = "lowpass";
+        lp.frequency.value = 7500;
+
+        const d1 = ctx.createDelay(0.3);
+        d1.delayTime.value = 0.045;
+        const d2 = ctx.createDelay(0.3);
+        d2.delayTime.value = 0.085;
+        const d3 = ctx.createDelay(0.3);
+        d3.delayTime.value = 0.140;
+
+        this.effectChainInput.connect(hp);
+        hp.connect(lp);
+        lp.connect(d1);
+        lp.connect(d2);
+        lp.connect(d3);
+        d1.connect(this.effectChainOutput);
+        d2.connect(this.effectChainOutput);
+        d3.connect(this.effectChainOutput);
+        this.activeFxNodes.push(hp, lp, d1, d2, d3);
+        break;
+      }
+
+      case "tape_sat_master": {
+        const bump = ctx.createBiquadFilter();
+        bump.type = "peaking";
+        bump.frequency.value = 65;
+        bump.gain.value = 1.5;
+        bump.Q.value = 0.9;
+
+        const shaper = ctx.createWaveShaper();
+        shaper.oversample = "4x";
+        const n = 2048;
+        const curve = new Float32Array(n);
+        const k = 2.2;
+        for (let i = 0; i < n; i++) {
+          const x = (i * 2) / n - 1;
+          curve[i] = Math.tanh(k * x) / Math.tanh(k);
+        }
+        shaper.curve = curve;
+
+        const lp = ctx.createBiquadFilter();
+        lp.type = "lowpass";
+        lp.frequency.value = 14500;
+
+        this.effectChainInput.connect(bump);
+        bump.connect(shaper);
+        shaper.connect(lp);
+        lp.connect(this.effectChainOutput);
+        this.activeFxNodes.push(bump, shaper, lp);
+        break;
+      }
+
+      case "analog_juno_chorus": {
+        const delayL = ctx.createDelay(0.1);
+        const delayR = ctx.createDelay(0.1);
+        delayL.delayTime.value = 0.022;
+        delayR.delayTime.value = 0.027;
+
+        const lfo = ctx.createOscillator();
+        lfo.type = "sine";
+        lfo.frequency.value = 0.75;
+
+        const lfoGainL = ctx.createGain();
+        const lfoGainR = ctx.createGain();
+        lfoGainL.gain.value = 0.0006;
+        lfoGainR.gain.value = 0.0005;
+
+        lfo.connect(lfoGainL);
+        lfo.connect(lfoGainR);
+        lfoGainL.connect(delayL.delayTime);
+        lfoGainR.connect(delayR.delayTime);
+
+        this.effectChainInput.connect(delayL);
+        this.effectChainInput.connect(delayR);
+
+        const merger = ctx.createChannelMerger(2);
+        delayL.connect(merger, 0, 0);
+        delayR.connect(merger, 0, 1);
+        merger.connect(this.effectChainOutput);
+        lfo.start();
+
+        this.activeFxNodes.push(delayL, delayR, lfo, lfoGainL, lfoGainR, merger);
+        break;
+      }
+
+      case "opto_tremolo_16th": {
+        const gainNode = ctx.createGain();
+        const lfo = ctx.createOscillator();
+        lfo.type = "sine";
+        lfo.frequency.value = 8.6; // 16th note pulse
+        const lfoGain = ctx.createGain();
+        lfoGain.gain.value = 0.40;
         lfo.connect(lfoGain);
         lfoGain.connect(gainNode.gain);
         lfo.start();
@@ -1231,8 +1508,12 @@ export class NativePcmEngine {
   }
 
   playNote(instId, midiNote, velocity = 95, customGain = 1.0, layerIndex = null) {
+    const dest = (layerIndex !== null && layerIndex !== undefined && this.layerInserts && this.layerInserts[layerIndex])
+      ? this.layerInserts[layerIndex].input
+      : this.destination;
+
     if (this.sfxGenerator && this.sfxGenerator.isSfxInstrument(instId)) {
-      return this.sfxGenerator.playSfxNote(instId, midiNote, velocity, customGain);
+      return this.sfxGenerator.playSfxNote(instId, midiNote, velocity, customGain, dest);
     }
 
     const anchorData = this.findNearestAnchor(instId, midiNote, velocity);
@@ -1429,12 +1710,6 @@ export class NativePcmEngine {
     // Voice Audio Chain: Source -> TVF -> TVA -> (Layer Insert Bus | Master Rack)
     src.connect(filter);
     filter.connect(voiceGain);
-
-    // Route to layer insert processor if layerIndex is specified
-    const dest = (layerIndex !== null && layerIndex !== undefined && this.layerInserts && this.layerInserts[layerIndex])
-      ? this.layerInserts[layerIndex].input
-      : this.destination;
-
     voiceGain.connect(dest);
 
     // Instant sample-0 hardware playback

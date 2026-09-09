@@ -4,6 +4,8 @@
  * DJ/cinematic sound effects, and analog/acoustic drum percussion using pure Web Audio DSP.
  */
 
+import { synthesizerYouEngine } from "./synthesizer-you-samples.js";
+
 export class SfxSoundGenerator {
   constructor(ctx, destinationNode) {
     this.ctx = ctx;
@@ -881,27 +883,832 @@ export class SfxSoundGenerator {
     };
   }
 
+  // =========================================================================
+  // EXPANDED 1. NATURE SOUNDS
+  // =========================================================================
+
+  triggerCampfire(duration = 4.5, velocity = 95, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = destNode || this.destination;
+
+    // Fire low warmth rumble
+    const noise = this.createNoiseSource(true);
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(320, now);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.35 * vel * customGain, now + 0.3);
+    g.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    noise.connect(lp);
+    lp.connect(g);
+    g.connect(dest);
+    noise.start(now);
+    noise.stop(now + duration + 0.1);
+
+    // Random timber crackle pops
+    const numPops = 8;
+    for (let i = 0; i < numPops; i++) {
+      const popTime = now + 0.2 + Math.random() * (duration - 0.8);
+      const popOsc = ctx.createOscillator();
+      popOsc.type = "sine";
+      popOsc.frequency.setValueAtTime(900 + Math.random() * 1800, popTime);
+      popOsc.frequency.exponentialRampToValueAtTime(120, popTime + 0.015);
+      const popGain = ctx.createGain();
+      popGain.gain.setValueAtTime(0.001, popTime);
+      popGain.gain.linearRampToValueAtTime((0.15 + Math.random() * 0.2) * vel * customGain, popTime + 0.002);
+      popGain.gain.exponentialRampToValueAtTime(0.001, popTime + 0.02);
+      popOsc.connect(popGain);
+      popGain.connect(dest);
+      popOsc.start(popTime);
+      popOsc.stop(popTime + 0.03);
+    }
+    return noise;
+  }
+
+  triggerStream(duration = 4.5, velocity = 90, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = destNode || this.destination;
+
+    const noise = this.createNoiseSource(true);
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.setValueAtTime(1400, now);
+    bp.Q.setValueAtTime(1.2, now);
+
+    const lfo = ctx.createOscillator();
+    lfo.type = "sine";
+    lfo.frequency.setValueAtTime(0.7, now);
+    const lfoG = ctx.createGain();
+    lfoG.gain.value = 400;
+    lfo.connect(lfoG);
+    lfoG.connect(bp.frequency);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.40 * vel * customGain, now + 0.4);
+    g.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    noise.connect(bp);
+    bp.connect(g);
+    g.connect(dest);
+
+    lfo.start(now);
+    noise.start(now);
+    lfo.stop(now + duration + 0.1);
+    noise.stop(now + duration + 0.1);
+    return noise;
+  }
+
+  triggerCrickets(duration = 4.0, velocity = 90, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = destNode || this.destination;
+
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(4800, now);
+
+    const amLfo = ctx.createOscillator();
+    amLfo.type = "square";
+    amLfo.frequency.setValueAtTime(16, now); // rapid chirp modulation
+
+    const amGain = ctx.createGain();
+    amGain.gain.value = 0.5;
+    amLfo.connect(amGain);
+
+    const mainGain = ctx.createGain();
+    mainGain.gain.setValueAtTime(0.001, now);
+    mainGain.gain.linearRampToValueAtTime(0.30 * vel * customGain, now + 0.2);
+    mainGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    osc.connect(mainGain);
+    mainGain.connect(dest);
+
+    osc.start(now);
+    amLfo.start(now);
+    osc.stop(now + duration + 0.1);
+    amLfo.stop(now + duration + 0.1);
+    return osc;
+  }
+
+  triggerWaterfall(duration = 5.0, velocity = 95, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = destNode || this.destination;
+
+    const noise = this.createNoiseSource(true);
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(1800, now);
+
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.setValueAtTime(140, now);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.50 * vel * customGain, now + 0.5);
+    g.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    noise.connect(hp);
+    hp.connect(lp);
+    lp.connect(g);
+    g.connect(dest);
+
+    noise.start(now);
+    noise.stop(now + duration + 0.1);
+    return noise;
+  }
+
+  // =========================================================================
+  // EXPANDED 2. HUMAN VOX & CHOIR
+  // =========================================================================
+
+  triggerOhYeah(pitchMidi = 60, velocity = 100, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const baseFreq = 440 * Math.pow(2, (pitchMidi - 69) / 12);
+    const dest = destNode || this.destination;
+
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    osc1.type = "triangle";
+    osc2.type = "sine";
+    osc1.frequency.setValueAtTime(baseFreq * 0.90, now);
+    osc1.frequency.linearRampToValueAtTime(baseFreq * 1.15, now + 0.18);
+    osc1.frequency.exponentialRampToValueAtTime(baseFreq * 0.88, now + 0.65);
+
+    osc2.frequency.setValueAtTime(baseFreq * 0.90, now);
+    osc2.frequency.linearRampToValueAtTime(baseFreq * 1.15, now + 0.18);
+    osc2.frequency.exponentialRampToValueAtTime(baseFreq * 0.88, now + 0.65);
+
+    const f1 = ctx.createBiquadFilter();
+    f1.type = "bandpass";
+    f1.frequency.setValueAtTime(580, now);
+    f1.Q.setValueAtTime(4.0, now);
+
+    const f2 = ctx.createBiquadFilter();
+    f2.type = "bandpass";
+    f2.frequency.setValueAtTime(1850, now);
+    f2.Q.setValueAtTime(3.5, now);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.80 * vel * customGain, now + 0.06);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.70);
+
+    osc1.connect(f1);
+    osc2.connect(f2);
+    f1.connect(g);
+    f2.connect(g);
+    g.connect(dest);
+
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + 0.75);
+    osc2.stop(now + 0.75);
+    return osc1;
+  }
+
+  triggerCrowdCheer(duration = 4.0, velocity = 100, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = destNode || this.destination;
+
+    const noise = this.createNoiseSource(true);
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.setValueAtTime(1200, now);
+    bp.frequency.linearRampToValueAtTime(2400, now + 1.2);
+    bp.frequency.linearRampToValueAtTime(1500, now + duration);
+    bp.Q.setValueAtTime(1.0, now);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.60 * vel * customGain, now + 0.8);
+    g.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    noise.connect(bp);
+    bp.connect(g);
+    g.connect(dest);
+
+    noise.start(now);
+    noise.stop(now + duration + 0.1);
+    return noise;
+  }
+
+  triggerApplause(duration = 3.8, velocity = 95, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = destNode || this.destination;
+
+    const noise = this.createNoiseSource(true);
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.setValueAtTime(800, now);
+
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(6500, now);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.55 * vel * customGain, now + 0.4);
+    g.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    noise.connect(hp);
+    hp.connect(lp);
+    lp.connect(g);
+    g.connect(dest);
+
+    noise.start(now);
+    noise.stop(now + duration + 0.1);
+    return noise;
+  }
+
+  triggerWhisper(duration = 3.5, velocity = 90, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = destNode || this.destination;
+
+    const noise = this.createNoiseSource(true);
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.setValueAtTime(2200, now);
+    bp.Q.setValueAtTime(3.0, now);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.40 * vel * customGain, now + 0.3);
+    g.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    noise.connect(bp);
+    bp.connect(g);
+    g.connect(dest);
+
+    noise.start(now);
+    noise.stop(now + duration + 0.1);
+    return noise;
+  }
+
+  triggerVocalHum(pitchMidi = 48, velocity = 95, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const baseFreq = 440 * Math.pow(2, (pitchMidi - 69) / 12);
+    const dest = destNode || this.destination;
+
+    const osc = ctx.createOscillator();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(baseFreq, now);
+
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(420, now);
+    lp.Q.setValueAtTime(2.5, now);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.70 * vel * customGain, now + 0.08);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
+
+    osc.connect(lp);
+    lp.connect(g);
+    g.connect(dest);
+
+    osc.start(now);
+    osc.stop(now + 2.1);
+    return osc;
+  }
+
+  // =========================================================================
+  // EXPANDED 3. WEIRD & SCI-FI FX
+  // =========================================================================
+
+  triggerWarpDrive(velocity = 100, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = destNode || this.destination;
+
+    const osc = ctx.createOscillator();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(60, now);
+    osc.frequency.exponentialRampToValueAtTime(3200, now + 2.2);
+
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.setValueAtTime(200, now);
+    bp.frequency.exponentialRampToValueAtTime(4500, now + 2.2);
+    bp.Q.setValueAtTime(4.0, now);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.75 * vel * customGain, now + 0.1);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
+
+    osc.connect(bp);
+    bp.connect(g);
+    g.connect(dest);
+
+    osc.start(now);
+    osc.stop(now + 2.6);
+    return osc;
+  }
+
+  triggerRobotTelemetry(velocity = 95, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = destNode || this.destination;
+
+    const osc = ctx.createOscillator();
+    osc.type = "square";
+    // Stepped FM frequencies
+    const freqs = [1200, 1800, 950, 2400, 1400, 3100, 1100];
+    let t = now;
+    freqs.forEach(f => {
+      osc.frequency.setValueAtTime(f, t);
+      t += 0.055;
+    });
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.45 * vel * customGain, now + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+    osc.connect(g);
+    g.connect(dest);
+
+    osc.start(now);
+    osc.stop(now + 0.48);
+    return osc;
+  }
+
+  triggerPlasmaBlaster(velocity = 100, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = destNode || this.destination;
+
+    const osc = ctx.createOscillator();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(2800, now);
+    osc.frequency.exponentialRampToValueAtTime(45, now + 0.35);
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(6000, now);
+    filter.frequency.exponentialRampToValueAtTime(200, now + 0.35);
+    filter.Q.setValueAtTime(5.0, now);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.85 * vel * customGain, now + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.40);
+
+    osc.connect(filter);
+    filter.connect(g);
+    g.connect(dest);
+
+    osc.start(now);
+    osc.stop(now + 0.42);
+    return osc;
+  }
+
+  triggerCyberSweep(velocity = 95, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = destNode || this.destination;
+
+    const osc = ctx.createOscillator();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(110, now);
+    osc.frequency.exponentialRampToValueAtTime(5200, now + 4.0);
+
+    const flt = ctx.createBiquadFilter();
+    flt.type = "bandpass";
+    flt.frequency.setValueAtTime(250, now);
+    flt.frequency.exponentialRampToValueAtTime(8000, now + 4.0);
+    flt.Q.setValueAtTime(4.5, now);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.70 * vel * customGain, now + 0.2);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 4.2);
+
+    osc.connect(flt);
+    flt.connect(g);
+    g.connect(dest);
+
+    osc.start(now);
+    osc.stop(now + 4.3);
+    return osc;
+  }
+
+  triggerSubResonator(velocity = 100, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = destNode || this.destination;
+
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(48, now);
+
+    const lfo = ctx.createOscillator();
+    lfo.type = "sine";
+    lfo.frequency.setValueAtTime(4.5, now);
+    const lfoG = ctx.createGain();
+    lfoG.gain.value = 12;
+    lfo.connect(lfoG);
+    lfoG.connect(osc.frequency);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.90 * vel * customGain, now + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
+
+    osc.connect(g);
+    g.connect(dest);
+
+    osc.start(now);
+    lfo.start(now);
+    osc.stop(now + 2.6);
+    lfo.stop(now + 2.6);
+    return osc;
+  }
+
+  // =========================================================================
+  // EXPANDED 4. DJ & CINEMATIC FX
+  // =========================================================================
+
+  triggerCinemaBraam(velocity = 100, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = destNode || this.destination;
+
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    osc1.type = "sawtooth";
+    osc2.type = "square";
+    osc1.frequency.setValueAtTime(55, now); // Low A1 braam
+    osc2.frequency.setValueAtTime(55.4, now);
+
+    const dist = ctx.createWaveShaper();
+    const n = 512;
+    const curve = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const x = (i * 2) / n - 1;
+      curve[i] = Math.tanh(2.5 * x);
+    }
+    dist.curve = curve;
+
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(1600, now);
+    lp.frequency.exponentialRampToValueAtTime(400, now + 1.8);
+    lp.Q.setValueAtTime(2.0, now);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.95 * vel * customGain, now + 0.04);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 2.2);
+
+    osc1.connect(dist);
+    osc2.connect(dist);
+    dist.connect(lp);
+    lp.connect(g);
+    g.connect(dest);
+
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + 2.3);
+    osc2.stop(now + 2.3);
+    return osc1;
+  }
+
+  triggerClubDownlifter(duration = 3.5, velocity = 95, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = destNode || this.destination;
+
+    const noise = this.createNoiseSource(true);
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(8000, now);
+    lp.frequency.exponentialRampToValueAtTime(150, now + duration);
+    lp.Q.setValueAtTime(3.0, now);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.65 * vel * customGain, now + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    noise.connect(lp);
+    lp.connect(g);
+    g.connect(dest);
+
+    noise.start(now);
+    noise.stop(now + duration + 0.1);
+    return noise;
+  }
+
+  triggerReverseCymbal(duration = 2.2, velocity = 95, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = destNode || this.destination;
+
+    const noise = this.createNoiseSource(true);
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.setValueAtTime(3200, now);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.exponentialRampToValueAtTime(0.70 * vel * customGain, now + duration);
+    g.gain.linearRampToValueAtTime(0.001, now + duration + 0.05);
+
+    noise.connect(hp);
+    hp.connect(g);
+    g.connect(dest);
+
+    noise.start(now);
+    noise.stop(now + duration + 0.1);
+    return noise;
+  }
+
+  trigger808SubDrop(velocity = 100, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = destNode || this.destination;
+
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(95, now);
+    osc.frequency.exponentialRampToValueAtTime(28, now + 1.6);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.95 * vel * customGain, now + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 1.8);
+
+    osc.connect(g);
+    g.connect(dest);
+
+    osc.start(now);
+    osc.stop(now + 1.9);
+    return osc;
+  }
+
+  triggerVinylCrackle(duration = 4.0, velocity = 90, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = destNode || this.destination;
+
+    const noise = this.createNoiseSource(true);
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.setValueAtTime(3400, now);
+    bp.Q.setValueAtTime(2.0, now);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.35 * vel * customGain, now + 0.1);
+    g.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    noise.connect(bp);
+    bp.connect(g);
+    g.connect(dest);
+
+    noise.start(now);
+    noise.stop(now + duration + 0.1);
+    return noise;
+  }
+
+  // =========================================================================
+  // EXPANDED 5. DRUMS & PERCUSSIONS
+  // =========================================================================
+
+  trigger909Kick(velocity = 100, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = destNode || this.destination;
+
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(180, now);
+    osc.frequency.exponentialRampToValueAtTime(52, now + 0.06);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.95 * vel * customGain, now + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+    osc.connect(g);
+    g.connect(dest);
+
+    osc.start(now);
+    osc.stop(now + 0.38);
+    return osc;
+  }
+
+  triggerStereoClap(velocity = 100, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = destNode || this.destination;
+
+    // 3 rapid micro-bursts followed by diffuse noise tail
+    const bursts = [0, 0.012, 0.024];
+    bursts.forEach(offset => {
+      const noise = this.createNoiseSource(false);
+      const bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.setValueAtTime(1400, now + offset);
+      bp.Q.setValueAtTime(1.5, now + offset);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.001, now + offset);
+      g.gain.linearRampToValueAtTime(0.65 * vel * customGain, now + offset + 0.002);
+      g.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.02);
+      noise.connect(bp);
+      bp.connect(g);
+      g.connect(dest);
+      noise.start(now + offset);
+      noise.stop(now + offset + 0.03);
+    });
+
+    // Tail
+    const tailNoise = this.createNoiseSource(false);
+    const tailBp = ctx.createBiquadFilter();
+    tailBp.type = "bandpass";
+    tailBp.frequency.setValueAtTime(1200, now + 0.036);
+    const tailG = ctx.createGain();
+    tailG.gain.setValueAtTime(0.001, now + 0.036);
+    tailG.gain.linearRampToValueAtTime(0.70 * vel * customGain, now + 0.04);
+    tailG.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+    tailNoise.connect(tailBp);
+    tailBp.connect(tailG);
+    tailG.connect(dest);
+    tailNoise.start(now + 0.036);
+    tailNoise.stop(now + 0.30);
+    return tailNoise;
+  }
+
+  triggerBongos(isHigh = true, velocity = 95, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = destNode || this.destination;
+
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    const baseFreq = isHigh ? 380 : 210;
+    osc.frequency.setValueAtTime(baseFreq * 1.5, now);
+    osc.frequency.exponentialRampToValueAtTime(baseFreq, now + 0.03);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.80 * vel * customGain, now + 0.003);
+    g.gain.exponentialRampToValueAtTime(0.001, now + (isHigh ? 0.12 : 0.20));
+
+    osc.connect(g);
+    g.connect(dest);
+
+    osc.start(now);
+    osc.stop(now + 0.22);
+    return osc;
+  }
+
+  triggerTimbales(midiNote = 64, velocity = 95, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const baseFreq = 440 * Math.pow(2, (midiNote - 69) / 12);
+    const dest = destNode || this.destination;
+
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(baseFreq * 2.0, now);
+    osc.frequency.exponentialRampToValueAtTime(baseFreq, now + 0.025);
+
+    const ringOsc = ctx.createOscillator();
+    ringOsc.type = "triangle";
+    ringOsc.frequency.setValueAtTime(baseFreq * 3.4, now);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.75 * vel * customGain, now + 0.002);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+    osc.connect(g);
+    ringOsc.connect(g);
+    g.connect(dest);
+
+    osc.start(now);
+    ringOsc.start(now);
+    osc.stop(now + 0.38);
+    ringOsc.stop(now + 0.38);
+    return osc;
+  }
+
+  triggerCrashGong(velocity = 95, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = destNode || this.destination;
+
+    const noise = this.createNoiseSource(false);
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.setValueAtTime(2800, now);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.70 * vel * customGain, now + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
+
+    noise.connect(hp);
+    hp.connect(g);
+    g.connect(dest);
+
+    noise.start(now);
+    noise.stop(now + 2.6);
+    return noise;
+  }
+
+  triggerTaiko(velocity = 100, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = destNode || this.destination;
+
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(140, now);
+    osc.frequency.exponentialRampToValueAtTime(45, now + 0.08);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.95 * vel * customGain, now + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.90);
+
+    osc.connect(g);
+    g.connect(dest);
+
+    osc.start(now);
+    osc.stop(now + 0.95);
+    return osc;
+  }
+
   isSfxInstrument(instId) {
     if (!instId) return false;
     return (
       instId === "kalimba" ||
       instId === "m1_kalimba" ||
+      instId.startsWith("sy_") ||
       instId.startsWith("nature_") ||
       instId.startsWith("vox_") ||
       instId.startsWith("fx_") ||
       instId.startsWith("percussion_") ||
+      instId.startsWith("tr909_") ||
       instId === "tr808_kit" ||
+      instId === "tr909_kit" ||
       instId === "drums1" ||
       instId === "m1_drums"
     );
   }
 
-  playSfxNote(instId, midiNote = 60, velocity = 95, customGain = 1.0) {
+  playSfxNote(instId, midiNote = 60, velocity = 95, customGain = 1.0, destNode = null) {
+    if (instId && instId.startsWith("sy_")) {
+      return synthesizerYouEngine.trigger(instId, velocity, customGain, destNode, midiNote);
+    }
+
     switch (instId) {
       // 0. Kalimba / Mbira Thumb Piano
       case "kalimba":
       case "m1_kalimba":
         return this.triggerKalimba(midiNote, velocity, customGain);
+
       // 1. Nature Sounds
       case "nature_thunder":
         return this.triggerThunder(velocity, customGain);
@@ -913,6 +1720,14 @@ export class SfxSoundGenerator {
         return this.triggerBirdChirp(midiNote, velocity, customGain);
       case "nature_wind":
         return this.triggerWind(3.5, velocity, customGain);
+      case "nature_fire":
+        return this.triggerCampfire(4.5, velocity, customGain, destNode);
+      case "nature_stream":
+        return this.triggerStream(4.5, velocity, customGain, destNode);
+      case "nature_crickets":
+        return this.triggerCrickets(4.0, velocity, customGain, destNode);
+      case "nature_waterfall":
+        return this.triggerWaterfall(5.0, velocity, customGain, destNode);
 
       // 2. Human Vox
       case "vox_yeah":
@@ -921,6 +1736,16 @@ export class SfxSoundGenerator {
         return this.triggerVocalChant("whoa", midiNote, velocity, customGain);
       case "vox_hey":
         return this.triggerVocalChant("hey", midiNote, velocity, customGain);
+      case "vox_ohyeah":
+        return this.triggerOhYeah(midiNote, velocity, customGain, destNode);
+      case "vox_crowd_cheer":
+        return this.triggerCrowdCheer(4.0, velocity, customGain, destNode);
+      case "vox_applause":
+        return this.triggerApplause(3.8, velocity, customGain, destNode);
+      case "vox_whisper":
+        return this.triggerWhisper(3.5, velocity, customGain, destNode);
+      case "vox_hum":
+        return this.triggerVocalHum(midiNote, velocity, customGain, destNode);
       case "vox_beatbox": {
         const mod = midiNote % 3;
         if (mod === 0) return this.triggerBeatbox("kick", velocity, customGain);
@@ -935,6 +1760,16 @@ export class SfxSoundGenerator {
         return this.triggerAlienDrone(midiNote, velocity, customGain);
       case "fx_bionic":
         return this.triggerBionicGlitch(velocity, customGain);
+      case "fx_warpdrive":
+        return this.triggerWarpDrive(velocity, customGain, destNode);
+      case "fx_robot":
+        return this.triggerRobotTelemetry(velocity, customGain, destNode);
+      case "fx_plasma":
+        return this.triggerPlasmaBlaster(velocity, customGain, destNode);
+      case "fx_cyber_sweep":
+        return this.triggerCyberSweep(velocity, customGain, destNode);
+      case "fx_sub_resonator":
+        return this.triggerSubResonator(velocity, customGain, destNode);
 
       // 4. DJ & Cinematic FX
       case "fx_scratch":
@@ -945,6 +1780,16 @@ export class SfxSoundGenerator {
         return this.triggerSubBoom(velocity, customGain);
       case "fx_airhorn":
         return this.triggerReggaeAirhorn(velocity, customGain);
+      case "fx_cinema_braam":
+        return this.triggerCinemaBraam(velocity, customGain, destNode);
+      case "fx_downlifter":
+        return this.triggerClubDownlifter(3.5, velocity, customGain, destNode);
+      case "fx_rev_cymbal":
+        return this.triggerReverseCymbal(2.2, velocity, customGain, destNode);
+      case "fx_sub_drop":
+        return this.trigger808SubDrop(velocity, customGain, destNode);
+      case "fx_vinyl_crackle":
+        return this.triggerVinylCrackle(4.0, velocity, customGain, destNode);
 
       // 5. Percussions & Drum Kit
       case "tr808_kit":
@@ -966,12 +1811,24 @@ export class SfxSoundGenerator {
           return this.triggerConga(midiNote >= 60, velocity, customGain);
         }
       }
+      case "tr909_kit":
+        return this.trigger909Kick(velocity, customGain, destNode);
       case "percussion_conga":
         return this.triggerConga(midiNote >= 60, velocity, customGain);
       case "percussion_shaker":
         return this.triggerShaker(velocity, customGain);
       case "percussion_cowbell":
         return this.triggerCowbell(velocity, customGain);
+      case "percussion_clap":
+        return this.triggerStereoClap(velocity, customGain, destNode);
+      case "percussion_bongo":
+        return this.triggerBongos(midiNote >= 60, velocity, customGain, destNode);
+      case "percussion_timbales":
+        return this.triggerTimbales(midiNote, velocity, customGain, destNode);
+      case "percussion_crash":
+        return this.triggerCrashGong(velocity, customGain, destNode);
+      case "percussion_taiko":
+        return this.triggerTaiko(velocity, customGain, destNode);
 
       default:
         return null;

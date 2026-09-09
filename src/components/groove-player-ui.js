@@ -9,13 +9,14 @@ import { SampleGroovePlayer, GROOVE_TRACKS } from "../audio/sample-groove-player
 import { SfxSoundGenerator } from "../audio/sfx-sound-generator.js";
 import { multiLayerEngine } from "../audio/multi-layer-engine.js";
 import { audioCore } from "../audio/audio-core.js";
+import { synthesizerYouEngine, SYNTHESIZER_YOU_EFFECTS } from "../audio/synthesizer-you-samples.js";
 
 export class GroovePlayerUI {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
     this.groovePlayer = new SampleGroovePlayer();
     this.sfxGen = null;
-    this.activeSfxCategory = "crowd"; // 'crowd' | 'vox' | 'nature' | 'percussion' | 'dj' | 'weird'
+    this.activeSfxCategory = "synthesizer_you"; // 'synthesizer_you' | 'crowd' | 'vox' | 'nature' | 'percussion' | 'dj' | 'weird'
 
     this.initSfx();
     this.render();
@@ -27,6 +28,7 @@ export class GroovePlayerUI {
     try {
       if (audioCore.ctx) {
         this.sfxGen = new SfxSoundGenerator(audioCore.ctx, audioCore.masterGain || audioCore.ctx.destination);
+        synthesizerYouEngine.preload();
       }
     } catch (e) {
       console.warn("GroovePlayerUI sfxGen init:", e);
@@ -154,6 +156,7 @@ export class GroovePlayerUI {
 
             <!-- SFX Category Tabs -->
             <div class="sfx-cat-tabs">
+              <button class="sfx-cat-btn ${this.activeSfxCategory === "synthesizer_you" ? "active" : ""}" data-sfx-cat="synthesizer_you">🏄 SYNTH YOU FX</button>
               <button class="sfx-cat-btn ${this.activeSfxCategory === "crowd" ? "active" : ""}" data-sfx-cat="crowd">👏 CONCERT CROWD</button>
               <button class="sfx-cat-btn ${this.activeSfxCategory === "vox" ? "active" : ""}" data-sfx-cat="vox">🗣️ HUMAN VOX</button>
               <button class="sfx-cat-btn ${this.activeSfxCategory === "nature" ? "active" : ""}" data-sfx-cat="nature">🌿 NATURE SOUNDS</button>
@@ -174,6 +177,7 @@ export class GroovePlayerUI {
 
   renderSfxPads() {
     const sfxMap = {
+      synthesizer_you: SYNTHESIZER_YOU_EFFECTS,
       crowd: [
         { id: "applause_clapping", icon: "👏", name: "Concert Clapping", desc: "Real rhythmic concert audience applause" },
         { id: "applause_roar", icon: "🏟️", name: "Stadium Crowd Roar", desc: "Massive roaring arena ovation" },
@@ -332,6 +336,11 @@ export class GroovePlayerUI {
 
   triggerSfx(sfxId) {
     if (!this.sfxGen) return;
+
+    if (sfxId.startsWith("sy_")) {
+      synthesizerYouEngine.trigger(sfxId, 115, 1.0);
+      return;
+    }
 
     switch (sfxId) {
       // 1. Concert & Crowd (REAL recorded stadium applause & concert crowd)

@@ -10,6 +10,7 @@ import { LAYER_FX_OPTIONS } from "../audio/native-pcm-engine.js";
 export class MultiLayerUI {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
+    this.combiSearchQuery = "";
     this.render();
     this.bindEvents();
 
@@ -38,6 +39,7 @@ export class MultiLayerUI {
 
           <div class="combi-selector-row">
             <button class="preset-arrow-btn" id="combi-prev-btn" title="Previous preset">◀</button>
+            <input type="text" id="combi-search-input" class="combi-search-input" placeholder="Search presets..." value="${this.combiSearchQuery}" />
             <select class="combi-preset-select" id="combi-preset-select" title="Choose combi preset">
               ${catOrder
                 .map(
@@ -45,6 +47,7 @@ export class MultiLayerUI {
                 <optgroup label="${cat}">
                   ${allPresets
                     .filter(cp => cp.category === cat)
+                    .filter(cp => !this.combiSearchQuery || cp.name.toLowerCase().includes(this.combiSearchQuery.toLowerCase()) || (cp.category && cp.category.toLowerCase().includes(this.combiSearchQuery.toLowerCase())))
                     .map(
                       cp => `
                     <option value="${cp.id}" ${multiLayerEngine.activeCombi.id === cp.id ? "selected" : ""}>
@@ -61,6 +64,16 @@ export class MultiLayerUI {
             <button class="preset-arrow-btn" id="combi-next-btn" title="Next preset">▶</button>
           </div>
         </div>
+
+        <!-- Search results as chips (only when searching) -->
+        ${this.combiSearchQuery ? `
+        <div class="combi-search-results" id="combi-search-results">
+          ${allPresets
+            .filter(cp => cp.name.toLowerCase().includes(this.combiSearchQuery.toLowerCase()) || (cp.category && cp.category.toLowerCase().includes(this.combiSearchQuery.toLowerCase())))
+            .slice(0, 15)
+            .map(cp => `<button class="combi-search-chip ${multiLayerEngine.activeCombi.id === cp.id ? "active" : ""}" data-combi-search="${cp.id}">${cp.name}</button>`)
+            .join("")}
+        </div>` : ""}
 
         <!-- My Presets (localStorage) -->
         <div class="user-presets-bar">
@@ -120,15 +133,22 @@ export class MultiLayerUI {
               <div class="strip-inst-picker">
                 <label class="strip-picker-label">TIMBRE / SOUNDBANK</label>
                 <select class="layer-inst-select" data-layer="${idx}">
-                  ${Object.values(HD_SOUNDBANKS)
-                    .map(
-                      inst => `
-                    <option value="${inst.id}" ${layer.inst === inst.id ? "selected" : ""}>
-                      ${inst.name}
-                    </option>
-                  `
-                    )
-                    .join("")}
+                  ${(() => {
+                    const insts = Object.values(HD_SOUNDBANKS);
+                    const cats = [];
+                    insts.forEach(i => { if (i.category && !cats.includes(i.category)) cats.push(i.category); });
+                    // Prioritize Synthesizer You at top
+                    cats.sort((a, b) => a.includes("Synthesizer You") ? -1 : (b.includes("Synthesizer You") ? 1 : 0));
+                    return cats.map(cat => `
+                      <optgroup label="${cat.toUpperCase()}">
+                        ${insts.filter(i => i.category === cat).map(i => `
+                          <option value="${i.id}" ${layer.inst === i.id ? "selected" : ""}>
+                            ${i.name}
+                          </option>
+                        `).join("")}
+                      </optgroup>
+                    `).join("");
+                  })()}
                 </select>
               </div>
 
@@ -136,15 +156,25 @@ export class MultiLayerUI {
               <div class="strip-fx-picker">
                 <label class="strip-picker-label">INSERT EFFECT / DSP</label>
                 <select class="layer-fx-select" data-layer="${idx}">
-                  ${Object.values(LAYER_FX_OPTIONS)
-                    .map(
-                      fx => `
-                    <option value="${fx.id}" ${layer.fx === fx.id ? "selected" : ""}>
-                      ${fx.name}
-                    </option>
-                  `
-                    )
-                    .join("")}
+                  ${(() => {
+                    const fxList = Object.values(LAYER_FX_OPTIONS);
+                    const fxCats = [];
+                    fxList.forEach(f => {
+                      const cat = f.category || "General FX";
+                      if (!fxCats.includes(cat)) fxCats.push(cat);
+                    });
+                    // Put Synthesizer You FX at very top
+                    fxCats.sort((a, b) => a.includes("Synthesizer You") ? -1 : (b.includes("Synthesizer You") ? 1 : 0));
+                    return fxCats.map(cat => `
+                      <optgroup label="${cat.toUpperCase()}">
+                        ${fxList.filter(f => (f.category || "General FX") === cat).map(f => `
+                          <option value="${f.id}" ${layer.fx === f.id ? "selected" : ""}>
+                            ${f.name}
+                          </option>
+                        `).join("")}
+                      </optgroup>
+                    `).join("");
+                  })()}
                 </select>
               </div>
 
@@ -182,10 +212,32 @@ export class MultiLayerUI {
   }
 
   bindEvents() {
+    // Combi search
+    const searchInput = this.container.querySelector("#combi-search-input");
+    searchInput?.addEventListener("input", e => {
+      this.combiSearchQuery = e.target.value;
+      this.render();
+      this.bindEvents();
+      // Refocus search input
+      const newInput = this.container.querySelector("#combi-search-input");
+      if (newInput) { newInput.focus(); newInput.setSelectionRange(newInput.value.length, newInput.value.length); }
+    });
+
+    // Combi search chip clicks
+    this.container.querySelectorAll("[data-combi-search]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        multiLayerEngine.setCombiPreset(btn.getAttribute("data-combi-search"));
+        this.combiSearchQuery = "";
+        this.render();
+        this.bindEvents();
+      });
+    });
+
     // Combi preset selector + steppers
     const presetSelect = this.container.querySelector("#combi-preset-select");
     presetSelect?.addEventListener("change", e => {
       multiLayerEngine.setCombiPreset(e.target.value);
+      this.combiSearchQuery = "";
       this.render();
       this.bindEvents();
     });

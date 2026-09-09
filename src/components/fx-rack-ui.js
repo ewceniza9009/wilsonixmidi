@@ -21,20 +21,25 @@ export class FxRackUI {
   }
 
   updateKnobVisual(param, v) {
+    if (typeof v !== "number" || isNaN(v)) return;
     const knob = this.container?.querySelector(`.rotary-knob[data-param="${param}"]`);
     if (!knob) return;
-    const min = parseFloat(knob.getAttribute("data-min"));
-    const max = parseFloat(knob.getAttribute("data-max"));
-    const unit = knob.getAttribute("data-unit");
+    const min = parseFloat(knob.getAttribute("data-min")) || 0;
+    const max = parseFloat(knob.getAttribute("data-max")) || 1;
+    const unit = knob.getAttribute("data-unit") || "";
     const pointer = knob.querySelector(".knob-pointer");
     const valEl = knob.querySelector(".knob-value");
 
-    const norm = (v - min) / (max - min);
+    const range = max - min;
+    const norm = range === 0 ? 0 : Math.max(0, Math.min(1, (v - min) / range));
     const deg = -140 + norm * 280;
     if (pointer) pointer.style.transform = `rotate(${deg}deg)`;
     if (valEl) {
       if (unit === "%") valEl.innerText = `${Math.round(norm * 100)}%`;
       else if (unit === "dB") valEl.innerText = `${v >= 0 ? "+" : ""}${v.toFixed(1)}dB`;
+      else if (unit === "Hz") valEl.innerText = v >= 1000 ? `${(v / 1000).toFixed(1)}kHz` : `${Math.round(v)}Hz`;
+      else if (unit === "ms") valEl.innerText = `${Math.round(v)}ms`;
+      else if (unit === "s") valEl.innerText = v < 0.2 ? `${Math.round(v * 1000)}ms` : `${v.toFixed(1)}s`;
       else valEl.innerText = `${v.toFixed(1)}${unit}`;
     }
   }
@@ -253,28 +258,158 @@ export class FxRackUI {
             </div>
           </div>
 
-          <!-- Device 8: Studio EQ & Limiter -->
-          <div class="ableton-device-box" id="dev-eq">
+          <!-- Device 8: Vintage Spring Reverb (The Surf Foundation) -->
+          <div class="ableton-device-box" id="dev-spring-reverb">
             <div class="device-bar">
-              <button class="dev-power-btn active" data-dev="eq" disabled>LOCK</button>
-              <span class="dev-name">3-BAND EQ & LIMITER</span>
+              <button class="dev-power-btn" data-dev="spring-reverb">OFF</button>
+              <span class="dev-name">VINTAGE SPRING REVERB (SURF DRIP)</span>
             </div>
             <div class="dev-body">
               <div class="knob-group">
-                <div class="rotary-knob" data-param="eq-low" data-min="-10" data-max="10" data-val="1.5" data-unit="dB">
+                <div class="rotary-knob" data-param="spring-mix" data-min="0" data-max="1" data-val="0.35" data-unit="%">
                   <div class="knob-face"><div class="knob-pointer"></div></div>
-                  <span class="knob-label">LOW (90Hz)</span>
-                  <span class="knob-value">+1.5dB</span>
+                  <span class="knob-label">MIX</span>
+                  <span class="knob-value">35%</span>
                 </div>
-                <div class="rotary-knob" data-param="eq-mid" data-min="-10" data-max="10" data-val="0" data-unit="dB">
+                <div class="rotary-knob" data-param="spring-tone" data-min="1800" data-max="5500" data-val="3200" data-unit="Hz">
                   <div class="knob-face"><div class="knob-pointer"></div></div>
-                  <span class="knob-label">MID (1.4k)</span>
+                  <span class="knob-label">DRIP TONE</span>
+                  <span class="knob-value">3.2kHz</span>
+                </div>
+                <div class="rotary-knob" data-param="spring-decay" data-min="0.6" data-max="4.5" data-val="2.2" data-unit="s">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">DECAY</span>
+                  <span class="knob-value">2.2s</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Device 9: Slapback Tape Delay (Vocal Attitude) -->
+          <div class="ableton-device-box" id="dev-slapback">
+            <div class="device-bar">
+              <button class="dev-power-btn" data-dev="slapback">OFF</button>
+              <span class="dev-name">SLAPBACK TAPE DELAY</span>
+            </div>
+            <div class="dev-body">
+              <div class="knob-group">
+                <div class="rotary-knob" data-param="slapback-mix" data-min="0" data-max="1" data-val="0.35" data-unit="%">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">MIX</span>
+                  <span class="knob-value">35%</span>
+                </div>
+                <div class="rotary-knob" data-param="slapback-time" data-min="0.065" data-max="0.140" data-val="0.095" data-unit="s">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">DELAY</span>
+                  <span class="knob-value">95ms</span>
+                </div>
+                <div class="rotary-knob" data-param="slapback-tone" data-min="1800" data-max="8000" data-val="3400" data-unit="Hz">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">TAPE TONE</span>
+                  <span class="knob-value">3.4kHz</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Device 10: 80s Non-Linear Gated Reverb -->
+          <div class="ableton-device-box" id="dev-gated-reverb">
+            <div class="device-bar">
+              <button class="dev-power-btn" data-dev="gated-reverb">OFF</button>
+              <span class="dev-name">80s GATED REVERB (CANNON)</span>
+            </div>
+            <div class="dev-body">
+              <div class="knob-group">
+                <div class="rotary-knob" data-param="gated-mix" data-min="0" data-max="1" data-val="0.45" data-unit="%">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">MIX</span>
+                  <span class="knob-value">45%</span>
+                </div>
+                <div class="rotary-knob" data-param="gated-time" data-min="80" data-max="300" data-val="180" data-unit="ms">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">GATE TIME</span>
+                  <span class="knob-value">180ms</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Device 11: Optical Tremolo Pulse -->
+          <div class="ableton-device-box" id="dev-tremolo">
+            <div class="device-bar">
+              <button class="dev-power-btn" data-dev="tremolo">OFF</button>
+              <span class="dev-name">OPTICAL TREMOLO PULSE</span>
+            </div>
+            <div class="dev-body">
+              <div class="knob-group">
+                <div class="rotary-knob" data-param="tremolo-mix" data-min="0" data-max="1" data-val="0.60" data-unit="%">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">MIX</span>
+                  <span class="knob-value">60%</span>
+                </div>
+                <div class="rotary-knob" data-param="tremolo-rate" data-min="0.5" data-max="12" data-val="4.5" data-unit="Hz">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">RATE</span>
+                  <span class="knob-value">4.5Hz</span>
+                </div>
+                <div class="rotary-knob" data-param="tremolo-depth" data-min="0" data-max="1" data-val="0.55" data-unit="%">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">DEPTH</span>
+                  <span class="knob-value">55%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Device 12: Master Bus Tape Saturation -->
+          <div class="ableton-device-box" id="dev-tape-sat">
+            <div class="device-bar">
+              <button class="dev-power-btn" data-dev="tape-sat">OFF</button>
+              <span class="dev-name">MASTER TAPE SATURATION</span>
+            </div>
+            <div class="dev-body">
+              <div class="knob-group">
+                <div class="rotary-knob" data-param="tape-drive" data-min="0.05" data-max="1" data-val="0.35" data-unit="%">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">DRIVE</span>
+                  <span class="knob-value">35%</span>
+                </div>
+                <div class="rotary-knob" data-param="tape-warmth" data-min="0.1" data-max="1" data-val="0.60" data-unit="%">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">WARMTH</span>
+                  <span class="knob-value">60%</span>
+                </div>
+                <div class="rotary-knob" data-param="tape-mix" data-min="0" data-max="1" data-val="0.85" data-unit="%">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">MIX</span>
+                  <span class="knob-value">85%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Device 13: 3-Band Master Studio EQ -->
+          <div class="ableton-device-box" id="dev-eq">
+            <div class="device-bar">
+              <button class="dev-power-btn active" data-dev="eq">ON</button>
+              <span class="dev-name">STUDIO MASTER EQ</span>
+            </div>
+            <div class="dev-body">
+              <div class="knob-group">
+                <div class="rotary-knob" data-param="eq-low" data-min="-12" data-max="12" data-val="1.0" data-unit="dB">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">LOW (100Hz)</span>
+                  <span class="knob-value">+1.0dB</span>
+                </div>
+                <div class="rotary-knob" data-param="eq-mid" data-min="-12" data-max="12" data-val="0.0" data-unit="dB">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">MID (1.2kHz)</span>
                   <span class="knob-value">0.0dB</span>
                 </div>
-                <div class="rotary-knob" data-param="eq-high" data-min="-10" data-max="10" data-val="2.0" data-unit="dB">
+                <div class="rotary-knob" data-param="eq-high" data-min="-12" data-max="12" data-val="1.8" data-unit="dB">
                   <div class="knob-face"><div class="knob-pointer"></div></div>
-                  <span class="knob-label">AIR (8.5k)</span>
-                  <span class="knob-value">+2.0dB</span>
+                  <span class="knob-label">HIGH (8kHz)</span>
+                  <span class="knob-value">+1.8dB</span>
                 </div>
               </div>
             </div>
@@ -423,6 +558,53 @@ export class FxRackUI {
         fx.phaser.setRate(val);
         break;
 
+      case "spring-mix":
+        fx.springReverb?.setMix(val);
+        break;
+      case "spring-tone":
+        fx.springReverb?.setTone(val);
+        break;
+      case "spring-decay":
+        fx.springReverb?.setDecay(val);
+        break;
+
+      case "slapback-mix":
+        fx.slapback?.setMix(val);
+        break;
+      case "slapback-time":
+        fx.slapback?.setDelayTime(val);
+        break;
+      case "slapback-tone":
+        fx.slapback?.setTone(val);
+        break;
+
+      case "gated-mix":
+        fx.gatedReverb?.setMix(val);
+        break;
+      case "gated-time":
+        fx.gatedReverb?.setGateTime(val);
+        break;
+
+      case "tremolo-mix":
+        fx.tremolo?.setMix(val);
+        break;
+      case "tremolo-rate":
+        fx.tremolo?.setRate(val);
+        break;
+      case "tremolo-depth":
+        fx.tremolo?.setDepth(val);
+        break;
+
+      case "tape-drive":
+        fx.tapeSat?.setDrive(val);
+        break;
+      case "tape-warmth":
+        fx.tapeSat?.setWarmth(val);
+        break;
+      case "tape-mix":
+        fx.tapeSat?.setMix(val);
+        break;
+
       case "eq-low":
         fx.masterEq.setLowGain(val);
         break;
@@ -455,6 +637,11 @@ export class FxRackUI {
         if (dev === "rotary") fx.rotary.setBypass(bypassed);
         if (dev === "tube") fx.tube.setBypass(bypassed);
         if (dev === "phaser") fx.phaser.setBypass(bypassed);
+        if (dev === "spring-reverb") fx.springReverb?.setBypass(bypassed);
+        if (dev === "slapback") fx.slapback?.setBypass(bypassed);
+        if (dev === "gated-reverb") fx.gatedReverb?.setBypass(bypassed);
+        if (dev === "tremolo") fx.tremolo?.setBypass(bypassed);
+        if (dev === "tape-sat") fx.tapeSat?.setBypass(bypassed);
       });
     });
 
@@ -490,6 +677,11 @@ export class FxRackUI {
       rotary: fx.rotary?.enabled,
       tube: fx.tube?.enabled,
       phaser: fx.phaser?.enabled,
+      "spring-reverb": fx.springReverb?.enabled,
+      slapback: fx.slapback?.enabled,
+      "gated-reverb": fx.gatedReverb?.enabled,
+      tremolo: fx.tremolo?.enabled,
+      "tape-sat": fx.tapeSat?.enabled,
     };
 
     Object.entries(devMap).forEach(([dev, isEnabled]) => {
@@ -538,6 +730,30 @@ export class FxRackUI {
     if (fx.phaser) {
       this.updateKnobVisual("phaser-mix", fx.phaser.mix);
       this.updateKnobVisual("phaser-rate", fx.phaser.rate);
+    }
+    if (fx.springReverb) {
+      this.updateKnobVisual("spring-mix", fx.springReverb.mix);
+      this.updateKnobVisual("spring-tone", fx.springReverb.toneFreq);
+      this.updateKnobVisual("spring-decay", fx.springReverb.decay);
+    }
+    if (fx.slapback) {
+      this.updateKnobVisual("slapback-mix", fx.slapback.mix);
+      this.updateKnobVisual("slapback-time", fx.slapback.delayTime);
+      this.updateKnobVisual("slapback-tone", fx.slapback.tapeTone);
+    }
+    if (fx.gatedReverb) {
+      this.updateKnobVisual("gated-mix", fx.gatedReverb.mix);
+      this.updateKnobVisual("gated-time", fx.gatedReverb.gateHoldMs);
+    }
+    if (fx.tremolo) {
+      this.updateKnobVisual("tremolo-mix", fx.tremolo.mix);
+      this.updateKnobVisual("tremolo-rate", fx.tremolo.rate);
+      this.updateKnobVisual("tremolo-depth", fx.tremolo.depth);
+    }
+    if (fx.tapeSat) {
+      this.updateKnobVisual("tape-drive", fx.tapeSat.drive);
+      this.updateKnobVisual("tape-warmth", fx.tapeSat.warmth);
+      this.updateKnobVisual("tape-mix", fx.tapeSat.mix);
     }
   }
 }
