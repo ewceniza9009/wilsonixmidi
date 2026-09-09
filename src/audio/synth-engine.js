@@ -467,6 +467,10 @@ export class SynthEngine {
       this._muteNode.gain.value = 0.0;
       this._muteNode.connect(ctx.destination);
       this.voicePool = new VoicePoolManager(ctx, 32, this._muteNode);
+      // This pool's 96 oscillators are permanently inaudible (hard-wired to the
+      // muted node above) yet still rendered every quantum. Stop them outright
+      // to free the audio render thread; the Triton VA pool is untouched.
+      this.voicePool.voices.forEach(v => v.stopOscillators());
     }
     audioCore.fxRack.applyPreset(this.activePatch.fxPreset);
   }

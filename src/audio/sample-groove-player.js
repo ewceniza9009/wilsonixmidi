@@ -286,11 +286,8 @@ export class SampleGroovePlayer {
     osc.start(time);
     osc.stop(time + 0.15);
 
-    // Noise burst
-    const length = ctx.sampleRate * decay;
-    const buf = ctx.createBuffer(1, length, ctx.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
+    // Noise burst (reused pooled buffer, identical white-noise character)
+    const buf = this.getNoiseBuffer(decay);
 
     const noise = ctx.createBufferSource();
     noise.buffer = buf;
@@ -314,10 +311,7 @@ export class SampleGroovePlayer {
   synthHat(time, closed = true, gainVal = 0.45) {
     const ctx = audioCore.ctx;
     const dur = closed ? 0.05 : 0.28;
-    const length = ctx.sampleRate * dur;
-    const buf = ctx.createBuffer(1, length, ctx.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
+    const buf = this.getNoiseBuffer(dur);
 
     const noise = ctx.createBufferSource();
     noise.buffer = buf;
@@ -337,6 +331,35 @@ export class SampleGroovePlayer {
 
     noise.start(time);
     noise.stop(time + dur + 0.02);
+  }
+
+  // Reused white-noise buffers (identical character, zero per-hit allocation).
+  // A small ring per duration decorrelates adjacent noise hits so overlapping
+  // hits never phase against an identical byte-for-byte buffer.
+  getNoiseBuffer(duration) {
+    const ctx = audioCore.ctx;
+    const length = Math.max(1, Math.ceil(ctx.sampleRate * duration));
+
+    if (!this._noisePool) this._noisePool = new Map();
+    if (!this._noisePoolIdx) this._noisePoolIdx = new Map();
+
+    let pool = this._noisePool.get(length);
+    if (!pool) {
+      pool = [];
+      this._noisePool.set(length, pool);
+      this._noisePoolIdx.set(length, 0);
+    }
+
+    const poolSize = 8;
+    const idx = this._noisePoolIdx.get(length);
+    if (!pool[idx]) {
+      const buf = ctx.createBuffer(1, length, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
+      pool[idx] = buf;
+    }
+    this._noisePoolIdx.set(length, (idx + 1) % poolSize);
+    return pool[idx];
   }
 
   synthBassTone(time, noteMidi, dur = 0.25, gainVal = 0.65) {

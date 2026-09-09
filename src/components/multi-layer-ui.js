@@ -212,15 +212,18 @@ export class MultiLayerUI {
   }
 
   bindEvents() {
-    // Combi search
+    // Combi search (debounced: no full DOM rebuild per keystroke)
     const searchInput = this.container.querySelector("#combi-search-input");
     searchInput?.addEventListener("input", e => {
       this.combiSearchQuery = e.target.value;
-      this.render();
-      this.bindEvents();
-      // Refocus search input
-      const newInput = this.container.querySelector("#combi-search-input");
-      if (newInput) { newInput.focus(); newInput.setSelectionRange(newInput.value.length, newInput.value.length); }
+      clearTimeout(this._searchDebounce);
+      this._searchDebounce = setTimeout(() => {
+        this.render();
+        this.bindEvents();
+        // Refocus search input
+        const newInput = this.container.querySelector("#combi-search-input");
+        if (newInput) { newInput.focus(); newInput.setSelectionRange(newInput.value.length, newInput.value.length); }
+      }, 160);
     });
 
     // Combi search chip clicks

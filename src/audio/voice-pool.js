@@ -184,6 +184,21 @@ export class PolyphonicVoice {
       this.voiceGain.gain.setTargetAtTime(0.0, now, 0.015);
     } catch (e) {}
   }
+
+  // Permanently silence this voice's oscillators. Only safe for pools whose
+  // output is hard-wired into an inaudible path (e.g. the synth engine's muted
+  // reserve pool). A stopped OscillatorNode continues outputting absolute
+  // silence at zero CPU, freeing the render thread for real instrument audio.
+  stopOscillators() {
+    const stop = osc => {
+      try {
+        if (osc) osc.stop();
+      } catch (e) {}
+    };
+    stop(this.osc1);
+    stop(this.osc2);
+    stop(this.osc3);
+  }
 }
 
 export class VoicePoolManager {

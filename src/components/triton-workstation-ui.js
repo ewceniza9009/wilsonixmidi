@@ -895,23 +895,26 @@ export class TritonWorkstationUI {
     const searchInput = document.getElementById("triton-search-input");
     searchInput?.addEventListener("input", e => {
       this.searchQuery = e.target.value;
-      const programs = this.getGridPrograms();
-      const grid = this.container.querySelector(".touchview-program-grid");
-      if (grid) {
-        grid.innerHTML = programs
-          .map(
-            p => `
-          <div class="triton-prog-cell ${this.isGridCellActive(p) ? "active" : ""}" data-prog-id="${p.id}">
-            <span class="prog-bank-code">${this.activeBankId.replace("_", " ")}</span>
-            <span class="prog-num">${p.num}</span>
-            <span class="prog-name-label">${p.name}</span>
-            <span class="prog-star">★</span>
-          </div>
-        `
-          )
-          .join("");
-        this.bindProgramGrid();
-      }
+      clearTimeout(this._searchDebounce);
+      this._searchDebounce = setTimeout(() => {
+        const programs = this.getGridPrograms();
+        const grid = this.container.querySelector(".touchview-program-grid");
+        if (grid) {
+          grid.innerHTML = programs
+            .map(
+              p => `
+            <div class="triton-prog-cell ${this.isGridCellActive(p) ? "active" : ""}" data-prog-id="${p.id}">
+              <span class="prog-bank-code">${this.activeBankId.replace("_", " ")}</span>
+              <span class="prog-num">${p.num}</span>
+              <span class="prog-name-label">${p.name}</span>
+              <span class="prog-star">★</span>
+            </div>
+          `
+            )
+            .join("");
+          this.bindProgramGrid();
+        }
+      }, 160);
     });
   }
 

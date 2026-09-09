@@ -18,6 +18,11 @@ export class TubeDrive {
     this.enabled = false;
 
     this.buildNetwork();
+
+    // Only regenerate the 65536-sample WavShaper curve when drive actually
+    // shifts by at least 1/512 of full range, so knob drags don't allocate
+    // 256KB of garbage per mousemove event. Sub-0.2% steps are inaudible.
+    this._curveKey = Math.round(this.drive * 512);
   }
 
   buildNetwork() {
@@ -99,7 +104,11 @@ export class TubeDrive {
 
   setDrive(val) {
     this.drive = Math.max(0, Math.min(1.0, val));
-    this.shaper.curve = this.makeTriodeCurve(this.drive);
+    const curveKey = Math.round(this.drive * 512);
+    if (curveKey !== this._curveKey) {
+      this._curveKey = curveKey;
+      this.shaper.curve = this.makeTriodeCurve(this.drive);
+    }
     const now = this.ctx.currentTime;
     if (this.preGain) {
       const targetPre = 1.0 + Math.pow(this.drive, 1.2) * 3.8;

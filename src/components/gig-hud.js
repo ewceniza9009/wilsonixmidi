@@ -22,6 +22,19 @@ export class GigHudUI {
 
     this.render();
     this.startVuMonitor();
+
+    // Pause the VU meter rAF loop whenever the HUD is scrolled out of view
+    if (typeof IntersectionObserver !== "undefined" && this.container) {
+      this._vuObserver = new IntersectionObserver(entries => {
+        if (entries[0].isIntersecting) {
+          this.startVuMonitor();
+        } else {
+          this._vuRunning = false;
+          if (this.vuAnimationId) cancelAnimationFrame(this.vuAnimationId);
+        }
+      });
+      this._vuObserver.observe(this.container);
+    }
   }
 
   render() {
@@ -409,10 +422,14 @@ export class GigHudUI {
   }
 
   startVuMonitor() {
+    if (this._vuRunning) return;
+    this._vuRunning = true;
+
     const vuBar = document.getElementById("vu-meter-bar");
     const latencyVal = document.getElementById("hud-latency-val");
 
     const updateFrame = () => {
+      if (!this._vuRunning) return;
       const level = audioCore.getPeakLevel();
       if (vuBar) {
         const heightPct = Math.min(100, Math.round(level * 180));
