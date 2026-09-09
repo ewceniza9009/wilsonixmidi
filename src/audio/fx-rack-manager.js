@@ -295,9 +295,9 @@ export class FxRackManager {
         this.chorus.setBypass(false);
         this.chorus.setRate(0.65);
         this.chorus.setDepth(1.0);
-        this.chorus.setMix(0.58);
+        this.chorus.setMix(0.65);
         this.reverb.setBypass(false);
-        this.reverb.setMix(0.30);
+        this.reverb.setMix(0.35);
         this.reverb.setDecay(2.1);
         this.masterEq.setLowGain(1.0);
         this.masterEq.setHighGain(1.8);

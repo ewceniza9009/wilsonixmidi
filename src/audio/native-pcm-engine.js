@@ -144,11 +144,11 @@ export class LayerInsertProcessor {
     // Reliable audible wet blend per effect (was a flat 0.15 for everything,
     // which left chorus/reverb inaudible). Modulation/time types get real presence.
     const WET_BLEND = {
-      chorus_lush: 0.30,
-      chorus_vintage: 0.28,
-      analog_juno_chorus: 0.28,
-      reverb_hall: 0.30,
-      reverb_plate: 0.27,
+      chorus_lush: 0.34,
+      chorus_vintage: 0.30,
+      analog_juno_chorus: 0.30,
+      reverb_hall: 0.34,
+      reverb_plate: 0.28,
       reverb_room: 0.24,
       delay_tape: 0.24,
       delay_dub: 0.24,
