@@ -279,6 +279,30 @@ export class FxRackManager {
         this.masterEq.setHighGain(2.2);
         break;
 
+      case "rooftop_cathedral":
+      case "dx7_ep1":
+        this.setPresetTrim(1.0);
+        this.tube.setBypass(true);
+        this.autopan.setBypass(true);
+        this.phaser.setBypass(true);
+        this.flanger.setBypass(true);
+        this.rotary.setBypass(true);
+        this.delay.setBypass(true);
+        this.slapback.setBypass(true);
+        this.springReverb.setBypass(true);
+        this.gatedReverb.setBypass(true);
+        this.tapeSat.setBypass(true);
+        this.chorus.setBypass(false);
+        this.chorus.setRate(0.65);
+        this.chorus.setDepth(1.0);
+        this.chorus.setMix(0.58);
+        this.reverb.setBypass(false);
+        this.reverb.setMix(0.30);
+        this.reverb.setDecay(2.1);
+        this.masterEq.setLowGain(1.0);
+        this.masterEq.setHighGain(1.8);
+        break;
+
       case "triton_ep":
       case "rnb_ep":
       case "triton_dyno_ep":

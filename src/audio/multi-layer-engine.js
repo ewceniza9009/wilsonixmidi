@@ -210,6 +210,18 @@ export const COMBI_PRESETS = {
       { id: 3, name: "Punch Bass (Left)", inst: "synth_bass_1", fx: "punch_comp", gain: 0.70, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: false },
     ],
   },
+  rooftop_cathedral: {
+    id: "rooftop_cathedral",
+    name: "★ 1985 DX7 E.Piano 1 (FM Bell + Dimension Chorus + Hall)",
+    category: "Electric Piano",
+    fxPreset: "rooftop_cathedral",
+    layers: [
+      { id: 0, name: "DX7 E.Piano 1 Bell", inst: "electric_piano_2", fx: "chorus_lush", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Hall Reverb Return", inst: "electric_piano_2", fx: "reverb_hall", gain: 0.40, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Analog Ensemble Double", inst: "electric_piano_2", fx: "chorus_vintage", gain: 0.28, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Soft Octave Bell (+12)", inst: "electric_piano_2", fx: "clean", gain: 0.20, pan: 0.05, oct: 1, minVel: 60, maxVel: 127, enabled: false },
+    ],
+  },
   neo_soul_chill: {
     id: "neo_soul_chill",
     name: "★ Neo-Soul Chill (DX7 FM + EP + Sax + Sub)",

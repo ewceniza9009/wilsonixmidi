@@ -141,33 +141,45 @@ export class LayerInsertProcessor {
 
     // Default balance
     const isSerialInsert = ["air_eq", "warm_eq", "punch_comp", "tube_warm", "tube_lead", "distortion_metal", "lofi_vinyl", "tape_lowpass", "trance_delay", "shred_stack"].includes(this.currentFx);
+    // Reliable audible wet blend per effect (was a flat 0.15 for everything,
+    // which left chorus/reverb inaudible). Modulation/time types get real presence.
+    const WET_BLEND = {
+      chorus_lush: 0.30,
+      chorus_vintage: 0.28,
+      analog_juno_chorus: 0.28,
+      reverb_hall: 0.30,
+      reverb_plate: 0.27,
+      reverb_room: 0.24,
+      delay_tape: 0.24,
+      delay_dub: 0.24,
+    };
     if (isSerialInsert) {
       this.dryGain.gain.setValueAtTime(0.0, ctx.currentTime);
       this.wetGain.gain.setValueAtTime(1.0, ctx.currentTime);
     } else {
       this.dryGain.gain.setValueAtTime(1.0, ctx.currentTime);
-      this.wetGain.gain.setValueAtTime(0.15, ctx.currentTime);
+      this.wetGain.gain.setValueAtTime(WET_BLEND[this.currentFx] ?? 0.15, ctx.currentTime);
     }
 
     switch (this.currentFx) {
       case "chorus_lush":
       case "chorus_vintage": {
-        // True Studio Dimension D Stereo Chorus (Gentle stereo spread - Zero ear-to-ear flanging)
+        // True Studio Dimension D Stereo Chorus (audible shimmering width)
         const isLush = this.currentFx === "chorus_lush";
         const delayL = ctx.createDelay(0.1);
         const delayR = ctx.createDelay(0.1);
-        delayL.delayTime.value = isLush ? 0.015 : 0.013;
-        delayR.delayTime.value = isLush ? 0.0175 : 0.0155;
+        delayL.delayTime.value = isLush ? 0.022 : 0.019;
+        delayR.delayTime.value = isLush ? 0.026 : 0.023;
 
         const lfo = ctx.createOscillator();
         lfo.type = "sine";
-        lfo.frequency.value = isLush ? 0.8 : 0.6;
+        lfo.frequency.value = isLush ? 0.65 : 0.5;
 
         const lfoGainL = ctx.createGain();
         const lfoGainR = ctx.createGain();
-        const depth = isLush ? 0.0004 : 0.0003;
+        const depth = isLush ? 0.0028 : 0.0022;
         lfoGainL.gain.value = depth;
-        lfoGainR.gain.value = depth * 0.75;
+        lfoGainR.gain.value = depth * 0.78;
 
         lfo.connect(lfoGainL);
         lfo.connect(lfoGainR);
@@ -462,54 +474,66 @@ export class LayerInsertProcessor {
       case "reverb_hall":
       case "reverb_plate":
       case "reverb_room": {
-        // True Stereo Diffuse Reverb Network with L+R balanced spread
-        const d1 = ctx.createDelay(0.2);
-        d1.delayTime.value = 0.024;
-        const d2 = ctx.createDelay(0.2);
-        d2.delayTime.value = 0.048;
-        const d3 = ctx.createDelay(0.2);
-        d3.delayTime.value = 0.075;
+        // Stable multi-tap reverb: delays cascade IN SERIES with ONE damped
+        // feedback loop back to the head. Loop gain = fbGain (< 1) only, so the
+        // tail decays exponentially and can NEVER build up / self-oscillate.
+        const variant = this.currentFx;
+        const taps = variant === "reverb_hall"
+          ? [0.034, 0.042, 0.056, 0.078]
+          : variant === "reverb_plate"
+            ? [0.022, 0.030, 0.041, 0.057]
+            : [0.016, 0.023, 0.032, 0.045];
+        // Per-cycle loss keeps overall loop gain strictly under 1.0
+        const fbGainVal = variant === "reverb_hall" ? 0.50 : variant === "reverb_plate" ? 0.44 : 0.34;
+        const dampHz = variant === "reverb_plate" ? 6500 : variant === "reverb_room" ? 4200 : 3300;
 
-        const g1 = ctx.createGain();
-        g1.gain.value = 0.35;
-        const g2 = ctx.createGain();
-        g2.gain.value = 0.25;
-        const g3 = ctx.createGain();
-        g3.gain.value = 0.18;
-
-        const lpfL = ctx.createBiquadFilter();
-        lpfL.type = "lowpass";
-        lpfL.frequency.value = this.currentFx === "reverb_plate" ? 6500 : 4500;
-
-        const lpfR = ctx.createBiquadFilter();
-        lpfR.type = "lowpass";
-        lpfR.frequency.value = this.currentFx === "reverb_plate" ? 6500 : 4500;
+        const d = taps.map(t => {
+          const dl = ctx.createDelay(0.2);
+          dl.delayTime.value = t;
+          return dl;
+        });
 
         const hpf = ctx.createBiquadFilter();
         hpf.type = "highpass";
         hpf.frequency.value = 180;
 
         this.effectChainInput.connect(hpf);
-        hpf.connect(d1);
-        hpf.connect(d2);
-        hpf.connect(d3);
+        hpf.connect(d[0]);
+        d[0].connect(d[1]);
+        d[1].connect(d[2]);
+        d[2].connect(d[3]);
 
-        d1.connect(g1);
-        d2.connect(g2);
-        d3.connect(g3);
+        // Damped feedback: tail of the cascade loops back to the head only
+        const fbDamp = ctx.createBiquadFilter();
+        fbDamp.type = "lowpass";
+        fbDamp.frequency.value = dampHz;
+        const fbGain = ctx.createGain();
+        fbGain.gain.setValueAtTime(fbGainVal, ctx.currentTime);
+        d[3].connect(fbDamp);
+        fbDamp.connect(fbGain);
+        fbGain.connect(d[0]);
 
-        // Balance left and right stereo field
-        g1.connect(lpfL);
-        g2.connect(lpfR);
-        g3.connect(lpfL);
-        g3.connect(lpfR);
+        const lpfL = ctx.createBiquadFilter();
+        lpfL.type = "lowpass";
+        lpfL.frequency.value = dampHz;
+        const lpfR = ctx.createBiquadFilter();
+        lpfR.type = "lowpass";
+        lpfR.frequency.value = dampHz;
+
+        d.forEach((dl, i) => {
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.5, ctx.currentTime);
+          dl.connect(g);
+          g.connect(i % 2 === 0 ? lpfL : lpfR);
+          g.connect(i % 2 === 0 ? lpfR : lpfL);
+        });
 
         const merger = ctx.createChannelMerger(2);
         lpfL.connect(merger, 0, 0);
         lpfR.connect(merger, 0, 1);
         merger.connect(this.effectChainOutput);
 
-        this.activeFxNodes.push(hpf, d1, d2, d3, g1, g2, g3, lpfL, lpfR, merger);
+        this.activeFxNodes.push(hpf, d[0], d[1], d[2], d[3], fbDamp, fbGain, lpfL, lpfR, merger);
         break;
       }
 
@@ -1143,6 +1167,7 @@ export class NativePcmEngine {
     // 3. Preload essential starting soundfonts non-blockingly (on idle)
     // All other soundfonts load on-demand when selected, avoiding main-thread freezes
     const idlePreload = () => {
+      this.loadSoundfont("electric_piano_2");
       this.loadSoundfont("soprano_sax");
       this.loadSoundfont("breath_noise");
       this.loadSoundfont("string_ensemble_1");
@@ -1297,6 +1322,10 @@ export class NativePcmEngine {
       // 2. Electric Pianos, FM Tines -> studio DX7 FM WAV multisamples (clean source, no MP3 grain)
       rhodes_stage_mp3: "electric_piano_1",
       electric_piano_1: "abletunes_fm_piano",
+      // REAL DX electric piano (GM program 5, genuine DX7-style FM EP timbre)
+      electric_piano_2: "electric_piano_2",
+      tri_stage_ep: "electric_piano_2",
+      dx7_ep1: "electric_piano_2",
       triton_dyno_ep: "abletunes_fm_piano",
       abletunes_fm_piano: "abletunes_fm_piano",
       abletunes_fm_dx7: "abletunes_fm_piano",
@@ -1473,6 +1502,8 @@ export class NativePcmEngine {
         instMap = this.decodedBuffers.get("clarinet") || this.decodedBuffers.get("alto_sax");
       } else if (str.includes("string") || str.includes("pad")) {
         instMap = this.decodedBuffers.get("string_ensemble_1");
+      } else if (str.includes("electric") || str.includes("dx")) {
+        instMap = this.decodedBuffers.get("electric_piano_2") || this.decodedBuffers.get("electric_piano_1");
       }
       if (!instMap || instMap.size === 0) {
         instMap = this.decodedBuffers.get("acoustic_grand_piano");

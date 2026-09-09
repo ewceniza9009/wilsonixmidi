@@ -85,8 +85,8 @@ export class KorgStereoChorus {
   }
 
   setDepth(val) {
-    // 0.0004s to 0.0012s safe micro-modulation depth
-    this.depth = 0.0004 + val * 0.0008;
+    // 0.5ms to 3.5ms safe micro-modulation depth (audible shimmer, no chorus "warble")
+    this.depth = 0.0005 + val * 0.003;
     const now = this.ctx.currentTime;
     if (this.lfoGainL && this.lfoGainR) {
       this.lfoGainL.gain.setTargetAtTime(this.depth, now, 0.02);
@@ -99,7 +99,7 @@ export class KorgStereoChorus {
     const now = this.ctx.currentTime;
     if (this.enabled) {
       const dryFrac = 1.0;
-      const wetFrac = this.mix * 0.35;
+      const wetFrac = this.mix * 0.6;
       this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
       this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
     }
@@ -114,7 +114,7 @@ export class KorgStereoChorus {
     } else {
       const m = this.mix > 0 ? this.mix : 0.25;
       const dryFrac = 1.0;
-      const wetFrac = m * 0.35;
+      const wetFrac = m * 0.6;
       this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
       this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
     }
