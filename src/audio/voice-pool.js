@@ -14,6 +14,7 @@ export class PolyphonicVoice {
     this.startTime = 0;
     this.isSustained = false;
     this.isBusy = false;
+    this._gen = 0;
 
     this.buildGraph();
   }
@@ -72,6 +73,8 @@ export class PolyphonicVoice {
 
   trigger(midiNote, velocity, instrumentConfig, pitchBendRatio = 1.0) {
     this.activeMidiNote = midiNote;
+    this._gen++;
+    const wasBusy = this.isBusy;
     this.isBusy = true;
     this.isSustained = false;
 
@@ -93,44 +96,38 @@ export class PolyphonicVoice {
     this.osc2.frequency.setValueAtTime(freq * (instrumentConfig.osc2Ratio || 2.001), now);
     this.osc3.frequency.setValueAtTime(freq * (instrumentConfig.osc3Ratio || 0.5), now);
 
-    // Dynamic Filter
+    // Dynamic Filter (smooth exponential slew so reused resonant voices never zipper)
     const baseCutoff = instrumentConfig.filterCutoff || 6000;
     const filterEnv = Math.min(18000, baseCutoff * (0.5 + velRatio * 0.8));
     this.filter.type = instrumentConfig.filterType || "lowpass";
     this.filter.Q.setValueAtTime(Math.min(5.0, instrumentConfig.filterQ || 1.0), now);
     this.filter.frequency.cancelScheduledValues(now);
-    this.filter.frequency.setValueAtTime(filterEnv, now);
-
-    if (instrumentConfig.filterDecay) {
-      this.filter.frequency.setTargetAtTime(
-        Math.max(160, filterEnv * 0.35),
-        now,
-        instrumentConfig.filterDecay * 0.4
-      );
-    }
+    this.filter.frequency.setTargetAtTime(filterEnv, now, 0.012);
 
     // Component balances (clean, balanced timbre mix without velocity-squaring)
     this.gain1.gain.setValueAtTime(instrumentConfig.gain1 || 0.7, now);
     this.gain2.gain.setValueAtTime(instrumentConfig.gain2 || 0.3, now);
     this.gain3.gain.setValueAtTime(instrumentConfig.gain3 || 0.15, now);
 
-    // Instant Attack Ramp (Audible, punchy dynamic curve from 0.35 to 1.0 - never silenced)
     const attack = Math.max(0.001, instrumentConfig.attack || 0.002);
     const peakGain = (0.35 + velRatio * 0.65) * (instrumentConfig.masterGain || 0.85);
     const decay = instrumentConfig.decay || 2.2;
     const sustain = peakGain * (instrumentConfig.sustainLevel || 0.35);
 
+    // Click-free gating: when a voice is stolen or retriggered while soundING,
+    // duck it smoothly to near-silence first so the held note never gets chopped.
+    const gateT = now + (wasBusy ? 0.055 : 0.0);
     this.voiceGain.gain.cancelScheduledValues(now);
-    this.voiceGain.gain.setValueAtTime(0.0, now);
-    this.voiceGain.gain.linearRampToValueAtTime(peakGain, now + attack);
-
-    if (instrumentConfig.isPercussive) {
-      // Smooth exponential decay to silence without cutting off abruptly
-      this.voiceGain.gain.setTargetAtTime(0.0, now + attack, decay * 0.45);
-    } else {
-      // Hold at sustain
-      this.voiceGain.gain.setTargetAtTime(sustain, now + attack, 0.25);
+    if (wasBusy) {
+      this.voiceGain.gain.setTargetAtTime(0.0, now, 0.01);
     }
+    this.voiceGain.gain.setValueAtTime(0.0, gateT);
+    this.voiceGain.gain.setTargetAtTime(peakGain, gateT, attack);
+    this.voiceGain.gain.setTargetAtTime(
+      instrumentConfig.isPercussive ? 0.0 : sustain,
+      gateT + attack * 3,
+      instrumentConfig.isPercussive ? decay * 0.45 : 0.25
+    );
   }
 
   release(sustainPedalActive, releaseTime = 0.25) {
@@ -144,31 +141,33 @@ export class PolyphonicVoice {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const rel = Math.max(0.02, Math.min(0.8, releaseTime));
+    const tau = Math.max(0.015, rel * 0.22);
+    const gen = this._gen;
 
     // Smooth, guaranteed exponential decay to absolute zero
     this.voiceGain.gain.cancelScheduledValues(now);
-    this.voiceGain.gain.setTargetAtTime(0.0, now, Math.max(0.015, rel * 0.22));
+    this.voiceGain.gain.setTargetAtTime(0.0, now, tau);
 
+    // Free the voice only after it has physically faded to inaudibility AND the
+    // same generation still owns it (a reused/retriggered note must never be
+    // killed by a stale release timer from an earlier tap on the same key).
     setTimeout(() => {
-      if (!this.isSustained) {
-        try {
-          this.voiceGain.gain.cancelScheduledValues(this.ctx.currentTime);
-          this.voiceGain.gain.setValueAtTime(0.0, this.ctx.currentTime);
-        } catch (e) {}
+      if (gen === this._gen && !this.isSustained) {
         this.isBusy = false;
         this.activeMidiNote = null;
       }
-    }, (rel + 0.06) * 1000);
+    }, Math.max(220, tau * 6 * 1000));
   }
 
   forceStop() {
     const now = this.ctx.currentTime;
+    this._gen++;
     this.isBusy = false;
     this.isSustained = false;
     this.activeMidiNote = null;
     try {
       this.voiceGain.gain.cancelScheduledValues(now);
-      this.voiceGain.gain.setValueAtTime(0.0, now);
+      this.voiceGain.gain.setTargetAtTime(0.0, now, 0.015);
     } catch (e) {}
   }
 }

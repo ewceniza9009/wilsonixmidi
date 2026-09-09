@@ -107,6 +107,7 @@ export class PingPongDelay {
   }
 
   setDivision(div) {
+    if (typeof div !== "number" || !Number.isFinite(div)) return;
     this.division = Math.max(0.125, Math.min(1.0, div));
     const dt = this.calculateDelayTime();
     const now = this.ctx.currentTime;

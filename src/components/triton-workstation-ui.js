@@ -503,18 +503,48 @@ export class TritonWorkstationUI {
     const isGuitar = cat.includes("guitar") || name.includes("guitar");
     const isBass = cat.includes("bass") || name.includes("bass");
 
-    const isPcmAcoustic =
-      cat.includes("piano") ||
-      name.includes("piano") ||
-      cat.includes("organ") ||
-      name.includes("organ") ||
-      cat.includes("woodwind") ||
-      name.includes("sax") ||
-      cat.includes("brass") ||
-      name.includes("brass") ||
-      isGuitar ||
-      isBass ||
-      (cat.includes("strings") && !cat.includes("pad") && !cat.includes("synth"));
+    // VA TIMBRE: any Triton program whose sound is defined by its own oscillators
+    // (and is NOT a dedicated genuine PCM sample) renders through the Triton VA
+    // engine so every program has its OWN unique voice instead of collapsing onto
+    // a shared sample. Pianos/keyboards/guitars/woodwinds/brass keep real samples.
+    const hasOsc = !!prog.osc1 || !!prog.osc2;
+    const isSynthTimbre =
+      hasOsc &&
+      (cat.includes("lead") ||
+        cat.includes("fast synth") ||
+        cat.includes("synthesizer") ||
+        cat.includes("motion") ||
+        cat.includes("synth pad") ||
+        cat.includes("hit") ||
+        cat.includes("stab") ||
+        cat.includes("bells & pad") ||
+        cat.includes("bells") ||
+        cat.includes("electric piano") ||
+        cat.includes("organ") ||
+        cat.includes("strings") ||
+        cat.includes("bass & sub") ||
+        name.includes("trance") ||
+        name.includes("lead") ||
+        name.includes("saw") ||
+        name.includes("scream") ||
+        name.includes("sweeper") ||
+        name.includes("vox") ||
+        name.includes("throats") ||
+        name.includes("techno") ||
+        name.includes("hypersaw") ||
+        name.includes("synth") ||
+        name.includes("harmonica") ||
+        name.includes("tine") ||
+        name.includes("rhodes") ||
+        name.includes("r&b") ||
+        name.includes("fm piano"));
+
+    if (isSynthTimbre) {
+      // EVERY synth-timbre program plays its own genuine oscillator voice.
+      multiLayerEngine.setTritonVaProgram(prog);
+      this.applyIfxMfx(prog);
+      return;
+    }
 
     let instKey = "acoustic_grand_piano";
     const ifx = (prog.ifx || "").toLowerCase();
@@ -562,35 +592,7 @@ export class TritonWorkstationUI {
 
     // Configure matched KORG TRITON IFX & MFX Routing
     if (audioCore.fxRack) {
-      const fx = audioCore.fxRack;
-      const isRotary = ifx.includes("rotary") || cat.includes("organ") || name.includes("organ");
-      const isLeadSynth = cat.includes("lead") || cat.includes("fast synth") || cat.includes("synthesizer") || name.includes("trance") || name.includes("saw");
-      const isEp = cat.includes("electric piano") || cat.includes("ep") || name.includes("ep") || name.includes("tine") || name.includes("r&b") || name.includes("fm piano");
-      const isGuitarDist = name.includes("distortion") || name.includes("*dist") || name.includes("feedback") || name.includes("overdrive") || ifx.includes("distortion") || ifx.includes("overdrive");
-      const isPhaser = ifx.includes("phaser") || name.includes("sweeper") || name.includes("throats");
-
-      // All programs default to 100% clean, pristine studio output (Zero distortion, zero unwanted static)
-      fx.setPresetTrim(1.0);
-      fx.tube.setBypass(true);
-      fx.autopan.setBypass(true);
-      fx.phaser.setBypass(true);
-      fx.chorus.setBypass(true);
-      fx.rotary.setBypass(true);
-      fx.delay.setBypass(true);
-      fx.reverb.setBypass(false);
-      fx.reverb.setMix(0.20);
-      fx.reverb.setDecay(2.0);
-
-      // Sync Ableton device bay power buttons immediately
-      const fxDevs = ["autopan", "chorus", "tube", "phaser", "rotary", "delay", "reverb"];
-      fxDevs.forEach(dev => {
-        const isEn = audioCore.fxRack[dev]?.enabled;
-        const btn = document.querySelector(`.dev-power-btn[data-dev="${dev}"]`);
-        if (btn) {
-          btn.classList.toggle("active", !!isEn);
-          btn.innerText = isEn ? "ON" : "OFF";
-        }
-      });
+      this.applyIfxMfx(prog);
 
       // If user is currently looking at the IFX/MFX tab, update live display
       if (this.activeSubTab === "IFX/MFX") {
@@ -601,6 +603,128 @@ export class TritonWorkstationUI {
         }
       }
     }
+  }
+
+  applyIfxMfx(prog) {
+    const fx = audioCore.fxRack;
+    if (!fx) return;
+    const ifx = (prog.ifx || "").toLowerCase();
+    const mfx = (prog.mfx || "").toLowerCase();
+    const name = (prog.name || "").toLowerCase();
+    const cat = (prog.category || "").toLowerCase();
+
+    // Healthy default trim
+    fx.setPresetTrim(1.0);
+    fx.tube.setBypass(true);
+    fx.autopan.setBypass(true);
+    fx.phaser.setBypass(true);
+    fx.flanger.setBypass(true);
+    fx.chorus.setBypass(true);
+    fx.rotary.setBypass(true);
+    fx.tremolo.setBypass(true);
+    fx.slapback.setBypass(true);
+    fx.delay.setBypass(true);
+    fx.springReverb.setBypass(true);
+    fx.gatedReverb.setBypass(true);
+    fx.tapeSat.setBypass(true);
+    fx.reverb.setBypass(false);
+    fx.reverb.setMix(0.16);
+    fx.reverb.setDecay(1.8);
+    fx.masterEq.setLowGain(0);
+    fx.masterEq.setMidGain(0);
+    fx.masterEq.setHighGain(0);
+
+    const has = (s) => ifx.includes(s) || mfx.includes(s) || name.includes(s);
+
+    if (has("overdrive") || has("distortion") || has(" tube")) {
+      fx.tube.setBypass(false);
+      fx.tube.setDrive(has("distortion") ? 0.62 : 0.40);
+      fx.tube.setMix(0.55);
+      fx.tube.setTone(4200);
+    }
+    if (has("phaser")) {
+      fx.phaser.setBypass(false);
+      fx.phaser.setRate(1.0);
+      fx.phaser.setMix(0.30);
+    }
+    if (has("flanger")) {
+      fx.flanger.setBypass(false);
+      fx.flanger.setRate(0.45);
+      fx.flanger.setMix(0.30);
+    }
+    if (has("chorus") || has("ensemble")) {
+      fx.chorus.setBypass(false);
+      fx.chorus.setRate(0.85);
+      fx.chorus.setDepth(0.7);
+      fx.chorus.setMix(0.35);
+    }
+    if (has("rotary")) {
+      fx.rotary.setBypass(false);
+      fx.rotary.setMix(0.45);
+    }
+    if (has("tremolo") || has("pan")) {
+      fx.tremolo.setBypass(false);
+      fx.tremolo.setDepth(0.4);
+      fx.tremolo.setMix(0.35);
+    }
+    if (has("delay") || has("echo") || has("ping-pong")) {
+      fx.delay.setBypass(false);
+      fx.delay.setMix(0.30);
+      fx.delay.setFeedback(0.35);
+      if (has("dotted") || has("dub") || has("ping-pong")) {
+        fx.delay.setDivision(0.375);
+      }
+    }
+    if (has("spring")) {
+      fx.springReverb.setBypass(false);
+      fx.springReverb.setMix(0.35);
+      fx.springReverb.setDecay(2.2);
+    }
+    if (has("gated") || has("cathedral") || has("hall")) {
+      fx.gatedReverb.setBypass(false);
+      fx.gatedReverb.setMix(has("gated") ? 0.45 : 0.25);
+    } else if (has("plate")) {
+      fx.reverb.setBypass(false);
+      fx.reverb.setMix(0.20);
+    }
+    if (has("tape") && !has("tape delay")) {
+      fx.tapeSat.setBypass(false);
+      fx.tapeSat.setDrive(0.30);
+      fx.tapeSat.setWarmth(0.6);
+    }
+    if (has("auto-wah") || has("wah")) {
+      // Vibrato-style movement + resonant filter flavor
+      fx.phaser.setBypass(false);
+      fx.phaser.setRate(2.6);
+      fx.phaser.setMix(0.40);
+    }
+    if (has(" paramet") || has("eq")) {
+      fx.masterEq.setLowGain(1.0);
+      fx.masterEq.setMidGain(0.6);
+      fx.masterEq.setHighGain(1.4);
+    }
+    if (has("decimat") || has("bit") || has("mega")) {
+      // Grungy digital character
+      fx.reverb.setBypass(false);
+      fx.reverb.setMix(0.10);
+    }
+
+    this.syncFxPowerButtons();
+  }
+
+  syncFxPowerButtons() {
+    const fx = audioCore.fxRack;
+    if (!fx) return;
+    const fxDevs = ["autopan", "chorus", "tube", "phaser", "flanger", "rotary", "tremolo", "delay", "reverb", "springReverb", "gatedReverb", "tapeSat"];
+    fxDevs.forEach(dev => {
+      const unit = fx[dev];
+      const isEn = unit && unit.enabled !== false;
+      const btn = document.querySelector(`.dev-power-btn[data-dev="${dev}"]`);
+      if (btn) {
+        btn.classList.toggle("active", !!isEn);
+        btn.innerText = isEn ? "ON" : "OFF";
+      }
+    });
   }
 
   bindIfxMfxControls() {

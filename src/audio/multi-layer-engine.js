@@ -8,6 +8,7 @@
 import { NativePcmEngine } from "./native-pcm-engine.js";
 import { audioCore } from "./audio-core.js";
 import { synthEngine, INSTRUMENT_PATCHES } from "./synth-engine.js";
+import { tritonVaEngine } from "./triton-va-engine.js";
 
 export const HD_SOUNDBANKS = {
   acoustic_grand_piano: { id: "acoustic_grand_piano", name: "SG Hybrid Concert Grand", category: "Acoustic Piano" },
@@ -614,6 +615,8 @@ export class MultiLayerEngine {
     this.activeCombi = COMBI_PRESETS.ballad_master;
     this.isCombiMode = true; // Signature Synthage + Triton Strings Combi active on boot!
     this.isSynthMode = false;
+    this.isTritonVaMode = false;
+    this.activeTritonVaProg = null;
     this.activeSingleInst = "acoustic_grand_piano";
     this.synthPatch = null;
     this.layers = JSON.parse(JSON.stringify(this.activeCombi.layers));
@@ -760,6 +763,8 @@ export class MultiLayerEngine {
 
   setSingleInstrument(instKey) {
     this.isSynthMode = false;
+    this.isTritonVaMode = false;
+    this.activeTritonVaProg = null;
     const resolved = this.resolveBankKey(instKey);
     this.activeSingleInst = resolved;
 
@@ -829,16 +834,33 @@ export class MultiLayerEngine {
 
   setSynthProgram(patchConfig) {
     this.isSynthMode = true;
+    this.isTritonVaMode = false;
+    this.activeTritonVaProg = null;
     this.isCombiMode = false;
     this.synthPatch = patchConfig;
     synthEngine.activePatch = patchConfig;
     this.init();
   }
 
+  setTritonVaProgram(prog) {
+    this.isTritonVaMode = true;
+    this.isCombiMode = false;
+    this.isSynthMode = true;
+    this.activeTritonVaProg = prog;
+    const ctx = audioCore.init();
+    if (ctx) tritonVaEngine.init();
+    tritonVaEngine.setProgram(prog);
+    this.init();
+    this.notifyLayerChange();
+  }
+
   toggleCombiMode(enabled) {
     this.isCombiMode = enabled !== undefined ? enabled : !this.isCombiMode;
     if (this.isCombiMode) {
       this.isSynthMode = false;
+      this.isTritonVaMode = false;
+      this.activeTritonVaProg = null;
+      tritonVaEngine.allNotesOff();
     }
     this.init();
     this.notifyLayerChange();
@@ -859,6 +881,9 @@ export class MultiLayerEngine {
       this.activeCombi = COMBI_PRESETS[presetId];
       this.isCombiMode = true;
       this.isSynthMode = false;
+      this.isTritonVaMode = false;
+      this.activeTritonVaProg = null;
+      tritonVaEngine.allNotesOff();
       this.isDualLayerActive = false; // explicitly loaded a full 4-layer combi
       this.layers = JSON.parse(JSON.stringify(this.activeCombi.layers));
       this.init();
@@ -933,6 +958,18 @@ export class MultiLayerEngine {
     if (!this.pcmEngine) this.init();
     audioCore.ensureRunning();
 
+    // Triton VA mode: real oscillator engine plays the program's own waveforms
+    if (this.isTritonVaMode && this.activeTritonVaProg) {
+      if (this.isSplitMode && midiNote < this.splitPointMidi) {
+        if (this.pcmEngine) {
+          this.pcmEngine.playNote(this.splitBassInst, midiNote, velocity, 1.0, null);
+        }
+        return;
+      }
+      tritonVaEngine.noteOn(midiNote, velocity);
+      return;
+    }
+
     // Split zone: left hand plays bass regardless of mode
     if (this.isSplitMode && midiNote < this.splitPointMidi) {
       if (this.pcmEngine) {
@@ -964,6 +1001,16 @@ export class MultiLayerEngine {
 
   noteOff(midiNote) {
     audioCore.ensureRunning();
+    if (this.isTritonVaMode && this.activeTritonVaProg) {
+      if (this.isSplitMode && midiNote < this.splitPointMidi) {
+        if (this.pcmEngine) {
+          this.pcmEngine.stopNote(this.splitBassInst, midiNote);
+        }
+        return;
+      }
+      tritonVaEngine.noteOff(midiNote);
+      return;
+    }
     if (this.isSynthMode) {
       synthEngine.noteOff(midiNote);
       if (synthEngine.isDualLayer) {
@@ -1009,11 +1056,19 @@ export class MultiLayerEngine {
   setSustainPedal(isDown) {
     if (!this.pcmEngine) this.init();
     audioCore.ensureRunning();
+    if (this.isTritonVaMode && this.activeTritonVaProg) {
+      tritonVaEngine.setSustainPedal(isDown);
+      return;
+    }
     if (this.pcmEngine) this.pcmEngine.setSustainPedal(isDown);
   }
 
   setPitchBend(semitones) {
     if (!this.pcmEngine) this.init();
+    if (this.isTritonVaMode && this.activeTritonVaProg) {
+      tritonVaEngine.setPitchBend(semitones);
+      return;
+    }
     if (this.pcmEngine) this.pcmEngine.setPitchBend(semitones);
   }
 
@@ -1024,6 +1079,7 @@ export class MultiLayerEngine {
 
   panic() {
     if (this.pcmEngine) this.pcmEngine.allNotesOff();
+    tritonVaEngine.allNotesOff();
   }
 
   // ---- User presets + gig setlist (localStorage: sync, offline, zero deps) ----
