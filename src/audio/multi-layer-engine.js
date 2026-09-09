@@ -11,7 +11,7 @@ import { synthEngine, INSTRUMENT_PATCHES } from "./synth-engine.js";
 import { tritonVaEngine } from "./triton-va-engine.js";
 
 export const HD_SOUNDBANKS = {
-  acoustic_grand_piano: { id: "acoustic_grand_piano", name: "SG Hybrid Concert Grand", category: "Acoustic Piano" },
+  acoustic_grand_piano: { id: "acoustic_grand_piano", name: "Velo Piano Concert Grand", category: "Acoustic Piano" },
   electric_piano_1: { id: "electric_piano_1", name: "Triton Suit. & Stage EP", category: "Electric Piano" },
   rhodes_stage_mp3: { id: "rhodes_stage_mp3", name: "Stage Rhodes 73 (Vintage Muir)", category: "Electric Piano" },
   abletunes_fm_piano: { id: "abletunes_fm_piano", name: "Abletunes Studio FM Piano (DX7)", category: "Electric Piano" },
@@ -171,7 +171,7 @@ export const COMBI_PRESETS = {
     name: "★ Ballad Master (Synthage + Triton Strings + Tine)",
     category: "Worship / Ballad",
     layers: [
-      { id: 0, name: "Synthage Grand", inst: "acoustic_grand_piano", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 0, name: "Velo Piano Grand", inst: "acoustic_grand_piano", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 1, name: "Triton Warm Strings", inst: "string_ensemble_1", fx: "clean", gain: 0.65, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 2, name: "Dyno Bell Tine", inst: "electric_piano_1", fx: "clean", gain: 0.55, pan: 0.05, oct: 0, minVel: 30, maxVel: 127, enabled: true },
       { id: 3, name: "Shreddage Lead Guitar", inst: "distortion_guitar", fx: "tube_warm", gain: 0.75, pan: 0, oct: 0, minVel: 95, maxVel: 127, enabled: false },
@@ -182,7 +182,7 @@ export const COMBI_PRESETS = {
     name: "★ Celestial Worship (Piano + Universe + Choir)",
     category: "Worship / Ambient",
     layers: [
-      { id: 0, name: "Concert Grand", inst: "acoustic_grand_piano", fx: "air_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 0, name: "Velo Piano Concert Grand", inst: "acoustic_grand_piano", fx: "air_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 1, name: "Triton Warm Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.65, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 2, name: "M1 Ooh-Ahh Vocal Choir", inst: "choir_aahs", fx: "chorus_lush", gain: 0.75, pan: 0.05, oct: 0, minVel: 20, maxVel: 127, enabled: true },
       { id: 3, name: "Dyno Bell Tine", inst: "electric_piano_1", fx: "clean", gain: 0.45, pan: 0, oct: 1, minVel: 50, maxVel: 127, enabled: true },
@@ -349,7 +349,7 @@ export const COMBI_PRESETS = {
     layers: [
       { id: 0, name: "Triton Stereo Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 1, name: "Fat Brass Horns", inst: "brass_section", fx: "air_eq", gain: 0.80, pan: 0, oct: 0, minVel: 30, maxVel: 127, enabled: true },
-      { id: 2, name: "Concert Grand Accent", inst: "acoustic_grand_piano", fx: "clean", gain: 0.80, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Velo Piano Accent", inst: "acoustic_grand_piano", fx: "clean", gain: 0.80, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 3, name: "Breathy Alto Saxophone", inst: "alto_sax", fx: "reverb_room", gain: 0.75, pan: 0, oct: 0, minVel: 50, maxVel: 127, enabled: true },
     ],
   },
@@ -380,7 +380,7 @@ export const COMBI_PRESETS = {
     name: "★ Neo-Classical Ambient (Grand + Nylon + Strings)",
     category: "Neo-Classical",
     layers: [
-      { id: 0, name: "SG Hybrid Concert Grand", inst: "acoustic_grand_piano", fx: "air_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 0, name: "Velo Piano Concert Grand", inst: "acoustic_grand_piano", fx: "air_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 1, name: "Fantom Acoustic Nylon", inst: "acoustic_guitar_nylon", fx: "reverb_hall", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 2, name: "Triton Stereo Strings", inst: "string_ensemble_1", fx: "clean", gain: 0.65, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 3, name: "Breathy Alto Sax", inst: "alto_sax", fx: "reverb_room", gain: 0.70, pan: 0, oct: 0, minVel: 50, maxVel: 127, enabled: false },

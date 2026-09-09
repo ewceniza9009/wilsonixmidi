@@ -11,7 +11,7 @@ import Soundfont from "soundfont-player";
 export const HD_SOUNDBANKS = {
   acoustic_grand_piano: {
     id: "acoustic_grand_piano",
-    name: "SG Hybrid Concert Grand",
+    name: "Velo Piano Concert Grand",
     category: "Acoustic Piano",
     sfName: "acoustic_grand_piano",
     gain: 1.2,

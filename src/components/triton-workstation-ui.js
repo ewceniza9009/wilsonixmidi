@@ -16,7 +16,7 @@ export class TritonWorkstationUI {
     this.container = document.getElementById(containerId);
     this.activeBankId = "USER_A";
     this.activeSubTab = "BROWSER"; // 'BROWSER', 'EASY', 'IFX/MFX', 'ARP'
-    this.activeProg = TRITON_BANKS.USER_A.programs[5]; // SG Hybrid Piano default
+    this.activeProg = TRITON_BANKS.USER_A.programs[29]; // A036 Velo Piano ST (Concert Grand) default
     this.searchQuery = "";
 
     this.render();
