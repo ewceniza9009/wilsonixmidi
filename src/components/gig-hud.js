@@ -19,14 +19,19 @@ export class GigHudUI {
     this.bpm = 120;
     this.lastTapTimes = [];
     this.vuAnimationId = null;
+    this.gigMode = localStorage.getItem("midikey_gig_mode") === "1";
 
     this.render();
-    this.startVuMonitor();
+    if (this.gigMode) {
+      this._vuRunning = false;
+    } else {
+      this.startVuMonitor();
+    }
 
     // Pause the VU meter rAF loop whenever the HUD is scrolled out of view
     if (typeof IntersectionObserver !== "undefined" && this.container) {
       this._vuObserver = new IntersectionObserver(entries => {
-        if (entries[0].isIntersecting) {
+        if (entries[0].isIntersecting && !this.gigMode) {
           this.startVuMonitor();
         } else {
           this._vuRunning = false;
@@ -115,6 +120,11 @@ export class GigHudUI {
             <span class="latency-dot"></span>
             <span class="latency-number" id="hud-latency-val">--</span>
           </div>
+
+          <!-- Gig Mode: strip every rAF loop for minimum input-to-output jitter -->
+          <button class="gig-mode-btn ${this.gigMode ? "active" : ""}" id="hud-gig-btn" title="GIG MODE: disable all meters/live polling for minimum latency jitter">
+            GIG
+          </button>
 
           <!-- MIDI -->
           <div class="midi-status-pill" id="hud-midi-pill" title="Hardware MIDI connection">
@@ -411,6 +421,9 @@ export class GigHudUI {
         const l = audioCore.measureLatency();
         this._renderLatencyPopover(l, smoothed);
       });
+      // GIG MODE toggle: stop/restart the VU + latency polling rAF loop
+      const gigBtn = document.getElementById("hud-gig-btn");
+      gigBtn?.addEventListener("click", () => this.toggleGigMode());
       // Click anywhere else closes it
       window.addEventListener("click", () => this._closeLatencyPopover());
     }
@@ -447,6 +460,31 @@ export class GigHudUI {
     };
 
     updateFrame();
+  }
+
+  toggleGigMode() {
+    this.setGigMode(!this.gigMode);
+  }
+
+  setGigMode(on) {
+    this.gigMode = !!on;
+    localStorage.setItem("midikey_gig_mode", this.gigMode ? "1" : "0");
+    const btn = document.getElementById("hud-gig-btn");
+    btn?.classList.toggle("active", this.gigMode);
+    btn?.setAttribute(
+      "title",
+      this.gigMode
+        ? "GIG MODE ON: all meters disabled for minimum jitter (click to re-enable)"
+        : "GIG MODE: disable all meters/live polling for minimum latency jitter"
+    );
+    const vuBar = document.getElementById("vu-meter-bar");
+    if (vuBar) vuBar.style.display = this.gigMode ? "none" : "";
+    if (this.gigMode) {
+      this._vuRunning = false;
+      if (this.vuAnimationId) cancelAnimationFrame(this.vuAnimationId);
+    } else {
+      this.startVuMonitor();
+    }
   }
 
   _renderLatencyPopover(l, smoothed) {
