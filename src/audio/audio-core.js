@@ -15,6 +15,14 @@ export class AudioCore {
 
     // Pre-allocated buffer for zero GC overhead during 60/120fps metering
     this.peakBuffer = new Uint8Array(128);
+
+    // Diagnostics: taps the EXACT signal handed to the DAC (pre-driver, so a
+    // clean capture here shifts blame to the Windows endpoint; a dirty capture
+    // proves the app. Never audible — a dangling MediaStreamDestination costs
+    // nothing while no MediaRecorder is attached).
+    this.captureTap = null;
+    this.captureRecorder = null;
+    this.captureChunks = [];
   }
 
   init() {
@@ -63,9 +71,14 @@ export class AudioCore {
     this.dcBlocker.frequency.value = 20;
     // Master-wide fixed headroom trim: keeps stacked chords safely below full-scale
     // WITHOUT any dynamics processing, so the bus compressors stay completely
-    // transparent (compressors running hot = warm grindy noise)
+    // transparent (compressors running hot = warm grindy noise).
+    // MEASURED FIX (pre-DAC diag capture): sustained VA tine/EP programs slammed
+    // the master end so hard that the POST-limiter signal still hit 0 dBFS and
+    // 0.8% of samples hard-clipped -> constant limiter grab-release = the
+    // "magnet hum / garbage". 0.45 (~ -7 dB) gives the limiter room so it only
+    // catches real transients; raise the master slider if you want more level.
     this.busPad = this.ctx.createGain();
-    this.busPad.gain.value = 0.7;
+    this.busPad.gain.value = 0.45;
 
     // Master bus glue compressor: optical-style leveling for stacked chords.
     // Bypassed by default — the 0.7 busPad + hardware limiter already prevent
@@ -93,8 +106,17 @@ export class AudioCore {
     this.analyser.connect(this.hardwareLimiter);
     this.hardwareLimiter.connect(this.ctx.destination);
 
+    // Diagnostic tap: identical signal to the DAC (analyser is pass-through).
+    try {
+      this.captureTap = this.ctx.createMediaStreamDestination();
+      this.hardwareLimiter.connect(this.captureTap);
+    } catch (e) {
+      this.captureTap = null;
+    }
+
     // Telemetry
     this.updateLatencyMetrics();
+    this.installCaptureHotkey();
 
     return this.ctx;
   }
@@ -131,6 +153,165 @@ export class AudioCore {
     const base = (this.ctx.baseLatency || 0.0026) * 1000;
     const output = (this.ctx.outputLatency || 0.005) * 1000;
     this.reportedLatencyMs = Math.round((base + output) * 10) / 10;
+  }
+
+  // --- Diagnostics: capture exactly what the app sends to the DAC ---
+  // 8s MediaRecorder on the pre-DAC tap, auto-downloads a WAV.
+  // Trigger: a floating "DIAG 8s" pill button (bottom-left) OR Ctrl+Alt+R.
+  installCaptureHotkey() {
+    if (window.__midikeyCaptureHotkeyInstalled) return;
+    window.__midikeyCaptureHotkeyInstalled = true;
+    window.__audioDiagCapture = seconds => this.captureDiag(seconds);
+
+    window.addEventListener("keydown", e => {
+      if (e.ctrlKey && e.altKey && (e.key === "r" || e.key === "R")) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.captureDiag(8);
+      }
+    });
+
+    // Self-contained floating button — visible proof the tap is alive.
+    const pill = document.createElement("button");
+    pill.id = "midikey-diag-pill";
+    pill.textContent = "DIAG 8s";
+    Object.assign(pill.style, {
+      position: "fixed", left: "12px", bottom: "12px", zIndex: "99999",
+      padding: "6px 10px", fontSize: "11px", cursor: "pointer",
+      background: "rgba(0,0,0,0.55)", color: "#9ff0b0",
+      border: "1px solid rgba(255,255,255,0.25)", borderRadius: "6px",
+      fontFamily: "monospace", userSelect: "none",
+    });
+    pill.addEventListener("click", () => this.captureDiag(8, name => {
+      if (name) this._diagToast("saved: " + name);
+    }));
+    document.body.appendChild(pill);
+
+    // Toast helper for non-technical users.
+    if (!window.__midikeyDiagToastEl) {
+      const toasts = document.createElement("div");
+      toasts.id = "midikey-diag-toasts";
+      Object.assign(toasts.style, {
+        position: "fixed", bottom: "48px", left: "12px", zIndex: "99999",
+        display: "flex", flexDirection: "column", gap: "6px",
+      });
+      document.body.appendChild(toasts);
+      window.__midikeyDiagToastEl = toasts;
+    }
+  }
+
+  _diagToast(msg) {
+    const wrap = window.__midikeyDiagToastEl;
+    if (!wrap) return;
+    const t = document.createElement("div");
+    t.textContent = msg;
+    Object.assign(t.style, {
+      padding: "6px 10px", fontSize: "11px", background: "rgba(0,0,0,0.7)",
+      color: "#9ff0b0", border: "1px solid rgba(255,255,255,0.2)",
+      borderRadius: "6px", fontFamily: "monospace",
+    });
+    wrap.appendChild(t);
+    setTimeout(() => t.remove(), 6000);
+  }
+
+  captureDiag(seconds = 8, onDone) {
+    const pill = document.getElementById("midikey-diag-pill");
+    const mark = (text, color) => {
+      if (pill) {
+        pill.textContent = text;
+        pill.style.color = color || "#9ff0b0";
+      }
+    };
+    if (!this.captureTap || !window.MediaRecorder) {
+      mark("NO DIAG TAP", "#ff8080");
+      console.warn("captureDiag: no MediaStreamDestination or MediaRecorder");
+      return;
+    }
+    if (this.captureRecorder && this.captureRecorder.state !== "inactive") {
+      mark("ALREADY REC", "#ffd080");
+      return;
+    }
+    while (this.captureChunks.length) this.captureChunks.pop();
+
+    let recorder;
+    const mimes = ["audio/webm;codecs=opus", "audio/webm", ""];
+    for (const mime of mimes) {
+      try {
+        recorder = new MediaRecorder(this.captureTap.stream, mime ? { mimeType: mime } : undefined);
+        break;
+      } catch (e) {
+        recorder = null;
+      }
+    }
+    if (!recorder) {
+      mark("NO MEDIARECORDER", "#ff8080");
+      console.warn("captureDiag: MediaRecorder unsupported");
+      return;
+    }
+
+    this.captureRecorder = recorder;
+    mark("REC " + seconds + "s…", "#9ff0b0");
+    recorder.ondataavailable = ev => {
+      if (ev.data && ev.data.size > 0) this.captureChunks.push(ev.data);
+    };
+    recorder.onstop = () => {
+      this.captureRecorder = null;
+      mark("SAVING…", "#ffd080");
+      this._exportCaptureWav(seconds).then(name => {
+        mark("DIAG 8s", "#9ff0b0");
+        console.log("captureDiag saved:", name);
+        this._diagToast("WAV saved → Downloads: " + name);
+        if (onDone) onDone(name);
+      }).catch(err => {
+        mark("EXPORT FAIL", "#ff8080");
+        console.warn("captureDiag export failed", err);
+        this._diagToast("capture failed: " + err.message);
+      });
+    };
+    recorder.start();
+    setTimeout(() => {
+      try { recorder.stop(); } catch (e) {}
+    }, seconds * 1000);
+  }
+
+  async _exportCaptureWav(seconds) {
+    const blob = new Blob(this.captureChunks, { type: "audio/webm" });
+    const arrayBuffer = await blob.arrayBuffer();
+    const ab = await this.ctx.decodeAudioData(arrayBuffer);
+    const buf = this._bufferToWav(ab);
+    const name = `midikey-diag-${seconds}s.wav`;
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    return name;
+  }
+
+  _bufferToWav(buffer) {
+    const numCh = Math.min(2, buffer.numberOfChannels);
+    const sr = buffer.sampleRate;
+    const len = buffer.length;
+    const bytesPerSample = 2, blockAlign = numCh * bytesPerSample;
+    const dataSize = len * blockAlign;
+    const out = new ArrayBuffer(44 + dataSize);
+    const dv = new DataView(out);
+    const wStr = (off, str) => { for (let i = 0; i < str.length; i++) dv.setUint8(off + i, str.charCodeAt(i)); };
+    wStr(0, "RIFF"); dv.setUint32(4, 36 + dataSize, true); wStr(8, "WAVE");
+    wStr(12, "fmt "); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true);
+    dv.setUint16(22, numCh, true); dv.setUint32(24, sr, true);
+    dv.setUint32(28, sr * blockAlign, true); dv.setUint16(32, blockAlign, true);
+    dv.setUint16(34, 16, true); wStr(36, "data"); dv.setUint32(40, dataSize, true);
+
+    const L = buffer.getChannelData(0);
+    const R = numCh > 1 ? buffer.getChannelData(1) : null;
+    let off = 44;
+    for (let i = 0; i < len; i++) {
+      dv.setInt16(off, Math.max(-1, Math.min(1, L[i])) * 32767, true); off += 2;
+      if (R) { dv.setInt16(off, Math.max(-1, Math.min(1, R[i])) * 32767, true); off += 2; }
+    }
+    return out;
   }
 
   getLatencyMs() {
