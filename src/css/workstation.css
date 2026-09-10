@@ -1304,7 +1304,8 @@
 
 #multi-layer-mount,
 #fx-rack-mount,
-#middle-grid-section {
+#middle-grid-section,
+#media-player-mount {
   display: none;
 }
 
@@ -1333,7 +1334,8 @@
 #app-root.view-triton #multi-layer-mount,
 #app-root.view-triton #fx-rack-mount,
 #app-root.view-triton #middle-grid-section,
-#app-root.view-triton #groove-station-mount {
+#app-root.view-triton #groove-station-mount,
+#app-root.view-triton #media-player-mount {
   display: none !important;
 }
 
@@ -1348,7 +1350,8 @@
 #app-root.view-combi #triton-workstation-mount,
 #app-root.view-combi #fx-rack-mount,
 #app-root.view-combi #middle-grid-section,
-#app-root.view-combi #groove-station-mount {
+#app-root.view-combi #groove-station-mount,
+#app-root.view-combi #media-player-mount {
   display: none !important;
 }
 
@@ -1364,7 +1367,8 @@
 #app-root.view-fx #triton-workstation-mount,
 #app-root.view-fx #multi-layer-mount,
 #app-root.view-fx #middle-grid-section,
-#app-root.view-fx #groove-station-mount {
+#app-root.view-fx #groove-station-mount,
+#app-root.view-fx #media-player-mount {
   display: none !important;
 }
 
@@ -1383,7 +1387,8 @@
 #app-root.view-chords #triton-workstation-mount,
 #app-root.view-chords #multi-layer-mount,
 #app-root.view-chords #fx-rack-mount,
-#app-root.view-chords #groove-station-mount {
+#app-root.view-chords #groove-station-mount,
+#app-root.view-chords #media-player-mount {
   display: none !important;
 }
 
@@ -1398,7 +1403,8 @@
 #app-root.view-grooves #triton-workstation-mount,
 #app-root.view-grooves #multi-layer-mount,
 #app-root.view-grooves #fx-rack-mount,
-#app-root.view-grooves #middle-grid-section {
+#app-root.view-grooves #middle-grid-section,
+#app-root.view-grooves #media-player-mount {
   display: none !important;
 }
 
@@ -1414,7 +1420,25 @@
 #app-root.view-demo #multi-layer-mount,
 #app-root.view-demo #fx-rack-mount,
 #app-root.view-demo #middle-grid-section,
-#app-root.view-demo #groove-station-mount {
+#app-root.view-demo #groove-station-mount,
+#app-root.view-demo #media-player-mount {
+  display: none !important;
+}
+
+/* 4d. Media Player Deck View Mode: Audio/Video Playback Station */
+#app-root.view-player #media-player-mount {
+  display: flex !important;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+#app-root.view-player #triton-workstation-mount,
+#app-root.view-player #multi-layer-mount,
+#app-root.view-player #fx-rack-mount,
+#app-root.view-player #middle-grid-section,
+#app-root.view-player #groove-station-mount,
+#app-root.view-player #demo-station-mount {
   display: none !important;
 }
 

@@ -17,6 +17,7 @@ import { TritonWorkstationUI } from "./components/triton-workstation-ui.js";
 import { MultiLayerUI } from "./components/multi-layer-ui.js";
 import { GroovePlayerUI } from "./components/groove-player-ui.js";
 import { DemoStationUI } from "./components/demo-station.js";
+import { MediaPlayerUI } from "./components/media-player-ui.js";
 import { multiLayerEngine } from "./audio/multi-layer-engine.js";
 
 class MidiKeyEliteApp {
@@ -28,6 +29,7 @@ class MidiKeyEliteApp {
     this.chordPads = null;
     this.looper = null;
     this.grooveStation = null;
+    this.mediaPlayer = null;
     this.virtualKeyboard = null;
     this.licenseModal = null;
     this.unlocked = false;
@@ -152,6 +154,14 @@ class MidiKeyEliteApp {
       console.warn("GroovePlayerUI init:", e);
     }
 
+    // 6d. Media Player Deck (Audio/Video playback with persistent playlist)
+    try {
+      this.mediaPlayer = new MediaPlayerUI("media-player-mount");
+      this.mediaPlayer.render();
+    } catch (e) {
+      console.warn("MediaPlayerUI init:", e);
+    }
+
     // 7. Ableton Device FX Rack
     try {
       this.fxRack = new FxRackUI("fx-rack-mount");
@@ -193,7 +203,8 @@ class MidiKeyEliteApp {
             "view-demo",
             "view-fx",
             "view-looper",
-            "view-grooves"
+            "view-grooves",
+            "view-player"
           );
           appRoot.classList.add(`view-${view}`);
         }

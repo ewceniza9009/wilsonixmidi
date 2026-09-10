@@ -173,6 +173,10 @@ export class GigHudUI {
               <span class="tab-icon">🥁</span>
               <span class="tab-label">GROOVES</span>
             </button>
+            <button class="ws-tab-btn" data-view="player" title="Audio & Video Media Player Deck">
+              <span class="tab-icon">🎧</span>
+              <span class="tab-label">PLAYER</span>
+            </button>
             <button class="ws-tab-btn" data-view="keys" title="Keys Focused View">
               <span class="tab-icon">🎹</span>
               <span class="tab-label">KEYS</span>
