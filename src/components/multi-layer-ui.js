@@ -215,10 +215,10 @@ export class MultiLayerUI {
 
               <!-- Volume Fader & Meter -->
               <div class="strip-fader-bay">
+                <span class="fader-label">GAIN</span>
                 <div class="fader-track">
                   <input type="range" 
-                         class="vertical-fader" 
-                         orient="vertical" 
+                         class="vertical-fader layer-gain-slider" 
                          min="0" 
                          max="1.5" 
                          step="0.05" 

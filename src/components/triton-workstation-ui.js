@@ -126,7 +126,7 @@ export class TritonWorkstationUI {
 
           <!-- Triton Logo & Workstation Branding -->
           <div class="triton-brand-badge">
-            <div class="workstation-tag">MUSIC WORKSTATION / SAMPLER</div>
+            <div class="workstation-tag">MUSIC WORKSTATION</div>
             <div class="triton-hero-text">ELITE</div>
           </div>
         </div>
