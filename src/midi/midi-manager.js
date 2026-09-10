@@ -6,6 +6,7 @@
 
 import { synthEngine } from "../audio/synth-engine.js";
 import { multiLayerEngine } from "../audio/multi-layer-engine.js";
+import { shapeVelocity } from "./velocity-curve.js";
 
 export class MidiManager {
   constructor() {
@@ -79,7 +80,8 @@ export class MidiManager {
     switch (command) {
       case 0x9: // Note On
         if (velocity > 0) {
-          multiLayerEngine.noteOn(note, velocity);
+          const shaped = shapeVelocity(velocity);
+          multiLayerEngine.noteOn(note, shaped);
         } else {
           // Note On with velocity 0 is standard MIDI Note Off
           multiLayerEngine.noteOff(note);

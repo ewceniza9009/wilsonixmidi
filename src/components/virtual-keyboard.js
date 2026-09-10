@@ -17,6 +17,7 @@
 import { synthEngine } from "../audio/synth-engine.js";
 import { multiLayerEngine } from "../audio/multi-layer-engine.js";
 import { qwertyKeyboard } from "../midi/qwerty-keyboard.js";
+import { shapeVelocity, setVelocityCurve, getVelocityCurve } from "../midi/velocity-curve.js";
 
 const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const WHITE_NOTES = [0, 2, 4, 5, 7, 9, 11];
@@ -119,6 +120,16 @@ export class VirtualKeyboardUI {
             </div>
           </div>
 
+          <!-- Velocity Curve (keybed feel) -->
+          <div class="velocity-accent-unit" title="Keybed response curve for MIDI & touch keys — springy keys bite sooner on PUNCH">
+            <span class="velocity-readout" id="hud-curve-readout" style="margin-right:6px;">CURVE</span>
+            <div class="accent-preset-btns" id="hud-curve-btns">
+              <button class="accent-mini-btn active" data-curve="linear" title="Flat, as played">LIN</button>
+              <button class="accent-mini-btn" data-curve="punch" title="Soft hits jump to bite sooner">PUNCH</button>
+              <button class="accent-mini-btn" data-curve="soft" title="Soft hits stay soft, only firm hits bloom">SOFT</button>
+            </div>
+          </div>
+
           <!-- Sustain / Damper Pedal -->
           <div class="sustain-latch-unit">
             <button class="hud-btn sustain-btn" id="sustain-latch-btn" title="Acoustic Damper Pedal (Hold SPACEBAR)">
@@ -208,7 +219,8 @@ export class VirtualKeyboardUI {
 
     const calculateVelocity = (clientY, rect) => {
       const relativeY = Math.max(0, Math.min(1.0, (clientY - rect.top) / rect.height));
-      return Math.round(35 + relativeY * 92); // 35 to 127 dynamic range
+      const raw = Math.round(35 + relativeY * 92); // 35 to 127 dynamic range
+      return shapeVelocity(raw);
     };
 
     let isMouseDown = false;
@@ -480,7 +492,7 @@ export class VirtualKeyboardUI {
     });
 
     // Accent mini buttons (PP, MP, MF, FF, SFZ)
-    const accentBtns = this.container.querySelectorAll(".accent-mini-btn");
+    const accentBtns = this.container.querySelectorAll(".accent-mini-btn[data-vel]");
     accentBtns.forEach(btn => {
       btn.addEventListener("click", () => {
         accentBtns.forEach(b => b.classList.remove("active"));
@@ -489,6 +501,9 @@ export class VirtualKeyboardUI {
         qwertyKeyboard.setVelocity(vel);
       });
     });
+
+    // Velocity curve buttons (LIN / PUNCH / SOFT) — keybed response shaping
+    this.initCurveButtons();
 
     // Mobile / Screen Key Zoom Mode Switcher
     const rollContainer = document.getElementById("piano-roll-container");
@@ -621,5 +636,27 @@ export class VirtualKeyboardUI {
     }
 
     this.updateQwertyLabels();
+  }
+
+  // Velocity curve (keybed response) selector — LIN / PUNCH / SOFT.
+  // Applied at the performance inputs (touch keys + hardware MIDI) via
+  // velocity-curve.js; programmed velocities (pads/arp/loops) are untouched.
+  initCurveButtons() {
+    const wrapper = document.getElementById("hud-curve-btns");
+    if (!wrapper) return;
+
+    // Restore the previously chosen curve (if any) from localStorage.
+    const saved = getVelocityCurve();
+    const active = wrapper.querySelector(`[data-curve="${saved}"]`);
+    if (active) active.classList.add("active");
+
+    const btns = wrapper.querySelectorAll(".accent-mini-btn");
+    btns.forEach(btn => {
+      btn.addEventListener("click", () => {
+        btns.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        setVelocityCurve(btn.getAttribute("data-curve"));
+      });
+    });
   }
 }
