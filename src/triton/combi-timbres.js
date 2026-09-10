@@ -148,7 +148,7 @@ Object.entries(TRITON_BANKS).forEach(([bankId, bank]) => {
         id: prog.id,
         instKey: resolved.instKey,
         name: prog.name,
-        category: prog.category || bank.category || "Triton",
+        category: prog.category || bank.category || "Workstation",
         bank: bankId,
       });
     }
@@ -160,7 +160,7 @@ export function getTritonProgramById(id) {
 }
 
 export function getTritonBankName(bankId) {
-  return TRITON_BANK_NAME[bankId] || bankId || "TRITON";
+  return TRITON_BANK_NAME[bankId] || bankId || "WORKSTATION";
 }
 
 export function getTritonPcmEntries() {

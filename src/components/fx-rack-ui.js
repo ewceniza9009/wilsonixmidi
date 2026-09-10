@@ -50,7 +50,7 @@ export class FxRackUI {
     this.container.innerHTML = `
       <div class="fx-rack-strip">
         <div class="fx-rack-header">
-          <span class="rack-title">ABLETON & WORKSTATION DEVICE RACK</span>
+          <span class="rack-title">WORKSTATION DEVICE RACK</span>
           <span class="rack-tag">ZERO-BUFFER ARCHITECTURE</span>
         </div>
 

@@ -75,7 +75,7 @@ export class TritonWorkstationUI {
         <!-- Triton Top Header Bar -->
         <div class="triton-top-header">
           <div class="korg-badge">
-            <span class="korg-logo-text">KORG</span>
+            <span class="korg-logo-text">MIDIKEY</span>
           </div>
 
           <!-- Realtime Controls 1-4 -->
@@ -127,7 +127,7 @@ export class TritonWorkstationUI {
           <!-- Triton Logo & Workstation Branding -->
           <div class="triton-brand-badge">
             <div class="workstation-tag">MUSIC WORKSTATION / SAMPLER</div>
-            <div class="triton-hero-text">TRITON</div>
+            <div class="triton-hero-text">ELITE</div>
           </div>
         </div>
 
@@ -142,7 +142,7 @@ export class TritonWorkstationUI {
           <div class="nav-cluster-right">
             <div class="triton-search-box">
               <span class="search-ico">🔍</span>
-              <input type="text" id="triton-search-input" placeholder="Search 60+ Triton patches..." value="${this.searchQuery}" />
+              <input type="text" id="triton-search-input" placeholder="Search 60+ patches..." value="${this.searchQuery}" />
             </div>
           </div>
         </div>
@@ -237,7 +237,7 @@ export class TritonWorkstationUI {
     return `
       <div class="ifx-mfx-workspace">
         <div class="ifx-mfx-header">
-          <span class="ifx-title">KORG TRITON MULTI-EFFECTS ROUTING MATRIX (IFX 1-5 + MFX 1-2 + MEQ)</span>
+          <span class="ifx-title">MULTI-EFFECTS ROUTING MATRIX (IFX 1-5 + MFX 1-2 + MEQ)</span>
           <span class="ifx-chip">102 EFFECT ALGORITHMS</span>
         </div>
 

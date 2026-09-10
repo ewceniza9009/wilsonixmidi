@@ -153,13 +153,13 @@ export class GigHudUI {
         <!-- 5. Workspace View Switchers (Zero Scrolling - All in Stage Deck) -->
         <div class="hud-views-unit">
           <nav class="ws-tabs-bar" id="hud-workspace-tabs">
-            <button class="ws-tab-btn" data-view="all" title="View All Modules Stacked (Triton + Combi + FX + Chords)">
+            <button class="ws-tab-btn" data-view="all" title="View All Modules Stacked (Workstation + Combi + FX + Chords)">
               <span class="tab-icon">🎛️</span>
               <span class="tab-label">ALL</span>
             </button>
-            <button class="ws-tab-btn active" data-view="triton" title="Korg Triton VST Console">
+            <button class="ws-tab-btn active" data-view="triton" title="MidiKey Elite Workstation Console">
               <span class="tab-icon">🎹</span>
-              <span class="tab-label">TRITON</span>
+              <span class="tab-label">MAIN</span>
             </button>
             <button class="ws-tab-btn" data-view="combi" title="4-Timbre Combi Mixer">
               <span class="tab-icon">🎚️</span>
@@ -169,7 +169,7 @@ export class GigHudUI {
               <span class="tab-icon">✂️</span>
               <span class="tab-label">SPLIT</span>
             </button>
-            <button class="ws-tab-btn" data-view="fx" title="Ableton 7-Device Master FX Rack">
+            <button class="ws-tab-btn" data-view="fx" title="7-Device Master FX Rack">
               <span class="tab-icon">🎛️</span>
               <span class="tab-label">FX</span>
             </button>

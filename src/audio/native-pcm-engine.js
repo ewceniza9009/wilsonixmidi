@@ -1438,7 +1438,6 @@ export class NativePcmEngine {
           })
         );
       }
-      console.log(`[Native PCM Rompler] Soundfont loaded into RAM: ${instId} (${instMap.size} samples)`);
     } catch (err) {
       console.warn(`[Native PCM Rompler] Failed to load soundfont: ${instId}`, err);
     }
@@ -1492,7 +1491,6 @@ export class NativePcmEngine {
         })
       );
     }
-    console.log(`[Abletunes Engine] Loaded full studio bank: ${bank.name} (${instMap.size} anchors in RAM)`);
   }
 
   async decodeEmbeddedAnchors(instId) {

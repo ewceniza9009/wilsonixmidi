@@ -33,7 +33,7 @@ export const HD_SOUNDBANKS = {
   m1_fresh_air: { id: "m1_fresh_air", name: "Korg M1 Fresh Air (Airy Bell)", category: "Bells & Pad" },
   m1_slap_bass: { id: "m1_slap_bass", name: "Korg M1 Slap Bass (90s Funk)", category: "Bass & Sub" },
   string_ensemble_1: { id: "string_ensemble_1", name: "Triton Stereo Strings", category: "Strings & Choir" },
-  drawbar_organ: { id: "drawbar_organ", name: "M1 / B3 Rock Organ", category: "Organ" },
+  drawbar_organ: { id: "drawbar_organ", name: "Korg M1 / B3 Rock Organ", category: "Organ" },
   alto_sax: { id: "alto_sax", name: "Breathy Alto Saxophone", category: "Woodwind" },
   brass_section: { id: "brass_section", name: "Triton Fat Brass Section", category: "Brass" },
   synth_bass_1: { id: "synth_bass_1", name: "Moog Prodigy Punch Bass", category: "Bass & Sub" },
@@ -164,7 +164,7 @@ export const COMBI_PRESETS = {
       { id: 0, name: "Juno Analog Poly Synth", inst: "m1_universe", fx: "analog_juno_chorus", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 1, name: "Slapback Vocal Shout", inst: "vox_yeah", fx: "slapback_vocal", gain: 0.75, pan: 0.05, oct: 0, minVel: 40, maxVel: 127, enabled: true },
       { id: 2, name: "Optical Tremolo Synth Pulse", inst: "synth_bass_1", fx: "opto_tremolo_16th", gain: 0.70, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "M1 Fresh Air Shimmer", inst: "m1_fresh_air", fx: "spring_surf", gain: 0.50, pan: 0, oct: 1, minVel: 60, maxVel: 127, enabled: true },
+      { id: 3, name: "Korg M1 Fresh Air Shimmer", inst: "m1_fresh_air", fx: "spring_surf", gain: 0.50, pan: 0, oct: 1, minVel: 60, maxVel: 127, enabled: true },
     ],
   },
   synthesizer_you_cannon: {
@@ -218,7 +218,7 @@ export const COMBI_PRESETS = {
     layers: [
       { id: 0, name: "Velo Piano Concert Grand", inst: "acoustic_grand_piano", fx: "air_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 1, name: "Triton Warm Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.65, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "M1 Ooh-Ahh Vocal Choir", inst: "choir_aahs", fx: "chorus_lush", gain: 0.75, pan: 0.05, oct: 0, minVel: 20, maxVel: 127, enabled: true },
+      { id: 2, name: "Korg M1 Ooh-Ahh Vocal Choir", inst: "choir_aahs", fx: "chorus_lush", gain: 0.75, pan: 0.05, oct: 0, minVel: 20, maxVel: 127, enabled: true },
       { id: 3, name: "Dyno Bell Tine", inst: "electric_piano_1", fx: "clean", gain: 0.45, pan: 0, oct: 1, minVel: 50, maxVel: 127, enabled: true },
     ],
   },
@@ -240,7 +240,7 @@ export const COMBI_PRESETS = {
     layers: [
       { id: 0, name: "Suit & Stage EP", inst: "electric_piano_1", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 1, name: "Breathy Alto Sax", inst: "alto_sax", fx: "reverb_room", gain: 0.85, pan: 0, oct: 0, minVel: 40, maxVel: 127, enabled: true },
-      { id: 2, name: "Stereo Strings", inst: "string_ensemble_1", fx: "clean", gain: 0.55, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Triton Stereo Strings", inst: "string_ensemble_1", fx: "clean", gain: 0.55, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 3, name: "Punch Bass (Left)", inst: "synth_bass_1", fx: "punch_comp", gain: 0.70, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: false },
     ],
   },
@@ -274,7 +274,7 @@ export const COMBI_PRESETS = {
     layers: [
       { id: 0, name: "Concert Grand", inst: "acoustic_grand_piano", fx: "air_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 1, name: "B3 Rock Organ", inst: "drawbar_organ", fx: "clean", gain: 0.75, pan: 0, oct: 0, minVel: 20, maxVel: 127, enabled: true },
-      { id: 2, name: "Stereo Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.55, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Triton Stereo Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.55, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 3, name: "Fat Brass Horns", inst: "brass_section", fx: "tube_warm", gain: 0.65, pan: 0, oct: 0, minVel: 75, maxVel: 127, enabled: false },
     ],
   },
@@ -283,9 +283,9 @@ export const COMBI_PRESETS = {
     name: "★ Deep Space Ambient (Universe + Fresh Air + Choir)",
     category: "Ambient / Cinematic",
     layers: [
-      { id: 0, name: "Stereo Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.85, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 0, name: "Triton Stereo Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.85, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 1, name: "Dyno Bell Chime", inst: "electric_piano_1", fx: "clean", gain: 0.65, pan: 0, oct: 1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "M1 Ooh-Ahh Vocal Choir", inst: "choir_aahs", fx: "reverb_hall", gain: 0.80, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Korg M1 Ooh-Ahh Vocal Choir", inst: "choir_aahs", fx: "reverb_hall", gain: 0.80, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 3, name: "Stage Electric Piano", inst: "electric_piano_1", fx: "clean", gain: 0.55, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
     ],
   },
@@ -297,7 +297,7 @@ export const COMBI_PRESETS = {
       { id: 0, name: "Fat Brass", inst: "brass_section", fx: "air_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 1, name: "Dyno Tine EP", inst: "electric_piano_1", fx: "clean", gain: 0.65, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 2, name: "Prodigy Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.75, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Warm Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.50, pan: 0, oct: 1, minVel: 1, maxVel: 127, enabled: false },
+      { id: 3, name: "Triton Warm Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.50, pan: 0, oct: 1, minVel: 1, maxVel: 127, enabled: false },
     ],
   },
   hard_rock_shred: {
@@ -350,7 +350,7 @@ export const COMBI_PRESETS = {
     category: "Funk / Fusion",
     layers: [
       { id: 0, name: "Fender Strat Clean Guitar", inst: "electric_guitar_clean", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "M1 B3 Rock Organ", inst: "drawbar_organ", fx: "clean", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Korg M1 B3 Rock Organ", inst: "drawbar_organ", fx: "clean", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 2, name: "Punch Slap Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
       { id: 3, name: "Fat Horn Stabs", inst: "brass_section", fx: "tube_warm", gain: 0.70, pan: 0, oct: 0, minVel: 75, maxVel: 127, enabled: false },
     ],
@@ -372,8 +372,8 @@ export const COMBI_PRESETS = {
     category: "Gospel & Praise",
     layers: [
       { id: 0, name: "Concert Grand Piano", inst: "acoustic_grand_piano", fx: "air_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "M1 / B3 Gospel Organ", inst: "drawbar_organ", fx: "clean", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "M1 Ooh-Ahh Vocal Choir", inst: "choir_aahs", fx: "reverb_hall", gain: 0.75, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Korg M1 / B3 Gospel Organ", inst: "drawbar_organ", fx: "clean", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Korg M1 Ooh-Ahh Vocal Choir", inst: "choir_aahs", fx: "reverb_hall", gain: 0.75, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 3, name: "Fat Brass Fanfare", inst: "brass_section", fx: "tube_warm", gain: 0.60, pan: 0, oct: 0, minVel: 85, maxVel: 127, enabled: false },
     ],
   },
@@ -405,7 +405,7 @@ export const COMBI_PRESETS = {
     category: "Blues / Rock",
     layers: [
       { id: 0, name: "Fender Strat Clean Guitar", inst: "electric_guitar_clean", fx: "tube_warm", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "M1 B3 Rock Organ", inst: "drawbar_organ", fx: "clean", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Korg M1 B3 Rock Organ", inst: "drawbar_organ", fx: "clean", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 2, name: "Punch Blues Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
       { id: 3, name: "Breathy Blues Sax", inst: "alto_sax", fx: "reverb_room", gain: 0.80, pan: 0, oct: 0, minVel: 40, maxVel: 127, enabled: true },
     ],
@@ -438,7 +438,7 @@ export const COMBI_PRESETS = {
     category: "Jazz / Acid Jazz",
     layers: [
       { id: 0, name: "Dyno FM Tine", inst: "electric_piano_1", fx: "chorus_lush", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "M1 Slap Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Korg M1 Slap Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
       { id: 2, name: "B3 Groove Organ", inst: "drawbar_organ", fx: "rotary_slow", gain: 0.70, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 3, name: "Breathy Sax Stabs", inst: "alto_sax", fx: "reverb_room", gain: 0.70, pan: 0, oct: 0, minVel: 80, maxVel: 127, enabled: true },
     ],

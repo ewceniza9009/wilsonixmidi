@@ -181,7 +181,7 @@ export class MultiLayerUI {
                 <label class="strip-picker-label">TIMBRE / SOUNDBANK 🔍</label>
                 <div class="timbre-combo">
                   <input type="text" class="timbre-combo-input" data-layer="${idx}"
-                         placeholder="Search ${COMBI_TIMBRES.length} PCM + Triton timbres..."
+                         placeholder="Search ${COMBI_TIMBRES.length} PCM + VA timbres..."
                          value="${esc(layer.name || "")}" autocomplete="off" spellcheck="false" />
                   <div class="timbre-combo-list" data-layer="${idx}"></div>
                 </div>
@@ -284,7 +284,7 @@ export class MultiLayerUI {
                     <label class="strip-picker-label">ZONE TIMBRE 🔍</label>
                     <div class="timbre-combo" data-split-zone="${zk}">
                       <input type="text" class="timbre-combo-input" data-split-zone="${zk}"
-                             placeholder="Search ${COMBI_TIMBRES.length} PCM + Triton timbres..."
+                             placeholder="Search ${COMBI_TIMBRES.length} PCM + VA timbres..."
                              value="${esc(isStack ? "Follow Current Stack" : (z.name || ""))}" autocomplete="off" spellcheck="false" />
                       <div class="timbre-combo-list" data-split-zone="${zk}"></div>
                     </div>
@@ -544,7 +544,7 @@ export class MultiLayerUI {
           t => `
           <div class="timbre-opt ${t.value === selVal || (selName && t.name === selName) ? "selected" : ""}" data-value="${esc(t.value)}">
             <span class="timbre-opt-name">${esc(t.name)}</span>
-            <span class="timbre-opt-meta">${t.kind === "va" ? "⚙ TRITON VA OSCILLATOR" : "▤ PCM / SAMPLE"} · ${esc(t.bank)}${t.code ? " · " + esc(t.code) : ""}</span>
+            <span class="timbre-opt-meta">${t.kind === "va" ? "⚙ VA OSCILLATOR" : "▤ PCM / SAMPLE"} · ${esc(t.bank)}${t.code ? " · " + esc(t.code) : ""}</span>
           </div>`
         ).join("");
 
