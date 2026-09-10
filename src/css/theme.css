@@ -91,16 +91,227 @@ html, body {
 
 /* Scrollbar customization */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: var(--bg-surface);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--bg-card-hover);
+  background: #333d4e;
   border-radius: var(--radius-full);
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--accent-amber);
+}
+
+/* ==========================================================================
+   GLOBAL FORM & ENTRY CONTROLS - COMPACT STUDIO DESIGN SYSTEM
+   ========================================================================== */
+
+/* Universal Text & Number Inputs */
+input[type="text"],
+input[type="number"],
+input[type="search"],
+input[type="password"] {
+  font-family: var(--font-family-studio);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  background: linear-gradient(180deg, rgba(12, 15, 21, 0.95) 0%, rgba(18, 22, 30, 0.95) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top-color: rgba(255, 255, 255, 0.08);
+  border-bottom-color: rgba(255, 255, 255, 0.16);
+  border-radius: 4px;
+  padding: 3px 8px;
+  height: 25px;
+  box-shadow: inset 0 1.5px 3px rgba(0, 0, 0, 0.75), 0 1px 0 rgba(255, 255, 255, 0.04);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+  box-sizing: border-box;
+}
+
+input[type="text"]:hover,
+input[type="number"]:hover,
+input[type="search"]:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="search"]:focus {
+  border-color: var(--accent-amber);
+  background: #0f131a;
+  box-shadow: inset 0 1.5px 3px rgba(0, 0, 0, 0.8), 0 0 0 1.5px rgba(255, 118, 77, 0.3), 0 0 8px var(--accent-amber-glow);
+}
+
+input[type="text"]::placeholder,
+input[type="number"]::placeholder,
+input[type="search"]::placeholder {
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* Universal Dropdowns & Selects */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  font-family: var(--font-family-studio);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  background: linear-gradient(180deg, #222836 0%, #161b24 100%);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%2394a3b8' d='M0 0l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  background-size: 8px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-top-color: rgba(255, 255, 255, 0.22);
+  border-radius: 4px;
+  padding: 2px 20px 2px 7px;
+  height: 24px;
+  line-height: 1.2;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  outline: none;
+  transition: all 0.14s ease;
+  box-sizing: border-box;
+}
+
+select:hover {
+  background: linear-gradient(180deg, #283042 0%, #1a202c 100%);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23ff764d' d='M0 0l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  background-size: 8px 5px;
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #fff;
+}
+
+select:focus {
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 0 1.5px rgba(255, 118, 77, 0.35), 0 0 8px var(--accent-amber-glow);
+}
+
+select option, select optgroup {
+  background: #141720;
+  color: #f1f5f9;
+  font-size: 0.75rem;
+  padding: 4px 6px;
+}
+
+/* Universal Range Sliders (Webkit & Firefox) */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  height: 20px;
+  width: 100%;
+  margin: 0;
+  vertical-align: middle;
+}
+
+input[type="range"]:focus {
+  outline: none;
+}
+
+/* Range Track - WebKit */
+input[type="range"]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 6px;
+  background: linear-gradient(180deg, #151a24 0%, #222b3a 100%);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 1.5px 3px rgba(0, 0, 0, 0.9), 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Range Thumb - WebKit */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffffff 0%, #d1d5db 35%, #64748b 75%, #1e293b 100%);
+  border: 2px solid #0f172a;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.9), 0 0 2px rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+input[type="range"]:hover::-webkit-slider-thumb {
+  transform: scale(1.15);
+  border-color: var(--accent-amber);
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.9), 0 0 8px var(--accent-amber);
+}
+
+input[type="range"]:active::-webkit-slider-thumb {
+  transform: scale(1.05);
+  box-shadow: 0 0 10px var(--accent-amber);
+}
+
+/* Range Track - Firefox */
+input[type="range"]::-moz-range-track {
+  width: 100%;
+  height: 6px;
+  background: linear-gradient(180deg, #151a24 0%, #222b3a 100%);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 1.5px 3px rgba(0, 0, 0, 0.9), 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Range Thumb - Firefox */
+input[type="range"]::-moz-range-thumb {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffffff 0%, #d1d5db 35%, #64748b 75%, #1e293b 100%);
+  border: 2px solid #0f172a;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.9), 0 0 2px rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+input[type="range"]:hover::-moz-range-thumb {
+  transform: scale(1.15);
+  border-color: var(--accent-amber);
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.9), 0 0 8px var(--accent-amber);
+}
+
+input[type="range"]:active::-moz-range-thumb {
+  transform: scale(1.05);
+  box-shadow: 0 0 10px var(--accent-amber);
+}
+
+/* Universal Button Refinements */
+button {
+  font-family: var(--font-family-studio);
+  font-weight: 700;
+  outline: none;
+  cursor: pointer;
+  border-radius: 5px;
+  background-clip: padding-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top-color: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: all 0.14s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+button:focus {
+  outline: none;
+}
+
+button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255, 118, 77, 0.4);
+}
+
+button:active {
+  transform: translateY(1px) scale(0.98);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.7);
 }
