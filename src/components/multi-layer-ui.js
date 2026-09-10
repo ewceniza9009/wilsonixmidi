@@ -4,8 +4,10 @@
  * mute buttons, octave transpositions, and instrument selectors.
  */
 
-import { multiLayerEngine, COMBI_PRESETS, HD_SOUNDBANKS } from "../audio/multi-layer-engine.js";
+import { multiLayerEngine, COMBI_PRESETS, COMBI_TIMBRES } from "../audio/multi-layer-engine.js";
 import { LAYER_FX_OPTIONS } from "../audio/native-pcm-engine.js";
+
+const esc = s => String(s).replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
 
 export class MultiLayerUI {
   constructor(containerId) {
@@ -129,27 +131,15 @@ export class MultiLayerUI {
               </div>
               <div class="strip-layer-name" data-layer="${idx}" title="${layer.name}">${layer.name}</div>
 
-              <!-- Instrument Picker -->
-              <div class="strip-inst-picker">
-                <label class="strip-picker-label">TIMBRE / SOUNDBANK</label>
-                <select class="layer-inst-select" data-layer="${idx}">
-                  ${(() => {
-                    const insts = Object.values(HD_SOUNDBANKS);
-                    const cats = [];
-                    insts.forEach(i => { if (i.category && !cats.includes(i.category)) cats.push(i.category); });
-                    // Prioritize Synthesizer You at top
-                    cats.sort((a, b) => a.includes("Synthesizer You") ? -1 : (b.includes("Synthesizer You") ? 1 : 0));
-                    return cats.map(cat => `
-                      <optgroup label="${cat.toUpperCase()}">
-                        ${insts.filter(i => i.category === cat).map(i => `
-                          <option value="${i.id}" ${layer.inst === i.id ? "selected" : ""}>
-                            ${i.name}
-                          </option>
-                        `).join("")}
-                      </optgroup>
-                    `).join("");
-                  })()}
-                </select>
+              <!-- Instrument Picker (searchable: all PCM workstation banks + every Triton tab bank incl. VA) -->
+              <div class="strip-inst-picker timbre-picker" data-layer="${idx}">
+                <label class="strip-picker-label">TIMBRE / SOUNDBANK 🔍</label>
+                <div class="timbre-combo">
+                  <input type="text" class="timbre-combo-input" data-layer="${idx}"
+                         placeholder="Search ${COMBI_TIMBRES.length} PCM + Triton timbres..."
+                         value="${esc(layer.name || "")}" autocomplete="off" spellcheck="false" />
+                  <div class="timbre-combo-list" data-layer="${idx}"></div>
+                </div>
               </div>
 
               <!-- Dedicated Layer Effects Combo Box (Rack FX Insert) -->
@@ -321,13 +311,8 @@ export class MultiLayerUI {
       });
     });
 
-    // Instrument Pickers
-    this.container.querySelectorAll(".layer-inst-select").forEach(sel => {
-      sel.addEventListener("change", e => {
-        const idx = parseInt(sel.getAttribute("data-layer"));
-        multiLayerEngine.setLayerInstrument(idx, e.target.value);
-      });
-    });
+    // Instrument Pickers (searchable timbre combobox)
+    this.bindTimbreCombos();
 
     // Effects Combo Box Pickers per Rack
     this.container.querySelectorAll(".layer-fx-select").forEach(sel => {
@@ -361,6 +346,93 @@ export class MultiLayerUI {
     });
   }
 
+  bindTimbreCombos() {
+    this.container.querySelectorAll(".timbre-combo").forEach(combo => {
+      const input = combo.querySelector(".timbre-combo-input");
+      const list = combo.querySelector(".timbre-combo-list");
+      if (!input || !list) return;
+      const layerIdx = parseInt(combo.getAttribute("data-layer") || "0");
+
+      const selectedValue = () => multiLayerEngine.layers[layerIdx]?.inst;
+      const close = () => list.classList.remove("open");
+
+      const renderList = () => {
+        const q = input.value.trim().toLowerCase();
+        let items = COMBI_TIMBRES.filter(t =>
+          !q ||
+          (t.name && t.name.toLowerCase().includes(q)) ||
+          (t.bank || "").toLowerCase().includes(q) ||
+          (t.category || "").toLowerCase().includes(q) ||
+          (t.code || "").toLowerCase().includes(q)
+        );
+        items = items.slice(0, 60);
+        if (!items.length) {
+          list.innerHTML = `<div class="timbre-opt-empty">No timbres match "${esc(input.value)}" — try program names or codes like "A000"</div>`;
+          list.classList.add("open");
+          return;
+        }
+        const selVal = selectedValue();
+        const selName = multiLayerEngine.layers[layerIdx]?.name;
+        list.innerHTML = items
+          .map(
+            t => `
+          <div class="timbre-opt ${t.value === selVal || (selName && t.name === selName) ? "selected" : ""}" data-value="${esc(t.value)}">
+            <span class="timbre-opt-name">${esc(t.name)}</span>
+            <span class="timbre-opt-meta">${t.kind === "va" ? "⚙ TRITON VA OSCILLATOR" : "▤ PCM / SAMPLE"} · ${esc(t.bank)}${t.code ? " · " + esc(t.code) : ""}</span>
+          </div>`
+          )
+          .join("");
+        list.classList.add("open");
+      };
+
+      const selectOption = optEl => {
+        if (!optEl) return;
+        const value = optEl.getAttribute("data-value");
+        multiLayerEngine.setLayerInstrument(layerIdx, value);
+        const nameEl = optEl.querySelector(".timbre-opt-name");
+        if (nameEl) input.value = nameEl.textContent;
+        close();
+        input.focus();
+      };
+
+      input.addEventListener("focus", renderList);
+      input.addEventListener("input", renderList);
+      input.addEventListener("click", () => { if (!list.classList.contains("open")) renderList(); });
+      input.addEventListener("blur", close);
+
+      input.addEventListener("keydown", e => {
+        const opts = [...list.querySelectorAll(".timbre-opt")];
+        if (!opts.length) return;
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+          e.preventDefault();
+          const cur = opts.findIndex(o => o.classList.contains("active"));
+          const next = e.key === "ArrowDown" ? (cur + 1) % opts.length : (cur <= 0 ? opts.length - 1 : cur - 1);
+          opts.forEach((o, i) => o.classList.toggle("active", i === next));
+          opts[next]?.scrollIntoView({ block: "nearest" });
+        } else if (e.key === "Enter") {
+          e.preventDefault();
+          const active = opts.find(o => o.classList.contains("active")) || opts[0];
+          if (active) selectOption(active);
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          close();
+          input.blur();
+        }
+      });
+
+      // mousedown preventDefault keeps input focus so blur->close doesn't race the click
+      list.addEventListener("mousedown", e => e.preventDefault());
+      list.addEventListener("click", e => {
+        const opt = e.target.closest(".timbre-opt");
+        if (opt) selectOption(opt);
+      });
+
+      document.addEventListener("click", e => {
+        if (!combo.contains(e.target)) close();
+      });
+    });
+  }
+
   updateLayerFaders() {
     const presetSelect = this.container.querySelector("#combi-preset-select");
     if (presetSelect && multiLayerEngine.activeCombi?.id) {
@@ -376,8 +448,8 @@ export class MultiLayerUI {
       const fxSelect = this.container.querySelector(`.layer-fx-select[data-layer="${i}"]`);
       if (fxSelect && l.fx) fxSelect.value = l.fx;
 
-      const instSelect = this.container.querySelector(`.layer-inst-select[data-layer="${i}"]`);
-      if (instSelect && l.inst) instSelect.value = l.inst;
+      const instInput = this.container.querySelector(`.timbre-combo-input[data-layer="${i}"]`);
+      if (instInput && l.name) instInput.value = l.name;
 
       const nameEl = this.container.querySelector(`.strip-layer-name[data-layer="${i}"]`);
       if (nameEl && l.name) {

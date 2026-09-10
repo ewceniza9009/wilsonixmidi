@@ -8,7 +8,8 @@
 import { NativePcmEngine } from "./native-pcm-engine.js";
 import { audioCore } from "./audio-core.js";
 import { synthEngine, INSTRUMENT_PATCHES } from "./synth-engine.js";
-import { tritonVaEngine } from "./triton-va-engine.js";
+import { tritonVaEngine, TritonVirtualAnalogEngine } from "./triton-va-engine.js";
+import { getTritonProgramById, getTritonBankName, getTritonPcmEntries, getTritonVaPrograms } from "../triton/combi-timbres.js";
 
 export const HD_SOUNDBANKS = {
   acoustic_grand_piano: { id: "acoustic_grand_piano", name: "Velo Piano Concert Grand", category: "Acoustic Piano" },
@@ -109,6 +110,39 @@ export const HD_SOUNDBANKS = {
   sy_riser_sweep: { id: "sy_riser_sweep", name: "🚀 Synthesizer You - FX Riser Sweep", category: "Synthesizer You (80s)" },
   sy_tape_drop: { id: "sy_tape_drop", name: "🛑 Synthesizer You - Tape Drop FX", category: "Synthesizer You (80s)" },
 };
+
+// Unified combi timbre catalog: HD workstation banks + every Triton tab bank
+// (M1/PCM programs resolve to a real PCM/SFX instrument, VA programs route to
+// their genuine Triton VA oscillator voice). Kept here so the engine and the
+// picker UI read from one source of truth.
+export const COMBI_TIMBRES = (() => {
+  const out = [];
+  Object.values(HD_SOUNDBANKS).forEach(inst => {
+    out.push({ value: inst.id, name: inst.name, category: inst.category, bank: "PCM WORKSTATION", kind: "pcm", code: "" });
+  });
+  getTritonPcmEntries().forEach(entry => {
+    if (HD_SOUNDBANKS[entry.instKey]) return;
+    out.push({
+      value: entry.instKey,
+      name: entry.name,
+      category: entry.category,
+      bank: getTritonBankName(entry.bank),
+      kind: "pcm",
+      code: entry.id,
+    });
+  });
+  getTritonVaPrograms().forEach(prog => {
+    out.push({
+      value: "va:" + prog.id,
+      name: prog.name,
+      category: prog.category || "VA Synth",
+      bank: getTritonBankName(prog.bank),
+      kind: "va",
+      code: prog.id,
+    });
+  });
+  return out;
+})();
 
 export const COMBI_PRESETS = {
   synthesizer_you_surf: {
@@ -641,6 +675,28 @@ export class MultiLayerEngine {
 
     this.onLayerChangeCallback = null;
     this.layerChangeListeners = new Set();
+    this._vaEngines = new Map(); // VA oscillator engine per combi layer program
+  }
+
+  getVaEngineFor(prog, gain = 1) {
+    const gainKey = Math.max(1, Math.min(150, Math.round((gain || 1) * 100)));
+    const key = prog.id + "|" + gainKey;
+    if (this._vaEngines.has(key)) return this._vaEngines.get(key);
+    const eng = new TritonVirtualAnalogEngine();
+    this.init();
+    eng.init();
+    eng.setProgram(prog);
+    if (typeof gain === "number" && gain > 0 && eng.config) {
+      eng.config.masterGain = (eng.config.masterGain || 0.72) * Math.min(1.25, 0.85 + gain);
+    }
+    this._vaEngines.set(key, eng);
+    return eng;
+  }
+
+  vaAllNotesOff() {
+    this._vaEngines.forEach(eng => {
+      try { eng.allNotesOff(); } catch (err) { /* voice pool may be mid-init */ }
+    });
   }
 
   addLayerChangeListener(cb) {
@@ -836,10 +892,20 @@ export class MultiLayerEngine {
   }
 
   setDualLayerInstrument(instKey) {
-    const resolved = this.resolveBankKey(instKey);
-    if (this.layers[1]) {
-      this.layers[1].inst = resolved;
-      this.layers[1].name = HD_SOUNDBANKS[resolved]?.name || HD_SOUNDBANKS[instKey]?.name || resolved;
+    if (instKey.startsWith("va:")) {
+      const prog = getTritonProgramById(instKey.slice(3));
+      if (prog && this.layers[1]) {
+        this.layers[1].inst = instKey;
+        this.layers[1].vaProg = prog;
+        this.layers[1].name = prog.name;
+      }
+    } else {
+      const resolved = this.resolveBankKey(instKey);
+      if (this.layers[1]) {
+        this.layers[1].inst = resolved;
+        delete this.layers[1].vaProg;
+        this.layers[1].name = HD_SOUNDBANKS[resolved]?.name || HD_SOUNDBANKS[instKey]?.name || resolved;
+      }
     }
     this.setDualLayerEnabled(true);
   }
@@ -873,6 +939,7 @@ export class MultiLayerEngine {
       this.isTritonVaMode = false;
       this.activeTritonVaProg = null;
       tritonVaEngine.allNotesOff();
+      this.vaAllNotesOff();
     }
     this.init();
     this.notifyLayerChange();
@@ -896,6 +963,7 @@ export class MultiLayerEngine {
       this.isTritonVaMode = false;
       this.activeTritonVaProg = null;
       tritonVaEngine.allNotesOff();
+      this.vaAllNotesOff();
       this.isDualLayerActive = false; // explicitly loaded a full 4-layer combi
       this.layers = JSON.parse(JSON.stringify(this.activeCombi.layers));
       this.init();
@@ -952,9 +1020,19 @@ export class MultiLayerEngine {
       return;
     }
     if (this.layers[layerIndex] && instKey) {
-      const resolvedKey = this.resolveBankKey(instKey);
-      this.layers[layerIndex].inst = resolvedKey;
-      this.layers[layerIndex].name = HD_SOUNDBANKS[resolvedKey]?.name || HD_SOUNDBANKS[instKey]?.name || instKey;
+      if (instKey.startsWith("va:")) {
+        const prog = getTritonProgramById(instKey.slice(3));
+        if (prog) {
+          this.layers[layerIndex].inst = instKey;
+          this.layers[layerIndex].vaProg = prog;
+          this.layers[layerIndex].name = prog.name;
+        }
+      } else {
+        const resolvedKey = this.resolveBankKey(instKey);
+        this.layers[layerIndex].inst = resolvedKey;
+        delete this.layers[layerIndex].vaProg;
+        this.layers[layerIndex].name = HD_SOUNDBANKS[resolvedKey]?.name || HD_SOUNDBANKS[instKey]?.name || instKey;
+      }
       this.isCombiMode = true;
       this.isSynthMode = false;
       this.init();
@@ -999,7 +1077,9 @@ export class MultiLayerEngine {
         if (velocity < layer.minVel || velocity > layer.maxVel) continue;
 
         const transposedMidi = Math.max(21, Math.min(108, midiNote + layer.oct * 12));
-        if (this.pcmEngine) {
+        if (layer.vaProg) {
+          this.getVaEngineFor(layer.vaProg, layer.gain).noteOn(transposedMidi, velocity);
+        } else if (this.pcmEngine) {
           this.pcmEngine.playNote(layer.inst, transposedMidi, velocity, layer.gain, i);
         }
       }
@@ -1042,7 +1122,11 @@ export class MultiLayerEngine {
         for (let i = 0; i < this.layers.length; i++) {
           const layer = this.layers[i];
           const transposedMidi = Math.max(21, Math.min(108, midiNote + layer.oct * 12));
-          this.pcmEngine.stopNote(layer.inst, transposedMidi);
+          if (layer.vaProg) {
+            this.getVaEngineFor(layer.vaProg, layer.gain).noteOff(transposedMidi);
+          } else {
+            this.pcmEngine.stopNote(layer.inst, transposedMidi);
+          }
         }
       } else {
         this.pcmEngine.stopNote(this.activeSingleInst, midiNote);
@@ -1072,7 +1156,12 @@ export class MultiLayerEngine {
       tritonVaEngine.setSustainPedal(isDown);
       return;
     }
-    if (this.pcmEngine) this.pcmEngine.setSustainPedal(isDown);
+    if (this.pcmEngine) {
+      this.pcmEngine.setSustainPedal(isDown);
+      if (this.isCombiMode) {
+        this._vaEngines.forEach(eng => { try { eng.setSustainPedal(isDown); } catch (err) {} });
+      }
+    }
   }
 
   setPitchBend(semitones) {
@@ -1081,7 +1170,12 @@ export class MultiLayerEngine {
       tritonVaEngine.setPitchBend(semitones);
       return;
     }
-    if (this.pcmEngine) this.pcmEngine.setPitchBend(semitones);
+    if (this.pcmEngine) {
+      this.pcmEngine.setPitchBend(semitones);
+      if (this.isCombiMode) {
+        this._vaEngines.forEach(eng => { try { eng.setPitchBend(semitones); } catch (err) {} });
+      }
+    }
   }
 
   setModWheel(amount) {
@@ -1092,6 +1186,7 @@ export class MultiLayerEngine {
   panic() {
     if (this.pcmEngine) this.pcmEngine.allNotesOff();
     tritonVaEngine.allNotesOff();
+    this.vaAllNotesOff();
   }
 
   // ---- User presets + gig setlist (localStorage: sync, offline, zero deps) ----
