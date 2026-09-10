@@ -22,8 +22,14 @@ export class AudioCore {
 
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     try {
-      // Force interactive low-latency hardware buffer
-      this.ctx = new AudioContextClass({ latencyHint: "interactive" });
+      // "balanced" lets the browser use a larger WASAPI internal buffer than
+      // "interactive". On low-power chips (WILSONIX-tier SoCs) the audio thread
+      // can miss the tiny 128-frame (~2.9ms) interactive deadline during
+      // sustained bass-heavy patches -> 1-3ms dropout = an audible crackle.
+      // The tradeoff is a few extra ms of base latency, which is far less
+      // obnoxious than periodic crackles. If it feels laggy, switch back to
+      // "interactive" (measured tooling is unaffected either way).
+      this.ctx = new AudioContextClass({ latencyHint: "balanced" });
     } catch (e) {
       this.ctx = new AudioContextClass();
     }
