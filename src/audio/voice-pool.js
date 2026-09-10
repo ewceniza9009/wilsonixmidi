@@ -220,17 +220,17 @@ export class PolyphonicVoice {
     this.voiceGain.gain.cancelScheduledValues(now);
     if (sameNote) {
       // Legato same-note retrigger (fast repeated keys): blend from the current
-      // level -- no zero gap, no duck, no chop, no latency.
-      const aStart = now + 0.002;
-      this.voiceGain.gain.setTargetAtTime(peakGain, aStart, Math.max(0.002, attack));
-      this.voiceGain.gain.setTargetAtTime(decTarget, aStart + Math.max(0.002, attack) * 3 + 0.004, decTau);
+      // level -- no zero gap, no duck, no chop, instant response.
+      const aStart = now + 0.001;
+      this.voiceGain.gain.setTargetAtTime(peakGain, aStart, Math.max(0.001, attack));
+      this.voiceGain.gain.setTargetAtTime(decTarget, aStart + Math.max(0.001, attack) * 3 + 0.003, decTau);
     } else if (wasBusy) {
-      // Voice steal: quick smooth duck to near-silence (old note never chopped),
-      // then a clean attack wave-in. 50ms is short enough to feel snappy.
-      const zeroAt = now + 0.05;
-      this.voiceGain.gain.setTargetAtTime(0.0, now, 0.012);
+      // Voice steal: fast duck to near-silence, then clean attack wave-in.
+      // 25ms duck is fast enough to feel instant on rapid re-triggers.
+      const zeroAt = now + 0.025;
+      this.voiceGain.gain.setTargetAtTime(0.0, now, 0.006);
       this.voiceGain.gain.setValueAtTime(0.0, zeroAt);
-      const aStart = zeroAt + 0.004;
+      const aStart = zeroAt + 0.002;
       this.voiceGain.gain.setTargetAtTime(peakGain, aStart, attack);
       this.voiceGain.gain.setTargetAtTime(decTarget, aStart + attack * 3 + 0.004, decTau);
     } else {

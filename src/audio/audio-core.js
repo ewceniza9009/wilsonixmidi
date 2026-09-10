@@ -61,23 +61,29 @@ export class AudioCore {
     this.busPad = this.ctx.createGain();
     this.busPad.gain.value = 0.7;
 
-    // Master bus glue compressor: slow optical-style leveling that transparently
-    // contains sustained stacked chords BEFORE the limiter, so the limiter only
-    // catches true transient peaks and never pumps or distorts
+    // Master bus glue compressor: optical-style leveling for stacked chords.
+    // Bypassed by default — the 0.7 busPad + hardware limiter already prevent
+    // clipping. Only engaged by heavy FX presets to contain sustained tails.
     this.busComp = this.ctx.createDynamicsCompressor();
     this.busComp.threshold.value = -16.0;
-    this.busComp.knee.value = 24.0;
+    this.busComp.knee.value = 12.0;
     this.busComp.ratio.value = 1.6;
-    this.busComp.attack.value = 0.050;
-    this.busComp.release.value = 0.450;
+    this.busComp.attack.value = 0.015;
+    this.busComp.release.value = 0.300;
 
-    // Routing: FX Rack -> Master Gain -> BusPad(trim) -> DC Blocker -> BusComp -> Analyser -> HardwareLimiter -> Destination
-    // (No waveshaper on the master bus: tanh saturation was adding grit to sustained chords)
+    // Bypass gain: routes AROUND the bus compressor when it's not needed,
+    // removing its per-quantum DSP overhead entirely.
+    this.busCompBypass = this.ctx.createGain();
+    this.busCompBypass.gain.value = 1.0;
+    this.busCompEnabled = false;
+
+    // Routing: FX Rack -> Master Gain -> BusPad(trim) -> DC Blocker -> [BusComp OR Bypass] -> Analyser -> HardwareLimiter -> Destination
     this.fxRack.output.connect(this.masterGain);
     this.masterGain.connect(this.busPad);
     this.busPad.connect(this.dcBlocker);
-    this.dcBlocker.connect(this.busComp);
-    this.busComp.connect(this.analyser);
+    // Default: fast bypass path (no compressor)
+    this.dcBlocker.connect(this.busCompBypass);
+    this.busCompBypass.connect(this.analyser);
     this.analyser.connect(this.hardwareLimiter);
     this.hardwareLimiter.connect(this.ctx.destination);
 
@@ -192,6 +198,25 @@ export class AudioCore {
     if (!this.masterGain || !this.ctx) return;
     const v = Math.max(0, Math.min(3.0, val * 3.0));
     this.masterGain.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02);
+  }
+
+  // Toggle the bus compressor on/off. When OFF, audio routes through a
+  // bypass gain node with zero DSP overhead. When ON, the compressor
+  // contains sustained stacked chords before the limiter.
+  setBusCompEnabled(enabled) {
+    if (this.busCompEnabled === enabled) return;
+    this.busCompEnabled = enabled;
+    try {
+      if (enabled) {
+        this.dcBlocker.disconnect(this.busCompBypass);
+        this.dcBlocker.connect(this.busComp);
+        this.busComp.connect(this.analyser);
+      } else {
+        this.dcBlocker.disconnect(this.busComp);
+        this.dcBlocker.connect(this.busCompBypass);
+        this.busCompBypass.connect(this.analyser);
+      }
+    } catch (e) {}
   }
 
   // DIAG recorder: taps post-limiter master output so crackle reports can be

@@ -3,6 +3,7 @@
  * Chains: Tube Drive -> Phaser -> Korg Chorus -> Rotary -> Ping-Pong Delay -> Algorithmic Reverb -> EQ & Limiter
  */
 
+import { audioCore } from "./audio-core.js";
 import { GrandPianoAcoustics } from "./effects/piano-acoustics.js";
 import { TubeDrive } from "./effects/tube-drive.js";
 import { AutoPan } from "./effects/auto-pan.js";
@@ -103,17 +104,30 @@ export class FxRackManager {
     effect.setBypass = bypassed => {
       if (originalSetBypass) originalSetBypass(bypassed);
       setEngaged(!bypassed);
+      // Re-evaluate: should we use fast path or full FX chain?
+      this._updateChainRouting();
     };
 
     return { effect, setEngaged };
   }
 
   chainEffects() {
-    // Clean Studio Serial chain, hard-bypassed per slot:
-    // Input -> PianoAcoustics -> TubeDrive -> AutoPan -> Phaser -> Flanger ->
-    // Chorus -> Rotary -> Tremolo -> Slapback -> Delay -> SpringReverb ->
-    // GatedReverb -> AlgorithmicReverb -> TapeSaturation -> PresetTrim ->
-    // MasterEQ -> Output
+    // FAST PATH: direct route that skips ALL 14 bypass-slot node chains.
+    // When every effect is off, audio goes Input -> FastPathGain -> Output
+    // with ZERO extra DSP overhead. The browser render thread pulls zero
+    // unnecessary nodes → instant touch-to-sound on any hardware.
+    this.fastPathGain = this.ctx.createGain();
+    this.fastPathGain.gain.value = 1.0;
+    this.input.connect(this.fastPathGain);
+    // Clean path: input -> fastPathGain -> presetTrim -> masterEq -> output
+    this.fastPathGain.connect(this.presetTrimNode);
+
+    // Full FX chain path (only connected when ANY effect is engaged)
+    this.fullChainStart = this.ctx.createGain();
+    this.fullChainStart.gain.value = 1.0;
+    this.chainJunctions = [];
+    this.chainConnected = false;
+
     const chain = [
       this.pianoAcoustics,
       this.tube,
@@ -131,16 +145,21 @@ export class FxRackManager {
       this.tapeSat,
     ];
 
-    let cursor = this.input;
+    let cursor = this.fullChainStart;
     chain.forEach(effect => {
       const junction = this.ctx.createGain();
       this._installBypassSlot(effect, cursor, junction);
+      this.chainJunctions.push(junction);
       cursor = junction;
     });
 
     cursor.connect(this.presetTrimNode);
     this.presetTrimNode.connect(this.masterEq.input);
     this.masterEq.output.connect(this.output);
+
+    // Store chain head for dynamic connect/disconnect
+    this._chainEnd = cursor;
+    this._chainEffects = chain;
 
     // Default: 100% Clean Studio Concert Grand (Pure pristine samples)
     this.pianoAcoustics.setBypass(true);
@@ -156,9 +175,36 @@ export class FxRackManager {
     this.springReverb.setBypass(true);
     this.gatedReverb.setBypass(true);
     this.tapeSat.setBypass(true);
-    this.reverb.setBypass(false);
+    // Default: 100% clean, ALL effects (incl. reverb) bypassed → the FX fast-path
+    // short-circuit stays active for instant touch-to-sound. Enable any effect in
+    // the UI when you want ambience/tone shaping (that engages the full chain).
+    this.reverb.setBypass(true);
     this.reverb.setMix(0.12);
     this.reverb.setDecay(1.6);
+
+    // After setting defaults, check if we need the full chain or fast path
+    this._updateChainRouting();
+  }
+
+  // Called after every bypass toggle. When ALL effects are bypassed, the full
+  // FX node chain is physically disconnected from the graph → zero render
+  // overhead. When any effect is engaged, the chain is connected and the fast
+  // path is disconnected.
+  _updateChainRouting() {
+    const anyEngaged = this._chainEffects.some(e => e.enabled);
+    if (anyEngaged && !this.chainConnected) {
+      try { this.input.disconnect(this.fastPathGain); } catch (e) {}
+      try { this.input.connect(this.fullChainStart); } catch (e) {}
+      this.chainConnected = true;
+      // Heavy FX engaged: enable bus compressor to contain stacked tails
+      try { audioCore.setBusCompEnabled(true); } catch (e) {}
+    } else if (!anyEngaged && this.chainConnected) {
+      try { this.input.disconnect(this.fullChainStart); } catch (e) {}
+      try { this.input.connect(this.fastPathGain); } catch (e) {}
+      this.chainConnected = false;
+      // All FX off: bypass bus compressor for zero-overhead fast path
+      try { audioCore.setBusCompEnabled(false); } catch (e) {}
+    }
   }
 
   setPresetTrim(val) {
@@ -392,7 +438,7 @@ export class FxRackManager {
         this.chorus.setBypass(true);
         this.rotary.setBypass(true);
         this.delay.setBypass(true);
-        this.reverb.setBypass(false);
+        this.reverb.setBypass(true);
         this.reverb.setMix(0.12);
         this.reverb.setDecay(1.6);
         this.masterEq.setLowGain(1.0);

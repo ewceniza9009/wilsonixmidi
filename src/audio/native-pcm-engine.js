@@ -18,6 +18,173 @@ const NOTE_MAP = {
   C: 0, "C#": 1, Db: 1, D: 2, "D#": 3, Eb: 3, E: 4, F: 5, "F#": 6, Gb: 6, G: 7, "G#": 8, Ab: 8, A: 9, "A#": 10, Bb: 10, B: 11
 };
 
+// Module-level: instrument aliases resolved once, not rebuilt per keypress.
+const INST_ALIASES = {
+  // 1. Acoustic Pianos -> studio upright WAV multisamples (clean source, no MP3 grain)
+  synthage_grand: "abletunes_upright",
+  whitney_ballad: "abletunes_upright",
+  ballad_master: "abletunes_upright",
+  m1_piano_16: "abletunes_upright",
+  abletunes_upright: "abletunes_upright",
+  acoustic_grand_piano: "abletunes_upright",
+
+  // 2. Electric Pianos, FM Tines -> studio DX7 FM WAV multisamples (clean source, no MP3 grain)
+  rhodes_stage_mp3: "electric_piano_1",
+  electric_piano_1: "abletunes_fm_piano",
+  // REAL DX electric piano (GM program 5, genuine DX7-style FM EP timbre)
+  electric_piano_2: "electric_piano_2",
+  tri_stage_ep: "electric_piano_2",
+  dx7_ep1: "electric_piano_2",
+  triton_dyno_ep: "abletunes_fm_piano",
+  abletunes_fm_piano: "abletunes_fm_piano",
+  abletunes_fm_dx7: "abletunes_fm_piano",
+  m1_fresh_air: "abletunes_fm_piano",
+
+  // 3. Real Electric & Acoustic Guitars
+  distortion_guitar: "distortion_guitar",
+  overdriven_guitar: "overdriven_guitar",
+  electric_guitar_clean: "electric_guitar_clean",
+  acoustic_guitar_nylon: "acoustic_guitar_nylon",
+  fantom_nylon_pluck: "acoustic_guitar_nylon",
+
+  // 4. Organs
+  drawbar_organ: "drawbar_organ",
+  m1_rock_organ: "drawbar_organ",
+  m1_organ_2: "drawbar_organ",
+
+  // 5. Real Bass & Sub
+  synth_bass_1: "synth_bass_1",
+  moog_punch_bass: "synth_bass_1",
+  m1_slap_bass: "synth_bass_1",
+
+  // 6. Real Human Vocal Choir - 100% DISTINCT from Strings!
+  choir_aahs: "choir_aahs",
+  voice_oohs: "voice_oohs",
+  m1_choir: "choir_aahs",
+  m1_ooh_ahh: "choir_aahs",
+  ooh_ahh: "choir_aahs",
+  choir: "choir_aahs",
+  choral: "choir_aahs",
+  cathedral_choir: "choir_aahs",
+  angelic_oohs: "choir_aahs",
+  vocal_breath: "breath_noise",
+  breath_noise: "breath_noise",
+
+  // Concert Crowd & Applause
+  applause: "applause",
+  concert_applause: "applause",
+  stadium_roar: "applause",
+  crowd_cheer: "applause",
+  ovation: "applause",
+
+  // Real Nature Field Recordings
+  seashore: "seashore",
+  ocean_waves: "seashore",
+  bird_tweet: "bird_tweet",
+  forest_birds: "bird_tweet",
+
+  // Real Acoustic & Synth Drums
+  taiko_drum: "taiko_drum",
+  thunder_taiko: "taiko_drum",
+  synth_drum: "synth_drum",
+  gunshot: "gunshot",
+  sub_boom: "gunshot",
+
+  // 7. Strings & Pads
+  string_ensemble_1: "string_ensemble_1",
+  triton_warm_strings: "string_ensemble_1",
+  symphonic_strings: "string_ensemble_1",
+  m1_symphonic: "string_ensemble_1",
+  m1_strings: "string_ensemble_1",
+  m1_universe: "string_ensemble_1",
+
+  // 8. Brass, Horns & Synth Leads
+  brass_section: "brass_section",
+  fat_brass_horns: "brass_section",
+  supersaw_lead: "brass_section",
+  m1_brass_1: "brass_section",
+  brass_1: "brass_section",
+
+  // 9. Woodwinds & Genuine Saxophones
+  alto_sax: "alto_sax",
+  breathy_alto_sax: "alto_sax",
+  sax_genuine_solo: "alto_sax",
+  sax_solo: "alto_sax",
+  sax_alto_lead: "alto_sax",
+  sax_funk_stab: "alto_sax",
+  sax_fall: "alto_sax",
+  sax_scoop: "alto_sax",
+  tenor_sax: "tenor_sax",
+  sax_sensual: "tenor_sax",
+  sax_blues_growl: "tenor_sax",
+  sax_tenor_blues: "tenor_sax",
+  soprano_sax: "soprano_sax",
+  sax_soprano: "soprano_sax",
+  m1_lore: "alto_sax",
+  m1_flute: "flute",
+  m1_pan_flute: "flute",
+  pan_flute: "flute",
+
+  // 10. Doctor Mix M1 Instruments
+  m1_guitar_1: "acoustic_guitar_steel",
+  guitar_1: "acoustic_guitar_steel",
+  m1_12string: "acoustic_guitar_steel",
+  string_12: "acoustic_guitar_steel",
+  m1_fretless: "acoustic_bass",
+  fretless: "acoustic_bass",
+  m1_bottle_bell: "vibraphone",
+  bottle_bell: "vibraphone",
+  m1_kalimba: "kalimba",
+  kalimba: "kalimba",
+  m1_koto: "harpsichord",
+  koto: "harpsichord",
+  m1_bell_ring: "vibraphone",
+  bell_ring: "vibraphone",
+  m1_pick_bass: "slap_bass_1",
+  pick_bass: "slap_bass_1",
+  m1_synth_bass_1: "synth_bass_1",
+  m1_solo_synth: "brass_section",
+};
+
+// Module-level: SOURCES ARE PEAK-NORMALIZED AT LOAD — not recreated per note.
+const INST_TRIM_GAINS = {
+  acoustic_grand_piano: 1.0,
+  abletunes_upright: 1.0,
+  m1_piano_16: 1.0,
+  electric_piano_1: 1.0,
+  abletunes_fm_piano: 1.0,
+  string_ensemble_1: 1.0,
+  m1_universe: 1.0,
+  m1_choir: 1.15,
+  choir_aahs: 1.15,
+  acoustic_guitar_nylon: 1.0,
+  electric_guitar_clean: 1.0,
+  alto_sax: 1.05,
+  brass_section: 1.0,
+  drawbar_organ: 1.0,
+  synth_bass_1: 1.05,
+  m1_slap_bass: 1.05,
+  distortion_guitar: 1.0,
+  overdriven_guitar: 1.0,
+  trumpet: 1.05,
+  trombone: 1.05,
+  tenor_sax: 1.05,
+  flute: 1.0,
+  clarinet: 1.0,
+  violin: 1.0,
+  cello: 1.0,
+  church_organ: 1.0,
+  vibraphone: 1.0,
+  electric_piano_2: 1.0,
+  acoustic_bass: 1.05,
+  soprano_sax: 1.05,
+  muted_trumpet: 1.0,
+  acoustic_guitar_steel: 1.0,
+  slap_bass_1: 1.05,
+  rock_organ: 1.0,
+  harpsichord: 1.0,
+};
+
 export function noteNameToMidi(noteStr) {
   const match = noteStr.match(/^([A-G][b#]?)([0-9])$/);
   if (!match) return null;
@@ -1345,132 +1512,6 @@ export class NativePcmEngine {
   }
 
   findNearestAnchor(instId, targetMidi, velocity = 95) {
-    const INST_ALIASES = {
-      // 1. Acoustic Pianos -> studio upright WAV multisamples (clean source, no MP3 grain)
-      synthage_grand: "abletunes_upright",
-      whitney_ballad: "abletunes_upright",
-      ballad_master: "abletunes_upright",
-      m1_piano_16: "abletunes_upright",
-      abletunes_upright: "abletunes_upright",
-      acoustic_grand_piano: "abletunes_upright",
-
-      // 2. Electric Pianos, FM Tines -> studio DX7 FM WAV multisamples (clean source, no MP3 grain)
-      rhodes_stage_mp3: "electric_piano_1",
-      electric_piano_1: "abletunes_fm_piano",
-      // REAL DX electric piano (GM program 5, genuine DX7-style FM EP timbre)
-      electric_piano_2: "electric_piano_2",
-      tri_stage_ep: "electric_piano_2",
-      dx7_ep1: "electric_piano_2",
-      triton_dyno_ep: "abletunes_fm_piano",
-      abletunes_fm_piano: "abletunes_fm_piano",
-      abletunes_fm_dx7: "abletunes_fm_piano",
-      m1_fresh_air: "abletunes_fm_piano",
-
-      // 3. Real Electric & Acoustic Guitars
-      distortion_guitar: "distortion_guitar",
-      overdriven_guitar: "overdriven_guitar",
-      electric_guitar_clean: "electric_guitar_clean",
-      acoustic_guitar_nylon: "acoustic_guitar_nylon",
-      fantom_nylon_pluck: "acoustic_guitar_nylon",
-
-      // 4. Organs
-      drawbar_organ: "drawbar_organ",
-      m1_rock_organ: "drawbar_organ",
-      m1_organ_2: "drawbar_organ",
-
-      // 5. Real Bass & Sub
-      synth_bass_1: "synth_bass_1",
-      moog_punch_bass: "synth_bass_1",
-      m1_slap_bass: "synth_bass_1",
-
-      // 6. Real Human Vocal Choir - 100% DISTINCT from Strings!
-      choir_aahs: "choir_aahs",
-      voice_oohs: "voice_oohs",
-      m1_choir: "choir_aahs",
-      m1_ooh_ahh: "choir_aahs",
-      ooh_ahh: "choir_aahs",
-      choir: "choir_aahs",
-      choral: "choir_aahs",
-      cathedral_choir: "choir_aahs",
-      angelic_oohs: "choir_aahs",
-      vocal_breath: "breath_noise",
-      breath_noise: "breath_noise",
-
-      // Concert Crowd & Applause
-      applause: "applause",
-      concert_applause: "applause",
-      stadium_roar: "applause",
-      crowd_cheer: "applause",
-      ovation: "applause",
-
-      // Real Nature Field Recordings
-      seashore: "seashore",
-      ocean_waves: "seashore",
-      bird_tweet: "bird_tweet",
-      forest_birds: "bird_tweet",
-
-      // Real Acoustic & Synth Drums
-      taiko_drum: "taiko_drum",
-      thunder_taiko: "taiko_drum",
-      synth_drum: "synth_drum",
-      gunshot: "gunshot",
-      sub_boom: "gunshot",
-
-      // 7. Strings & Pads
-      string_ensemble_1: "string_ensemble_1",
-      triton_warm_strings: "string_ensemble_1",
-      symphonic_strings: "string_ensemble_1",
-      m1_symphonic: "string_ensemble_1",
-      m1_strings: "string_ensemble_1",
-      m1_universe: "string_ensemble_1",
-
-      // 8. Brass, Horns & Synth Leads
-      brass_section: "brass_section",
-      fat_brass_horns: "brass_section",
-      supersaw_lead: "brass_section",
-      m1_brass_1: "brass_section",
-      brass_1: "brass_section",
-
-      // 9. Woodwinds & Genuine Saxophones
-      alto_sax: "alto_sax",
-      breathy_alto_sax: "alto_sax",
-      sax_genuine_solo: "alto_sax",
-      sax_solo: "alto_sax",
-      sax_alto_lead: "alto_sax",
-      sax_funk_stab: "alto_sax",
-      sax_fall: "alto_sax",
-      sax_scoop: "alto_sax",
-      tenor_sax: "tenor_sax",
-      sax_sensual: "tenor_sax",
-      sax_blues_growl: "tenor_sax",
-      sax_tenor_blues: "tenor_sax",
-      soprano_sax: "soprano_sax",
-      sax_soprano: "soprano_sax",
-      m1_lore: "alto_sax",
-      m1_flute: "flute",
-      m1_pan_flute: "flute",
-      pan_flute: "flute",
-
-      // 10. Doctor Mix M1 Instruments
-      m1_guitar_1: "acoustic_guitar_steel",
-      guitar_1: "acoustic_guitar_steel",
-      m1_12string: "acoustic_guitar_steel",
-      string_12: "acoustic_guitar_steel",
-      m1_fretless: "acoustic_bass",
-      fretless: "acoustic_bass",
-      m1_bottle_bell: "vibraphone",
-      bottle_bell: "vibraphone",
-      m1_kalimba: "kalimba",
-      kalimba: "kalimba",
-      m1_koto: "harpsichord",
-      koto: "harpsichord",
-      m1_bell_ring: "vibraphone",
-      bell_ring: "vibraphone",
-      m1_pick_bass: "slap_bass_1",
-      pick_bass: "slap_bass_1",
-      m1_synth_bass_1: "synth_bass_1",
-      m1_solo_synth: "brass_section",
-    };
     if (instId && INST_ALIASES[instId]) {
       instId = INST_ALIASES[instId];
     }
@@ -1617,7 +1658,6 @@ export class NativePcmEngine {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const velNorm = Math.max(0.08, Math.min(1.0, velocity / 127));
-    const isSax = String(instId || "").toLowerCase().includes("sax");
     this.heldNotes.add(midiNote);
 
     // Pitch ratio: exact if anchor === target, otherwise nearest neighbor
@@ -1689,6 +1729,16 @@ export class NativePcmEngine {
     src.buffer = anchorData.buffer;
 
     // Expressive lip embouchure scoop & singing vibrato for genuine saxophones
+    const isSax = String(instId || "").toLowerCase().includes("sax");
+    const isChoir = instId === "choir_aahs" || instId === "m1_choir" || instId === "m1_ooh_ahh" || instId?.includes("choir");
+    const isHashy = !isSax && !isChoir && (
+      instId?.includes("string") || instId?.includes("brass") ||
+      instId?.includes("trumpet") || instId?.includes("trombone") ||
+      instId?.includes("violin") || instId?.includes("cello") ||
+      instId?.includes("flute") || instId?.includes("clarinet") ||
+      instId?.includes("universe") || instId?.includes("fresh_air") ||
+      instId?.includes("pad")
+    );
     let vibLfo = null;
     if (isSax) {
       // Natural lip scoop into note pitch (-35 cents settling smoothly over 60ms)
@@ -1729,15 +1779,6 @@ export class NativePcmEngine {
     // a lower ceiling (their musical energy lives below 10kHz anyway).
     const filter = ctx.createBiquadFilter();
     filter.type = "lowpass";
-    const isChoir = instId === "choir_aahs" || instId === "m1_choir" || instId === "m1_ooh_ahh" || instId?.includes("choir");
-    const isHashy = !isSax && !isChoir && (
-      instId?.includes("string") || instId?.includes("brass") ||
-      instId?.includes("trumpet") || instId?.includes("trombone") ||
-      instId?.includes("violin") || instId?.includes("cello") ||
-      instId?.includes("flute") || instId?.includes("clarinet") ||
-      instId?.includes("universe") || instId?.includes("fresh_air") ||
-      instId?.includes("pad")
-    );
     const minCutoff = isSax ? 10000 : (isChoir ? 650 : (isHashy ? 6000 : 9000));
     const maxCutoff = isSax ? 20000 : (isChoir ? 3800 : (isHashy ? 9500 : 20000));
     const dynamicCutoff = minCutoff + velNorm * (maxCutoff - minCutoff);
@@ -1766,43 +1807,6 @@ export class NativePcmEngine {
     voiceGain.channelInterpretation = "speakers";
 
     // Sources are peak-normalized at load, so trims stay near unity for balanced combis
-    const INST_TRIM_GAINS = {
-      acoustic_grand_piano: 1.0,
-      abletunes_upright: 1.0,
-      m1_piano_16: 1.0,
-      electric_piano_1: 1.0,
-      abletunes_fm_piano: 1.0,
-      string_ensemble_1: 1.0,
-      m1_universe: 1.0,
-      m1_choir: 1.15,
-      choir_aahs: 1.15,
-      acoustic_guitar_nylon: 1.0,
-      electric_guitar_clean: 1.0,
-      alto_sax: 1.05,
-      brass_section: 1.0,
-      drawbar_organ: 1.0,
-      synth_bass_1: 1.05,
-      m1_slap_bass: 1.05,
-      distortion_guitar: 1.0,
-      overdriven_guitar: 1.0,
-      trumpet: 1.05,
-      trombone: 1.05,
-      tenor_sax: 1.05,
-      flute: 1.0,
-      clarinet: 1.0,
-      violin: 1.0,
-      cello: 1.0,
-      church_organ: 1.0,
-      vibraphone: 1.0,
-      electric_piano_2: 1.0,
-      acoustic_bass: 1.05,
-      soprano_sax: 1.05,
-      muted_trumpet: 1.0,
-      acoustic_guitar_steel: 1.0,
-      slap_bass_1: 1.05,
-      rock_organ: 1.0,
-      harpsichord: 1.0,
-    };
     const trim = INST_TRIM_GAINS[instId] || 1.0;
 
     // In Combi mode (multiple simultaneous layers), scale so 4 layers sum with limiter headroom
@@ -1819,9 +1823,10 @@ export class NativePcmEngine {
       voiceGain.gain.setTargetAtTime(peakGain, now, 0.06);
     } else if (isSax) {
       // Smooth wind reed breath pressure swell (50ms smooth rise - no mechanical clack)
-      voiceGain.gain.setTargetAtTime(peakGain, now, 0.050);
+      voiceGain.gain.setTargetAtTime(peakGain, now, 0.035);
     } else {
-      voiceGain.gain.setTargetAtTime(peakGain, now, 0.002);
+      // Fast 1ms attack — instant touch-to-sound with no perceptible delay
+      voiceGain.gain.setTargetAtTime(peakGain, now, 0.001);
     }
     // Bounded sustain: full hold ~32s, then slow exponential die-out (~40s to silence).
     // (Notes were hard-fading at 8s even while held -- audible "nulls" mid-note.)

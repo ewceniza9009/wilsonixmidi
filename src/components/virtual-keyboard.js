@@ -212,8 +212,12 @@ export class VirtualKeyboardUI {
     };
 
     let isMouseDown = false;
+    let lastTouchTime = 0; // Suppress synthetic mouse events after real touch
 
     track.addEventListener("mousedown", e => {
+      // On touchscreen laptops, browsers fire BOTH touchstart AND synthesized mousedown
+      // for the same finger tap. Suppress the mouse event to prevent double-trigger.
+      if (performance.now() - lastTouchTime < 800) return;
       e.preventDefault();
       isMouseDown = true;
       const key = getKeyFromPoint(e.clientX, e.clientY);
@@ -231,6 +235,7 @@ export class VirtualKeyboardUI {
 
     window.addEventListener("mousemove", e => {
       if (!isMouseDown) return;
+      if (performance.now() - lastTouchTime < 800) return;
       const key = getKeyFromPoint(e.clientX, e.clientY);
       if (key) {
         const primaryNote = this.activeMouseChord ? this.activeMouseChord[0] : null;
@@ -259,6 +264,7 @@ export class VirtualKeyboardUI {
     });
 
     window.addEventListener("mouseup", () => {
+      if (performance.now() - lastTouchTime < 800) { isMouseDown = false; return; }
       if (isMouseDown && this.activeMouseChord) {
         this.activeMouseChord.forEach(n => {
           this.setKeyVisualState(n, false);
@@ -274,6 +280,7 @@ export class VirtualKeyboardUI {
       "touchstart",
       e => {
         e.preventDefault();
+        lastTouchTime = performance.now(); // Block synthetic mouse events
         for (let i = 0; i < e.changedTouches.length; i++) {
           const t = e.changedTouches[i];
           const key = getKeyFromPoint(t.clientX, t.clientY);
