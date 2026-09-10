@@ -19,9 +19,11 @@ export class GigHudUI {
     this.bpm = 120;
     this.lastTapTimes = [];
     this.vuAnimationId = null;
+    this._latencySmoothed = null;
     this.gigMode = localStorage.getItem("midikey_gig_mode") === "1";
 
     this.render();
+    this.bindPillInteractions();
     if (this.gigMode) {
       this._vuRunning = false;
     } else {
@@ -404,6 +406,33 @@ export class GigHudUI {
     }
   }
 
+  bindPillInteractions() {
+    if (this._pillInteractionsBound || !this.container) return;
+    this._pillInteractionsBound = true;
+
+    const latencyVal = document.getElementById("hud-latency-val");
+    const latencyPill = document.getElementById("hud-latency-pill");
+
+    const paintLatency = (l) => {
+      const shown = l.measuredMs || l.reportedMs;
+      if (!shown || !latencyVal) return;
+      this._latencySmoothed = this._latencySmoothed === null ? shown : this._latencySmoothed * 0.6 + shown * 0.4;
+      latencyVal.innerText = `${this._latencySmoothed.toFixed(1)}ms`;
+      latencyPill?.classList.toggle("latency-warm", this._latencySmoothed > 20);
+      latencyPill?.classList.toggle("latency-hot", this._latencySmoothed > 50);
+    };
+
+    latencyPill?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const l = audioCore.measureLatency();
+      this._renderLatencyPopover(l, this._latencySmoothed);
+      paintLatency(l);
+    });
+    const gigBtn = document.getElementById("hud-gig-btn");
+    gigBtn?.addEventListener("click", () => this.toggleGigMode());
+    window.addEventListener("click", () => this._closeLatencyPopover());
+  }
+
   startVuMonitor() {
     if (this._vuRunning) return;
     this._vuRunning = true;
@@ -411,22 +440,6 @@ export class GigHudUI {
     const vuBar = document.getElementById("vu-meter-bar");
     const latencyVal = document.getElementById("hud-latency-val");
     const latencyPill = document.getElementById("hud-latency-pill");
-
-    let smoothed = null;
-    // Re-bind the pill click so opening the detail popover re-reads live metrics
-    if (!this._latencyPopoverBound) {
-      this._latencyPopoverBound = true;
-      latencyPill?.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const l = audioCore.measureLatency();
-        this._renderLatencyPopover(l, smoothed);
-      });
-      // GIG MODE toggle: stop/restart the VU + latency polling rAF loop
-      const gigBtn = document.getElementById("hud-gig-btn");
-      gigBtn?.addEventListener("click", () => this.toggleGigMode());
-      // Click anywhere else closes it
-      window.addEventListener("click", () => this._closeLatencyPopover());
-    }
 
     let lastMeasure = 0;
     const updateFrame = () => {
@@ -447,11 +460,11 @@ export class GigHudUI {
         const l = audioCore.measureLatency();
         const shown = l.measuredMs || l.reportedMs;
         if (shown) {
-          smoothed = smoothed === null ? shown : smoothed * 0.6 + shown * 0.4;
+          this._latencySmoothed = this._latencySmoothed === null ? shown : this._latencySmoothed * 0.6 + shown * 0.4;
           if (latencyVal) {
-            latencyVal.innerText = `${smoothed.toFixed(1)}ms`;
-            latencyPill?.classList.toggle("latency-warm", smoothed > 20);
-            latencyPill?.classList.toggle("latency-hot", smoothed > 50);
+            latencyVal.innerText = `${this._latencySmoothed.toFixed(1)}ms`;
+            latencyPill?.classList.toggle("latency-warm", this._latencySmoothed > 20);
+            latencyPill?.classList.toggle("latency-hot", this._latencySmoothed > 50);
           }
         }
       }
