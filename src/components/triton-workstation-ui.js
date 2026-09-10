@@ -175,12 +175,7 @@ export class TritonWorkstationUI {
     }
 
     // Default: BROWSER Mode
-    return `
-      <!-- Bank Selectors Row -->
-      <div class="triton-banks-row">
-        ${Object.values(TRITON_BANKS)
-          .map(
-            b => `
+    const bankCardHtml = b => `
           <button class="triton-bank-card ${this.activeBankId === b.id ? "active" : ""}" data-bank="${b.id}">
             <div class="bank-thumb-preview">
               <div class="mini-triton-icon"></div>
@@ -190,9 +185,9 @@ export class TritonWorkstationUI {
               <span class="bank-card-desc">${b.category}</span>
             </div>
           </button>
-        `
-          )
-          .join("")}
+        `;
+
+    const combiCardHtml = () => `
           <button class="triton-bank-card ${this.activeBankId === "COMBI" ? "active" : ""}" data-bank="COMBI">
             <div class="bank-thumb-preview">
               <div class="mini-triton-icon"></div>
@@ -202,6 +197,21 @@ export class TritonWorkstationUI {
               <span class="bank-card-desc">4-Timbre Stacks</span>
             </div>
           </button>
+        `;
+
+    // Bank card display order (COMBI card sits right after GENUINE SAX & REEDS)
+    const bankRowOrder = ["USER_A", "KORG_M1", "USER_B", "USER_C", "USER_D", "GENUINE_SAX", "COMBI", "NATURE", "HUMAN_VOX", "WEIRD_FX", "DJ_CINEMATIC", "PERCUSSION"];
+
+    return `
+      <!-- Bank Selectors Row -->
+      <div class="triton-banks-row">
+        ${bankRowOrder
+          .map(bankId => {
+            if (bankId === "COMBI") return combiCardHtml();
+            const b = TRITON_BANKS[bankId];
+            return b ? bankCardHtml(b) : "";
+          })
+          .join("")}
       </div>
 
       <!-- TouchView 4-Column Program Grid (Matches Image 2) -->

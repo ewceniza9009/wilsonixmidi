@@ -8,6 +8,8 @@ export class StudioEqLimiter {
     this.ctx = ctx;
     this.input = ctx.createGain();
     this.output = ctx.createGain();
+    this.enabled = true;
+    this._bypassRestore = null;
 
     this.buildNetwork();
   }
@@ -47,15 +49,39 @@ export class StudioEqLimiter {
   }
 
   setLowGain(db) {
+    this.enabled = true;
     this.lowShelf.gain.setTargetAtTime(Math.max(-12, Math.min(12, db)), this.ctx.currentTime, 0.02);
   }
 
   setMidGain(db) {
+    this.enabled = true;
     this.midPeak.gain.setTargetAtTime(Math.max(-12, Math.min(12, db)), this.ctx.currentTime, 0.02);
   }
 
   setHighGain(db) {
+    this.enabled = true;
     this.highShelf.gain.setTargetAtTime(Math.max(-12, Math.min(12, db)), this.ctx.currentTime, 0.02);
+  }
+
+  setBypass(bypassed) {
+    this.enabled = !bypassed;
+    if (bypassed) {
+      if (this._bypassRestore === null) {
+        this._bypassRestore = [
+          this.lowShelf.gain.value,
+          this.midPeak.gain.value,
+          this.highShelf.gain.value,
+        ];
+      }
+      this.lowShelf.gain.setTargetAtTime(0, this.ctx.currentTime, 0.02);
+      this.midPeak.gain.setTargetAtTime(0, this.ctx.currentTime, 0.02);
+      this.highShelf.gain.setTargetAtTime(0, this.ctx.currentTime, 0.02);
+    } else if (this._bypassRestore) {
+      this.lowShelf.gain.setTargetAtTime(this._bypassRestore[0], this.ctx.currentTime, 0.02);
+      this.midPeak.gain.setTargetAtTime(this._bypassRestore[1], this.ctx.currentTime, 0.02);
+      this.highShelf.gain.setTargetAtTime(this._bypassRestore[2], this.ctx.currentTime, 0.02);
+      this._bypassRestore = null;
+    }
   }
 
   setTrim(val) {

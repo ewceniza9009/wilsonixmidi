@@ -8,6 +8,9 @@ import { audioCore } from "../audio/audio-core.js";
 export class FxRackUI {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
+    if (typeof window !== "undefined") {
+      Object.defineProperty(window, "__midikeyAudioCore", { get: () => audioCore });
+    }
     this.render();
     this.bindKnobs();
     this.bindToggles();
@@ -642,6 +645,7 @@ export class FxRackUI {
         if (dev === "gated-reverb") fx.gatedReverb?.setBypass(bypassed);
         if (dev === "tremolo") fx.tremolo?.setBypass(bypassed);
         if (dev === "tape-sat") fx.tapeSat?.setBypass(bypassed);
+        if (dev === "eq") fx.masterEq?.setBypass(bypassed);
       });
     });
 
@@ -682,6 +686,7 @@ export class FxRackUI {
       "gated-reverb": fx.gatedReverb?.enabled,
       tremolo: fx.tremolo?.enabled,
       "tape-sat": fx.tapeSat?.enabled,
+      eq: fx.masterEq?.enabled,
     };
 
     Object.entries(devMap).forEach(([dev, isEnabled]) => {
