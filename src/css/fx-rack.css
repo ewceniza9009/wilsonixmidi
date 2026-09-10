@@ -137,40 +137,42 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   cursor: ns-resize;
 }
 
 .knob-face {
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #3a4150 0%, #151820 100%);
-  border: 2px solid #4b5563;
+  background: radial-gradient(circle at 35% 35%, #475569 0%, #1e2533 55%, #0f121a 100%);
+  border: 1.5px solid #334155;
   position: relative;
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.6);
-  transition: border-color 0.15s ease;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.75), inset 0 1px 1px rgba(255, 255, 255, 0.35), inset 0 -2px 3px rgba(0, 0, 0, 0.8);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
 }
 
 .rotary-knob:hover .knob-face {
   border-color: var(--accent-amber);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.9), 0 0 8px var(--accent-amber-glow), inset 0 1px 1px rgba(255, 255, 255, 0.5);
+  transform: scale(1.05);
 }
 
 .knob-pointer {
-  width: 3px;
-  height: 12px;
+  width: 2.5px;
+  height: 11px;
   background: var(--accent-amber);
-  border-radius: 2px;
+  border-radius: 1.5px;
   position: absolute;
   top: 3px;
-  left: calc(50% - 1.5px);
+  left: calc(50% - 1.25px);
   transform-origin: bottom center;
   transform: rotate(0deg);
-  box-shadow: 0 0 6px var(--accent-amber);
+  box-shadow: 0 0 6px var(--accent-amber), 0 0 10px rgba(255, 118, 77, 0.5);
 }
 
 .knob-label {
-  font-size: 0.58rem;
+  font-size: 0.56rem;
   font-weight: 800;
   color: var(--text-muted);
   letter-spacing: 0.5px;
@@ -178,27 +180,42 @@
 
 .knob-value {
   font-family: var(--font-family-mono);
-  font-size: 0.62rem;
-  font-weight: 700;
-  color: var(--text-secondary);
+  font-size: 0.58rem;
+  font-weight: 800;
+  color: #38bdf8;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  min-width: 24px;
+  text-align: center;
 }
 
 .rotary-speed-toggle,
 .piano-lid-toggle {
-  background: #374151;
+  background: linear-gradient(180deg, #252b38 0%, #171c26 100%);
   color: var(--accent-amber);
-  border: 1px solid var(--border-medium);
-  font-size: 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-top-color: rgba(255, 255, 255, 0.22);
+  font-size: 0.62rem;
   font-weight: 800;
-  padding: 6px 10px;
+  padding: 4px 8px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   margin-right: 4px;
   white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  transition: all 0.12s ease;
+}
+
+.rotary-speed-toggle:hover,
+.piano-lid-toggle:hover {
+  background: linear-gradient(180deg, #323b4e 0%, #202736 100%);
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 6px var(--accent-amber-glow);
 }
 
 .rotary-speed-toggle:active,
 .piano-lid-toggle:active {
-  background: var(--accent-amber);
-  color: #000;
+  transform: translateY(1px);
 }
