@@ -55,78 +55,55 @@ export class FxRackManager {
     this.chainEffects();
   }
 
-  // Wires an effect into the chain through a HARD-BYPASS slot.
+  // DYNAMIC SERIES CHAIN. Instead of permanently wiring all 14 effect slots
+  // (their 14 dry-gain junctions stayed in the graph whenever ANY effect was
+  // engaged — wasted render threads on modest laptops → overrun static), the
+  // audio graph is rebuilt from ONLY the engaged effects, in rack order.
   //
-  // WHY: the render thread must finish each audio quantum in real-time. Wiring
-  // every effect permanently in series meant ALL 15 effects (two 4x-oversampled
-  // waveshapers, spring/algorithmic reverbs, feedback delays, LFO banks...)
-  // kept processing every quantum even when "bypassed" -- bypass only zeroed an
-  // internal wet gain. That guaranteed render-thread overload -> the
-  // hard-silence dropouts that sound like stutter/garble.
+  //   all bypassed:  input ─► fastPathGain ─► presetTrim ─► masterEq ─► output
+  //   some engaged:  input ─► fx1.input ─► fx1.output ─► fx2.input ─► ... ─► presetTrim ─► masterEq ─► output
   //
-  // HOW: audio flows through a dry continuity wire past the effect. The effect's
-  // send tap is physically DISCONNECTED from the graph while bypassed, so the
-  // browser stops pulling the effect's whole internal network (near-zero DSP).
-  // Engaging restores the exact same signal path as before, with the same
-  // internal dry/wet gains -> tone is bit-identical to the original wiring.
-  _installBypassSlot(effect, sourceNode, targetNode) {
-    const ctx = this.ctx;
+  // Whole-graph rebuilds happen only on FX toggle / preset load (UI actions),
+  // never on the audio-note hot path, so cost is irrelevant. Bypassed effects
+  // are physically absent from the graph → zero render-thread pull.
+  _updateChainRouting() {
+    const engaged = this._chainEffects.filter(e => e.enabled);
 
-    const dryGain = ctx.createGain();
-    dryGain.gain.value = 1.0;
-    sourceNode.connect(dryGain);
-    dryGain.connect(targetNode);
+    // Tear down the previous topology completely (disconnect all outputs).
+    try { this.input.disconnect(); } catch (e) {}
+    if (this._chainEngaged) {
+      this._chainEngaged.forEach(e => {
+        try { e.output.disconnect(); } catch (err) {}
+      });
+    }
 
-    const wetGain = ctx.createGain();
-    wetGain.gain.value = 0.0;
-    const tap = ctx.createGain();
-    tap.connect(effect.input);
-    effect.output.connect(wetGain);
-    wetGain.connect(targetNode);
+    if (engaged.length === 0) {
+      // FAST PATH: single unity gain — the absolute minimum graph.
+      this.input.connect(this.fastPathGain);
+      audioCore.setBusCompEnabled(false);
+    } else {
+      // SERIES PATH: only engaged effects, in rack order.
+      this.input.connect(engaged[0].input);
+      for (let i = 0; i < engaged.length - 1; i++) {
+        engaged[i].output.connect(engaged[i + 1].input);
+      }
+      engaged[engaged.length - 1].output.connect(this.presetTrimNode);
+      audioCore.setBusCompEnabled(true);
+    }
 
-    let engaged = false;
-    const setEngaged = on => {
-      if (on === engaged) return;
-      engaged = on;
-      const now = ctx.currentTime;
-      dryGain.gain.setTargetAtTime(on ? 0.0 : 1.0, now, 0.015);
-      wetGain.gain.setTargetAtTime(on ? 1.0 : 0.0, now, 0.015);
-      try {
-        sourceNode.disconnect(tap);
-      } catch (e) {}
-      if (on) sourceNode.connect(tap);
-    };
-    setEngaged(false);
-
-    // Route every setBypass caller (rack presets, FX UI, engine patches)
-    // through the hard-bypass so they disconnect the physical link too.
-    const originalSetBypass = effect.setBypass ? effect.setBypass.bind(effect) : null;
-    effect.setBypass = bypassed => {
-      if (originalSetBypass) originalSetBypass(bypassed);
-      setEngaged(!bypassed);
-      // Re-evaluate: should we use fast path or full FX chain?
-      this._updateChainRouting();
-    };
-
-    return { effect, setEngaged };
+    this._chainEngaged = engaged;
+    this.chainConnected = engaged.length > 0;
   }
 
   chainEffects() {
-    // FAST PATH: direct route that skips ALL 14 bypass-slot node chains.
-    // When every effect is off, audio goes Input -> FastPathGain -> Output
-    // with ZERO extra DSP overhead. The browser render thread pulls zero
-    // unnecessary nodes → instant touch-to-sound on any hardware.
+    // FAST PATH: direct unity route used when every effect is bypassed.
+    // input -> fastPathGain -> presetTrim -> masterEq -> output
     this.fastPathGain = this.ctx.createGain();
     this.fastPathGain.gain.value = 1.0;
     this.input.connect(this.fastPathGain);
-    // Clean path: input -> fastPathGain -> presetTrim -> masterEq -> output
     this.fastPathGain.connect(this.presetTrimNode);
-
-    // Full FX chain path (only connected when ANY effect is engaged)
-    this.fullChainStart = this.ctx.createGain();
-    this.fullChainStart.gain.value = 1.0;
-    this.chainJunctions = [];
-    this.chainConnected = false;
+    this.presetTrimNode.connect(this.masterEq.input);
+    this.masterEq.output.connect(this.output);
 
     const chain = [
       this.pianoAcoustics,
@@ -144,22 +121,22 @@ export class FxRackManager {
       this.reverb,
       this.tapeSat,
     ];
+    this._chainEffects = chain;
+    this._chainEngaged = null;
+    this.chainConnected = false;
 
-    let cursor = this.fullChainStart;
+    // Route every setBypass caller (rack presets, FX UI, engine patches) through
+    // a single point that rebuilds the dynamic series chain.
     chain.forEach(effect => {
-      const junction = this.ctx.createGain();
-      this._installBypassSlot(effect, cursor, junction);
-      this.chainJunctions.push(junction);
-      cursor = junction;
+      const orig = effect.setBypass ? effect.setBypass.bind(effect) : null;
+      effect.setBypass = bypassed => {
+        if (orig) orig(bypassed);
+        this._updateChainRouting();
+      };
     });
 
-    cursor.connect(this.presetTrimNode);
-    this.presetTrimNode.connect(this.masterEq.input);
-    this.masterEq.output.connect(this.output);
-
-    // Store chain head for dynamic connect/disconnect
-    this._chainEnd = cursor;
-    this._chainEffects = chain;
+    // Defer wiring until all defaults are applied, so the fast path engages once.
+    this._bootstrapping = true;
 
     // Default: 100% Clean Studio Concert Grand (Pure pristine samples)
     this.pianoAcoustics.setBypass(true);
@@ -177,34 +154,14 @@ export class FxRackManager {
     this.tapeSat.setBypass(true);
     // Default: 100% clean, ALL effects (incl. reverb) bypassed → the FX fast-path
     // short-circuit stays active for instant touch-to-sound. Enable any effect in
-    // the UI when you want ambience/tone shaping (that engages the full chain).
+    // the UI when you want ambience/tone shaping (that engages the series chain).
     this.reverb.setBypass(true);
     this.reverb.setMix(0.12);
     this.reverb.setDecay(1.6);
 
-    // After setting defaults, check if we need the full chain or fast path
+    // Apply the default topology once (fast path).
+    this._bootstrapping = false;
     this._updateChainRouting();
-  }
-
-  // Called after every bypass toggle. When ALL effects are bypassed, the full
-  // FX node chain is physically disconnected from the graph → zero render
-  // overhead. When any effect is engaged, the chain is connected and the fast
-  // path is disconnected.
-  _updateChainRouting() {
-    const anyEngaged = this._chainEffects.some(e => e.enabled);
-    if (anyEngaged && !this.chainConnected) {
-      try { this.input.disconnect(this.fastPathGain); } catch (e) {}
-      try { this.input.connect(this.fullChainStart); } catch (e) {}
-      this.chainConnected = true;
-      // Heavy FX engaged: enable bus compressor to contain stacked tails
-      try { audioCore.setBusCompEnabled(true); } catch (e) {}
-    } else if (!anyEngaged && this.chainConnected) {
-      try { this.input.disconnect(this.fullChainStart); } catch (e) {}
-      try { this.input.connect(this.fastPathGain); } catch (e) {}
-      this.chainConnected = false;
-      // All FX off: bypass bus compressor for zero-overhead fast path
-      try { audioCore.setBusCompEnabled(false); } catch (e) {}
-    }
   }
 
   setPresetTrim(val) {

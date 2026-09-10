@@ -1914,8 +1914,9 @@ export class NativePcmEngine {
       // Smooth wind reed breath pressure swell (50ms smooth rise - no mechanical clack)
       voiceGain.gain.setTargetAtTime(peakGain, now, 0.035);
     } else {
-      // Fast 1ms attack — instant touch-to-sound with no perceptible delay
-      voiceGain.gain.setTargetAtTime(peakGain, now, 0.001);
+      // Fast sampled ramp across 4ms (~1.5 render quanta) — instant touch-to-sound,
+      // but never a step jump inside a single quantum (that would zipper/crackle).
+      voiceGain.gain.exponentialRampToValueAtTime(peakGain, now + 0.004);
     }
     // Bounded sustain: full hold ~32s, then slow exponential die-out (~40s to silence).
     // (Notes were hard-fading at 8s even while held -- audible "nulls" mid-note.)
