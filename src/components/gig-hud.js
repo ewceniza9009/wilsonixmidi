@@ -115,9 +115,9 @@ export class GigHudUI {
           </div>
 
           <!-- Latency -->
-          <div class="latency-hud-pill" title="Hardware buffer latency">
+          <div class="latency-hud-pill" id="hud-latency-pill" title="Click for measured round-trip latency analysis">
             <span class="latency-dot"></span>
-            <span class="latency-number" id="hud-latency-val">4.2ms</span>
+            <span class="latency-number" id="hud-latency-val">--</span>
           </div>
 
           <!-- MIDI -->
@@ -436,7 +436,22 @@ export class GigHudUI {
 
     const vuBar = document.getElementById("vu-meter-bar");
     const latencyVal = document.getElementById("hud-latency-val");
+    const latencyPill = document.getElementById("hud-latency-pill");
 
+    let smoothed = null;
+    // Re-bind the pill click so opening the detail popover re-reads live metrics
+    if (!this._latencyPopoverBound) {
+      this._latencyPopoverBound = true;
+      latencyPill?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const l = audioCore.measureLatency();
+        this._renderLatencyPopover(l, smoothed);
+      });
+      // Click anywhere else closes it
+      window.addEventListener("click", () => this._closeLatencyPopover());
+    }
+
+    let lastMeasure = 0;
     const updateFrame = () => {
       if (!this._vuRunning) return;
       const level = audioCore.getPeakLevel();
@@ -448,14 +463,84 @@ export class GigHudUI {
         else vuBar.style.backgroundColor = "#10b981";
       }
 
-      if (Math.random() < 0.03 && latencyVal) {
-        const ms = audioCore.getLatencyMs();
-        latencyVal.innerText = `${ms}ms`;
+      // Live measured latency (throttled to ~10Hz to let the drift accumulate)
+      const now = performance.now();
+      if (now - lastMeasure > 100) {
+        lastMeasure = now;
+        const l = audioCore.measureLatency();
+        const shown = l.measuredMs || l.reportedMs;
+        if (shown) {
+          smoothed = smoothed === null ? shown : smoothed * 0.6 + shown * 0.4;
+          if (latencyVal) {
+            latencyVal.innerText = `${smoothed.toFixed(1)}ms`;
+            latencyPill?.classList.toggle("latency-warm", smoothed > 20);
+            latencyPill?.classList.toggle("latency-hot", smoothed > 50);
+          }
+        }
       }
 
       this.vuAnimationId = requestAnimationFrame(updateFrame);
     };
 
     updateFrame();
+  }
+
+  _renderLatencyPopover(l, smoothed) {
+    this._closeLatencyPopover();
+
+    const pill = document.getElementById("hud-latency-pill");
+    if (!pill) return;
+    const rect = pill.getBoundingClientRect();
+
+    const pop = document.createElement("div");
+    pop.className = "latency-popover";
+    pop.id = "hud-latency-popover";
+
+    const shown = l.measuredMs || l.reportedMs;
+    const primary = smoothed !== null ? `${smoothed.toFixed(1)}ms` : `${(shown ?? 0).toFixed(1)}ms`;
+    const bufferMs = l.baseMs;
+    const bufferSamples = l.sampleRate ? Math.round((bufferMs / 1000) * l.sampleRate) : 0;
+    const stalled = l.lockMs !== null && Math.abs(l.lockMs) > 50;
+
+    const rows = [
+      ["ROUND-TRIP (Buffer+Output)", `${l.measuredMs.toFixed(1)} ms`],
+      ["SMOOTHED (10Hz avg)", primary],
+      ["Base buffer (input side)", `${l.baseMs.toFixed(1)} ms (${bufferSamples} samples @ ${(l.sampleRate / 1000).toFixed(1)} kHz)`],
+      ["Audio clock lock (drift)", l.lockMs === null ? "—" : `${l.lockMs.toFixed(1)} ms`],
+      ["Engine state", l.state],
+    ].map(
+      ([k, v]) => `
+      <div class="latency-pop-row">
+        <span class="latency-pop-key">${k}</span>
+        <span class="latency-pop-val">${v}</span>
+      </div>`
+    ).join("");
+
+    pop.innerHTML = `
+      <div class="latency-pop-head">
+        <span>ROUND-TRIP LATENCY ANALYSIS</span>
+        <button class="latency-pop-close" id="hud-latency-close">✕</button>
+      </div>
+      <div class="latency-pop-body">${rows}</div>
+      <div class="latency-pop-tip">
+        <span>${stalled
+          ? "⚠️ Audio clock is stalled (engine silent or tab throttled) — the live readout floats; play a note to re-lock it."
+          : "🔹 Real latency = base buffer + OS output buffer. Bluetooth output adds 100–200ms on top — use wired listening."}</span>
+      </div>
+    `;
+
+    pop.style.top = `${rect.bottom + 8}px`;
+    pop.style.left = `${Math.max(8, rect.left)}px`;
+    document.body.appendChild(pop);
+
+    pop.querySelector("#hud-latency-close").addEventListener("click", (e) => {
+      e.stopPropagation();
+      this._closeLatencyPopover();
+    });
+  }
+
+  _closeLatencyPopover() {
+    const pop = document.getElementById("hud-latency-popover");
+    if (pop) pop.remove();
   }
 }

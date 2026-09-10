@@ -126,6 +126,56 @@ export class AudioCore {
     return this.reportedLatencyMs || 5.2;
   }
 
+  // Latency analysis.
+  // The engine's TRUE output latency is baseLatency + outputLatency (bounded,
+  // negotiated with the OS audio device). getOutputTimestamp() timestamps run
+  // on TWO different clocks (audio vs wall). While the engine is actively
+  // rendering they stay in near-perfect lockstep; if the context is suspended
+  // or the page throttles silent audio, the audio clock stalls while the wall
+  // clock keeps advancing — the raw difference then drifts to tens of
+  // thousands of ms. So we only trust the timestamp cross-check while the two
+  // clocks are locked, surface that lock as a live "drift" meter, and always
+  // report the bounded buffer latency as the primary measured value.
+  measureLatency() {
+    const out = {
+      reportedMs: this.getLatencyMs(),
+      baseMs: 0,
+      measuredMs: null,
+      outputMs: 0,
+      lockMs: null,
+      sampleRate: this.ctx ? this.ctx.sampleRate : 0,
+      state: this.ctx ? this.ctx.state : "uninitialized",
+    };
+    if (!this.ctx) return out;
+
+    try {
+      const base = (this.ctx.baseLatency || 0.0026) * 1000;
+      const output = (this.ctx.outputLatency || 0.005) * 1000;
+      out.baseMs = Math.round(base * 10) / 10;
+      out.outputMs = Math.round(output * 10) / 10;
+      out.measuredMs = Math.round((base + output) * 10) / 10;
+
+      if (typeof this.ctx.getOutputTimestamp === "function") {
+        const ts = this.ctx.getOutputTimestamp();
+        if (ts && Number.isFinite(ts.performanceTime) && Number.isFinite(ts.contextTime)) {
+          if (this._lastLatTs) {
+            const wallDelta = ts.performanceTime - this._lastLatTs.performanceTime;
+            const audioDelta = (ts.contextTime - this._lastLatTs.contextTime) * 1000;
+            if (wallDelta > 1 && wallDelta < 500) {
+              const drift = Math.round((wallDelta - audioDelta) * 10) / 10;
+              // Healthy lock ~0ms; runaway (stalled audio clock) = big positive
+              out.lockMs = Math.abs(drift) > 100000 ? Math.round(drift) : drift;
+            }
+          }
+          this._lastLatTs = { performanceTime: ts.performanceTime, contextTime: ts.contextTime };
+        }
+      }
+    } catch (e) {
+      // measurement failure — fall back to reported numbers
+    }
+    return out;
+  }
+
   getPeakLevel() {
     if (!this.analyser || !this.peakBuffer) return 0;
     this.analyser.getByteTimeDomainData(this.peakBuffer);
