@@ -204,51 +204,64 @@
 }
 
 .triton-subtab {
-  background: #374151;
+  background: linear-gradient(180deg, #28303f 0%, #1a202c 100%);
   color: #cbd5e1;
-  border: 1px solid #4b5563;
-  font-size: 0.72rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top-color: rgba(255, 255, 255, 0.22);
+  font-size: 0.68rem;
   font-weight: 800;
-  padding: 6px 14px;
-  border-radius: 3px;
+  padding: 5px 12px;
+  border-radius: 5px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  transition: all 0.14s ease;
 }
 
 .triton-subtab:hover {
-  background: #4b5563;
+  background: linear-gradient(180deg, #333e52 0%, #222938 100%);
   color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .triton-subtab.active {
-  background: #0284c7;
+  background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
   color: #fff;
   border-color: #38bdf8;
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .triton-search-box {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #11141a;
-  border: 1px solid var(--accent-amber);
+  background: linear-gradient(180deg, #10141c 0%, #151924 100%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: var(--radius-sm);
-  padding: 4px 10px;
+  padding: 3px 8px;
+  box-shadow: inset 0 1.5px 3px rgba(0, 0, 0, 0.7);
+  transition: all 0.15s ease;
+}
+
+.triton-search-box:focus-within {
+  border-color: var(--accent-amber);
+  box-shadow: inset 0 1.5px 3px rgba(0, 0, 0, 0.8), 0 0 0 1.5px rgba(255, 118, 77, 0.3), 0 0 8px var(--accent-amber-glow);
 }
 
 .triton-search-box input {
   background: transparent;
   border: none;
   color: #fff;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
   outline: none;
-  width: 220px;
+  width: 200px;
+  height: auto;
+  box-shadow: none;
+  padding: 0;
 }
 
 .triton-search-box input::placeholder {
-  color: #666;
+  color: #64748b;
 }
 
 /* /* TouchView Screen Body (Flex: 1, fits exactly in remaining stage space) */
@@ -1206,14 +1219,23 @@
 }
 
 .oct-mini-btn {
-  background: #374151;
-  color: #fff;
-  border: none;
+  background: linear-gradient(180deg, #272d3c 0%, #191e28 100%);
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-top-color: rgba(255, 255, 255, 0.22);
   font-size: 0.58rem;
   font-weight: 800;
-  padding: 2px 5px;
-  border-radius: 2px;
+  padding: 2px 6px;
+  border-radius: 4px;
   cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: all 0.12s ease;
+}
+
+.oct-mini-btn:hover {
+  background: linear-gradient(180deg, #374256 0%, #242c3b 100%);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.28);
 }
 
 .oct-mini-val {

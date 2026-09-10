@@ -416,35 +416,38 @@
 .ws-tabs-bar {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
 }
 
 .ws-tab-btn {
   display: flex;
   align-items: center;
   gap: 3px;
-  background: #212632;
-  border: 1px solid var(--border-subtle);
+  background: linear-gradient(180deg, #222836 0%, #171c26 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top-color: rgba(255, 255, 255, 0.2);
   color: var(--text-secondary);
   font-size: 0.58rem;
   font-weight: 800;
-  padding: 3px 5px;
+  padding: 3px 6px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
   transition: all 0.12s ease;
 }
 
 .ws-tab-btn:hover {
-  background: #2d3445;
+  background: linear-gradient(180deg, #2d3546 0%, #202735 100%);
   color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .ws-tab-btn.active {
-  background: linear-gradient(135deg, rgba(255, 118, 77, 0.35), rgba(255, 118, 77, 0.1));
+  background: linear-gradient(135deg, rgba(255, 118, 77, 0.35), rgba(255, 118, 77, 0.12));
   border-color: var(--accent-amber);
-  color: var(--accent-amber);
-  box-shadow: 0 0 8px var(--accent-amber-glow);
+  color: #ffedd5;
+  box-shadow: 0 0 8px var(--accent-amber-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .ws-tab-btn.fx-scroll-btn {
