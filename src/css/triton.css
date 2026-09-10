@@ -466,20 +466,29 @@
 }
 
 .combi-search-input {
-  width: 140px;
-  min-width: 100px;
-  background: #11141a;
-  border: 1px solid var(--accent-amber);
+  width: 130px;
+  min-width: 90px;
+  background: linear-gradient(180deg, #10141c 0%, #171c26 100%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
-  font-size: 0.72rem;
+  font-size: 0.70rem;
   font-weight: 700;
-  padding: 6px 8px;
+  padding: 4px 8px;
+  height: 26px;
   outline: none;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.7);
+  box-sizing: border-box;
+}
+
+.combi-search-input:focus {
+  border-color: var(--accent-amber);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.8), 0 0 0 1.5px rgba(255, 118, 77, 0.3), 0 0 6px var(--accent-amber-glow);
 }
 
 .combi-search-input::placeholder {
-  color: #666;
+  color: #64748b;
+  font-weight: 500;
 }
 
 .combi-search-results {
@@ -491,35 +500,35 @@
 }
 
 .combi-search-chip {
-  background: #1a1e28;
-  border: 1px solid #333;
-  border-radius: 4px;
+  background: linear-gradient(180deg, #242b3a 0%, #181d28 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
   color: var(--text-primary);
-  font-size: 0.65rem;
-  padding: 3px 8px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 2px 7px;
   cursor: pointer;
   white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: all 0.12s ease;
 }
 
 .combi-search-chip:hover,
 .combi-search-chip.active {
-  background: var(--accent-amber);
+  background: linear-gradient(180deg, #ff8c69 0%, #ff6230 100%);
   color: #000;
   border-color: var(--accent-amber);
+  box-shadow: 0 0 8px var(--accent-amber-glow);
 }
 
 .combi-preset-select {
   flex: 1 1 auto;
   min-width: 0;
-  background: #11141a;
-  border: 1px solid var(--accent-amber);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 6px 8px;
-  outline: none;
-  cursor: pointer;
+  height: 26px;
+  padding: 3px 22px 3px 8px;
+  font-size: 0.70rem;
+  font-weight: 800;
+  border-color: rgba(255, 118, 77, 0.4);
 }
 
 .combi-title-group {
@@ -551,28 +560,31 @@
 }
 
 .combi-preset-btn {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
+  background: linear-gradient(180deg, #252b38 0%, #171c26 100%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-top-color: rgba(255, 255, 255, 0.22);
   color: var(--text-secondary);
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   font-weight: 800;
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  border-radius: 5px;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  transition: all 0.14s ease;
 }
 
 .combi-preset-btn:hover {
-  background: var(--bg-card-hover);
+  background: linear-gradient(180deg, #323b4e 0%, #202736 100%);
   color: #fff;
+  border-color: rgba(255, 255, 255, 0.28);
 }
 
 .combi-preset-btn.active {
-  background: linear-gradient(135deg, rgba(255, 118, 77, 0.3), rgba(255, 118, 77, 0.1));
+  background: linear-gradient(135deg, rgba(255, 118, 77, 0.35), rgba(255, 118, 77, 0.12));
   border-color: var(--accent-amber);
-  color: var(--accent-amber);
-  box-shadow: 0 0 10px var(--accent-amber-glow);
+  color: #ffedd5;
+  box-shadow: 0 0 8px var(--accent-amber-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .strip-layer-name {
@@ -597,14 +609,16 @@
 }
 
 .user-preset-input {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
+  background: linear-gradient(180deg, #10141c 0%, #171c26 100%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   color: #fff;
-  font-size: 0.72rem;
+  font-size: 0.70rem;
   font-weight: 700;
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  border-radius: 5px;
   min-width: 140px;
+  height: 25px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.7);
 }
 
 .user-preset-list {
@@ -617,26 +631,29 @@
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  padding: 2px 2px 2px 8px;
-  font-size: 0.68rem;
+  background: linear-gradient(180deg, #202634 0%, #151922 100%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-top-color: rgba(255, 255, 255, 0.2);
+  border-radius: 5px;
+  padding: 2px 4px 2px 8px;
+  font-size: 0.65rem;
   font-weight: 800;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .user-preset-chip.active {
   border-color: var(--accent-amber);
+  box-shadow: 0 0 6px var(--accent-amber-glow);
 }
 
 .user-preset-load {
   background: none;
   border: none;
   color: var(--text-secondary);
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   font-weight: 800;
   cursor: pointer;
-  padding: 4px 2px;
+  padding: 3px 2px;
 }
 
 .user-preset-chip.active .user-preset-load {
@@ -648,10 +665,19 @@
 .setlist-move {
   background: none;
   border: none;
-  color: var(--text-secondary);
-  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-size: 0.62rem;
   cursor: pointer;
-  padding: 4px 6px;
+  padding: 3px 4px;
+  border-radius: 3px;
+  transition: all 0.1s ease;
+}
+
+.user-preset-del:hover,
+.setlist-del:hover,
+.setlist-move:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .setlist-list {
@@ -667,22 +693,24 @@
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  padding: 2px 2px 2px 8px;
-  font-size: 0.68rem;
+  background: linear-gradient(180deg, #202634 0%, #151922 100%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-top-color: rgba(255, 255, 255, 0.2);
+  border-radius: 5px;
+  padding: 2px 4px 2px 8px;
+  font-size: 0.65rem;
   font-weight: 800;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .setlist-load {
   background: none;
   border: none;
   color: var(--text-secondary);
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   font-weight: 800;
   cursor: pointer;
-  padding: 4px 2px;
+  padding: 3px 2px;
 }
 
 /* Split Keyboard Zones Console */
@@ -1113,21 +1141,24 @@
 
 .timbre-combo-input {
   width: 100%;
-  background: #11141a;
-  border: 1px solid var(--border-medium);
+  background: linear-gradient(180deg, #10141c 0%, #171c26 100%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   font-size: 0.68rem;
   font-weight: 700;
-  padding: 5px 6px;
+  padding: 3px 6px;
+  height: 25px;
   outline: none;
   cursor: text;
   box-sizing: border-box;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.7);
+  transition: all 0.14s ease;
 }
 
 .timbre-combo-input:focus {
   border-color: var(--accent-amber);
-  box-shadow: 0 0 0 1px var(--accent-amber);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.8), 0 0 0 1.5px rgba(255, 118, 77, 0.3), 0 0 8px var(--accent-amber-glow);
 }
 
 .timbre-combo-list {
@@ -1138,13 +1169,13 @@
   z-index: 80;
   max-height: 260px;
   overflow-y: auto;
-  background: #0b0f16;
-  border: 1px solid var(--border-medium);
+  background: #0d111a;
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: var(--radius-sm);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.75), 0 0 1px rgba(255, 255, 255, 0.1);
   display: none;
   margin: 0;
-  padding: 2px 0;
+  padding: 3px 0;
 }
 
 .timbre-combo-list.open {
@@ -1155,18 +1186,20 @@
   display: flex;
   flex-direction: column;
   gap: 1px;
-  padding: 5px 8px;
+  padding: 4px 7px;
   cursor: pointer;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background 0.1s ease;
 }
 
 .timbre-opt:hover,
 .timbre-opt.active {
-  background: rgba(245, 158, 11, 0.12);
+  background: rgba(255, 118, 77, 0.15);
 }
 
 .timbre-opt.selected .timbre-opt-name {
   color: var(--accent-amber);
+  text-shadow: 0 0 6px var(--accent-amber-glow);
 }
 
 .timbre-opt-name {
