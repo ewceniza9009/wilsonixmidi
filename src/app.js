@@ -15,6 +15,7 @@ import { VirtualKeyboardUI } from "./components/virtual-keyboard.js";
 import { LicenseModalUI } from "./components/license-modal.js";
 import { TritonWorkstationUI } from "./components/triton-workstation-ui.js";
 import { MultiLayerUI } from "./components/multi-layer-ui.js";
+import { SplitConsoleUI } from "./components/split-console-ui.js";
 import { GroovePlayerUI } from "./components/groove-player-ui.js";
 import { DemoStationUI } from "./components/demo-station.js";
 import { MediaPlayerUI } from "./components/media-player-ui.js";
@@ -132,6 +133,13 @@ class MidiKeyEliteApp {
       console.warn("MultiLayerUI init:", e);
     }
 
+    // 5b. Split Keyboard Console (dedicated assignment view)
+    try {
+      this.splitConsole = new SplitConsoleUI("split-console-mount");
+    } catch (e) {
+      console.warn("SplitConsoleUI init:", e);
+    }
+
     // 6. Middle Station: Chord Pads & Clip Looper
     try {
       this.chordPads = new ChordPadsUI("chord-pads-mount");
@@ -198,6 +206,7 @@ class MidiKeyEliteApp {
             "view-all",
             "view-triton",
             "view-combi",
+            "view-split",
             "view-keys",
             "view-chords",
             "view-demo",
@@ -212,6 +221,11 @@ class MidiKeyEliteApp {
         if (view === "combi") {
           multiLayerEngine.toggleCombiMode(true);
         }
+
+        // SPLIT tab is the master split switch: select it → split ON, leave → OFF
+        const splitOn = view === "split";
+        multiLayerEngine.toggleSplitMode(splitOn);
+        synthEngine.toggleSplitMode(splitOn);
 
         // Snap smoothly to stage deck when switching stage views
         const stageDeck = document.getElementById("studio-stage-deck");

@@ -9,6 +9,28 @@ import { LAYER_FX_OPTIONS } from "../audio/native-pcm-engine.js";
 
 const esc = s => String(s).replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
 
+const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const midiName = m => NOTE_NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
+
+const fxOptionsHTML = selectedIx => {
+  const fxList = Object.values(LAYER_FX_OPTIONS);
+  const fxCats = [];
+  fxList.forEach(f => {
+    const cat = f.category || "General FX";
+    if (!fxCats.includes(cat)) fxCats.push(cat);
+  });
+  fxCats.sort((a, b) => a.includes("Synthesizer You") ? -1 : (b.includes("Synthesizer You") ? 1 : 0));
+  return fxCats.map(cat => `
+    <optgroup label="${cat.toUpperCase()}">
+      ${fxList.filter(f => (f.category || "General FX") === cat).map(f => `
+        <option value="${f.id}" ${selectedIx === f.id ? "selected" : ""}>
+          ${f.name}
+        </option>
+      `).join("")}
+    </optgroup>
+  `).join("");
+};
+
 export class MultiLayerUI {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
@@ -19,6 +41,29 @@ export class MultiLayerUI {
     multiLayerEngine.onLayerChangeCallback = () => {
       this.updateLayerFaders();
     };
+
+    multiLayerEngine.addSplitChangeListener(() => {
+      const consoleEl = document.getElementById("split-keyboard-console");
+      if (consoleEl) consoleEl.classList.toggle("active", !!multiLayerEngine.isSplitMode);
+      const powerBtn = document.getElementById("split-power-btn");
+      if (powerBtn) {
+        powerBtn.classList.toggle("active", !!multiLayerEngine.isSplitMode);
+        powerBtn.innerText = multiLayerEngine.isSplitMode ? "SPLIT ON" : "SPLIT OFF";
+      }
+      const nameEl = document.getElementById("split-name-lower");
+      if (nameEl && multiLayerEngine.splitZones.lower?.name) {
+        nameEl.innerText = multiLayerEngine.splitZones.lower.name;
+        nameEl.title = multiLayerEngine.splitZones.lower.name;
+      }
+      const nameUpper = document.getElementById("split-name-upper");
+      if (nameUpper && multiLayerEngine.splitZones.upper) {
+        const z = multiLayerEngine.splitZones.upper;
+        const nm = (z.inst && z.inst !== "current_stack" && z.name) ? z.name : "Current Stack";
+        nameUpper.innerText = nm;
+        nameUpper.title = nm;
+        nameUpper.closest(".split-zone-strip")?.classList.toggle("stack", !z.inst || z.inst === "current_stack");
+      }
+    });
   }
 
   render() {
@@ -197,6 +242,73 @@ export class MultiLayerUI {
             )
             .join("")}
         </div>
+
+        <!-- Split Keyboard Zones Console (assignable instrument + insert FX per half) -->
+        <div class="split-keyboard-console ${multiLayerEngine.isSplitMode ? "active" : ""}" id="split-keyboard-console">
+          <div class="combi-header-bar">
+            <div class="combi-title-group">
+              <span class="combi-pill">SPLIT KEYBOARD</span>
+              <span class="combi-main-title">TWO-ZONE PERFORMANCE SPLIT</span>
+            </div>
+            <div class="split-master-row">
+              <button class="layer-power-btn split-power-btn ${multiLayerEngine.isSplitMode ? "active" : ""}" id="split-power-btn">
+                ${multiLayerEngine.isSplitMode ? "SPLIT ON" : "SPLIT OFF"}
+              </button>
+              <label class="strip-picker-label">POINT</label>
+              <select class="split-point-select" id="split-point-select" title="Split point (notes below → LOWER zone, at/above → UPPER zone)">
+                ${(() => {
+                  const p = multiLayerEngine.splitPointMidi;
+                  return [48, 55, 60, 62, 67, 72]
+                    .concat(Array.from({ length: 37 }, (_, i) => i + 48))
+                    .filter((v, i, a) => a.indexOf(v) === i)
+                    .sort((a, b) => a - b)
+                    .map(m => `<option value="${m}" ${m === p ? "selected" : ""}>${midiName(m)}</option>`)
+                    .join("");
+                })()}
+              </select>
+            </div>
+          </div>
+
+          <div class="split-zones-row">
+            ${
+              ["lower", "upper"].map(zk => {
+                const z = multiLayerEngine.splitZones[zk];
+                const isStack = !z.inst || z.inst === "current_stack";
+                return `
+                <div class="layer-channel-strip split-zone-strip ${isStack ? "stack" : ""}" id="split-strip-${zk}">
+                  <div class="strip-header">
+                    <span class="strip-num">${zk === "lower" ? "LOWER ZONE" : "UPPER ZONE"} · ${zk === "lower" ? "BELOW POINT" : "AT/ABOVE POINT"}</span>
+                  </div>
+                  <div class="strip-layer-name split-zone-name" id="split-name-${zk}" title="${z.name || "Current Stack"}">${z.name || "Current Stack"}</div>
+                  <div class="strip-inst-picker timbre-picker" data-split-zone="${zk}">
+                    <label class="strip-picker-label">ZONE TIMBRE 🔍</label>
+                    <div class="timbre-combo" data-split-zone="${zk}">
+                      <input type="text" class="timbre-combo-input" data-split-zone="${zk}"
+                             placeholder="Search ${COMBI_TIMBRES.length} PCM + Triton timbres..."
+                             value="${esc(isStack ? "Follow Current Stack" : (z.name || ""))}" autocomplete="off" spellcheck="false" />
+                      <div class="timbre-combo-list" data-split-zone="${zk}"></div>
+                    </div>
+                  </div>
+                  <div class="strip-fx-picker">
+                    <label class="strip-picker-label">INSERT EFFECT / DSP</label>
+                    <select class="layer-fx-select split-zone-fx" data-split-zone="${zk}">${fxOptionsHTML(z.fx || "clean")}</select>
+                  </div>
+                  <div class="strip-footer-controls">
+                    <div class="octave-mini-picker">
+                      <button class="oct-mini-btn" data-split-oct="${zk}" data-oct="-1">-12</button>
+                      <span class="oct-mini-val" id="split-oct-val-${zk}">${z.oct >= 0 ? "+" : ""}${z.oct}</span>
+                      <button class="oct-mini-btn" data-split-oct="${zk}" data-oct="1">+12</button>
+                    </div>
+                    <span class="strip-role-tag">GAIN</span>
+                    <input type="range" class="split-zone-gain" data-split-gain="${zk}" min="0" max="1.5" step="0.05" value="${z.gain}" title="Zone volume" />
+                    <span class="split-gain-val" id="split-gain-val-${zk}">${Math.round(z.gain * 100)}%</span>
+                  </div>
+                </div>
+              `;
+              }).join("")
+            }
+          </div>
+        </div>
       </div>
     `;
   }
@@ -334,7 +446,7 @@ export class MultiLayerUI {
     });
 
     // Octave Shift Buttons
-    this.container.querySelectorAll(".oct-mini-btn").forEach(btn => {
+    this.container.querySelectorAll(".oct-mini-btn[data-layer]").forEach(btn => {
       btn.addEventListener("click", () => {
         const idx = parseInt(btn.getAttribute("data-layer"));
         const delta = parseInt(btn.getAttribute("data-oct"));
@@ -344,6 +456,47 @@ export class MultiLayerUI {
         if (octVal) octVal.innerText = `${multiLayerEngine.layers[idx].oct >= 0 ? "+" : ""}${multiLayerEngine.layers[idx].oct}`;
       });
     });
+
+    // ---- Split Keyboard Console ----
+    const splitPowerBtn = this.container.querySelector("#split-power-btn");
+    splitPowerBtn?.addEventListener("click", () => {
+      multiLayerEngine.toggleSplitMode(!multiLayerEngine.isSplitMode);
+      this.render();
+      this.bindEvents();
+    });
+
+    const splitPointSelect = this.container.querySelector("#split-point-select");
+    splitPointSelect?.addEventListener("change", e => {
+      multiLayerEngine.setSplitPointMidi(parseInt(e.target.value));
+    });
+
+    this.container.querySelectorAll(".split-zone-fx").forEach(sel => {
+      sel.addEventListener("change", e => {
+        const zone = sel.getAttribute("data-split-zone");
+        multiLayerEngine.setSplitZoneFx(zone, e.target.value);
+      });
+    });
+
+    this.container.querySelectorAll(".split-zone-gain").forEach(sl => {
+      sl.addEventListener("input", e => {
+        const zone = sl.getAttribute("data-split-gain");
+        const val = parseFloat(e.target.value);
+        multiLayerEngine.setSplitZoneGain(zone, val);
+        const readout = document.getElementById(`split-gain-val-${zone}`);
+        if (readout) readout.innerText = `${Math.round(val * 100)}%`;
+      });
+    });
+
+    this.container.querySelectorAll(".oct-mini-btn[data-split-oct]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const zone = btn.getAttribute("data-split-oct");
+        const delta = parseInt(btn.getAttribute("data-oct"));
+        const currentOct = multiLayerEngine.splitZones[zone].oct || 0;
+        multiLayerEngine.setSplitZoneOctave(zone, currentOct + delta);
+        const octVal = document.getElementById(`split-oct-val-${zone}`);
+        if (octVal) octVal.innerText = `${multiLayerEngine.splitZones[zone].oct >= 0 ? "+" : ""}${multiLayerEngine.splitZones[zone].oct}`;
+      });
+    });
   }
 
   bindTimbreCombos() {
@@ -351,9 +504,20 @@ export class MultiLayerUI {
       const input = combo.querySelector(".timbre-combo-input");
       const list = combo.querySelector(".timbre-combo-list");
       if (!input || !list) return;
-      const layerIdx = parseInt(combo.getAttribute("data-layer") || "0");
 
-      const selectedValue = () => multiLayerEngine.layers[layerIdx]?.inst;
+      const zoneKey = combo.getAttribute("data-split-zone");
+      const layerIdx = zoneKey
+        ? null
+        : parseInt((combo.getAttribute("data-layer") || input.getAttribute("data-layer") || "0"));
+
+      const selectedValue = () => zoneKey
+        ? multiLayerEngine.splitZones[zoneKey]?.inst
+        : multiLayerEngine.layers[layerIdx]?.inst;
+      const selectedName = () => zoneKey
+        ? multiLayerEngine.splitZones[zoneKey]?.name
+        : multiLayerEngine.layers[layerIdx]?.name;
+      const isStackMode = zoneKey && (!selectedValue() || selectedValue() === "current_stack");
+
       const close = () => list.classList.remove("open");
 
       const renderList = () => {
@@ -366,31 +530,49 @@ export class MultiLayerUI {
           (t.code || "").toLowerCase().includes(q)
         );
         items = items.slice(0, 60);
-        if (!items.length) {
-          list.innerHTML = `<div class="timbre-opt-empty">No timbres match "${esc(input.value)}" — try program names or codes like "A000"</div>`;
-          list.classList.add("open");
-          return;
-        }
         const selVal = selectedValue();
-        const selName = multiLayerEngine.layers[layerIdx]?.name;
-        list.innerHTML = items
-          .map(
-            t => `
+        const selName = selectedName();
+
+        const stackRow = zoneKey
+          ? `<div class="timbre-opt ${isStackMode ? "selected" : ""}" data-value="current_stack">
+              <span class="timbre-opt-name">Follow Current Stack</span>
+              <span class="timbre-opt-meta">▸ PLAYS THE ACTIVE COMBI / SINGLE PROGRAM</span>
+            </div>`
+          : "";
+
+        const rows = items.map(
+          t => `
           <div class="timbre-opt ${t.value === selVal || (selName && t.name === selName) ? "selected" : ""}" data-value="${esc(t.value)}">
             <span class="timbre-opt-name">${esc(t.name)}</span>
             <span class="timbre-opt-meta">${t.kind === "va" ? "⚙ TRITON VA OSCILLATOR" : "▤ PCM / SAMPLE"} · ${esc(t.bank)}${t.code ? " · " + esc(t.code) : ""}</span>
           </div>`
-          )
-          .join("");
+        ).join("");
+
+        if (!rows && !stackRow) {
+          list.innerHTML = `<div class="timbre-opt-empty">No timbres match "${esc(input.value)}" — try program names or codes like "A000"</div>`;
+          list.classList.add("open");
+          return;
+        }
+        list.innerHTML = stackRow + rows;
         list.classList.add("open");
       };
 
       const selectOption = optEl => {
         if (!optEl) return;
         const value = optEl.getAttribute("data-value");
-        multiLayerEngine.setLayerInstrument(layerIdx, value);
-        const nameEl = optEl.querySelector(".timbre-opt-name");
-        if (nameEl) input.value = nameEl.textContent;
+        if (zoneKey) {
+          if (value === "current_stack") {
+            multiLayerEngine.setSplitZoneStack(zoneKey);
+          } else {
+            multiLayerEngine.setSplitZoneInstrument(zoneKey, value);
+          }
+          const nameEl = optEl.querySelector(".timbre-opt-name");
+          if (nameEl) input.value = nameEl.textContent;
+        } else {
+          multiLayerEngine.setLayerInstrument(layerIdx, value);
+          const nameEl = optEl.querySelector(".timbre-opt-name");
+          if (nameEl) input.value = nameEl.textContent;
+        }
         close();
         input.focus();
       };

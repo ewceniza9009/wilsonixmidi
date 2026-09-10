@@ -663,6 +663,319 @@
   padding: 4px 2px;
 }
 
+/* Split Keyboard Zones Console */
+.split-keyboard-console {
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, rgba(168, 85, 247, 0.06), rgba(10, 12, 18, 0.4));
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+
+.split-keyboard-console.active {
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.12);
+}
+
+.split-master-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.split-point-select {
+  background: #11141a;
+  border: 1px solid var(--accent-amber);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 4px 8px;
+  outline: none;
+  cursor: pointer;
+}
+
+.split-zones-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .split-zones-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.split-zone-strip {
+  border-color: rgba(168, 85, 247, 0.35);
+}
+
+.split-zone-strip.stack .strip-layer-name {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.split-zone-gain {
+  flex: 1 1 auto;
+  min-width: 60px;
+  accent-color: var(--accent-amber);
+}
+
+.split-gain-val {
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  min-width: 34px;
+  text-align: right;
+}
+
+/* ==================================================================
+   SPLIT KEYBOARD CONSOLE (dedicated view)
+   ================================================================== */
+.split-console-view {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  border-radius: var(--radius-md);
+  background:
+    linear-gradient(180deg, rgba(168, 85, 247, 0.08), rgba(10, 12, 18, 0.6));
+}
+
+.split-console-view.on {
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.15);
+}
+
+.split-console-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.split-console-title {
+  margin: 4px 0 2px;
+  font-size: 1.25rem;
+  font-weight: 800;
+  background: linear-gradient(90deg, var(--accent-amber), #f8b56a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.split-console-sub {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  max-width: 640px;
+}
+
+.split-master-area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+}
+
+.split-status-badge {
+  font-size: 0.85rem;
+  font-weight: 800;
+  padding: 8px 14px;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  background: #1a1f28;
+  color: var(--text-muted);
+}
+
+.split-status-badge.on {
+  background: var(--accent-amber);
+  color: #141618;
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.35);
+}
+
+.split-label {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.split-point-select {
+  background: #11141a;
+  border: 1px solid var(--accent-amber);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 800;
+  padding: 5px 8px;
+  outline: none;
+  cursor: pointer;
+}
+
+.split-cards-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 820px) {
+  .split-cards-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.split-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-radius: var(--radius-md);
+  padding: 14px;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.split-card-lower {
+  border: 2px solid rgba(239, 68, 68, 0.55);
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.15), inset 0 0 30px rgba(239, 68, 68, 0.05);
+}
+
+.split-card-upper {
+  border: 2px solid rgba(59, 130, 246, 0.55);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.15), inset 0 0 30px rgba(59, 130, 246, 0.05);
+}
+
+.split-card-side {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.split-card-tag {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+}
+
+.split-card-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
+.split-card-lower .split-card-title { color: #f87171; }
+.split-card-upper .split-card-title { color: #60a5fa; }
+
+.split-card-hint {
+  margin: 0;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.split-card-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.split-instr-select,
+.split-fx-select {
+  width: 100%;
+  background: #11141a;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 7px 8px;
+  outline: none;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.split-instr-select:focus,
+.split-fx-select:focus {
+  border-color: var(--accent-amber);
+}
+
+.split-card-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.split-oct-btn {
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 5px 9px;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  background: #1a1f28;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.split-oct-btn:hover {
+  border-color: var(--accent-amber);
+}
+
+.split-oct-val {
+  font-size: 0.78rem;
+  font-weight: 800;
+  min-width: 34px;
+  text-align: center;
+}
+
+.split-vol {
+  flex: 1 1 auto;
+  min-width: 80px;
+  accent-color: var(--accent-amber);
+}
+
+.split-vol-val {
+  font-size: 0.68rem;
+  font-weight: 800;
+  min-width: 36px;
+}
+
+.split-card-current {
+  font-size: 0.68rem;
+  color: var(--text-primary);
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px dashed var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+}
+
+.split-card-current b {
+  color: var(--accent-amber);
+}
+
+.split-help-line {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  padding: 8px 10px;
+  border: 1px dashed var(--border-medium);
+  border-radius: var(--radius-sm);
+}
+
+.split-help-line b {
+  color: var(--text-primary);
+}
+
 /* 4-Layer Strips Rack */
 .layer-strips-rack {
   display: grid;

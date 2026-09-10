@@ -99,10 +99,6 @@ export class GigHudUI {
                 .join("")}
             </select>
           </div>
-
-          <button class="mode-pill-btn ${synthEngine.isSplitMode ? "active" : ""}" id="btn-toggle-split" title="Split Bass on Left Hand">
-            ${synthEngine.isSplitMode ? "SPLIT ON" : "SPLIT"}
-          </button>
         </div>
 
         <!-- 4. Performance & Hardware Telemetry -->
@@ -156,6 +152,10 @@ export class GigHudUI {
             <button class="ws-tab-btn" data-view="combi" title="4-Timbre Combi Mixer">
               <span class="tab-icon">🎚️</span>
               <span class="tab-label">COMBI</span>
+            </button>
+            <button class="ws-tab-btn" data-view="split" title="Split Keyboard: assign a sound to the lower and upper halves">
+              <span class="tab-icon">✂️</span>
+              <span class="tab-label">SPLIT</span>
             </button>
             <button class="ws-tab-btn" data-view="fx" title="Ableton 7-Device Master FX Rack">
               <span class="tab-icon">🎛️</span>
@@ -263,15 +263,7 @@ export class GigHudUI {
       }
     });
 
-    // Split toggle (audible PCM path + legacy synth state kept in sync)
-    const splitBtn = document.getElementById("btn-toggle-split");
-    splitBtn?.addEventListener("click", () => {
-      const next = !multiLayerEngine.isSplitMode;
-      multiLayerEngine.toggleSplitMode(next);
-      synthEngine.toggleSplitMode(next);
-      splitBtn.classList.toggle("active", next);
-      splitBtn.innerText = `SPLIT: ${next ? "ON" : "OFF"}`;
-    });
+    // Split is controlled by the SPLIT workspace tab (auto-enable/disable there)
 
     // Tap Tempo
     const tapBtn = document.getElementById("btn-tap-tempo");
@@ -346,35 +338,7 @@ export class GigHudUI {
       }
     });
 
-    // Workspace View Tabs Switcher (Triggers instant in-place switch, 0 scrolling!)
-    const appRoot = document.getElementById("app-root");
-    const wsTabBtns = this.container.querySelectorAll(".ws-tab-btn[data-view]");
-    wsTabBtns.forEach(btn => {
-      btn.addEventListener("click", () => {
-        wsTabBtns.forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        const view = btn.getAttribute("data-view");
-
-        if (appRoot) {
-          appRoot.classList.remove(
-            "view-all",
-            "view-triton",
-            "view-combi",
-            "view-keys",
-            "view-chords",
-            "view-demo",
-            "view-fx",
-            "view-looper",
-            "view-grooves"
-          );
-          appRoot.classList.add(`view-${view}`);
-        }
-
-        if (view === "combi") {
-          multiLayerEngine.toggleCombiMode(true);
-        }
-      });
-    });
+    // Workspace view switching is owned by app.js (single authoritative handler)
   }
 
   switchPatch(patchId) {

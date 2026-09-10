@@ -887,6 +887,14 @@ export class NativePcmEngine {
       new LayerInsertProcessor(ctx, destinationNode),
     ];
 
+    // 2 Dedicated Split Keyboard Zone Inserts (LOWER = left hand below split point,
+    // UPPER = right hand at/above split point). Each half gets its own assignable
+    // instrument + insert FX chain, exactly like a combi rack strip.
+    this.splitZoneInserts = {
+      lower: new LayerInsertProcessor(ctx, destinationNode),
+      upper: new LayerInsertProcessor(ctx, destinationNode),
+    };
+
     // Cache of decoded AudioBuffers: instId -> midiNote -> AudioBuffer
     this.decodedBuffers = new Map();
     // Tracking active playing voices: midiNote -> array of voice records
@@ -1590,10 +1598,12 @@ export class NativePcmEngine {
     };
   }
 
-  playNote(instId, midiNote, velocity = 95, customGain = 1.0, layerIndex = null) {
-    const dest = (layerIndex !== null && layerIndex !== undefined && this.layerInserts && this.layerInserts[layerIndex])
-      ? this.layerInserts[layerIndex].input
-      : this.destination;
+  playNote(instId, midiNote, velocity = 95, customGain = 1.0, layerIndex = null, destOverride = null) {
+    const dest = destOverride
+      ? destOverride
+      : (layerIndex !== null && layerIndex !== undefined && this.layerInserts && this.layerInserts[layerIndex]
+        ? this.layerInserts[layerIndex].input
+        : this.destination);
 
     if (this.sfxGenerator && this.sfxGenerator.isSfxInstrument(instId)) {
       return this.sfxGenerator.playSfxNote(instId, midiNote, velocity, customGain, dest);

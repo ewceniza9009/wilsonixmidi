@@ -668,10 +668,18 @@ export class MultiLayerEngine {
     this.layers = JSON.parse(JSON.stringify(this.activeCombi.layers));
     this.isDualLayerActive = false; // Dedicated dual-layer toggle state for live stage performance
 
-    // Keyboard split: notes below the split point play bass instead (audible PCM path)
+    // Keyboard split: two fully assignable zones. Notes below splitPointMidi hit the
+    // LOWER zone; notes at/above hit the UPPER zone. Each zone carries its own
+    // instrument, insert FX, gain and octave shift, routed through dedicated split
+    // insert buses (lower/upper) exactly like a combi rack strip.
     this.isSplitMode = false;
     this.splitPointMidi = 60; // Middle C split
-    this.splitBassInst = "synth_bass_1";
+    this.splitZones = {
+      lower: { inst: "synth_bass_1", name: "Moog Prodigy Punch Bass", fx: "clean", gain: 1.0, oct: 0 },
+      upper: { inst: null, name: null, fx: "clean", gain: 1.0, oct: 0 }, // inst null = follow current stack
+    };
+    this.onSplitChangeCallback = null;
+    this.splitChangeListeners = new Set();
 
     this.onLayerChangeCallback = null;
     this.layerChangeListeners = new Set();
@@ -743,6 +751,11 @@ export class MultiLayerEngine {
         activeCombiName: this.activeCombi?.name || null,
         activeSingleInst: this.activeSingleInst,
         masterPct: this._masterPct ?? 50,
+        split: {
+          enabled: this.isSplitMode,
+          pointMidi: this.splitPointMidi,
+          zones: this.splitZones,
+        },
       }));
     } catch (e) {}
   }
@@ -770,8 +783,17 @@ export class MultiLayerEngine {
       if (typeof s.masterPct === "number") {
         this._masterPct = Math.max(0, Math.min(100, Math.round(s.masterPct)));
       }
+      if (s.split && typeof s.split === "object") {
+        this.isSplitMode = !!s.split.enabled;
+        if (typeof s.split.pointMidi === "number") {
+          this.splitPointMidi = Math.max(21, Math.min(108, Math.round(s.split.pointMidi)));
+        }
+        if (s.split.zones && s.split.zones.lower) this.splitZones.lower = { ...this.splitZones.lower, ...s.split.zones.lower };
+        if (s.split.zones && s.split.zones.upper) this.splitZones.upper = { ...this.splitZones.upper, ...s.split.zones.upper };
+      }
       this.init();
       this.syncLayerFx();
+      this.syncSplitFx();
       return s;
     } catch (e) {
       return null;
@@ -785,6 +807,10 @@ export class MultiLayerEngine {
         // Route through FX Rack Input so Tube Overdrive, Distortion, Chorus, Rotary work on ALL sounds!
         this.pcmEngine = new NativePcmEngine(ctx, audioCore.fxRack.input);
       }
+    }
+    if (this.pcmEngine) {
+      this.syncLayerFx();
+      this.syncSplitFx();
     }
   }
 
@@ -1042,29 +1068,130 @@ export class MultiLayerEngine {
 
   toggleSplitMode(enabled) {
     this.isSplitMode = enabled !== undefined ? enabled : !this.isSplitMode;
+    this.notifySplitChange();
+  }
+
+  notifySplitChange() {
+    if (this.onSplitChangeCallback) {
+      try { this.onSplitChangeCallback(this.isSplitMode); } catch (e) {}
+    }
+    for (const cb of this.splitChangeListeners) {
+      try { cb(this.isSplitMode); } catch (e) {}
+    }
+    this.saveSessionSoon();
+  }
+
+  addSplitChangeListener(cb) {
+    if (typeof cb === "function") this.splitChangeListeners.add(cb);
+  }
+
+  removeSplitChangeListener(cb) {
+    this.splitChangeListeners.delete(cb);
+  }
+
+  splitZone(zoneKey) {
+    return this.splitZones[zoneKey === "upper" ? "upper" : "lower"];
+  }
+
+  setSplitPointMidi(midi) {
+    this.splitPointMidi = Math.max(21, Math.min(108, Math.round(midi)));
+    this.notifySplitChange();
+  }
+
+  setSplitZoneInstrument(zoneKey, instKey) {
+    const zone = this.splitZone(zoneKey);
+    if (!zone || !instKey) return;
+    if (instKey.startsWith("va:")) {
+      const prog = getTritonProgramById(instKey.slice(3));
+      if (prog) {
+        zone.inst = "va:" + prog.id;
+        zone.name = prog.name;
+        zone.vaProg = prog;
+      }
+    } else {
+      const resolved = this.resolveBankKey(instKey);
+      zone.inst = resolved;
+      delete zone.vaProg;
+      zone.name = HD_SOUNDBANKS[resolved]?.name || HD_SOUNDBANKS[instKey]?.name || instKey;
+    }
+    this.init();
+    this.notifySplitChange();
+  }
+
+  setSplitZoneStack(zoneKey) {
+    // "Follow current stack": upper zone plays the active combi/single program
+    const zone = this.splitZone(zoneKey);
+    if (!zone) return;
+    zone.inst = null;
+    zone.name = "Current Stack";
+    delete zone.vaProg;
+    this.notifySplitChange();
+  }
+
+  setSplitZoneFx(zoneKey, fxId) {
+    const zone = this.splitZone(zoneKey);
+    if (!zone) return;
+    zone.fx = fxId || "clean";
+    this.init();
+    if (this.pcmEngine && this.pcmEngine.splitZoneInserts && this.pcmEngine.splitZoneInserts[zoneKey]) {
+      this.pcmEngine.splitZoneInserts[zoneKey].setEffect(zone.fx);
+    }
+    this.notifySplitChange();
+  }
+
+  setSplitZoneGain(zoneKey, gain) {
+    const zone = this.splitZone(zoneKey);
+    if (!zone) return;
+    zone.gain = Math.max(0, Math.min(1.5, gain));
+    this.notifySplitChange();
+  }
+
+  setSplitZoneOctave(zoneKey, oct) {
+    const zone = this.splitZone(zoneKey);
+    if (!zone) return;
+    zone.oct = Math.max(-2, Math.min(2, oct));
+    this.notifySplitChange();
+  }
+
+  syncSplitFx() {
+    if (this.pcmEngine && this.pcmEngine.splitZoneInserts) {
+      ["lower", "upper"].forEach(key => {
+        const zone = this.splitZones[key];
+        if (zone && this.pcmEngine.splitZoneInserts[key]) {
+          this.pcmEngine.splitZoneInserts[key].setEffect(zone.fx || "clean");
+        }
+      });
+    }
   }
 
   noteOn(midiNote, velocity = 95) {
     if (!this.pcmEngine) this.init();
     audioCore.ensureRunning();
 
-    // Triton VA mode: real oscillator engine plays the program's own waveforms
-    if (this.isTritonVaMode && this.activeTritonVaProg) {
-      if (this.isSplitMode && midiNote < this.splitPointMidi) {
-        if (this.pcmEngine) {
-          this.pcmEngine.playNote(this.splitBassInst, midiNote, velocity, 1.0, null);
+    // Split zone: route through the dedicated zone bus (triggers assigned instrument
+    // or the current stack, so each half gets its own insert FX like a combi strip)
+    if (this.isSplitMode) {
+      const isLower = midiNote < this.splitPointMidi;
+      const zone = this.splitZone(isLower ? "lower" : "upper");
+
+      if (zone && zone.inst !== null && zone.inst !== undefined && zone.inst !== "current_stack") {
+        const transposedMidi = Math.max(21, Math.min(108, midiNote + (zone.oct || 0) * 12));
+        if (zone.vaProg) {
+          this.getVaEngineFor(zone.vaProg, zone.gain).noteOn(transposedMidi, velocity);
+        } else if (this.pcmEngine) {
+          const dest = (this.pcmEngine.splitZoneInserts && this.pcmEngine.splitZoneInserts[isLower ? "lower" : "upper"])
+            ? this.pcmEngine.splitZoneInserts[isLower ? "lower" : "upper"].input
+            : null;
+          this.pcmEngine.playNote(zone.inst, transposedMidi, velocity, zone.gain, null, dest);
         }
         return;
       }
-      tritonVaEngine.noteOn(midiNote, velocity);
-      return;
+      // current-stack zone: fall through to normal routing (combi/single/VA)
     }
 
-    // Split zone: left hand plays bass regardless of mode
-    if (this.isSplitMode && midiNote < this.splitPointMidi) {
-      if (this.pcmEngine) {
-        this.pcmEngine.playNote(this.splitBassInst, midiNote, velocity, 1.0, null);
-      }
+    // Triton VA mode: real oscillator engine plays the program's own waveforms
+    if (this.isTritonVaMode && this.activeTritonVaProg) {
+      tritonVaEngine.noteOn(midiNote, velocity);
       return;
     }
 
@@ -1093,13 +1220,25 @@ export class MultiLayerEngine {
 
   noteOff(midiNote) {
     audioCore.ensureRunning();
-    if (this.isTritonVaMode && this.activeTritonVaProg) {
-      if (this.isSplitMode && midiNote < this.splitPointMidi) {
-        if (this.pcmEngine) {
-          this.pcmEngine.stopNote(this.splitBassInst, midiNote);
+
+    // Split zone release mirrors the noteOn routing (zone bus + VA/PCM)
+    if (this.isSplitMode) {
+      const isLower = midiNote < this.splitPointMidi;
+      const zone = this.splitZone(isLower ? "lower" : "upper");
+
+      if (zone && zone.inst !== null && zone.inst !== undefined && zone.inst !== "current_stack") {
+        const transposedMidi = Math.max(21, Math.min(108, midiNote + (zone.oct || 0) * 12));
+        if (zone.vaProg) {
+          this.getVaEngineFor(zone.vaProg, zone.gain).noteOff(transposedMidi);
+        } else if (this.pcmEngine) {
+          this.pcmEngine.stopNote(zone.inst, transposedMidi);
         }
         return;
       }
+      // current-stack zone: fall through to normal routing (combi/single/VA)
+    }
+
+    if (this.isTritonVaMode && this.activeTritonVaProg) {
       tritonVaEngine.noteOff(midiNote);
       return;
     }
@@ -1108,13 +1247,6 @@ export class MultiLayerEngine {
       if (synthEngine.isDualLayer) {
         synthEngine.releaseLayerVoice(midiNote);
       }
-    }
-
-    if (this.isSplitMode && midiNote < this.splitPointMidi) {
-      if (this.pcmEngine) {
-        this.pcmEngine.stopNote(this.splitBassInst, midiNote);
-      }
-      return;
     }
 
     if (this.pcmEngine) {
@@ -1135,6 +1267,18 @@ export class MultiLayerEngine {
   }
 
   setNoteExpression(midiNote, relativeY) {
+    if (!this.pcmEngine) this.init();
+
+    if (this.isSplitMode) {
+      const isLower = midiNote < this.splitPointMidi;
+      const zone = this.splitZone(isLower ? "lower" : "upper");
+      if (zone && zone.inst !== null && zone.inst !== undefined && zone.inst !== "current_stack") {
+        const transposedMidi = Math.max(21, Math.min(108, midiNote + (zone.oct || 0) * 12));
+        if (this.pcmEngine) this.pcmEngine.setNoteExpression(transposedMidi, relativeY);
+        return;
+      }
+    }
+
     if (this.pcmEngine) {
       if (this.isCombiMode) {
         for (let i = 0; i < this.layers.length; i++) {
