@@ -84,25 +84,34 @@
 }
 
 .triton-silver-knob {
-  width: 24px;
-  height: 24px;
+  width: 25px;
+  height: 25px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #ffffff 0%, #a8b0bd 50%, #4b5260 100%);
-  border: 1px solid #2d333f;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
+  background: radial-gradient(circle at 35% 35%, #ffffff 0%, #d1d5db 30%, #94a3b8 65%, #475569 100%);
+  border: 1.5px solid #1e293b;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.8), inset 0 1px 1px rgba(255, 255, 255, 0.9), inset 0 -1px 2px rgba(0, 0, 0, 0.5);
   position: relative;
   cursor: ns-resize;
+  transition: transform 0.1s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.triton-silver-knob:hover {
+  transform: scale(1.08);
+  border-color: var(--accent-amber);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 8px var(--accent-amber-glow);
 }
 
 .knob-notch {
   width: 2px;
-  height: 7px;
-  background: #11141a;
+  height: 8px;
+  background: #0f172a;
+  border-radius: 1px;
   position: absolute;
   top: 2px;
   left: calc(50% - 1px);
   transform-origin: bottom center;
   transform: rotate(-30deg);
+  box-shadow: 0 0 1px rgba(255, 255, 255, 0.7);
 }
 
 .rt-label {
@@ -906,43 +915,48 @@
 .split-instr-select,
 .split-fx-select {
   width: 100%;
-  background: #11141a;
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-size: 0.78rem;
+  height: 28px;
+  padding: 3px 22px 3px 8px;
+  font-size: 0.72rem;
   font-weight: 700;
-  padding: 7px 8px;
-  outline: none;
-  cursor: pointer;
   box-sizing: border-box;
 }
 
-.split-instr-select:focus,
-.split-fx-select:focus {
-  border-color: var(--accent-amber);
+.split-fx-select {
+  border-color: rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
 }
 
 .split-card-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
 .split-oct-btn {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 800;
-  padding: 5px 9px;
-  border: 1px solid var(--border-medium);
+  padding: 3px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-top-color: rgba(255, 255, 255, 0.22);
   border-radius: var(--radius-sm);
-  background: #1a1f28;
+  background: linear-gradient(180deg, #252b38 0%, #171c26 100%);
   color: var(--text-primary);
   cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  transition: all 0.12s ease;
 }
 
 .split-oct-btn:hover {
+  background: linear-gradient(180deg, #323b4e 0%, #202736 100%);
   border-color: var(--accent-amber);
+  color: var(--accent-amber);
+  box-shadow: 0 0 6px var(--accent-amber-glow);
+}
+
+.split-oct-btn:active {
+  transform: translateY(1px);
 }
 
 .split-oct-val {
@@ -954,14 +968,18 @@
 
 .split-vol {
   flex: 1 1 auto;
-  min-width: 80px;
-  accent-color: var(--accent-amber);
+  min-width: 90px;
+  height: 20px;
+  cursor: pointer;
 }
 
 .split-vol-val {
-  font-size: 0.68rem;
+  font-family: var(--font-family-mono);
+  font-size: 0.72rem;
   font-weight: 800;
+  color: #fb923c;
   min-width: 36px;
+  text-shadow: 0 0 6px rgba(251, 146, 60, 0.4);
 }
 
 .split-card-current {
@@ -1024,20 +1042,29 @@
 }
 
 .layer-power-btn {
-  background: #374151;
-  color: #9ca3af;
-  border: none;
+  background: linear-gradient(180deg, #252b38 0%, #171c26 100%);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top-color: rgba(255, 255, 255, 0.2);
   font-size: 0.62rem;
   font-weight: 800;
-  padding: 3px 8px;
-  border-radius: var(--radius-sm);
+  padding: 3px 9px;
+  border-radius: 5px;
   cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  transition: all 0.14s ease;
+}
+
+.layer-power-btn:hover {
+  background: linear-gradient(180deg, #323a4a 0%, #202632 100%);
+  color: #fff;
 }
 
 .layer-power-btn.active {
-  background: var(--accent-green);
-  color: #000;
-  box-shadow: 0 0 8px var(--accent-green-glow);
+  background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+  color: #052e16;
+  border-color: #34d399;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .strip-num {
@@ -1062,21 +1089,17 @@
 
 .strip-inst-picker select, .strip-fx-picker select {
   width: 100%;
-  background: #11141a;
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-size: 0.70rem;
+  height: 25px;
+  padding: 2px 20px 2px 6px;
+  font-size: 0.68rem;
   font-weight: 700;
-  padding: 5px 6px;
-  outline: none;
-  cursor: pointer;
+  box-sizing: border-box;
 }
 
 .strip-fx-picker select {
   border-color: rgba(56, 189, 248, 0.35);
   color: #38bdf8;
-  background: #0b1320;
+  background-color: #0c1320;
 }
 
 .strip-fx-picker select:focus, .strip-inst-picker select:focus {
@@ -1170,37 +1193,47 @@
 .strip-fader-bay {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  background: #0d0f14;
-  padding: 8px;
+  justify-content: space-between;
+  gap: 8px;
+  background: linear-gradient(180deg, #10141d 0%, #161c27 100%);
+  padding: 6px 10px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border-subtle);
-  min-height: 84px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.fader-label {
+  font-size: 0.58rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
 .fader-track {
-  height: 74px;
+  flex: 1;
   display: flex;
   align-items: center;
-  justify-content: center;
+  min-width: 0;
 }
 
-.vertical-fader {
-  writing-mode: vertical-lr;
-  direction: rtl;
-  width: 18px;
-  height: 85px;
+.strip-fader-bay .vertical-fader {
+  width: 100%;
+  flex: 1;
+  height: 20px;
   cursor: pointer;
 }
 
 .fader-readout {
   font-family: var(--font-family-mono);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 800;
-  color: var(--accent-amber);
-  min-width: 42px;
+  color: #fb923c;
+  min-width: 38px;
   text-align: right;
+  text-shadow: 0 0 6px rgba(251, 146, 60, 0.4);
 }
 
 .strip-footer-controls {
