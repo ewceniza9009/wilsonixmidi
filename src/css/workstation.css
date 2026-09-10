@@ -917,6 +917,10 @@
   padding: 8px 6px;
   cursor: pointer;
   position: relative;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
   transition: all 0.12s ease;
 }
 
