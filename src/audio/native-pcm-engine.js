@@ -1078,6 +1078,15 @@ export class NativePcmEngine {
     this.MAX_VOICES = 28;
     this.heldNotes = new Set();
 
+    // Reusable voice spines (filter->gain per destination). AudioBufferSourceNode
+    // is single-use, but BiquadFilter + GainNode are NOT — pooling them removes
+    // 2 node allocations (plus channel-config writes) from every noteOn. Each
+    // keypress now creates only the single BufferSource it must.
+    //   destNode -> { free: [{ filter, voiceGain }] }
+    this._spinePools = new Map();
+    // Reusable hammer transient (bandpass->gain) per destination.
+    this._hammerPools = new Map();
+
     // Shared felt-hammer transient: 60ms exponentially-decaying noise burst,
     // bandpassed per-note to imitate grand hammer strike on piano voices
     try {
@@ -1639,6 +1648,97 @@ export class NativePcmEngine {
     };
   }
 
+  // Cached per-instrument timbre classification. Computed ONCE per instrument
+  // id instead of string-hunting on every keypress of the same program.
+  _instTimbre(instId) {
+    const key = instId || "";
+    let t = this._timbreCache && this._timbreCache.get(key);
+    if (t) return t;
+    const lower = key.toLowerCase();
+    const isSax = lower.includes("sax");
+    const isChoir = key === "choir_aahs" || key === "m1_choir" || key === "m1_ooh_ahh" || lower.includes("choir");
+    const isHashy = !isSax && !isChoir && (
+      lower.includes("string") || lower.includes("brass") ||
+      lower.includes("trumpet") || lower.includes("trombone") ||
+      lower.includes("violin") || lower.includes("cello") ||
+      lower.includes("flute") || lower.includes("clarinet") ||
+      lower.includes("universe") || lower.includes("fresh_air") ||
+      lower.includes("pad")
+    );
+    t = [isSax, isChoir, isHashy];
+    if (!this._timbreCache) this._timbreCache = new Map();
+    this._timbreCache.set(key, t);
+    return t;
+  }
+
+  // Acquire a pooled filter->gain voice spine for a destination. Creates a new
+  // spine only if the pool is exhausted (transient overload). Any automation the
+  // PREVIOUS voice left on the pool is wiped before reuse, so recycled spines
+  // sound bit-identical to freshly-created ones.
+  _acquireSpine(dest) {
+    let pool = this._spinePools.get(dest);
+    if (!pool) {
+      pool = { free: [] };
+      this._spinePools.set(dest, pool);
+    }
+    let spine = pool.free.pop();
+    if (!spine) {
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      const voiceGain = this.ctx.createGain();
+      voiceGain.channelCount = 2;
+      voiceGain.channelCountMode = "explicit";
+      voiceGain.channelInterpretation = "speakers";
+      filter.connect(voiceGain);
+      voiceGain.connect(dest);
+      spine = { filter, voiceGain };
+    }
+    // Strip leftovers from the recycled voice's murder at +32s / release tails.
+    const now = this.ctx.currentTime;
+    try { spine.filter.frequency.cancelScheduledValues(now); } catch (e) {}
+    try { spine.filter.Q.cancelScheduledValues(now); } catch (e) {}
+    try { spine.voiceGain.gain.cancelScheduledValues(now); } catch (e) {}
+    return spine;
+  }
+
+  _releaseSpine(dest, spine) {
+    if (!spine || !this._spinePools) return;
+    let pool = this._spinePools.get(dest);
+    if (!pool) {
+      pool = { free: [] };
+      this._spinePools.set(dest, pool);
+    }
+    pool.free.push(spine);
+  }
+
+  _acquireHammer(dest) {
+    let pool = this._hammerPools.get(dest);
+    if (!pool) {
+      pool = { free: [] };
+      this._hammerPools.set(dest, pool);
+    }
+    let h = pool.free.pop();
+    if (!h) {
+      const hbp = this.ctx.createBiquadFilter();
+      hbp.type = "bandpass";
+      const hg = this.ctx.createGain();
+      hbp.connect(hg);
+      hg.connect(dest);
+      h = { hbp, hg };
+    }
+    return h;
+  }
+
+  _releaseHammer(dest, h) {
+    if (!h || !this._hammerPools) return;
+    let pool = this._hammerPools.get(dest);
+    if (!pool) {
+      pool = { free: [] };
+      this._hammerPools.set(dest, pool);
+    }
+    pool.free.push(h);
+  }
+
   playNote(instId, midiNote, velocity = 95, customGain = 1.0, layerIndex = null, destOverride = null) {
     const dest = destOverride
       ? destOverride
@@ -1729,16 +1829,7 @@ export class NativePcmEngine {
     src.buffer = anchorData.buffer;
 
     // Expressive lip embouchure scoop & singing vibrato for genuine saxophones
-    const isSax = String(instId || "").toLowerCase().includes("sax");
-    const isChoir = instId === "choir_aahs" || instId === "m1_choir" || instId === "m1_ooh_ahh" || instId?.includes("choir");
-    const isHashy = !isSax && !isChoir && (
-      instId?.includes("string") || instId?.includes("brass") ||
-      instId?.includes("trumpet") || instId?.includes("trombone") ||
-      instId?.includes("violin") || instId?.includes("cello") ||
-      instId?.includes("flute") || instId?.includes("clarinet") ||
-      instId?.includes("universe") || instId?.includes("fresh_air") ||
-      instId?.includes("pad")
-    );
+    const [isSax, isChoir, isHashy] = this._instTimbre(instId);
     let vibLfo = null;
     if (isSax) {
       // Natural lip scoop into note pitch (-35 cents settling smoothly over 60ms)
@@ -1777,8 +1868,9 @@ export class NativePcmEngine {
     // Measured: harmonically-rich MP3 families carry -55 to -64dB of encoder hash
     // above 6kHz that normalizing lifts into audible static, so those families get
     // a lower ceiling (their musical energy lives below 10kHz anyway).
-    const filter = ctx.createBiquadFilter();
-    filter.type = "lowpass";
+    // Pooled spine: no allocation, filter is pre-wired to voiceGain -> dest.
+    const spine = this._acquireSpine(dest);
+    const { filter, voiceGain } = spine;
     const minCutoff = isSax ? 10000 : (isChoir ? 650 : (isHashy ? 6000 : 9000));
     const maxCutoff = isSax ? 20000 : (isChoir ? 3800 : (isHashy ? 9500 : 20000));
     const dynamicCutoff = minCutoff + velNorm * (maxCutoff - minCutoff);
@@ -1800,11 +1892,8 @@ export class NativePcmEngine {
       filter.Q.setValueAtTime(0.20, now);
     }
 
-    // 3. Time-Variant Amplifier (TVA): Maximum loudness, punchy studio presence
-    const voiceGain = ctx.createGain();
-    voiceGain.channelCount = 2;
-    voiceGain.channelCountMode = "explicit";
-    voiceGain.channelInterpretation = "speakers";
+    // 3. Time-Variant Amplifier (TVA): Maximum loudness, punchy studio presence.
+    // voiceGain comes pre-wired from the pooled spine (channel config done once).
 
     // Sources are peak-normalized at load, so trims stay near unity for balanced combis
     const trim = INST_TRIM_GAINS[instId] || 1.0;
@@ -1836,10 +1925,13 @@ export class NativePcmEngine {
       src.stop(now + 40);
     } catch (e) {}
 
-    // Voice Audio Chain: Source -> TVF -> TVA -> (Layer Insert Bus | Master Rack)
+    // Voice Audio Chain: Source -> TVF -> TVA -> (Layer Insert Bus | Master Rack).
+    // filter -> voiceGain -> dest are pre-wired in the pooled spine.
     src.connect(filter);
-    filter.connect(voiceGain);
-    voiceGain.connect(dest);
+
+    // Return this voice spine to the pool the moment the source ends, so dense
+    // fast passages reuse the same filter/gain over the whole run (zero churn).
+    src.onended = () => { this._releaseSpine(dest, spine); };
 
     // Instant sample-0 hardware playback
     src.start(0);
@@ -1851,15 +1943,14 @@ export class NativePcmEngine {
       if (isPianoHammer && this.hammerBuf) {
         const hsrc = ctx.createBufferSource();
         hsrc.buffer = this.hammerBuf;
-        const hbp = ctx.createBiquadFilter();
-        hbp.type = "bandpass";
+        const h = this._acquireHammer(dest);
+        const hbp = h.hbp;
+        const hg = h.hg;
         hbp.frequency.value = 1400 + velNorm * 1800;
         hbp.Q.value = 0.9;
-        const hg = ctx.createGain();
         hg.gain.setValueAtTime(0.22 * velNorm * velNorm, now);
         hsrc.connect(hbp);
-        hbp.connect(hg);
-        hg.connect(dest);
+        hsrc.onended = () => { this._releaseHammer(dest, h); };
         hsrc.start(now);
         hsrc.stop(now + 0.10);
       }
