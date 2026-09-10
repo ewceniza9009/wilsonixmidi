@@ -68,6 +68,11 @@ export class TritonVirtualAnalogEngine {
 
     const isPercussive = /(stab|hit|pluck|slap|tine|ep|wurly|rhodes|clav|harp|kalimba|mallet|vibes|vibe|bell(?!\s*pad)|piano(?!\s*pad))/i.test((prog.category || "") + " " + (prog.name || ""));
 
+    // HARD SYNC: programs named "sync" (Brian's Sync, Octa Sync, sync pads/leads)
+    // route osc2 to the phase-sync WaveShaper so the slave is reset by osc1 on every
+    // master period -- the authentic raucous octave/harmonic "sync lead" character.
+    const isSyncProgram = /(\bsync\b|octa.?sync|harm.?sync|sync.?lead)/i.test((prog.category || "") + " " + (prog.name || "") + " " + (prog.ifx || ""));
+
     this.config = {
       osc1Type: osc1,
       osc1Ratio: r1,
@@ -87,6 +92,7 @@ export class TritonVirtualAnalogEngine {
       sustainLevel: prog.sustain ?? 0.65,
       release: prog.release ?? 0.35,
       isPercussive,
+      syncSlave: isSyncProgram,
       masterGain: 0.72,
     };
   }

@@ -97,6 +97,7 @@ export const TRITON_BANKS = {
       { id: "B005", num: "005", name: "Wurly 200A Classic", category: "Electric Piano", osc1: "triangle", osc2: "sine", r1: 1.0, r2: 3.0, cutoff: 5600, Q: 1.5, attack: 0.003, decay: 2.4, sustain: 0.25, release: 0.35, ifx: "Tremolo", mfx: "Spring Reverb" },
       { id: "B006", num: "006", name: "Clavinet D6 Funk", category: "Keyboard", osc1: "sawtooth", osc2: "square", r1: 1.0, r2: 2.0, cutoff: 6200, Q: 3.5, attack: 0.001, decay: 1.2, sustain: 0.05, release: 0.08, ifx: "Auto-Wah", mfx: "Tape Delay" },
       { id: "B007", num: "007", name: "Nylon Acoustic Pluck", category: "Guitar", osc1: "triangle", osc2: "sawtooth", r1: 1.0, r2: 2.0, cutoff: 5400, Q: 1.6, attack: 0.002, decay: 2.0, sustain: 0.05, release: 0.25, ifx: "4-Band EQ", mfx: "Hall Reverb" },
+      { id: "B008", num: "008", name: "OCTA SYNC1", category: "Lead Synth", osc1: "sawtooth", osc2: "sawtooth", r1: 1.0, r2: 2.0, cutoff: 9000, Q: 3.0, attack: 0.004, decay: 1.8, sustain: 0.7, release: 0.3, ifx: "Distortion", mfx: "Ping-Pong Delay" },
     ],
   },
   USER_C: {

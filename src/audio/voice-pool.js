@@ -4,6 +4,46 @@
  * popping, sizzling, and crackling (no discontinuous disconnect() calls).
  */
 
+// True hard-sync in native Web Audio: the master saw (osc1) IS the phase ramp, so a
+// WaveShaper can map master phase -> slave phase ((p * ratio) % 1) and synthesize a
+// perfectly reset slave waveform for any ratio. Same technique JV/JP-style oscillators
+// emulate sync with: no AudioWorklet needed, phase-locked octave/sync leads included.
+const _syncCurveCache = new Map();
+
+function getSyncCurve(ratio, waveType) {
+  const key = ratio.toFixed(3) + "|" + waveType;
+  const cached = _syncCurveCache.get(key);
+  if (cached) return cached;
+
+  const N = 4096;
+  const curve = new Float32Array(N);
+  const half = N - 1;
+  for (let i = 0; i < N; i++) {
+    const v = (i / half) * 2 - 1;      // WaveShaper input: osc1 saw >= -1..1 == master phase
+    const p = (v + 1) * 0.5;           // master phase 0..1
+    const sp = (p * ratio) % 1;        // slave phase, reset every master period (hard sync)
+    let out;
+    switch (waveType) {
+      case "square":
+        out = sp < 0.5 ? 1 : -1;
+        break;
+      case "triangle":
+        out = sp < 0.5 ? 4 * sp - 1 : 3 - 4 * sp;
+        break;
+      case "sine":
+        out = Math.sin(sp * 2 * Math.PI);
+        break;
+      case "sawtooth":
+      default:
+        out = sp * 2 - 1;
+        break;
+    }
+    curve[i] = out;
+  }
+  _syncCurveCache.set(key, curve);
+  return curve;
+}
+
 export class PolyphonicVoice {
   constructor(ctx, voiceIndex, destinationNode) {
     this.ctx = ctx;
@@ -52,11 +92,24 @@ export class PolyphonicVoice {
     this.gain2.gain.value = 0.3;
     this.gain3.gain.value = 0.15;
 
+    // Hard-sync slave path: osc2 (the "harmony" oscillator) is silently gated when a
+    // program requests sync, and a phase-sync WaveShaper (fed by osc1 = master) drives
+    // gain2 instead. osc2 keeps running but contributes nothing while sync is active.
+    this.osc2Gate = ctx.createGain();
+    this.osc2Gate.gain.value = 1.0;
+    this.osc2.connect(this.osc2Gate);
+    this.osc2Gate.connect(this.gain2);
+
+    this.syncShaper = ctx.createWaveShaper();
+    this.syncShaper.oversample = "2x";
+    this.syncShaper.curve = new Float32Array(2); // all-zero = silent while no program uses sync
+    this.osc1.connect(this.syncShaper);
+    this.syncShaper.connect(this.gain2);
+
     // Permanent, click-free audio routing:
     // Oscs -> Mixers -> Filter -> VoiceGain -> Destination
     this.osc1.connect(this.gain1);
-    this.osc2.connect(this.gain2);
-this.osc3.connect(this.gain3);
+    this.osc3.connect(this.gain3);
     this._osc3Connected = true;
 
     this.gain1.connect(this.filter);
@@ -105,6 +158,19 @@ this.osc3.connect(this.gain3);
     this.osc1.frequency.setValueAtTime(freq * (instrumentConfig.osc1Ratio || 1.0), now);
     this.osc2.frequency.setValueAtTime(freq * (instrumentConfig.osc2Ratio || 2.001), now);
     this.osc3.frequency.setValueAtTime(freq * (instrumentConfig.osc3Ratio || 0.5), now);
+
+    // HARD SYNC: master = osc1, slave = WaveShaper(osc1 phase) mapped at osc2 ratio.
+    // The native osc2 is gated out (it would add a plain harmonic on top); the shaper
+    // renders (p * n) % 1 with the slave's own waveform = exact phase-reset sync.
+    const syncActive = !!instrumentConfig.syncSlave && (instrumentConfig.osc1Ratio || 1.0) > 0;
+    if (syncActive) {
+      const syncRatio = Math.max(1.001, (instrumentConfig.osc2Ratio || 2.0) / (instrumentConfig.osc1Ratio || 1.0));
+      this.syncShaper.curve = getSyncCurve(syncRatio, instrumentConfig.osc2Type || "sawtooth");
+      this.osc2Gate.gain.setTargetAtTime(0.0, now, 0.0015);
+    } else {
+      this.osc2Gate.gain.setTargetAtTime(1.0, now, 0.0015);
+      if (this.syncShaper.curve.length > 2) this.syncShaper.curve = new Float32Array(2);
+    }
 
     // Dynamic Filter (smooth exponential slew; resonance scaled down ~55% so high-Q
     // programs don't turn into boxy resonant clipping - the grainy/dirty wall)
