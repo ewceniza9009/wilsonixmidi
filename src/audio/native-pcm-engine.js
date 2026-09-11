@@ -106,22 +106,22 @@ const INST_ALIASES = {
   m1_brass_1: "brass_section",
   brass_1: "brass_section",
 
-  // 9. Woodwinds & Genuine Saxophones
-  alto_sax: "alto_sax",
-  breathy_alto_sax: "alto_sax",
-  sax_genuine_solo: "alto_sax",
-  sax_solo: "alto_sax",
-  sax_alto_lead: "alto_sax",
-  sax_funk_stab: "alto_sax",
-  sax_fall: "alto_sax",
-  sax_scoop: "alto_sax",
+  // 9. Woodwinds & Genuine Saxophones (Acoustic Blue Note Tenor Sax Multisamples)
+  alto_sax: "tenor_sax",
+  breathy_alto_sax: "tenor_sax",
+  sax_genuine_solo: "tenor_sax",
+  sax_solo: "tenor_sax",
+  sax_alto_lead: "tenor_sax",
+  sax_funk_stab: "tenor_sax",
+  sax_fall: "tenor_sax",
+  sax_scoop: "tenor_sax",
   tenor_sax: "tenor_sax",
   sax_sensual: "tenor_sax",
   sax_blues_growl: "tenor_sax",
   sax_tenor_blues: "tenor_sax",
   soprano_sax: "soprano_sax",
   sax_soprano: "soprano_sax",
-  m1_lore: "alto_sax",
+  m1_lore: "tenor_sax",
   m1_flute: "flute",
   m1_pan_flute: "flute",
   pan_flute: "flute",
@@ -642,66 +642,74 @@ export class LayerInsertProcessor {
       case "reverb_hall":
       case "reverb_plate":
       case "reverb_room": {
-        // Stable multi-tap reverb: delays cascade IN SERIES with ONE damped
-        // feedback loop back to the head. Loop gain = fbGain (< 1) only, so the
-        // tail decays exponentially and can NEVER build up / self-oscillate.
-        const variant = this.currentFx;
-        const taps = variant === "reverb_hall"
-          ? [0.034, 0.042, 0.056, 0.078]
-          : variant === "reverb_plate"
-            ? [0.022, 0.030, 0.041, 0.057]
-            : [0.016, 0.023, 0.032, 0.045];
-        // Per-cycle loss keeps overall loop gain strictly under 1.0
-        const fbGainVal = variant === "reverb_hall" ? 0.50 : variant === "reverb_plate" ? 0.44 : 0.34;
-        const dampHz = variant === "reverb_plate" ? 6500 : variant === "reverb_room" ? 4200 : 3300;
+        // 100% Pure Feedforward Studio Reverb (0% feedback loops, 0% ringing, 0% feedback blowup)
+        const isHall = this.currentFx === "reverb_hall";
+        const isPlate = this.currentFx === "reverb_plate";
+        const dampHz = isPlate ? 7000 : (isHall ? 5000 : 4200);
 
-        const d = taps.map(t => {
-          const dl = ctx.createDelay(0.2);
-          dl.delayTime.value = t;
-          return dl;
-        });
+        const hp = ctx.createBiquadFilter();
+        hp.type = "highpass";
+        hp.frequency.value = 150;
 
-        const hpf = ctx.createBiquadFilter();
-        hpf.type = "highpass";
-        hpf.frequency.value = 180;
+        const lp = ctx.createBiquadFilter();
+        lp.type = "lowpass";
+        lp.frequency.value = dampHz;
 
-        this.effectChainInput.connect(hpf);
-        hpf.connect(d[0]);
-        d[0].connect(d[1]);
-        d[1].connect(d[2]);
-        d[2].connect(d[3]);
+        this.effectChainInput.connect(hp);
+        hp.connect(lp);
 
-        // Damped feedback: tail of the cascade loops back to the head only
-        const fbDamp = ctx.createBiquadFilter();
-        fbDamp.type = "lowpass";
-        fbDamp.frequency.value = dampHz;
-        const fbGain = ctx.createGain();
-        fbGain.gain.setValueAtTime(fbGainVal, ctx.currentTime);
-        d[3].connect(fbDamp);
-        fbDamp.connect(fbGain);
-        fbGain.connect(d[0]);
+        // Prime-staggered feedforward multi-taps
+        const tapsL = isHall ? [0.023, 0.045, 0.078, 0.112] : [0.016, 0.032, 0.054, 0.082];
+        const tapsR = isHall ? [0.029, 0.052, 0.086, 0.125] : [0.021, 0.039, 0.063, 0.095];
+        const weights = [0.45, 0.35, 0.25, 0.15];
 
-        const lpfL = ctx.createBiquadFilter();
-        lpfL.type = "lowpass";
-        lpfL.frequency.value = dampHz;
-        const lpfR = ctx.createBiquadFilter();
-        lpfR.type = "lowpass";
-        lpfR.frequency.value = dampHz;
+        const sumL = ctx.createGain();
+        const sumR = ctx.createGain();
+        sumL.gain.value = 0.5;
+        sumR.gain.value = 0.5;
 
-        d.forEach((dl, i) => {
-          const g = ctx.createGain();
-          g.gain.setValueAtTime(0.5, ctx.currentTime);
-          dl.connect(g);
-          g.connect(i % 2 === 0 ? lpfL : lpfR);
-          g.connect(i % 2 === 0 ? lpfR : lpfL);
-        });
+        const nodes = [hp, lp, sumL, sumR];
+
+        for (let i = 0; i < tapsL.length; i++) {
+          const dL = ctx.createDelay(0.3);
+          dL.delayTime.value = tapsL[i];
+          const gL = ctx.createGain();
+          gL.gain.value = weights[i];
+          lp.connect(dL);
+          dL.connect(gL);
+          gL.connect(sumL);
+
+          const dR = ctx.createDelay(0.3);
+          dR.delayTime.value = tapsR[i];
+          const gR = ctx.createGain();
+          gR.gain.value = weights[i];
+          lp.connect(dR);
+          dR.connect(gR);
+          gR.connect(sumR);
+
+          nodes.push(dL, dR, gL, gR);
+        }
+
+        // Diffusion allpass filters
+        const apL = ctx.createBiquadFilter();
+        apL.type = "allpass";
+        apL.frequency.value = 1800;
+        apL.Q.value = 0.7;
+        sumL.connect(apL);
+
+        const apR = ctx.createBiquadFilter();
+        apR.type = "allpass";
+        apR.frequency.value = 2200;
+        apR.Q.value = 0.7;
+        sumR.connect(apR);
 
         const merger = ctx.createChannelMerger(2);
-        lpfL.connect(merger, 0, 0);
-        lpfR.connect(merger, 0, 1);
+        apL.connect(merger, 0, 0);
+        apR.connect(merger, 0, 1);
         merger.connect(this.effectChainOutput);
 
-        this.activeFxNodes.push(hpf, d[0], d[1], d[2], d[3], fbDamp, fbGain, lpfL, lpfR, merger);
+        nodes.push(apL, apR, merger);
+        this.activeFxNodes.push(...nodes);
         break;
       }
 
@@ -1909,80 +1917,8 @@ export class NativePcmEngine {
     const src = ctx.createBufferSource();
     src.buffer = anchorData.buffer;
 
-    // Expressive lip embouchure scoop, singing vibrato & throat growl for genuine saxophones
-    const [isSax, isChoir, isHashy] = this._instTimbre(instId);
-    let vibLfo = null;
-    let growlLfo = null;
-
-    if (isSax) {
-      const lower = (instId || "").toLowerCase();
-      const isSensual = lower.includes("sensual");
-      const isBluesGrowl = lower.includes("blues_growl") || lower.includes("growl");
-      const isFunkStab = lower.includes("funk_stab") || lower.includes("stab");
-      const isFall = lower.includes("fall");
-      const isScoop = lower.includes("scoop");
-
-      if (isScoop) {
-        // Deep expressive pitch scoop (-75 cents rising smoothly over 85ms)
-        const scoopRate = bentPlaybackRate * Math.pow(2, -0.75 / 12);
-        src.playbackRate.setValueAtTime(scoopRate, now);
-        src.playbackRate.exponentialRampToValueAtTime(bentPlaybackRate, now + 0.085);
-      } else if (isBluesGrowl) {
-        // Blues dirty scoop (-45 cents rising over 55ms)
-        const scoopRate = bentPlaybackRate * Math.pow(2, -0.45 / 12);
-        src.playbackRate.setValueAtTime(scoopRate, now);
-        src.playbackRate.exponentialRampToValueAtTime(bentPlaybackRate, now + 0.055);
-
-        // Dirty throat flutter growl (28Hz rasp modulation)
-        try {
-          growlLfo = ctx.createOscillator();
-          growlLfo.type = "sawtooth";
-          growlLfo.frequency.setValueAtTime(28, now);
-          const growlGain = ctx.createGain();
-          growlGain.gain.setValueAtTime(bentPlaybackRate * 0.012, now);
-          growlLfo.connect(growlGain);
-          growlGain.connect(src.playbackRate);
-          growlLfo.start(now);
-        } catch (e) {}
-      } else if (isFall) {
-        // Big band fall: plays solid note, then slides down -4 semitones after 280ms
-        src.playbackRate.setValueAtTime(bentPlaybackRate, now);
-        src.playbackRate.setValueAtTime(bentPlaybackRate, now + 0.28);
-        src.playbackRate.exponentialRampToValueAtTime(bentPlaybackRate * Math.pow(2, -4 / 12), now + 0.65);
-      } else if (isFunkStab) {
-        // Immediate punchy funk bite (zero scoop)
-        src.playbackRate.setValueAtTime(bentPlaybackRate, now);
-      } else {
-        // Natural saxophone lip scoop on accented notes (-30 cents over 48ms)
-        if (velNorm > 0.40) {
-          const scoopRate = bentPlaybackRate * Math.pow(2, -0.30 / 12);
-          src.playbackRate.setValueAtTime(scoopRate, now);
-          src.playbackRate.exponentialRampToValueAtTime(bentPlaybackRate, now + 0.048);
-        } else {
-          src.playbackRate.setValueAtTime(bentPlaybackRate, now);
-        }
-      }
-
-      // Expressive delayed diaphragm & lip vibrato (fades in naturally after holding note for 180-220ms)
-      if (!isFunkStab) {
-        try {
-          vibLfo = ctx.createOscillator();
-          vibLfo.type = "sine";
-          const vibRate = isSensual ? 5.1 : 5.35;
-          vibLfo.frequency.setValueAtTime(vibRate, now);
-          const vibGain = ctx.createGain();
-          const targetVibDepth = isSensual ? bentPlaybackRate * 0.018 : bentPlaybackRate * 0.014;
-          vibGain.gain.setValueAtTime(0.00001, now);
-          vibGain.gain.setValueAtTime(0.00001, now + 0.18);
-          vibGain.gain.linearRampToValueAtTime(targetVibDepth, now + 0.46);
-          vibLfo.connect(vibGain);
-          vibGain.connect(src.playbackRate);
-          vibLfo.start(now);
-        } catch (e) {}
-      }
-    } else {
-      src.playbackRate.setValueAtTime(bentPlaybackRate, now);
-    }
+    // Set pitch playback rate cleanly without artificial scoops or LFO detuning
+    src.playbackRate.setValueAtTime(bentPlaybackRate, now);
 
     // Infinite Smooth Hold for sustained instruments (Equal-Power Pre-Crossfaded: 0% chop, 0% clicks)
     if (anchorData.buffer && anchorData.buffer._isLoopable) {
@@ -1994,52 +1930,17 @@ export class NativePcmEngine {
       src.loop = false;
     }
 
-    // 2. Dynamic Time-Variant Filter (TVF): Acoustic Formant Resonance
+    // 2. Dynamic Time-Variant Filter (TVF): Pure transparent lowpass with warm acoustic presence
+    const [isSax, isChoir, isHashy] = this._instTimbre(instId);
     const spine = this._acquireSpine(dest);
     const { filter, voiceGain } = spine;
-    const minCutoff = isSax ? 7500 : (isChoir ? 650 : (isHashy ? 6000 : 9000));
-    const maxCutoff = isSax ? 16000 : (isChoir ? 3800 : (isHashy ? 9500 : 20000));
+    const minCutoff = isSax ? 7500 : (isChoir ? 800 : (isHashy ? 7000 : 10000));
+    const maxCutoff = isSax ? 16000 : (isChoir ? 5000 : (isHashy ? 12000 : 20000));
     const dynamicCutoff = minCutoff + velNorm * (maxCutoff - minCutoff);
 
-    if (isChoir) {
-      // Authentic Korg M1 03 Ooh-Ahh Dual-Formant Morph:
-      // Starts as a warm, rounded "Ooh" vowel formant (~550Hz, resonant Q)
-      // then blooms smoothly over 180ms into open, heavenly airy "Aah" choir (~3400Hz)
-      filter.frequency.setValueAtTime(480 + velNorm * 180, now);
-      filter.Q.setValueAtTime(2.2, now);
-      filter.frequency.setTargetAtTime(2800 + velNorm * 1200, now + 0.04, 0.12);
-      filter.Q.setTargetAtTime(0.8, now + 0.04, 0.12);
-    } else if (isSax) {
-      const lower = (instId || "").toLowerCase();
-      const isSensual = lower.includes("sensual");
-      const isFunkStab = lower.includes("funk_stab");
-      const isBluesGrowl = lower.includes("blues_growl");
-
-      // Horn Bore Acoustic Formant Shaping:
-      // Throat resonance (1150Hz - 1600Hz) + Bell Horn Bite (3000Hz - 4200Hz) with resonant Q
-      if (isSensual) {
-        // Smoky, warm 80s tenor sub-tone
-        filter.frequency.setValueAtTime(1400 + velNorm * 2200, now);
-        filter.Q.setValueAtTime(1.4, now);
-      } else if (isBluesGrowl) {
-        // Guttural raspy honk
-        filter.frequency.setValueAtTime(1800 + velNorm * 3800, now);
-        filter.Q.setValueAtTime(2.2, now);
-      } else if (isFunkStab) {
-        // Bright piercing horn section bite
-        filter.frequency.setValueAtTime(2800 + velNorm * 4500, now);
-        filter.Q.setValueAtTime(1.8, now);
-      } else {
-        // Expressive solo alto sax: opens dynamically with strike velocity
-        const throatFreq = 1600 + velNorm * 2800;
-        filter.frequency.setValueAtTime(1200, now);
-        filter.frequency.exponentialRampToValueAtTime(throatFreq, now + 0.040);
-        filter.Q.setValueAtTime(1.6, now);
-      }
-    } else {
-      filter.frequency.setValueAtTime(dynamicCutoff, now);
-      filter.Q.setValueAtTime(0.20, now);
-    }
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(dynamicCutoff, now);
+    filter.Q.setValueAtTime(0.3, now);
 
     // 3. Time-Variant Amplifier (TVA): Maximum loudness, punchy studio presence.
     const trim = INST_TRIM_GAINS[instId] || 1.0;
@@ -2049,12 +1950,7 @@ export class NativePcmEngine {
 
     voiceGain.gain.setValueAtTime(0.0, now);
     if (isChoir) {
-      voiceGain.gain.setTargetAtTime(peakGain, now, 0.06);
-    } else if (isSax) {
-      const lower = (instId || "").toLowerCase();
-      const isFunkStab = lower.includes("funk_stab");
-      const attackTime = isFunkStab ? 0.008 : 0.028;
-      voiceGain.gain.setTargetAtTime(peakGain, now, attackTime);
+      voiceGain.gain.setTargetAtTime(peakGain, now, 0.05);
     } else {
       voiceGain.gain.linearRampToValueAtTime(peakGain, now + 0.0035);
     }
@@ -2083,8 +1979,6 @@ export class NativePcmEngine {
       baseGain: peakGain,
       baseCutoff: dynamicCutoff,
       velNorm,
-      vibLfo,
-      growlLfo,
       startTime: now,
     };
 
@@ -2288,18 +2182,18 @@ export class NativePcmEngine {
           try {
             const isChoir = v.instId === "choir_aahs" || v.instId === "m1_choir" || v.instId === "m1_ooh_ahh" || v.instId?.includes("choir");
             const isString = v.instId === "string_ensemble_1" || v.instId?.includes("string") || v.instId?.includes("pad");
-            const isSax = v.instId === "alto_sax" || v.instId?.includes("sax");
+            const isSax = v.instId === "alto_sax" || v.instId?.includes("sax") || v.instId?.includes("reed") || v.instId?.includes("flute");
             const isSynth = v.instId?.includes("synth") || v.instId?.includes("supersaw") || v.instId?.includes("trance") || v.instId?.includes("m1_") || v.instId?.includes("electric_piano") || v.instId?.includes("rhodes") || v.instId?.includes("drawbar");
-            const tau = isChoir ? 0.35 : (isString ? 0.18 : (isSynth ? 0.12 : (isSax ? 0.14 : 0.03)));
+            const tau = isChoir ? 0.30 : (isString ? 0.16 : (isSynth ? 0.08 : (isSax ? 0.035 : 0.025)));
             v.voiceGain.gain.cancelScheduledValues(now);
             v.voiceGain.gain.setTargetAtTime(0, now, tau);
-            const stopTime = isChoir ? 2.0 : (isString ? 1.0 : (isSynth ? 0.6 : (isSax ? 0.65 : 0.2)));
+            const stopTime = isChoir ? 1.5 : (isString ? 0.8 : (isSynth ? 0.4 : (isSax ? 0.14 : 0.10)));
             v.src.stop(now + stopTime);
             if (v.vibLfo) {
-              try { v.vibLfo.stop(now + stopTime + 0.1); } catch (e) {}
+              try { v.vibLfo.stop(now + stopTime + 0.05); } catch (e) {}
             }
             if (v.growlLfo) {
-              try { v.growlLfo.stop(now + stopTime + 0.1); } catch (e) {}
+              try { v.growlLfo.stop(now + stopTime + 0.05); } catch (e) {}
             }
           } catch (e) {}
         }

@@ -884,7 +884,15 @@ export class MultiLayerEngine {
       supersaw_lead: "brass_section",
       abletunes_fm_dx7: "abletunes_fm_piano",
       fat_brass_horns: "brass_section",
-      breathy_alto_sax: "alto_sax",
+      alto_sax: "tenor_sax",
+      breathy_alto_sax: "tenor_sax",
+      sax_genuine_solo: "tenor_sax",
+      sax_sensual: "tenor_sax",
+      sax_blues_growl: "tenor_sax",
+      sax_funk_stab: "tenor_sax",
+      sax_fall: "tenor_sax",
+      sax_scoop: "tenor_sax",
+      sax_solo: "tenor_sax",
       m1_fresh_air: "electric_piano_1",
       m1_universe: "string_ensemble_1",
       m1_choir: "choir_aahs",
@@ -1426,6 +1434,12 @@ export class MultiLayerEngine {
     if (this.pcmEngine) this.pcmEngine.allNotesOff();
     tritonVaEngine.allNotesOff();
     this.vaAllNotesOff();
+    if (audioCore.fxRack) {
+      try {
+        if (audioCore.fxRack.delay) audioCore.fxRack.delay.setBypass(true);
+        if (audioCore.fxRack.dubEcho) audioCore.fxRack.dubEcho.setBypass(true);
+      } catch (e) {}
+    }
   }
 
   // ---- User presets + gig setlist (localStorage: sync, offline, zero deps) ----

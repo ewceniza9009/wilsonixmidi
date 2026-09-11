@@ -2001,7 +2001,6 @@ export class SfxSoundGenerator {
       id.startsWith("vox_") ||
       id.startsWith("fx_") ||
       id.startsWith("percussion_") ||
-      id.startsWith("sax_") ||
       id.startsWith("tr909_") ||
       id === "tr808_kit" ||
       id === "tr909_kit" ||
@@ -2155,24 +2154,6 @@ export class SfxSoundGenerator {
       case "percussion_taiko":
         return this.triggerTaiko(velocity, customGain, destNode);
 
-      // 6. Genuine Saxophone Effects & Expressions
-      case "sax_genuine_solo":
-      case "sax_solo":
-        return this.triggerSaxSolo(midiNote, velocity, customGain, destNode);
-      case "sax_sensual":
-      case "sax_breathy_80s":
-        return this.triggerSaxSensual(midiNote, velocity, customGain, destNode);
-      case "sax_blues_growl":
-      case "sax_growl":
-        return this.triggerSaxBluesGrowl(midiNote, velocity, customGain, destNode);
-      case "sax_funk_stab":
-      case "sax_stab":
-        return this.triggerSaxFunkStab(midiNote, velocity, customGain, destNode);
-      case "sax_fall":
-      case "sax_fall_scoop":
-        return this.triggerSaxFall(midiNote, velocity, customGain, destNode);
-      case "sax_scoop":
-        return this.triggerSaxScoop(midiNote, velocity, customGain, destNode);
 
       // 7. Reggae, Dub & Stage Sound FX
       case "dub_siren":

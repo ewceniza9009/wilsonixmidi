@@ -127,12 +127,12 @@ export const TRITON_BANKS = {
     name: "🎷 GENUINE SAX & REEDS",
     category: "Solo & Expression",
     programs: [
-      { id: "SAX01", num: "01", name: "🎷 Expressive Solo Alto Sax", category: "Woodwind & Sax", instId: "sax_genuine_solo", ifx: "Studio Dimension", mfx: "Concert Hall" },
+      { id: "SAX01", num: "01", name: "🎷 Expressive Solo Alto Sax", category: "Woodwind & Sax", instId: "sax_genuine_solo", ifx: "Studio Dimension", mfx: "Plate Reverb" },
       { id: "SAX02", num: "02", name: "🎷 Sensual 80s Breathy Sax", category: "Woodwind & Sax", instId: "sax_sensual", ifx: "Roland Juno Stereo Chorus", mfx: "Plate Reverb" },
-      { id: "SAX03", num: "03", name: "🎷 Dirty Blues Sax Growl", category: "Woodwind & Sax", instId: "sax_blues_growl", ifx: "Tube Drive", mfx: "Room Reverb" },
-      { id: "SAX04", num: "04", name: "🎷 Funk Brass & Sax Stab", category: "Woodwind & Sax", instId: "sax_funk_stab", ifx: "Punch Limiter", mfx: "Plate Reverb" },
-      { id: "SAX05", num: "05", name: "🎷 Big Band Sax Fall", category: "Woodwind & Sax", instId: "sax_fall", ifx: "Echo Delay", mfx: "Cathedral Hall" },
-      { id: "SAX06", num: "06", name: "🎷 Expressive Pitch Scoop Sax", category: "Woodwind & Sax", instId: "sax_scoop", ifx: "Presence EQ", mfx: "Concert Hall" },
+      { id: "SAX03", num: "03", name: "🎷 Dirty Blues Sax Growl", category: "Woodwind & Sax", instId: "sax_blues_growl", ifx: "Warm EQ", mfx: "Room Reverb" },
+      { id: "SAX04", num: "04", name: "🎷 Funk Brass & Sax Stab", category: "Woodwind & Sax", instId: "sax_funk_stab", ifx: "Punch Limiter", mfx: "Room Reverb" },
+      { id: "SAX05", num: "05", name: "🎷 Big Band Sax Fall", category: "Woodwind & Sax", instId: "sax_fall", ifx: "Presence EQ", mfx: "Room Reverb" },
+      { id: "SAX06", num: "06", name: "🎷 Expressive Pitch Scoop Sax", category: "Woodwind & Sax", instId: "sax_scoop", ifx: "Presence EQ", mfx: "Plate Reverb" },
     ],
   },
   NATURE: {

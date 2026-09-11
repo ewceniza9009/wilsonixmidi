@@ -722,12 +722,17 @@ export class TritonWorkstationUI {
       fx.springReverb.setMix(0.35);
       fx.springReverb.setDecay(2.2);
     }
-    if (has("gated") || has("cathedral") || has("hall")) {
+    if (has("gated")) {
       fx.gatedReverb.setBypass(false);
-      fx.gatedReverb.setMix(has("gated") ? 0.45 : 0.25);
-    } else if (has("plate")) {
+      fx.gatedReverb.setMix(0.35);
+    } else if (has("cathedral") || has("hall")) {
       fx.reverb.setBypass(false);
       fx.reverb.setMix(0.20);
+      fx.reverb.setDecay(2.0);
+    } else if (has("plate") || has("room")) {
+      fx.reverb.setBypass(false);
+      fx.reverb.setMix(0.15);
+      fx.reverb.setDecay(1.4);
     }
     if (has("tape") && !has("tape delay")) {
       fx.tapeSat.setBypass(false);
