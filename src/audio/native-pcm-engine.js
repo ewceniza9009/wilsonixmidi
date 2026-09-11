@@ -1082,9 +1082,9 @@ export class NativePcmEngine {
     this.pitchBendSemitones = 0;
     this.modWheelAmount = 0;
 
-    // Global polyphony cap: prevents voice pileup crackle + crash on very fast playing
+    // Global polyphony cap: ample headroom for fast multi-layer chords
     this.voiceQueue = [];
-    this.MAX_VOICES = 28;
+    this.MAX_VOICES = 64;
     this.heldNotes = new Set();
 
     // Reusable voice spines (filter->gain per destination). AudioBufferSourceNode
@@ -1865,10 +1865,9 @@ export class NativePcmEngine {
           if (isSameLayer || (layerIndex === null && isSameInst)) {
             try {
               oldV.voiceGain.gain.cancelScheduledValues(now);
-              oldV.voiceGain.gain.setTargetAtTime(0, now, 0.003);
+              oldV.voiceGain.gain.setValueAtTime(oldV.voiceGain.gain.value || 0.001, now);
+              oldV.voiceGain.gain.linearRampToValueAtTime(0.0001, now + 0.006);
               oldV.src.stop(now + 0.015);
-              if (oldV.vibLfo) { try { oldV.vibLfo.stop(now + 0.02); } catch (e) {} }
-              if (oldV.growlLfo) { try { oldV.growlLfo.stop(now + 0.02); } catch (e) {} }
               const qi = this.voiceQueue.indexOf(oldV);
               if (qi !== -1) this.voiceQueue.splice(qi, 1);
             } catch (e) {}
@@ -1896,7 +1895,8 @@ export class NativePcmEngine {
           if (isSameLayer || (layerIndex === null && isSameInst)) {
             try {
               oldV.voiceGain.gain.cancelScheduledValues(now);
-              oldV.voiceGain.gain.setTargetAtTime(0, now, 0.003);
+              oldV.voiceGain.gain.setValueAtTime(oldV.voiceGain.gain.value || 0.001, now);
+              oldV.voiceGain.gain.linearRampToValueAtTime(0.0001, now + 0.006);
               oldV.src.stop(now + 0.015);
               const qi = this.voiceQueue.indexOf(oldV);
               if (qi !== -1) this.voiceQueue.splice(qi, 1);
@@ -1945,7 +1945,7 @@ export class NativePcmEngine {
     // 3. Time-Variant Amplifier (TVA): Maximum loudness, punchy studio presence.
     const trim = INST_TRIM_GAINS[instId] || 1.0;
     const combiScale = (layerIndex !== null && layerIndex !== undefined) ? 0.42 : 1.0;
-    const densityScale = 1 / Math.sqrt(1 + this.voiceQueue.length / 6);
+    const densityScale = 1 / Math.sqrt(1 + this.voiceQueue.length / 20);
     const peakGain = (0.24 + velNorm * 0.76) * customGain * trim * combiScale * densityScale;
 
     voiceGain.gain.setValueAtTime(0.0, now);
@@ -2004,10 +2004,9 @@ export class NativePcmEngine {
       if (qi !== -1) this.voiceQueue.splice(qi, 1);
       try {
         oldest.voiceGain.gain.cancelScheduledValues(now);
-        oldest.voiceGain.gain.setTargetAtTime(0, now, 0.025);
-        oldest.src.stop(now + 0.15);
-        if (oldest.vibLfo) { try { oldest.vibLfo.stop(now + 0.16); } catch (e) {} }
-        if (oldest.growlLfo) { try { oldest.growlLfo.stop(now + 0.16); } catch (e) {} }
+        oldest.voiceGain.gain.setValueAtTime(oldest.voiceGain.gain.value || 0.001, now);
+        oldest.voiceGain.gain.linearRampToValueAtTime(0.0001, now + 0.015);
+        oldest.src.stop(now + 0.03);
       } catch (e) {}
       this.removeVoice(oldest.midiNote, oldest);
     }

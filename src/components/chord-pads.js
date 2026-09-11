@@ -297,8 +297,8 @@ export class ChordPadsUI {
     const chord = chords[index];
     if (!chord) return;
 
-    // Release any previous chord from this pad
-    this.releaseChord(index);
+    // Smoothly release any previously active chord pads so chords don't pile up or choke
+    this.releaseAllChords();
 
     const activeNotes = [...chord.notes];
     this.activeNotesMap.set(index, activeNotes);
@@ -307,6 +307,15 @@ export class ChordPadsUI {
       multiLayerEngine.noteOn(m, 105);
     });
     this.emitKeyVisual(activeNotes, true, 105);
+  }
+
+  releaseAllChords() {
+    this.activeNotesMap.forEach((notes, idx) => {
+      notes.forEach(m => multiLayerEngine.noteOff(m));
+      const pad = this.container?.querySelector(`#chord-pad-${idx}`);
+      if (pad) pad.classList.remove("active");
+    });
+    this.activeNotesMap.clear();
   }
 
   releaseChord(index) {
