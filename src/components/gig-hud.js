@@ -274,13 +274,13 @@ export class GigHudUI {
         <!-- 2. CENTER: Live Stage Rig Presets & Transport -->
         <div class="hud-section hud-center-group">
           <!-- Stage Registration Rig Quick Bar -->
-          <div class="hud-rig-widget" title="Live Stage Rig Snapshot (Click 1-8 to switch, Click STORE to save)">
+          <div class="hud-rig-widget" title="Live Stage Rig Snapshot (Press F1-F8 to switch, Shift+F1-F8 or STORE to save)">
             <span class="rig-label">RIG:</span>
             <div class="rig-bank-pills">
-              <button class="rig-bank-pill ${curBank === "A" ? "active" : ""}" data-bank="A" title="Bank A: Pop / Ballad Stage Set">A</button>
-              <button class="rig-bank-pill ${curBank === "B" ? "active" : ""}" data-bank="B" title="Bank B: Studio & Groove Set">B</button>
-              <button class="rig-bank-pill ${curBank === "C" ? "active" : ""}" data-bank="C" title="Bank C: Gospel & Worship Set">C</button>
-              <button class="rig-bank-pill ${curBank === "D" ? "active" : ""}" data-bank="D" title="Bank D: Solo Leads & Sax Set">D</button>
+              <button class="rig-bank-pill ${curBank === "A" ? "active" : ""}" data-bank="A" title="Bank A: Pop / Ballad Stage Set (F9)">A</button>
+              <button class="rig-bank-pill ${curBank === "B" ? "active" : ""}" data-bank="B" title="Bank B: Studio & Groove Set (F10)">B</button>
+              <button class="rig-bank-pill ${curBank === "C" ? "active" : ""}" data-bank="C" title="Bank C: Gospel & Worship Set (F11)">C</button>
+              <button class="rig-bank-pill ${curBank === "D" ? "active" : ""}" data-bank="D" title="Bank D: Solo Leads & Sax Set (F12)">D</button>
             </div>
             <div class="rig-slot-pills">
               ${[1, 2, 3, 4, 5, 6, 7, 8]
@@ -289,13 +289,13 @@ export class GigHudUI {
                     const slotData = currentBankSlots[num - 1];
                     const slotTitle = slotData?.name || `Rig ${curBank}-${num}`;
                     return `
-                      <button class="rig-slot-pill ${curSlot === num ? "active" : ""}" data-slot="${num}" title="Rig ${curBank}-${num}: ${slotTitle}">${num}</button>
+                      <button class="rig-slot-pill ${curSlot === num ? "active" : ""}" data-slot="${num}" title="Rig ${curBank}-${num}: ${slotTitle} (Press F${num}, Shift+F${num} to Store)">${num}</button>
                     `;
                   }
                 )
                 .join("")}
             </div>
-            <button class="rig-save-btn" id="hud-rig-save-btn" title="Store Current Sound & FX to Active Slot">💾 STORE</button>
+            <button class="rig-save-btn" id="hud-rig-save-btn" title="Store Current Sound & FX to Active Slot (Shift+F${curSlot})">💾 STORE</button>
           </div>
 
           <!-- Master WAV Recorder -->
@@ -546,7 +546,7 @@ export class GigHudUI {
       const slotNum = parseInt(btn.getAttribute("data-slot"));
       const slotData = bankSlots[slotNum - 1];
       const slotTitle = slotData?.name || `Rig ${curBank}-${slotNum}`;
-      btn.title = `Rig ${curBank}-${slotNum}: ${slotTitle}`;
+      btn.title = `Rig ${curBank}-${slotNum}: ${slotTitle} (Press F${slotNum}, Shift+F${slotNum} to Store)`;
     });
   }
 

@@ -55,10 +55,10 @@ class MidiKeyEliteApp {
       console.warn("Session restore:", e);
     }
 
-    // 1. Immediate Audio Unlock Setup (Bound synchronously FIRST so clicks ALWAYS work)
+    // 1. Immediate Audio Unlock & Auto-Close Setup
     const unlockGesture = () => {
       if (!this.unlocked) {
-        audioCore.unlock();
+        try { audioCore.unlock(); } catch (e) {}
         this.unlocked = true;
         try { multiLayerEngine.init(); } catch (e) { console.warn("Engine init:", e); }
         if (this.tritonConsole && this.tritonConsole.activeProg) {
@@ -70,11 +70,15 @@ class MidiKeyEliteApp {
         const splash = document.getElementById("audio-unlock-overlay");
         if (splash) {
           splash.classList.add("hidden");
-          setTimeout(() => { splash.style.display = "none"; }, 300);
+          splash.style.display = "none";
         }
       }
     };
 
+    // Auto-attempt unlock immediately on startup
+    unlockGesture();
+
+    // Background passive unlock on first interaction if browser requires user gesture
     window.addEventListener("pointerdown", unlockGesture, { passive: true });
     window.addEventListener("keydown", unlockGesture, { passive: true });
     window.addEventListener("touchstart", unlockGesture, { passive: true });

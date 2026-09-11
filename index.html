@@ -88,15 +88,15 @@
 </head>
 <body>
   <div id="app-root">
-    <!-- Audio Unlock Splash -->
-    <div class="audio-unlock-overlay" id="audio-unlock-overlay">
+    <!-- Audio Unlock Splash (Auto-closed / transparent background unlock) -->
+    <div class="audio-unlock-overlay hidden" id="audio-unlock-overlay" style="display: none;">
       <div class="unlock-card">
         <div class="unlock-title"><span>MIDI</span>KEY ELITE</div>
         <p class="unlock-desc">
           Ableton-Grade Performance Synthesizer & DAW.<br />
           Click below to arm the <strong>zero-delay audio pipeline</strong> and connect your USB MIDI or laptop keyboard.
         </p>
-        <button class="unlock-btn" id="btn-engine-unlock" onclick="document.getElementById('audio-unlock-overlay').classList.add('hidden');">▶ INITIALIZE ZERO-LAG ENGINE</button>
+        <button class="unlock-btn" id="btn-engine-unlock">▶ INITIALIZE ZERO-LAG ENGINE</button>
       </div>
     </div>
 

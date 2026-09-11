@@ -188,8 +188,8 @@ export class QwertyKeyboard {
     if (!this.enabled) return;
     if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.isContentEditable) return;
 
-    // Shift + 1-8 is reserved for Rig Snapshot saving (do not trigger black keys / music notes)
-    if (e.shiftKey && /^Digit[1-8]$/.test(e.code)) {
+    // F1-F12 are strictly dedicated to Rig Snapshots & Setlist Banks
+    if (/^F(?:[1-9]|1[0-2])$/.test(e.code)) {
       return;
     }
 
@@ -229,8 +229,8 @@ export class QwertyKeyboard {
       return;
     }
 
-    // F2: Cycle Keyboard Layout (Melody <-> DAW)
-    if (e.code === "F2") {
+    // Backslash (`\`): Cycle Keyboard Layout (Melody <-> DAW)
+    if (e.code === "Backslash") {
       e.preventDefault();
       this.cycleLayoutMode();
       return;

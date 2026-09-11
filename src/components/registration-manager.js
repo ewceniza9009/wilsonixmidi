@@ -266,21 +266,27 @@ export class RegistrationManager {
       // Only handle if not typing in an input
       if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) return;
 
-      // Check for number keys 1 through 8 via standard code (Digit1..Digit8, Numpad1..Numpad8) or key
+      // 1. Function Keys F9..F12 switch Banks A, B, C, D
+      const fBankMap = { F9: "A", F10: "B", F11: "C", F12: "D" };
+      const matchedBank = fBankMap[e.code] || fBankMap[e.key?.toUpperCase()];
+      if (matchedBank) {
+        e.preventDefault();
+        this.currentBank = matchedBank;
+        this.recallSlot(matchedBank, this.currentSlot);
+        return;
+      }
+
+      // 2. Function Keys F1..F8 map to Rig Slots 1 through 8
       let slotNum = null;
-      const codeMatch = e.code.match(/^(?:Digit|Numpad)([1-8])$/);
-      if (codeMatch) {
-        slotNum = parseInt(codeMatch[1]);
-      } else if (e.key >= "1" && e.key <= "8") {
-        slotNum = parseInt(e.key);
-      } else if (e.shiftKey) {
-        // Shifted number symbols (!, @, #, $, %, ^, &, *)
-        const shiftedMap = { "!": 1, "@": 2, "#": 3, "$": 4, "%": 5, "^": 6, "&": 7, "*": 8 };
-        if (shiftedMap[e.key]) slotNum = shiftedMap[e.key];
+      const fKeyMatch = (e.code || "").match(/^F([1-8])$/);
+      if (fKeyMatch) {
+        slotNum = parseInt(fKeyMatch[1]);
+      } else if (e.key && e.key.match(/^F([1-8])$/i)) {
+        slotNum = parseInt(e.key.replace(/^F/i, ""));
       }
 
       if (slotNum !== null) {
-        // Shift + 1..8 OR Alt + 1..8 saves current rig to slot instantly
+        // Shift + F1..F8 OR Alt + F1..F8 saves current rig to slot instantly
         if (e.shiftKey || e.altKey) {
           e.preventDefault();
           e.stopPropagation();
@@ -291,9 +297,10 @@ export class RegistrationManager {
           return;
         }
 
-        // Plain 1..8 recalls slot in current bank
+        // Plain F1..F8 recalls slot in current bank
         if (!e.ctrlKey && !e.metaKey) {
           e.preventDefault();
+          e.stopPropagation();
           this.recallSlot(this.currentBank, slotNum);
         }
       }
