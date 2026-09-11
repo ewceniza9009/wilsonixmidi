@@ -1993,33 +1993,7 @@ export class SfxSoundGenerator {
     if (!instId) return false;
     if (instId.endsWith("_r")) return false;
     const id = String(instId).toLowerCase();
-    return (
-      id === "kalimba" ||
-      id === "m1_kalimba" ||
-      id.startsWith("sy_") ||
-      id.startsWith("nature_") ||
-      id.startsWith("vox_") ||
-      id.startsWith("fx_") ||
-      id.startsWith("percussion_") ||
-      id.startsWith("tr909_") ||
-      id === "tr808_kit" ||
-      id === "tr909_kit" ||
-      id === "drums1" ||
-      id === "m1_drums" ||
-      id === "dub_siren" ||
-      id === "reggae_siren" ||
-      id === "spring_splash" ||
-      id === "dub_splash" ||
-      id === "laser_zap" ||
-      id === "dub_laser" ||
-      id === "dub_horn" ||
-      id === "airhorn" ||
-      id === "sub_boom" ||
-      id === "sub_drop" ||
-      id === "808_boom" ||
-      id === "noise_riser" ||
-      id === "sweep_riser"
-    );
+    return id.startsWith("sy_");
   }
 
   playSfxNote(instId, midiNote = 60, velocity = 95, customGain = 1.0, destNode = null) {
