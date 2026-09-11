@@ -3,10 +3,23 @@ node_modules/
 .pnp
 .pnp.js
 
-# Production build output
+# Production build output & APKs
 dist/
 dist-ssr/
+dist-apk/
+*.apk
+*.aab
 *.local
+
+# Android & Gradle Build Artifacts
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+.gradle/
+*.class
 
 # Environment variables and secrets
 .env
@@ -44,6 +57,7 @@ Thumbs.db
 
 # Temporary / Scratch
 scratch/
+scratch_test_*.mjs
 .system_generated/
 
 src-tauri/target

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MidiKey Elite</string>
+    <string name="title_activity_main">MidiKey Elite</string>
+    <string name="package_name">com.wilsonix.midikey</string>
+    <string name="custom_url_scheme">com.wilsonix.midikey</string>
+</resources>

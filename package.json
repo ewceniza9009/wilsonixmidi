@@ -9,12 +9,16 @@
     "dev:desktop": "tools\\tauri-dev.bat",
     "build": "vite build",
     "build:desktop": "tools\\tauri-build.bat",
+    "build:apk": "vite build && npx cap copy android && cd android && gradlew.bat assembleDebug && cd .. && powershell -Command \"Copy-Item android/app/build/outputs/apk/debug/app-debug.apk dist-apk/midikey-elite.apk -Force\"",
     "preview": "vite preview",
     "tauri": "tauri",
     "start": "start src-tauri/target/release/wilsonix-midikey.exe",
     "gen-license": "node tools/license-generator.js"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
     "@tauri-apps/cli": "^2.11.4",
     "vite": "^6.2.0"
   },

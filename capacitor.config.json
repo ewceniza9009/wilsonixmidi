@@ -1,0 +1,13 @@
+{
+  "appId": "com.wilsonix.midikey",
+  "appName": "MidiKey Elite",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#0a0c10",
+    "allowMixedContent": true,
+    "captureInput": true
+  }
+}
