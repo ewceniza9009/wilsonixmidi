@@ -74,7 +74,10 @@ export class SlapbackTapeDelay {
     this.mix = Math.max(0, Math.min(1, val));
     const now = this.ctx.currentTime;
     if (this.enabled) {
-      this.wetGain.gain.setTargetAtTime(this.mix, now, 0.02);
+      const dryFrac = Math.cos(this.mix * Math.PI * 0.5);
+      const wetFrac = Math.sin(this.mix * Math.PI * 0.5) * 0.85;
+      this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
+      this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
     }
   }
 
@@ -82,8 +85,13 @@ export class SlapbackTapeDelay {
     this.enabled = !bypass;
     const now = this.ctx.currentTime;
     if (this.enabled) {
-      this.wetGain.gain.setTargetAtTime(this.mix, now, 0.02);
+      const m = this.mix > 0 ? this.mix : 0.35;
+      const dryFrac = Math.cos(m * Math.PI * 0.5);
+      const wetFrac = Math.sin(m * Math.PI * 0.5) * 0.85;
+      this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
+      this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
     } else {
+      this.dryGain.gain.setTargetAtTime(1.0, now, 0.02);
       this.wetGain.gain.setTargetAtTime(0.0, now, 0.02);
     }
   }

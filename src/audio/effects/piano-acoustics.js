@@ -132,8 +132,8 @@ export class GrandPianoAcoustics {
       this.wetGain.gain.setTargetAtTime(0.0, now, 0.02);
       this.dryGain.gain.setTargetAtTime(1.0, now, 0.02);
     } else {
-      this.wetGain.gain.setTargetAtTime(0.65, now, 0.02);
-      this.dryGain.gain.setTargetAtTime(1.0, now, 0.02);
+      this.wetGain.gain.setTargetAtTime(0.40, now, 0.02);
+      this.dryGain.gain.setTargetAtTime(0.65, now, 0.02);
     }
   }
 }

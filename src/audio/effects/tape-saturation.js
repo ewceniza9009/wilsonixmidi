@@ -33,12 +33,12 @@ export class MasterTapeSaturation {
     this.dryGain.connect(this.output);
     this.dryGain.gain.value = 1.0;
 
-    // 1. Pre-emphasis / Head-bump filter (subtle +1.2dB at 65Hz)
+    // 1. Pre-emphasis / Head-bump filter (subtle +0.8dB at 65Hz)
     this.headBump = ctx.createBiquadFilter();
     this.headBump.type = "peaking";
     this.headBump.frequency.value = 65;
-    this.headBump.gain.value = 1.5;
-    this.headBump.Q.value = 0.9;
+    this.headBump.gain.value = 0.8;
+    this.headBump.Q.value = 0.8;
 
     // 2. Analog Tape Waveshaper (Soft-Clipping Polynomial Curve)
     this.shaper = ctx.createWaveShaper();
@@ -50,9 +50,9 @@ export class MasterTapeSaturation {
     this.tapeLp.type = "lowpass";
     this.tapeLp.frequency.value = 14500;
 
-    // Output level compensation
+    // Output level compensation (Calibrated for exact 0dB unity with bypass)
     this.outComp = ctx.createGain();
-    this.outComp.gain.value = 0.95;
+    this.outComp.gain.value = 0.82 / (1.0 + this.drive * 0.22);
 
     // Routing
     this.input.connect(this.headBump);
@@ -82,6 +82,10 @@ export class MasterTapeSaturation {
   setDrive(val) {
     this.drive = Math.max(0.05, Math.min(1.0, val));
     this.generateTapeCurve();
+    if (this.outComp && this.ctx) {
+      const comp = 0.82 / (1.0 + this.drive * 0.22);
+      this.outComp.gain.setTargetAtTime(comp, this.ctx.currentTime, 0.02);
+    }
   }
 
   setWarmth(val) {
@@ -97,8 +101,10 @@ export class MasterTapeSaturation {
     this.mix = Math.max(0, Math.min(1.0, val));
     const now = this.ctx.currentTime;
     if (this.enabled) {
-      this.dryGain.gain.setTargetAtTime(1.0 - this.mix * 0.7, now, 0.02);
-      this.wetGain.gain.setTargetAtTime(this.mix, now, 0.02);
+      const dryFrac = Math.cos(this.mix * Math.PI * 0.5);
+      const wetFrac = Math.sin(this.mix * Math.PI * 0.5);
+      this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
+      this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
     }
   }
 
@@ -106,8 +112,11 @@ export class MasterTapeSaturation {
     this.enabled = !bypass;
     const now = this.ctx.currentTime;
     if (this.enabled) {
-      this.dryGain.gain.setTargetAtTime(1.0 - this.mix * 0.7, now, 0.02);
-      this.wetGain.gain.setTargetAtTime(this.mix, now, 0.02);
+      const m = this.mix > 0 ? this.mix : 0.85;
+      const dryFrac = Math.cos(m * Math.PI * 0.5);
+      const wetFrac = Math.sin(m * Math.PI * 0.5);
+      this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
+      this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
     } else {
       this.dryGain.gain.setTargetAtTime(1.0, now, 0.02);
       this.wetGain.gain.setTargetAtTime(0.0, now, 0.02);

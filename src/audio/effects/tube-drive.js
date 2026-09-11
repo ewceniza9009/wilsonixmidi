@@ -85,7 +85,7 @@ export class TubeDrive {
   calculateMakeup(drive) {
     // True perceptual loudness calibration for non-linear saturation
     // Compensates for speaker cabinet filtering and harmonic compression so wet output level matches dry bypass
-    return 0.72 / (1.0 + Math.pow(drive, 0.9) * 0.90);
+    return 0.68 / (1.0 + Math.pow(drive, 0.85) * 0.95);
   }
 
   makeTriodeCurve(amount) {

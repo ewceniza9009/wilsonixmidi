@@ -38,20 +38,20 @@ export class SpringReverb {
     this.dripFilter = ctx.createBiquadFilter();
     this.dripFilter.type = "peaking";
     this.dripFilter.frequency.value = this.toneFreq;
-    this.dripFilter.Q.value = 4.2;
-    this.dripFilter.gain.value = 8.5;
+    this.dripFilter.Q.value = 3.2;
+    this.dripFilter.gain.value = 3.0; // Calibrated for subtle vintage spring chime without volume explosion
 
     this.input.connect(this.hpFilter);
     this.hpFilter.connect(this.dripFilter);
 
     // 3. Staggered Spring Reflection Taps (coiled spring delay taps)
     const springDelays = [0.029, 0.038, 0.047, 0.059, 0.073];
-    const tapWeights = [0.45, 0.38, 0.30, 0.22, 0.15];
+    const tapWeights = [0.35, 0.28, 0.22, 0.16, 0.10];
 
     const sumL = ctx.createGain();
     const sumR = ctx.createGain();
-    sumL.gain.value = 0.5;
-    sumR.gain.value = 0.5;
+    sumL.gain.value = 0.40;
+    sumR.gain.value = 0.40;
 
     this.tankGains = [];
 
@@ -85,14 +85,14 @@ export class SpringReverb {
       const apL = ctx.createBiquadFilter();
       apL.type = "allpass";
       apL.frequency.value = apFreqs[i];
-      apL.Q.value = 2.5; // High resonant dispersion
+      apL.Q.value = 2.0;
       nodeL.connect(apL);
       nodeL = apL;
 
       const apR = ctx.createBiquadFilter();
       apR.type = "allpass";
       apR.frequency.value = apFreqs[i] * 1.08;
-      apR.Q.value = 2.5;
+      apR.Q.value = 2.0;
       nodeR.connect(apR);
       nodeR = apR;
     }
@@ -118,10 +118,10 @@ export class SpringReverb {
     this.decay = Math.max(0.6, Math.min(4.5, sec));
     const factor = this.decay / 2.2;
     const now = this.ctx ? this.ctx.currentTime : 0;
-    const tapWeights = [0.45, 0.38, 0.30, 0.22, 0.15];
+    const tapWeights = [0.35, 0.28, 0.22, 0.16, 0.10];
 
     for (let i = 0; i < tapWeights.length; i++) {
-      const w = Math.min(1.0, tapWeights[i] * factor);
+      const w = Math.min(0.8, tapWeights[i] * factor);
       if (this.tankGains[i * 2]) {
         this.tankGains[i * 2].gain.setTargetAtTime(w, now, 0.02);
       }
@@ -135,8 +135,10 @@ export class SpringReverb {
     this.mix = Math.max(0, Math.min(1, val));
     const now = this.ctx ? this.ctx.currentTime : 0;
     if (this.enabled) {
-      this.dryGain.gain.setTargetAtTime(1.0 - this.mix * 0.3, now, 0.02);
-      this.wetGain.gain.setTargetAtTime(this.mix * 1.25, now, 0.02);
+      const dryFrac = Math.cos(this.mix * Math.PI * 0.5);
+      const wetFrac = Math.sin(this.mix * Math.PI * 0.5) * 0.70;
+      this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
+      this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
     }
   }
 
@@ -144,8 +146,11 @@ export class SpringReverb {
     this.enabled = !bypass;
     const now = this.ctx ? this.ctx.currentTime : 0;
     if (this.enabled) {
-      this.dryGain.gain.setTargetAtTime(1.0 - this.mix * 0.3, now, 0.02);
-      this.wetGain.gain.setTargetAtTime(this.mix * 1.25, now, 0.02);
+      const m = this.mix > 0 ? this.mix : 0.35;
+      const dryFrac = Math.cos(m * Math.PI * 0.5);
+      const wetFrac = Math.sin(m * Math.PI * 0.5) * 0.70;
+      this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
+      this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
     } else {
       this.dryGain.gain.setTargetAtTime(1.0, now, 0.02);
       this.wetGain.gain.setTargetAtTime(0.0, now, 0.02);

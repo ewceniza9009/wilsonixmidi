@@ -103,10 +103,9 @@ export class StereoPhaser {
     this.mix = Math.max(0, Math.min(1.0, val));
     const now = this.ctx.currentTime;
     if (this.enabled) {
-      // Compensate for allpass notch frequency cancellation (+1.8dB makeup)
-      const makeup = 1.0 + this.mix * 0.22;
-      const wetFrac = this.mix * 0.5 * makeup;
-      const dryFrac = (1.0 - this.mix * 0.5) * makeup;
+      const makeup = 1.0 + this.mix * 0.10;
+      const dryFrac = Math.cos(this.mix * Math.PI * 0.5);
+      const wetFrac = Math.sin(this.mix * Math.PI * 0.5) * 0.70 * makeup;
       this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
       this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
     }
@@ -119,10 +118,10 @@ export class StereoPhaser {
       this.wetGain.gain.setTargetAtTime(0.0, now, 0.02);
       this.dryGain.gain.setTargetAtTime(1.0, now, 0.02);
     } else {
-      const m = this.mix !== undefined ? this.mix : 0.9;
-      const makeup = 1.0 + m * 0.22;
-      const wetFrac = m * 0.5 * makeup;
-      const dryFrac = (1.0 - m * 0.5) * makeup;
+      const m = this.mix !== undefined ? this.mix : 0.85;
+      const makeup = 1.0 + m * 0.10;
+      const dryFrac = Math.cos(m * Math.PI * 0.5);
+      const wetFrac = Math.sin(m * Math.PI * 0.5) * 0.70 * makeup;
       this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
       this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
     }

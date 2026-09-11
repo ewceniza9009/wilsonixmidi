@@ -121,7 +121,8 @@ export class StereoFlanger {
     this.mix = Math.max(0, Math.min(1.0, val));
     const now = this.ctx.currentTime;
     if (this.enabled) {
-      const wetFrac = Math.sin(this.mix * Math.PI * 0.5) * 0.8;
+      const fdbkComp = 1.0 / (1.0 + this.feedback * 0.35);
+      const wetFrac = Math.sin(this.mix * Math.PI * 0.5) * 0.85 * fdbkComp;
       const dryFrac = Math.cos(this.mix * Math.PI * 0.5);
       this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
       this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
@@ -135,8 +136,10 @@ export class StereoFlanger {
       this.wetGain.gain.setTargetAtTime(0.0, now, 0.02);
       this.dryGain.gain.setTargetAtTime(1.0, now, 0.02);
     } else {
-      const wetFrac = Math.sin(this.mix * Math.PI * 0.5) * 0.8;
-      const dryFrac = Math.cos(this.mix * Math.PI * 0.5);
+      const m = this.mix > 0 ? this.mix : 0.45;
+      const fdbkComp = 1.0 / (1.0 + this.feedback * 0.35);
+      const wetFrac = Math.sin(m * Math.PI * 0.5) * 0.85 * fdbkComp;
+      const dryFrac = Math.cos(m * Math.PI * 0.5);
       this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
       this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
     }

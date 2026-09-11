@@ -143,10 +143,9 @@ export class PingPongDelay {
     this.mix = Math.max(0, Math.min(1, val));
     const now = this.ctx.currentTime;
     if (this.enabled) {
-      // Calibrated delay wet gain: sits musical in the mix without boosting master volume
-      const fdbkComp = 1.0 / (1.0 + this.feedback * 0.45);
-      const wet = this.mix * 0.42 * fdbkComp;
-      const dry = 1.0 - this.mix * 0.12;
+      const fdbkComp = 1.0 / (1.0 + this.feedback * 0.35);
+      const dry = Math.cos(this.mix * Math.PI * 0.5);
+      const wet = Math.sin(this.mix * Math.PI * 0.5) * 0.80 * fdbkComp;
       this.wetGain.gain.setTargetAtTime(wet, now, 0.02);
       this.dryGain.gain.setTargetAtTime(dry, now, 0.02);
     }
@@ -162,9 +161,9 @@ export class PingPongDelay {
       this.feedbackR.gain.setTargetAtTime(0, now, 0.02);
     } else {
       const m = this.mix > 0 ? this.mix : 0.35;
-      const fdbkComp = 1.0 / (1.0 + this.feedback * 0.45);
-      const wet = m * 0.42 * fdbkComp;
-      const dry = 1.0 - m * 0.12;
+      const fdbkComp = 1.0 / (1.0 + this.feedback * 0.35);
+      const dry = Math.cos(m * Math.PI * 0.5);
+      const wet = Math.sin(m * Math.PI * 0.5) * 0.80 * fdbkComp;
       this.wetGain.gain.setTargetAtTime(wet, now, 0.02);
       this.dryGain.gain.setTargetAtTime(dry, now, 0.02);
       this.feedbackL.gain.setTargetAtTime(this.feedback, now, 0.02);

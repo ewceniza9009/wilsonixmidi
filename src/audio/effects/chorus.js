@@ -98,8 +98,8 @@ export class KorgStereoChorus {
     this.mix = Math.max(0, Math.min(1, val));
     const now = this.ctx.currentTime;
     if (this.enabled) {
-      const dryFrac = 1.0;
-      const wetFrac = this.mix * 0.6;
+      const dryFrac = Math.cos(this.mix * Math.PI * 0.5);
+      const wetFrac = Math.sin(this.mix * Math.PI * 0.5);
       this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
       this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
     }
@@ -113,8 +113,8 @@ export class KorgStereoChorus {
       this.dryGain.gain.setTargetAtTime(1.0, now, 0.02);
     } else {
       const m = this.mix > 0 ? this.mix : 0.25;
-      const dryFrac = 1.0;
-      const wetFrac = m * 0.6;
+      const dryFrac = Math.cos(m * Math.PI * 0.5);
+      const wetFrac = Math.sin(m * Math.PI * 0.5);
       this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
       this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
     }

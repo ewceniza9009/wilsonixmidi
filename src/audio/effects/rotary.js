@@ -69,14 +69,14 @@ export class RotarySpeaker {
 
     // 2. Bass Drum Rotor: Acoustic amplitude throb (calibrated for exact unity acoustic loudness)
     this.drumTremoloGain = ctx.createGain();
-    this.drumTremoloGain.gain.value = 0.72;
+    this.drumTremoloGain.gain.value = 0.50;
 
     this.drumLfo = ctx.createOscillator();
     this.drumLfo.type = "sine";
     this.drumLfo.frequency.value = this.drumRate;
 
     this.drumDepth = ctx.createGain();
-    this.drumDepth.gain.value = 0.22; // Rhythmic rotary throb
+    this.drumDepth.gain.value = 0.20; // Rhythmic rotary throb
     this.drumLfo.connect(this.drumDepth);
     this.drumDepth.connect(this.drumTremoloGain.gain);
 
@@ -84,7 +84,7 @@ export class RotarySpeaker {
 
     // Horn level for equal-power summing with drum
     this.hornLevel = ctx.createGain();
-    this.hornLevel.gain.value = 0.72;
+    this.hornLevel.gain.value = 0.50;
 
     // Combine Horn and Drum into Wet Output
     if (this.hornPanner) {
