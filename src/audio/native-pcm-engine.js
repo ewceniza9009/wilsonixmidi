@@ -1087,6 +1087,8 @@ export class NativePcmEngine {
     this._spinePools = new Map();
     // Reusable hammer transient (bandpass->gain) per destination.
     this._hammerPools = new Map();
+    // Reusable reed chiff transient (bandpass->gain) per destination.
+    this._chiffPools = new Map();
 
     // Shared felt-hammer transient: 60ms exponentially-decaying noise burst,
     // bandpassed per-note to imitate grand hammer strike on piano voices
@@ -1101,6 +1103,10 @@ export class NativePcmEngine {
     } catch (e) {
       this.hammerBuf = null;
     }
+
+    try {
+      this._createReedChiffBuffer();
+    } catch (e) {}
 
     this.loadingSoundfonts = new Set();
     this.isReady = false;
@@ -1343,6 +1349,7 @@ export class NativePcmEngine {
       this.loadSoundfont("alto_sax"),
       this.loadSoundfont("tenor_sax"),
     ]);
+    this._createReedChiffBuffer();
     this.isReady = true;
 
     // 2. Preload studio WAV banks for FM Piano and Upright
@@ -1748,6 +1755,65 @@ export class NativePcmEngine {
     pool.free.push(h);
   }
 
+  _instTimbre(instId) {
+    const id = (instId || "").toLowerCase();
+    const isSax = id.includes("sax");
+    const isChoir = id.includes("choir") || id.includes("ooh_ahh") || id.includes("vox") || id.includes("voice");
+    const isHashy = id.includes("guitar") || id.includes("pluck") || id.includes("harpsichord") || id.includes("slap_bass");
+    return [isSax, isChoir, isHashy];
+  }
+
+  _createReedChiffBuffer() {
+    if (this.reedChiffBuf || !this.ctx) return;
+    const sampleRate = this.ctx.sampleRate || 44100;
+    const len = Math.floor(sampleRate * 0.08); // 80ms organic cane reed breath transient
+    const buf = this.ctx.createBuffer(1, len, sampleRate);
+    const data = buf.getChannelData(0);
+    let b0 = 0, b1 = 0, b2 = 0;
+    for (let i = 0; i < len; i++) {
+      const t = i / len;
+      const white = Math.random() * 2 - 1;
+      b0 = 0.99 * b0 + white * 0.05;
+      b1 = 0.95 * b1 + white * 0.11;
+      b2 = 0.85 * b2 + white * 0.25;
+      const pink = (b0 + b1 + b2 + white * 0.1) * 0.6;
+      // Cane reed mechanical click on initial 12ms
+      const click = i < sampleRate * 0.012 ? Math.sin((i / (sampleRate * 0.012)) * Math.PI) * Math.sin(i * 0.35) * 0.45 : 0;
+      const env = Math.exp(-t * 7.2);
+      data[i] = (pink * 0.75 + click) * env;
+    }
+    this.reedChiffBuf = buf;
+  }
+
+  _acquireReedChiff(dest) {
+    if (!this._chiffPools) this._chiffPools = new Map();
+    let pool = this._chiffPools.get(dest);
+    if (!pool) {
+      pool = { free: [] };
+      this._chiffPools.set(dest, pool);
+    }
+    let c = pool.free.pop();
+    if (!c) {
+      const cbp = this.ctx.createBiquadFilter();
+      cbp.type = "bandpass";
+      const cg = this.ctx.createGain();
+      cbp.connect(cg);
+      cg.connect(dest);
+      c = { cbp, cg };
+    }
+    return c;
+  }
+
+  _releaseReedChiff(dest, c) {
+    if (!c || !this._chiffPools) return;
+    let pool = this._chiffPools.get(dest);
+    if (!pool) {
+      pool = { free: [] };
+      this._chiffPools.set(dest, pool);
+    }
+    pool.free.push(c);
+  }
+
   playNote(instId, midiNote, velocity = 95, customGain = 1.0, layerIndex = null, destOverride = null) {
     const dest = destOverride
       ? destOverride
@@ -1789,6 +1855,8 @@ export class NativePcmEngine {
               oldV.voiceGain.gain.cancelScheduledValues(now);
               oldV.voiceGain.gain.setTargetAtTime(0, now, 0.003);
               oldV.src.stop(now + 0.015);
+              if (oldV.vibLfo) { try { oldV.vibLfo.stop(now + 0.02); } catch (e) {} }
+              if (oldV.growlLfo) { try { oldV.growlLfo.stop(now + 0.02); } catch (e) {} }
               const qi = this.voiceQueue.indexOf(oldV);
               if (qi !== -1) this.voiceQueue.splice(qi, 1);
             } catch (e) {}
@@ -1837,28 +1905,77 @@ export class NativePcmEngine {
     const src = ctx.createBufferSource();
     src.buffer = anchorData.buffer;
 
-    // Expressive lip embouchure scoop & singing vibrato for genuine saxophones
+    // Expressive lip embouchure scoop, singing vibrato & throat growl for genuine saxophones
     const [isSax, isChoir, isHashy] = this._instTimbre(instId);
     let vibLfo = null;
-    if (isSax) {
-      // Natural lip scoop into note pitch (-35 cents settling smoothly over 60ms)
-      const scoopRate = bentPlaybackRate * Math.pow(2, -0.35 / 12);
-      src.playbackRate.setValueAtTime(scoopRate, now);
-      src.playbackRate.exponentialRampToValueAtTime(bentPlaybackRate, now + 0.060);
+    let growlLfo = null;
 
-      // Expressive delayed diaphragm vibrato LFO (swells in naturally after 160ms of holding the note)
-      try {
-        vibLfo = ctx.createOscillator();
-        vibLfo.type = "sine";
-        vibLfo.frequency.setValueAtTime(5.3, now);
-        const vibGain = ctx.createGain();
-        vibGain.gain.setValueAtTime(0.00001, now);
-        vibGain.gain.setValueAtTime(0.00001, now + 0.16);
-        vibGain.gain.linearRampToValueAtTime(bentPlaybackRate * 0.014, now + 0.50);
-        vibLfo.connect(vibGain);
-        vibGain.connect(src.playbackRate);
-        vibLfo.start(now);
-      } catch (e) {}
+    if (isSax) {
+      const lower = (instId || "").toLowerCase();
+      const isSensual = lower.includes("sensual");
+      const isBluesGrowl = lower.includes("blues_growl") || lower.includes("growl");
+      const isFunkStab = lower.includes("funk_stab") || lower.includes("stab");
+      const isFall = lower.includes("fall");
+      const isScoop = lower.includes("scoop");
+
+      if (isScoop) {
+        // Deep expressive pitch scoop (-75 cents rising smoothly over 85ms)
+        const scoopRate = bentPlaybackRate * Math.pow(2, -0.75 / 12);
+        src.playbackRate.setValueAtTime(scoopRate, now);
+        src.playbackRate.exponentialRampToValueAtTime(bentPlaybackRate, now + 0.085);
+      } else if (isBluesGrowl) {
+        // Blues dirty scoop (-45 cents rising over 55ms)
+        const scoopRate = bentPlaybackRate * Math.pow(2, -0.45 / 12);
+        src.playbackRate.setValueAtTime(scoopRate, now);
+        src.playbackRate.exponentialRampToValueAtTime(bentPlaybackRate, now + 0.055);
+
+        // Dirty throat flutter growl (28Hz rasp modulation)
+        try {
+          growlLfo = ctx.createOscillator();
+          growlLfo.type = "sawtooth";
+          growlLfo.frequency.setValueAtTime(28, now);
+          const growlGain = ctx.createGain();
+          growlGain.gain.setValueAtTime(bentPlaybackRate * 0.012, now);
+          growlLfo.connect(growlGain);
+          growlGain.connect(src.playbackRate);
+          growlLfo.start(now);
+        } catch (e) {}
+      } else if (isFall) {
+        // Big band fall: plays solid note, then slides down -4 semitones after 280ms
+        src.playbackRate.setValueAtTime(bentPlaybackRate, now);
+        src.playbackRate.setValueAtTime(bentPlaybackRate, now + 0.28);
+        src.playbackRate.exponentialRampToValueAtTime(bentPlaybackRate * Math.pow(2, -4 / 12), now + 0.65);
+      } else if (isFunkStab) {
+        // Immediate punchy funk bite (zero scoop)
+        src.playbackRate.setValueAtTime(bentPlaybackRate, now);
+      } else {
+        // Natural saxophone lip scoop on accented notes (-30 cents over 48ms)
+        if (velNorm > 0.40) {
+          const scoopRate = bentPlaybackRate * Math.pow(2, -0.30 / 12);
+          src.playbackRate.setValueAtTime(scoopRate, now);
+          src.playbackRate.exponentialRampToValueAtTime(bentPlaybackRate, now + 0.048);
+        } else {
+          src.playbackRate.setValueAtTime(bentPlaybackRate, now);
+        }
+      }
+
+      // Expressive delayed diaphragm & lip vibrato (fades in naturally after holding note for 180-220ms)
+      if (!isFunkStab) {
+        try {
+          vibLfo = ctx.createOscillator();
+          vibLfo.type = "sine";
+          const vibRate = isSensual ? 5.1 : 5.35;
+          vibLfo.frequency.setValueAtTime(vibRate, now);
+          const vibGain = ctx.createGain();
+          const targetVibDepth = isSensual ? bentPlaybackRate * 0.018 : bentPlaybackRate * 0.014;
+          vibGain.gain.setValueAtTime(0.00001, now);
+          vibGain.gain.setValueAtTime(0.00001, now + 0.18);
+          vibGain.gain.linearRampToValueAtTime(targetVibDepth, now + 0.46);
+          vibLfo.connect(vibGain);
+          vibGain.connect(src.playbackRate);
+          vibLfo.start(now);
+        } catch (e) {}
+      }
     } else {
       src.playbackRate.setValueAtTime(bentPlaybackRate, now);
     }
@@ -1873,15 +1990,11 @@ export class NativePcmEngine {
       src.loop = false;
     }
 
-    // 2. Dynamic Time-Variant Filter (TVF): Open and clear - no muffling.
-    // Measured: harmonically-rich MP3 families carry -55 to -64dB of encoder hash
-    // above 6kHz that normalizing lifts into audible static, so those families get
-    // a lower ceiling (their musical energy lives below 10kHz anyway).
-    // Pooled spine: no allocation, filter is pre-wired to voiceGain -> dest.
+    // 2. Dynamic Time-Variant Filter (TVF): Acoustic Formant Resonance
     const spine = this._acquireSpine(dest);
     const { filter, voiceGain } = spine;
-    const minCutoff = isSax ? 10000 : (isChoir ? 650 : (isHashy ? 6000 : 9000));
-    const maxCutoff = isSax ? 20000 : (isChoir ? 3800 : (isHashy ? 9500 : 20000));
+    const minCutoff = isSax ? 7500 : (isChoir ? 650 : (isHashy ? 6000 : 9000));
+    const maxCutoff = isSax ? 16000 : (isChoir ? 3800 : (isHashy ? 9500 : 20000));
     const dynamicCutoff = minCutoff + velNorm * (maxCutoff - minCutoff);
 
     if (isChoir) {
@@ -1893,61 +2006,65 @@ export class NativePcmEngine {
       filter.frequency.setTargetAtTime(2800 + velNorm * 1200, now + 0.04, 0.12);
       filter.Q.setTargetAtTime(0.8, now + 0.04, 0.12);
     } else if (isSax) {
-      filter.frequency.setValueAtTime(3600, now);
-      filter.frequency.exponentialRampToValueAtTime(dynamicCutoff, now + 0.045);
-      filter.Q.setValueAtTime(0.05, now);
+      const lower = (instId || "").toLowerCase();
+      const isSensual = lower.includes("sensual");
+      const isFunkStab = lower.includes("funk_stab");
+      const isBluesGrowl = lower.includes("blues_growl");
+
+      // Horn Bore Acoustic Formant Shaping:
+      // Throat resonance (1150Hz - 1600Hz) + Bell Horn Bite (3000Hz - 4200Hz) with resonant Q
+      if (isSensual) {
+        // Smoky, warm 80s tenor sub-tone
+        filter.frequency.setValueAtTime(1400 + velNorm * 2200, now);
+        filter.Q.setValueAtTime(1.4, now);
+      } else if (isBluesGrowl) {
+        // Guttural raspy honk
+        filter.frequency.setValueAtTime(1800 + velNorm * 3800, now);
+        filter.Q.setValueAtTime(2.2, now);
+      } else if (isFunkStab) {
+        // Bright piercing horn section bite
+        filter.frequency.setValueAtTime(2800 + velNorm * 4500, now);
+        filter.Q.setValueAtTime(1.8, now);
+      } else {
+        // Expressive solo alto sax: opens dynamically with strike velocity
+        const throatFreq = 1600 + velNorm * 2800;
+        filter.frequency.setValueAtTime(1200, now);
+        filter.frequency.exponentialRampToValueAtTime(throatFreq, now + 0.040);
+        filter.Q.setValueAtTime(1.6, now);
+      }
     } else {
       filter.frequency.setValueAtTime(dynamicCutoff, now);
       filter.Q.setValueAtTime(0.20, now);
     }
 
     // 3. Time-Variant Amplifier (TVA): Maximum loudness, punchy studio presence.
-    // voiceGain comes pre-wired from the pooled spine (channel config done once).
-
-    // Sources are peak-normalized at load, so trims stay near unity for balanced combis
     const trim = INST_TRIM_GAINS[instId] || 1.0;
-
-    // In Combi mode (multiple simultaneous layers), scale so 4 layers sum with limiter headroom
     const combiScale = (layerIndex !== null && layerIndex !== undefined) ? 0.42 : 1.0;
-
-    // Gig loudness lives in the master slider - voices stay clean here
     const densityScale = 1 / Math.sqrt(1 + this.voiceQueue.length / 6);
     const peakGain = (0.24 + velNorm * 0.76) * customGain * trim * combiScale * densityScale;
 
-    // 100% Click-free, pop-free attack envelope using exponential ramp (no step artifacts)
     voiceGain.gain.setValueAtTime(0.0001, now);
     if (isChoir) {
-      // Soft natural vocal choir swell (not sudden piano thud)
       voiceGain.gain.setTargetAtTime(peakGain, now, 0.06);
     } else if (isSax) {
-      // Smooth wind reed breath pressure swell (50ms smooth rise - no mechanical clack)
-      voiceGain.gain.setTargetAtTime(peakGain, now, 0.035);
+      const lower = (instId || "").toLowerCase();
+      const isFunkStab = lower.includes("funk_stab");
+      const attackTime = isFunkStab ? 0.008 : 0.028;
+      voiceGain.gain.setTargetAtTime(peakGain, now, attackTime);
     } else {
-      // Fast sampled ramp across 4ms (~1.5 render quanta) — instant touch-to-sound,
-      // but never a step jump inside a single quantum (that would zipper/crackle).
       voiceGain.gain.exponentialRampToValueAtTime(peakGain, now + 0.004);
     }
-    // Bounded sustain: full hold ~32s, then slow exponential die-out (~40s to silence).
-    // (Notes were hard-fading at 8s even while held -- audible "nulls" mid-note.)
-    // Releasing keys/sustain overrides this instantly via its own release envelope.
+
     voiceGain.gain.setTargetAtTime(0.0001, now + 32.0, 3.5);
     try {
       src.stop(now + 40);
     } catch (e) {}
 
-    // Voice Audio Chain: Source -> TVF -> TVA -> (Layer Insert Bus | Master Rack).
-    // filter -> voiceGain -> dest are pre-wired in the pooled spine.
     src.connect(filter);
-
-    // Return this voice spine to the pool the moment the source ends, so dense
-    // fast passages reuse the same filter/gain over the whole run (zero churn).
     src.onended = () => { this._releaseSpine(dest, spine); };
-
-    // Instant sample-0 hardware playback
     src.start(0);
 
-    // Felt-hammer layer for piano voices: short bandpassed thock under the attack,
-    // velocity-scaled like a real action (soft touch = felt, hard hit = wood crack)
+    // Felt-hammer layer for piano voices: short bandpassed thock under the attack
     try {
       const isPianoHammer = instId === "abletunes_upright" || instId === "acoustic_grand_piano" || instId === "m1_piano_16";
       if (isPianoHammer && this.hammerBuf) {
@@ -1966,6 +2083,26 @@ export class NativePcmEngine {
       }
     } catch (e) {}
 
+    // Cane Reed / Breath Air Layer for genuine acoustic saxophone voices
+    if (isSax && this.reedChiffBuf) {
+      try {
+        const csrc = ctx.createBufferSource();
+        csrc.buffer = this.reedChiffBuf;
+        const c = this._acquireReedChiff(dest);
+        const cbp = c.cbp;
+        const cg = c.cg;
+        cbp.frequency.value = 2400 + velNorm * 1200;
+        cbp.Q.value = 1.1;
+        const chiffGain = 0.18 * Math.sqrt(velNorm);
+        cg.gain.setValueAtTime(chiffGain, now);
+        cg.gain.exponentialRampToValueAtTime(0.0001, now + 0.075);
+        csrc.connect(cbp);
+        csrc.onended = () => { this._releaseReedChiff(dest, c); };
+        csrc.start(now);
+        csrc.stop(now + 0.08);
+      } catch (e) {}
+    }
+
     // Voice record
     const voiceRecord = {
       src,
@@ -1980,6 +2117,7 @@ export class NativePcmEngine {
       baseCutoff: dynamicCutoff,
       velNorm,
       vibLfo,
+      growlLfo,
       startTime: now,
     };
 
@@ -2007,6 +2145,8 @@ export class NativePcmEngine {
         oldest.voiceGain.gain.cancelScheduledValues(now);
         oldest.voiceGain.gain.setTargetAtTime(0, now, 0.025);
         oldest.src.stop(now + 0.15);
+        if (oldest.vibLfo) { try { oldest.vibLfo.stop(now + 0.16); } catch (e) {} }
+        if (oldest.growlLfo) { try { oldest.growlLfo.stop(now + 0.16); } catch (e) {} }
       } catch (e) {}
       this.removeVoice(oldest.midiNote, oldest);
     }
@@ -2126,6 +2266,9 @@ export class NativePcmEngine {
             if (v.vibLfo) {
               try { v.vibLfo.stop(now + stopTime + 0.1); } catch (e) {}
             }
+            if (v.growlLfo) {
+              try { v.growlLfo.stop(now + stopTime + 0.1); } catch (e) {}
+            }
           } catch (e) {}
         });
       });
@@ -2167,6 +2310,8 @@ export class NativePcmEngine {
               oldest.voiceGain.gain.cancelScheduledValues(now);
               oldest.voiceGain.gain.setTargetAtTime(0, now, 0.025);
               oldest.src.stop(now + 0.15);
+              if (oldest.vibLfo) { try { oldest.vibLfo.stop(now + 0.16); } catch (e) {} }
+              if (oldest.growlLfo) { try { oldest.growlLfo.stop(now + 0.16); } catch (e) {} }
               this.removeVoice(oldestKey, oldest);
               totalSus--;
             }
@@ -2185,6 +2330,9 @@ export class NativePcmEngine {
             v.src.stop(now + stopTime);
             if (v.vibLfo) {
               try { v.vibLfo.stop(now + stopTime + 0.1); } catch (e) {}
+            }
+            if (v.growlLfo) {
+              try { v.growlLfo.stop(now + stopTime + 0.1); } catch (e) {}
             }
           } catch (e) {}
         }
