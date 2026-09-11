@@ -92,6 +92,14 @@ export const HD_SOUNDBANKS = {
   fx_subboom: { id: "fx_subboom", name: "Sub Bass Impact Boom", category: "DJ & Cinematic FX" },
   fx_airhorn: { id: "fx_airhorn", name: "Dancehall Reggae Airhorn", category: "DJ & Cinematic FX" },
 
+  // Reggae, Dub & Stage Sound FX
+  dub_siren: { id: "dub_siren", name: "🚨 Jamaican Dub Siren", category: "Reggae & Dub SFX" },
+  spring_splash: { id: "spring_splash", name: "💥 Vintage Spring Reverb Crash", category: "Reggae & Dub SFX" },
+  laser_zap: { id: "laser_zap", name: "⚡ Sound System Laser Zap", category: "Reggae & Dub SFX" },
+  dub_horn: { id: "dub_horn", name: "🎺 Dancehall Airhorn Blast", category: "Reggae & Dub SFX" },
+  sub_boom: { id: "sub_boom", name: "💣 Heavy 808 Sub-Boom", category: "Reggae & Dub SFX" },
+  noise_riser: { id: "noise_riser", name: "🌊 White Noise Sweep Riser", category: "Reggae & Dub SFX" },
+
   // Percussions & Drums
   tr808_kit: { id: "tr808_kit", name: "TR-808 Analog Drum Kit", category: "Percussion & Drums" },
   percussion_conga: { id: "percussion_conga", name: "Afro-Cuban Congas", category: "Percussion & Drums" },
@@ -265,6 +273,54 @@ export const COMBI_PRESETS = {
       { id: 1, name: "Suit & Stage EP", inst: "electric_piano_1", fx: "clean", gain: 0.75, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 2, name: "Breathy Alto Sax", inst: "alto_sax", fx: "reverb_room", gain: 0.80, pan: 0, oct: 0, minVel: 40, maxVel: 127, enabled: true },
       { id: 3, name: "Analog Sub Bass", inst: "synth_bass_1", fx: "warm_eq", gain: 0.70, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+    ],
+  },
+  reggae_bubble: {
+    id: "reggae_bubble",
+    name: "★ Kingston Bubble & Reggae Skank (B3 + Piano + Guitar)",
+    category: "Reggae & Dub",
+    fxPreset: "reggae_dub",
+    layers: [
+      { id: 0, name: "Percussive B3 Bubble Organ", inst: "drawbar_organ", fx: "rotary_fast", gain: 1.0, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Staccato Grand Chop", inst: "acoustic_grand_piano", fx: "clean", gain: 0.85, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Muted Clean Guitar Skank", inst: "electric_guitar_clean", fx: "punch_comp", gain: 0.70, pan: 0.1, oct: 0, minVel: 20, maxVel: 127, enabled: true },
+      { id: 3, name: "Dub Sub Bass", inst: "synth_bass_1", fx: "warm_eq", gain: 0.80, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+    ],
+  },
+  shimmer_worship_celestial: {
+    id: "shimmer_worship_celestial",
+    name: "★ Celestial Shimmer & Grand (Octave Reverb)",
+    category: "Worship & Ambient",
+    fxPreset: "shimmer_ethereal",
+    layers: [
+      { id: 0, name: "Concert Grand Piano", inst: "acoustic_grand_piano", fx: "air_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Ethereal Shimmer Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.75, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Dyno 80s Bell Tine", inst: "electric_piano_1", fx: "clean", gain: 0.50, pan: 0.05, oct: 1, minVel: 30, maxVel: 127, enabled: true },
+      { id: 3, name: "Korg M1 Ooh-Ahh Formant", inst: "choir_aahs", fx: "chorus_lush", gain: 0.45, pan: 0, oct: 0, minVel: 20, maxVel: 127, enabled: true },
+    ],
+  },
+  talkbox_funk_master: {
+    id: "talkbox_funk_master",
+    name: "★ Roger Troutman Talkbox Lead & Slap Funk",
+    category: "Funk & Groove",
+    fxPreset: "talkbox_vocal",
+    layers: [
+      { id: 0, name: "Roger Talkbox Synth Lead (Zapp)", inst: "va:A017", fx: "tube_warm", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Korg M1 Slap Bass", inst: "m1_slap_bass", fx: "punch_comp", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Funky Clavinet D6", inst: "electric_piano_1", fx: "clean", gain: 0.65, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Fat Brass Horns", inst: "brass_section", fx: "air_eq", gain: 0.60, pan: -0.05, oct: 0, minVel: 60, maxVel: 127, enabled: false },
+    ],
+  },
+  lofi_vinyl_ep: {
+    id: "lofi_vinyl_ep",
+    name: "★ Lo-Fi Vintage Tape Rhodes (Wow & Flutter)",
+    category: "Neo-Soul / Lo-Fi",
+    fxPreset: "lofi_vinyl_tape",
+    layers: [
+      { id: 0, name: "Mark I Suitcase Rhodes", inst: "electric_piano_1", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Warm Atmosphere Strings", inst: "string_ensemble_1", fx: "reverb_room", gain: 0.45, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Sub Sine Bass", inst: "synth_bass_1", fx: "warm_eq", gain: 0.70, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Korg M1 Universe", inst: "string_ensemble_1", fx: "clean", gain: 0.35, pan: 0.05, oct: 1, minVel: 50, maxVel: 127, enabled: false },
     ],
   },
   gospel_praise: {
@@ -856,6 +912,7 @@ export class MultiLayerEngine {
   }
 
   setSingleInstrument(instKey) {
+    this.isSplitMode = false;
     this.isSynthMode = false;
     this.isTritonVaMode = false;
     this.activeTritonVaProg = null;
@@ -880,6 +937,7 @@ export class MultiLayerEngine {
 
     this.init();
     this.notifyLayerChange();
+    this.notifySplitChange();
   }
 
   setDualLayerEnabled(enabled) {
@@ -937,6 +995,7 @@ export class MultiLayerEngine {
   }
 
   setSynthProgram(patchConfig) {
+    this.isSplitMode = false;
     this.isSynthMode = true;
     this.isTritonVaMode = false;
     this.activeTritonVaProg = null;
@@ -944,9 +1003,11 @@ export class MultiLayerEngine {
     this.synthPatch = patchConfig;
     synthEngine.activePatch = patchConfig;
     this.init();
+    this.notifySplitChange();
   }
 
   setTritonVaProgram(prog) {
+    this.isSplitMode = false;
     this.isTritonVaMode = true;
     this.isCombiMode = false;
     this.isSynthMode = true;
@@ -956,11 +1017,13 @@ export class MultiLayerEngine {
     tritonVaEngine.setProgram(prog);
     this.init();
     this.notifyLayerChange();
+    this.notifySplitChange();
   }
 
   toggleCombiMode(enabled) {
     this.isCombiMode = enabled !== undefined ? enabled : !this.isCombiMode;
     if (this.isCombiMode) {
+      this.isSplitMode = false;
       this.isSynthMode = false;
       this.isTritonVaMode = false;
       this.activeTritonVaProg = null;
@@ -969,6 +1032,7 @@ export class MultiLayerEngine {
     }
     this.init();
     this.notifyLayerChange();
+    this.notifySplitChange();
   }
 
   syncLayerFx() {
@@ -985,6 +1049,7 @@ export class MultiLayerEngine {
     if (COMBI_PRESETS[presetId]) {
       this.activeCombi = COMBI_PRESETS[presetId];
       this.isCombiMode = true;
+      this.isSplitMode = false;
       this.isSynthMode = false;
       this.isTritonVaMode = false;
       this.activeTritonVaProg = null;
@@ -994,10 +1059,14 @@ export class MultiLayerEngine {
       this.layers = JSON.parse(JSON.stringify(this.activeCombi.layers));
       this.init();
       this.syncLayerFx();
+      if (this.activeCombi.fxPreset && audioCore.fxRack) {
+        audioCore.fxRack.applyPreset(this.activeCombi.fxPreset);
+      }
       if (INSTRUMENT_PATCHES[presetId]) {
         synthEngine.activePatch = INSTRUMENT_PATCHES[presetId];
       }
       this.notifyLayerChange();
+      this.notifySplitChange();
     }
   }
 

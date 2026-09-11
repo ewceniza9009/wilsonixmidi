@@ -60,6 +60,10 @@ export class GigHudUI {
       {
         label: "★ SIGNATURE 4-TIMBRE COMBIS",
         items: [
+          { id: "combi:reggae_bubble", name: "★ Kingston Bubble & Reggae Skank (B3 + Piano + Guitar)", type: "combi", combiId: "reggae_bubble" },
+          { id: "combi:shimmer_worship_celestial", name: "★ Celestial Shimmer & Grand (Octave Reverb)", type: "combi", combiId: "shimmer_worship_celestial" },
+          { id: "combi:talkbox_funk_master", name: "★ Roger Troutman Talkbox Lead & Slap Funk", type: "combi", combiId: "talkbox_funk_master" },
+          { id: "combi:lofi_vinyl_ep", name: "★ Lo-Fi Vintage Tape Rhodes (Wow & Flutter)", type: "combi", combiId: "lofi_vinyl_ep" },
           { id: "combi:ballad_master", name: "★ Concert Grand & Triton Strings", type: "combi", combiId: "ballad_master" },
           { id: "combi:tokyo_city_pop", name: "★ Tokyo City Pop (FM + Strat + Sax)", type: "combi", combiId: "tokyo_city_pop" },
           { id: "combi:chicago_blues_rock", name: "★ Chicago Blues (Strat + B3 + Bass)", type: "combi", combiId: "chicago_blues_rock" },
@@ -75,6 +79,14 @@ export class GigHudUI {
       {
         label: "✂️ KEYBOARD SPLIT PRESETS",
         items: [
+          {
+            id: "split:dub_roots",
+            name: "✂️ Split: Roots Dub Sub / Bubble Organ (G3)",
+            type: "split",
+            splitPoint: 55,
+            lower: { inst: "synth_bass_1", name: "Deep Dub Sub Bass", fx: "warm_eq", gain: 1.0, oct: -1 },
+            upper: { inst: "drawbar_organ", name: "Bubble Organ & Chop", fx: "reggae_dub", gain: 1.0, oct: 0 },
+          },
           {
             id: "split:moog_ep",
             name: "✂️ Split: Moog Bass / Suitcase EP (C4)",
@@ -107,6 +119,17 @@ export class GigHudUI {
             lower: { inst: "synth_bass_1", name: "Analog Sub Bass", fx: "punch_comp", gain: 1.0, oct: 0 },
             upper: { inst: "va:A017", name: "Brian's Sync Lead", fx: "tube_warm", gain: 1.0, oct: 0 },
           },
+        ],
+      },
+      {
+        label: "🚨 REGGAE, DUB & STAGE SOUND EFFECTS",
+        items: [
+          { id: "inst:dub_siren", name: "🚨 Jamaican Dub Siren (Tape Echo Feedback)", type: "inst", instId: "dub_siren" },
+          { id: "inst:spring_splash", name: "💥 Vintage Spring Reverb Splash (Dub Crash)", type: "inst", instId: "spring_splash" },
+          { id: "inst:laser_zap", name: "⚡ Sound System Laser Zap", type: "inst", instId: "laser_zap" },
+          { id: "inst:dub_horn", name: "🎺 Dancehall Stage Airhorn Blast", type: "inst", instId: "dub_horn" },
+          { id: "inst:sub_boom", name: "💣 Heavy 808 Sub-Boom / Bass Drop", type: "inst", instId: "sub_boom" },
+          { id: "inst:noise_riser", name: "🌊 White Noise Sweep & Transition Riser", type: "inst", instId: "noise_riser" },
         ],
       },
       {
@@ -421,7 +444,14 @@ export class GigHudUI {
 
     if (selectedId.startsWith("split:")) {
       const splitType = selectedId.slice(6);
-      if (splitType === "moog_ep") {
+      if (splitType === "dub_roots") {
+        multiLayerEngine.toggleSplitMode(true);
+        multiLayerEngine.setSplitPointMidi(55);
+        multiLayerEngine.setSplitZoneInstrument("lower", "synth_bass_1");
+        multiLayerEngine.setSplitZoneInstrument("upper", "drawbar_organ");
+        multiLayerEngine.setSplitZoneFx("lower", "warm_eq");
+        multiLayerEngine.setSplitZoneFx("upper", "reggae_dub");
+      } else if (splitType === "moog_ep") {
         multiLayerEngine.toggleSplitMode(true);
         multiLayerEngine.setSplitPointMidi(60);
         multiLayerEngine.setSplitZoneInstrument("lower", "synth_bass_1");

@@ -19,6 +19,11 @@ import { SpringReverb } from "./effects/spring-reverb.js";
 import { SlapbackTapeDelay } from "./effects/slapback-delay.js";
 import { GatedReverb } from "./effects/gated-reverb.js";
 import { MasterTapeSaturation } from "./effects/tape-saturation.js";
+import { ShimmerReverb } from "./effects/shimmer-reverb.js";
+import { DubSpaceEcho } from "./effects/dub-echo.js";
+import { DynamicAutoWah } from "./effects/auto-wah.js";
+import { TalkboxFormantFilter } from "./effects/talkbox-filter.js";
+import { VinylLoFiTape } from "./effects/vinyl-lofi.js";
 
 export class FxRackManager {
   constructor(ctx) {
@@ -28,7 +33,10 @@ export class FxRackManager {
 
     // Instantiate all elite effects
     this.pianoAcoustics = new GrandPianoAcoustics(ctx);
+    this.autoWah = new DynamicAutoWah(ctx);
+    this.talkbox = new TalkboxFormantFilter(ctx);
     this.tube = new TubeDrive(ctx);
+    this.vinylLoFi = new VinylLoFiTape(ctx);
     this.autopan = new AutoPan(ctx);
     this.phaser = new StereoPhaser(ctx);
     this.flanger = new StereoFlanger(ctx);
@@ -36,8 +44,10 @@ export class FxRackManager {
     this.rotary = new RotarySpeaker(ctx);
     this.tremolo = new TremoloPulse(ctx);
     this.slapback = new SlapbackTapeDelay(ctx);
+    this.dubEcho = new DubSpaceEcho(ctx);
     this.delay = new PingPongDelay(ctx);
     this.springReverb = new SpringReverb(ctx);
+    this.shimmerReverb = new ShimmerReverb(ctx);
     this.gatedReverb = new GatedReverb(ctx);
     this.reverb = new AlgorithmicReverb(ctx);
     this.tapeSat = new MasterTapeSaturation(ctx);
@@ -105,7 +115,10 @@ export class FxRackManager {
 
     const chain = [
       this.pianoAcoustics,
+      this.autoWah,
+      this.talkbox,
       this.tube,
+      this.vinylLoFi,
       this.autopan,
       this.phaser,
       this.flanger,
@@ -113,8 +126,10 @@ export class FxRackManager {
       this.rotary,
       this.tremolo,
       this.slapback,
+      this.dubEcho,
       this.delay,
       this.springReverb,
+      this.shimmerReverb,
       this.gatedReverb,
       this.reverb,
       this.tapeSat,
@@ -138,16 +153,21 @@ export class FxRackManager {
 
     // Default: 100% Clean Studio Concert Grand (Pure pristine samples)
     this.pianoAcoustics.setBypass(true);
+    this.autoWah.setBypass(true);
+    this.talkbox.setBypass(true);
     this.tube.setBypass(true);
+    this.vinylLoFi.setBypass(true);
     this.autopan.setBypass(true);
     this.phaser.setBypass(true);
     this.flanger.setBypass(true);
     this.rotary.setBypass(true);
     this.tremolo.setBypass(true);
     this.slapback.setBypass(true);
+    this.dubEcho.setBypass(true);
     this.delay.setBypass(true);
     this.chorus.setBypass(true);
     this.springReverb.setBypass(true);
+    this.shimmerReverb.setBypass(true);
     this.gatedReverb.setBypass(true);
     this.tapeSat.setBypass(true);
     // Default: 100% clean, ALL effects (incl. reverb) bypassed → the FX fast-path
@@ -162,6 +182,10 @@ export class FxRackManager {
     this._updateChainRouting();
   }
 
+  triggerDubThrow(durationSec = 2.5) {
+    if (this.dubEcho) this.dubEcho.triggerDubThrow(durationSec);
+  }
+
   setPresetTrim(val) {
     if (!this.presetTrimNode) return;
     const g = Math.max(0.2, Math.min(1.5, val));
@@ -169,14 +193,86 @@ export class FxRackManager {
   }
 
   applyPreset(presetName) {
-    // Newer units default bypassed on every preset change (cases below may enable them)
+    // Reset all modulation/time-based units
+    this.autoWah.setBypass(true);
+    this.talkbox.setBypass(true);
+    this.vinylLoFi.setBypass(true);
     this.flanger.setBypass(true);
     this.tremolo.setBypass(true);
     this.slapback.setBypass(true);
+    this.dubEcho.setBypass(true);
     this.springReverb.setBypass(true);
+    this.shimmerReverb.setBypass(true);
     this.gatedReverb.setBypass(true);
     this.tapeSat.setBypass(true);
+
     switch (presetName) {
+      case "dub_space_echo":
+      case "reggae_dub":
+        this.setPresetTrim(1.0);
+        this.tube.setBypass(true);
+        this.autopan.setBypass(true);
+        this.chorus.setBypass(true);
+        this.phaser.setBypass(true);
+        this.rotary.setBypass(true);
+        this.delay.setBypass(true);
+        this.dubEcho.setBypass(false);
+        this.dubEcho.setFeedback(0.32);
+        this.dubEcho.setMix(0.24);
+        this.springReverb.setBypass(false);
+        this.springReverb.setMix(0.18);
+        this.reverb.setBypass(true);
+        this.masterEq.setLowGain(0.5);
+        this.masterEq.setHighGain(0.5);
+        break;
+
+      case "shimmer_ethereal":
+      case "worship_shimmer":
+        this.setPresetTrim(1.0);
+        this.tube.setBypass(true);
+        this.autopan.setBypass(true);
+        this.chorus.setBypass(false);
+        this.chorus.setMix(0.20);
+        this.phaser.setBypass(true);
+        this.rotary.setBypass(true);
+        this.delay.setBypass(true);
+        this.shimmerReverb.setBypass(false);
+        this.shimmerReverb.setShimmer(0.40);
+        this.shimmerReverb.setDecay(2.0);
+        this.shimmerReverb.setMix(0.25);
+        this.reverb.setBypass(true);
+        break;
+
+      case "funk_auto_wah":
+      case "reggae_wah":
+        this.setPresetTrim(1.0);
+        this.autoWah.setBypass(false);
+        this.autoWah.setSensitivity(1.0);
+        this.autoWah.setResonance(2.2);
+        this.tube.setBypass(true);
+        this.chorus.setBypass(true);
+        this.reverb.setBypass(false);
+        this.reverb.setMix(0.10);
+        break;
+
+      case "talkbox_vocal":
+        this.setPresetTrim(1.0);
+        this.talkbox.setBypass(false);
+        this.talkbox.setMix(0.40);
+        this.tube.setBypass(true);
+        this.delay.setBypass(true);
+        break;
+
+      case "lofi_vinyl_tape":
+        this.setPresetTrim(1.0);
+        this.vinylLoFi.setBypass(false);
+        this.vinylLoFi.setWobble(0.45);
+        this.vinylLoFi.setMix(0.60);
+        this.tapeSat.setBypass(false);
+        this.tapeSat.setDrive(0.20);
+        this.springReverb.setBypass(false);
+        this.springReverb.setMix(0.12);
+        break;
       case "synthesizer_you_surf":
       case "surf_guitar":
       case "surf_synth":

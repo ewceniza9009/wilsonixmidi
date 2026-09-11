@@ -1992,19 +1992,34 @@ export class SfxSoundGenerator {
   isSfxInstrument(instId) {
     if (!instId) return false;
     if (instId.endsWith("_r")) return false;
+    const id = String(instId).toLowerCase();
     return (
-      instId === "kalimba" ||
-      instId === "m1_kalimba" ||
-      instId.startsWith("sy_") ||
-      instId.startsWith("nature_") ||
-      instId.startsWith("vox_") ||
-      instId.startsWith("fx_") ||
-      instId.startsWith("percussion_") ||
-      instId.startsWith("tr909_") ||
-      instId === "tr808_kit" ||
-      instId === "tr909_kit" ||
-      instId === "drums1" ||
-      instId === "m1_drums"
+      id === "kalimba" ||
+      id === "m1_kalimba" ||
+      id.startsWith("sy_") ||
+      id.startsWith("nature_") ||
+      id.startsWith("vox_") ||
+      id.startsWith("fx_") ||
+      id.startsWith("percussion_") ||
+      id.startsWith("sax_") ||
+      id.startsWith("tr909_") ||
+      id === "tr808_kit" ||
+      id === "tr909_kit" ||
+      id === "drums1" ||
+      id === "m1_drums" ||
+      id === "dub_siren" ||
+      id === "reggae_siren" ||
+      id === "spring_splash" ||
+      id === "dub_splash" ||
+      id === "laser_zap" ||
+      id === "dub_laser" ||
+      id === "dub_horn" ||
+      id === "airhorn" ||
+      id === "sub_boom" ||
+      id === "sub_drop" ||
+      id === "808_boom" ||
+      id === "noise_riser" ||
+      id === "sweep_riser"
     );
   }
 
@@ -2159,9 +2174,281 @@ export class SfxSoundGenerator {
       case "sax_scoop":
         return this.triggerSaxScoop(midiNote, velocity, customGain, destNode);
 
+      // 7. Reggae, Dub & Stage Sound FX
+      case "dub_siren":
+      case "reggae_siren":
+        return this.triggerDubSiren(midiNote || 60, velocity, customGain, destNode);
+      case "spring_splash":
+      case "dub_splash":
+        return this.triggerSpringSplash(velocity, customGain, destNode);
+      case "laser_zap":
+      case "dub_laser":
+        return this.triggerLaserZap(velocity, customGain, destNode);
+      case "dub_horn":
+      case "airhorn":
+        return this.triggerDubHorn(velocity, customGain, destNode);
+      case "sub_boom":
+      case "sub_drop":
+      case "808_boom":
+        return this.trigger808SubBoom(velocity, customGain, destNode);
+      case "noise_riser":
+      case "sweep_riser":
+        return this.triggerNoiseRiser(velocity, customGain, destNode);
+
       default:
         return null;
     }
   }
+
+  /**
+   * Authentic Jamaican Sound System Dub Siren with LFO Pitch Modulation & Space Echo
+   */
+  triggerDubSiren(midiNote = 60, velocity = 100, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const dest = this.getDest(destNode);
+    if (!dest) return null;
+    const now = ctx.currentTime;
+    const baseFreq = 440 * Math.pow(2, (midiNote - 69) / 12);
+
+    const osc = ctx.createOscillator();
+    osc.type = "square";
+    osc.frequency.setValueAtTime(baseFreq, now);
+
+    const lfo = ctx.createOscillator();
+    lfo.type = "sine";
+    lfo.frequency.setValueAtTime(4.8, now); // Siren speed
+
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.setValueAtTime(baseFreq * 0.28, now); // Siren depth
+    lfo.connect(lfoGain);
+    lfoGain.connect(osc.frequency);
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(2200, now);
+    filter.Q.value = 4.5;
+
+    const gainNode = ctx.createGain();
+    const peakVol = (velocity / 127) * 0.45 * customGain;
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(peakVol, now + 0.05);
+    gainNode.gain.setValueAtTime(peakVol, now + 1.2);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + 2.8);
+
+    // Dub Echo Delay line
+    const delay = ctx.createDelay(1.0);
+    delay.delayTime.setValueAtTime(0.32, now);
+    const delayFeedback = ctx.createGain();
+    delayFeedback.gain.setValueAtTime(0.68, now);
+    const delayDamp = ctx.createBiquadFilter();
+    delayDamp.type = "lowpass";
+    delayDamp.frequency.setValueAtTime(2400, now);
+
+    osc.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(dest);
+
+    // Feed to echo
+    gainNode.connect(delay);
+    delay.connect(delayDamp);
+    delayDamp.connect(delayFeedback);
+    delayFeedback.connect(delay);
+    delayDamp.connect(dest);
+
+    osc.start(now);
+    lfo.start(now);
+    osc.stop(now + 3.0);
+    lfo.stop(now + 3.0);
+
+    this.trackSfx([osc, lfo, gainNode, delay], 3.2);
+    return { stop: () => { try { gainNode.gain.setTargetAtTime(0, ctx.currentTime, 0.05); } catch(e){} } };
+  }
+
+  /**
+   * Vintage Spring Reverb Splash / Tank Crash (Iconic Dub Crash)
+   */
+  triggerSpringSplash(velocity = 100, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const dest = this.getDest(destNode);
+    if (!dest) return null;
+    const now = ctx.currentTime;
+
+    // Transient impulse
+    const osc = ctx.createOscillator();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(140, now);
+    osc.frequency.exponentialRampToValueAtTime(45, now + 0.08);
+
+    const impGain = ctx.createGain();
+    impGain.gain.setValueAtTime(0.8 * customGain, now);
+    impGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    osc.connect(impGain);
+
+    // Dispersive Spring Diffusion Network (Resonant Allpass cascade)
+    const ap1 = ctx.createBiquadFilter();
+    ap1.type = "allpass";
+    ap1.frequency.setValueAtTime(750, now);
+    ap1.Q.value = 8.0;
+
+    const ap2 = ctx.createBiquadFilter();
+    ap2.type = "allpass";
+    ap2.frequency.setValueAtTime(1450, now);
+    ap2.Q.value = 10.0;
+
+    const springDelay = ctx.createDelay(0.5);
+    springDelay.delayTime.setValueAtTime(0.038, now);
+    const springFb = ctx.createGain();
+    springFb.gain.setValueAtTime(0.82, now);
+
+    const springOut = ctx.createGain();
+    springOut.gain.setValueAtTime((velocity / 127) * 0.5 * customGain, now);
+    springOut.gain.exponentialRampToValueAtTime(0.001, now + 1.8);
+
+    impGain.connect(ap1);
+    ap1.connect(ap2);
+    ap2.connect(springDelay);
+    springDelay.connect(springFb);
+    springFb.connect(ap1);
+    springDelay.connect(springOut);
+    springOut.connect(dest);
+
+    osc.start(now);
+    osc.stop(now + 0.1);
+    this.trackSfx([osc, impGain, springOut], 2.0);
+    return true;
+  }
+
+  /**
+   * Sound System Laser Zap
+   */
+  triggerLaserZap(velocity = 100, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const dest = this.getDest(destNode);
+    if (!dest) return null;
+    const now = ctx.currentTime;
+
+    const osc = ctx.createOscillator();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(3200, now);
+    osc.frequency.exponentialRampToValueAtTime(80, now + 0.16);
+
+    const gain = ctx.createGain();
+    const vol = (velocity / 127) * 0.4 * customGain;
+    gain.gain.setValueAtTime(vol, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+    osc.connect(gain);
+    gain.connect(dest);
+
+    osc.start(now);
+    osc.stop(now + 0.25);
+    this.trackSfx([osc, gain], 0.3);
+    return true;
+  }
+
+  /**
+   * Dancehall / Reggae Stage Airhorn
+   */
+  triggerDubHorn(velocity = 100, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const dest = this.getDest(destNode);
+    if (!dest) return null;
+    const now = ctx.currentTime;
+
+    const f1 = 349.23; // F4
+    const f2 = 466.16; // Bb4
+
+    [f1, f2].forEach(freq => {
+      const osc = ctx.createOscillator();
+      osc.type = "square";
+      osc.frequency.setValueAtTime(freq * 0.92, now);
+      osc.frequency.linearRampToValueAtTime(freq, now + 0.04);
+
+      const gain = ctx.createGain();
+      const vol = (velocity / 127) * 0.22 * customGain;
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(vol, now + 0.02);
+      gain.gain.setValueAtTime(vol, now + 0.45);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.frequency.setValueAtTime(freq * 1.5, now);
+      filter.Q.value = 2.0;
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(dest);
+
+      osc.start(now);
+      osc.stop(now + 0.75);
+      this.trackSfx([osc, gain], 0.8);
+    });
+    return true;
+  }
+
+  /**
+   * Heavy 808 Sub-Boom / Bass Drop
+   */
+  trigger808SubBoom(velocity = 100, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const dest = this.getDest(destNode);
+    if (!dest) return null;
+    const now = ctx.currentTime;
+
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(120, now);
+    osc.frequency.exponentialRampToValueAtTime(32, now + 0.8);
+
+    const gain = ctx.createGain();
+    const vol = (velocity / 127) * 0.75 * customGain;
+    gain.gain.setValueAtTime(vol, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 1.6);
+
+    osc.connect(gain);
+    gain.connect(dest);
+
+    osc.start(now);
+    osc.stop(now + 1.7);
+    this.trackSfx([osc, gain], 1.8);
+    return true;
+  }
+
+  /**
+   * White Noise Sweep / Riser Transition
+   */
+  triggerNoiseRiser(velocity = 100, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const dest = this.getDest(destNode);
+    if (!dest || !this.noiseBuffer) return null;
+    const now = ctx.currentTime;
+
+    const noiseSrc = ctx.createBufferSource();
+    noiseSrc.buffer = this.noiseBuffer;
+    noiseSrc.loop = true;
+
+    const sweepFilter = ctx.createBiquadFilter();
+    sweepFilter.type = "bandpass";
+    sweepFilter.Q.value = 3.5;
+    sweepFilter.frequency.setValueAtTime(220, now);
+    sweepFilter.frequency.exponentialRampToValueAtTime(6500, now + 2.2);
+
+    const gain = ctx.createGain();
+    const vol = (velocity / 127) * 0.35 * customGain;
+    gain.gain.setValueAtTime(0.01, now);
+    gain.gain.linearRampToValueAtTime(vol, now + 2.0);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 2.4);
+
+    noiseSrc.connect(sweepFilter);
+    sweepFilter.connect(gain);
+    gain.connect(dest);
+
+    noiseSrc.start(now);
+    noiseSrc.stop(now + 2.5);
+    this.trackSfx([noiseSrc, gain], 2.6);
+    return true;
+  }
 }
+
 

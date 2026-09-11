@@ -1537,6 +1537,10 @@ export class NativePcmEngine {
   }
 
   findNearestAnchor(instId, targetMidi, velocity = 95) {
+    if (this.sfxGenerator && this.sfxGenerator.isSfxInstrument(instId)) {
+      return null;
+    }
+
     if (instId && INST_ALIASES[instId]) {
       instId = INST_ALIASES[instId];
     }
