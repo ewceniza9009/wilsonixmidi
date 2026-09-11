@@ -42,6 +42,16 @@ export class VirtualKeyboardUI {
     requestAnimationFrame(() => {
       this.centerOnMiddleC(false);
     });
+    setTimeout(() => {
+      this.centerOnMiddleC(false);
+    }, 60);
+
+    window.addEventListener("resize", () => {
+      const rollContainer = document.getElementById("piano-roll-container");
+      if (rollContainer && !rollContainer.classList.contains("zoom-full")) {
+        this.centerOnMiddleC(false);
+      }
+    }, { passive: true });
 
     // Subscribe to engine note triggers for bidirectional feedback
     synthEngine.onNoteChangeCallback = (midiNote, isPressed, velocity) => {
@@ -142,8 +152,8 @@ export class VirtualKeyboardUI {
           <div class="key-zoom-unit">
             <span class="zoom-label">KEYS:</span>
             <div class="zoom-pill-group">
-              <button class="zoom-btn active" data-zoom="wide">WIDE (TOUCH)</button>
-              <button class="zoom-btn" data-zoom="compact">COMPACT</button>
+              <button class="zoom-btn" data-zoom="wide">WIDE (TOUCH)</button>
+              <button class="zoom-btn active" data-zoom="compact">COMPACT</button>
               <button class="zoom-btn" data-zoom="full">88 FULL</button>
             </div>
           </div>
@@ -161,7 +171,7 @@ export class VirtualKeyboardUI {
         </div>
 
         <!-- Interactive Piano Bed (88 Keys) -->
-        <div class="piano-roll-container zoom-wide" id="piano-roll-container">
+        <div class="piano-roll-container zoom-compact" id="piano-roll-container">
           <div class="piano-bed" id="piano-keys-track">
             ${this.buildKeysHtml()}
           </div>
@@ -546,7 +556,14 @@ export class VirtualKeyboardUI {
   }
 
   centerOnMiddleC(smooth = false) {
-    this.scrollToMidi(60, smooth); // Middle C = 60
+    const el = this.keyElements.get(60); // Middle C = 60
+    const container = document.getElementById("piano-roll-container");
+    if (!el || !container) return;
+    const targetScroll = Math.max(0, el.offsetLeft - (container.clientWidth / 2) + (el.offsetWidth / 2));
+    container.scrollTo({
+      left: targetScroll,
+      behavior: smooth ? "smooth" : "auto",
+    });
   }
 
   updateQwertyLabels() {
