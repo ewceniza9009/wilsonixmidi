@@ -77,10 +77,12 @@ export class FxRackManager {
   // never on the audio-note hot path, so cost is irrelevant. Bypassed effects
   // are physically absent from the graph → zero render-thread pull.
   _updateChainRouting() {
+    if (this._bootstrapping) return;
     const engaged = this._chainEffects.filter(e => e.enabled);
 
     // Tear down the previous topology completely (disconnect all outputs).
     try { this.input.disconnect(); } catch (e) {}
+    try { this.fastPathGain.disconnect(); } catch (e) {}
     if (this._chainEngaged) {
       this._chainEngaged.forEach(e => {
         try { e.output.disconnect(); } catch (err) {}
@@ -90,6 +92,7 @@ export class FxRackManager {
     if (engaged.length === 0) {
       // FAST PATH: single unity gain — the absolute minimum graph.
       this.input.connect(this.fastPathGain);
+      this.fastPathGain.connect(this.presetTrimNode);
     } else {
       // SERIES PATH: only engaged effects, in rack order.
       this.input.connect(engaged[0].input);
@@ -193,308 +196,314 @@ export class FxRackManager {
   }
 
   applyPreset(presetName) {
-    // Reset all modulation/time-based units
-    this.autoWah.setBypass(true);
-    this.talkbox.setBypass(true);
-    this.vinylLoFi.setBypass(true);
-    this.flanger.setBypass(true);
-    this.tremolo.setBypass(true);
-    this.slapback.setBypass(true);
-    this.dubEcho.setBypass(true);
-    this.springReverb.setBypass(true);
-    this.shimmerReverb.setBypass(true);
-    this.gatedReverb.setBypass(true);
-    this.tapeSat.setBypass(true);
+    this._bootstrapping = true;
+    try {
+      // Reset all modulation/time-based units
+      this.autoWah.setBypass(true);
+      this.talkbox.setBypass(true);
+      this.vinylLoFi.setBypass(true);
+      this.flanger.setBypass(true);
+      this.tremolo.setBypass(true);
+      this.slapback.setBypass(true);
+      this.dubEcho.setBypass(true);
+      this.springReverb.setBypass(true);
+      this.shimmerReverb.setBypass(true);
+      this.gatedReverb.setBypass(true);
+      this.tapeSat.setBypass(true);
 
-    switch (presetName) {
-      case "dub_space_echo":
-      case "reggae_dub":
-        this.setPresetTrim(1.0);
-        this.tube.setBypass(true);
-        this.autopan.setBypass(true);
-        this.chorus.setBypass(true);
-        this.phaser.setBypass(true);
-        this.rotary.setBypass(true);
-        this.delay.setBypass(true);
-        this.dubEcho.setBypass(false);
-        this.dubEcho.setFeedback(0.32);
-        this.dubEcho.setMix(0.24);
-        this.springReverb.setBypass(false);
-        this.springReverb.setMix(0.18);
-        this.reverb.setBypass(true);
-        this.masterEq.setLowGain(0.5);
-        this.masterEq.setHighGain(0.5);
-        break;
+      switch (presetName) {
+        case "dub_space_echo":
+        case "reggae_dub":
+          this.setPresetTrim(1.0);
+          this.tube.setBypass(true);
+          this.autopan.setBypass(true);
+          this.chorus.setBypass(true);
+          this.phaser.setBypass(true);
+          this.rotary.setBypass(true);
+          this.delay.setBypass(true);
+          this.dubEcho.setBypass(false);
+          this.dubEcho.setFeedback(0.32);
+          this.dubEcho.setMix(0.24);
+          this.springReverb.setBypass(false);
+          this.springReverb.setMix(0.18);
+          this.reverb.setBypass(true);
+          this.masterEq.setLowGain(0.5);
+          this.masterEq.setHighGain(0.5);
+          break;
 
-      case "shimmer_ethereal":
-      case "worship_shimmer":
-        this.setPresetTrim(1.0);
-        this.tube.setBypass(true);
-        this.autopan.setBypass(true);
-        this.chorus.setBypass(false);
-        this.chorus.setMix(0.20);
-        this.phaser.setBypass(true);
-        this.rotary.setBypass(true);
-        this.delay.setBypass(true);
-        this.shimmerReverb.setBypass(false);
-        this.shimmerReverb.setShimmer(0.40);
-        this.shimmerReverb.setDecay(2.0);
-        this.shimmerReverb.setMix(0.25);
-        this.reverb.setBypass(true);
-        break;
+        case "shimmer_ethereal":
+        case "worship_shimmer":
+          this.setPresetTrim(1.0);
+          this.tube.setBypass(true);
+          this.autopan.setBypass(true);
+          this.chorus.setBypass(false);
+          this.chorus.setMix(0.20);
+          this.phaser.setBypass(true);
+          this.rotary.setBypass(true);
+          this.delay.setBypass(true);
+          this.shimmerReverb.setBypass(false);
+          this.shimmerReverb.setShimmer(0.40);
+          this.shimmerReverb.setDecay(2.0);
+          this.shimmerReverb.setMix(0.25);
+          this.reverb.setBypass(true);
+          break;
 
-      case "funk_auto_wah":
-      case "reggae_wah":
-        this.setPresetTrim(1.0);
-        this.autoWah.setBypass(false);
-        this.autoWah.setSensitivity(1.0);
-        this.autoWah.setResonance(2.2);
-        this.tube.setBypass(true);
-        this.chorus.setBypass(true);
-        this.reverb.setBypass(false);
-        this.reverb.setMix(0.10);
-        break;
+        case "funk_auto_wah":
+        case "reggae_wah":
+          this.setPresetTrim(1.0);
+          this.autoWah.setBypass(false);
+          this.autoWah.setSensitivity(1.0);
+          this.autoWah.setResonance(2.2);
+          this.tube.setBypass(true);
+          this.chorus.setBypass(true);
+          this.reverb.setBypass(false);
+          this.reverb.setMix(0.10);
+          break;
 
-      case "talkbox_vocal":
-        this.setPresetTrim(1.0);
-        this.talkbox.setBypass(false);
-        this.talkbox.setMix(0.40);
-        this.tube.setBypass(true);
-        this.delay.setBypass(true);
-        break;
+        case "talkbox_vocal":
+          this.setPresetTrim(1.0);
+          this.talkbox.setBypass(false);
+          this.talkbox.setMix(0.40);
+          this.tube.setBypass(true);
+          this.delay.setBypass(true);
+          break;
 
-      case "lofi_vinyl_tape":
-        this.setPresetTrim(1.0);
-        this.vinylLoFi.setBypass(false);
-        this.vinylLoFi.setWobble(0.45);
-        this.vinylLoFi.setMix(0.60);
-        this.tapeSat.setBypass(false);
-        this.tapeSat.setDrive(0.20);
-        this.springReverb.setBypass(false);
-        this.springReverb.setMix(0.12);
-        break;
-      case "synthesizer_you_surf":
-      case "surf_guitar":
-      case "surf_synth":
-        this.setPresetTrim(1.0);
-        this.tube.setBypass(true);
-        this.autopan.setBypass(true);
-        this.phaser.setBypass(true);
-        this.chorus.setBypass(true);
-        this.rotary.setBypass(true);
-        this.slapback.setBypass(true);
-        this.delay.setBypass(true);
-        this.reverb.setBypass(true);
-        this.gatedReverb.setBypass(true);
-        this.springReverb.setBypass(false);
-        this.springReverb.setTone(3400);
-        this.springReverb.setDecay(2.4);
-        this.springReverb.setMix(0.40);
-        this.tapeSat.setBypass(false);
-        this.tapeSat.setDrive(0.30);
-        this.tapeSat.setWarmth(0.65);
-        this.masterEq.setLowGain(1.0);
-        this.masterEq.setHighGain(2.0);
-        break;
+        case "lofi_vinyl_tape":
+          this.setPresetTrim(1.0);
+          this.vinylLoFi.setBypass(false);
+          this.vinylLoFi.setWobble(0.45);
+          this.vinylLoFi.setMix(0.60);
+          this.tapeSat.setBypass(false);
+          this.tapeSat.setDrive(0.20);
+          this.springReverb.setBypass(false);
+          this.springReverb.setMix(0.12);
+          break;
+        case "synthesizer_you_surf":
+        case "surf_guitar":
+        case "surf_synth":
+          this.setPresetTrim(1.0);
+          this.tube.setBypass(true);
+          this.autopan.setBypass(true);
+          this.phaser.setBypass(true);
+          this.chorus.setBypass(true);
+          this.rotary.setBypass(true);
+          this.slapback.setBypass(true);
+          this.delay.setBypass(true);
+          this.reverb.setBypass(true);
+          this.gatedReverb.setBypass(true);
+          this.springReverb.setBypass(false);
+          this.springReverb.setTone(3400);
+          this.springReverb.setDecay(2.4);
+          this.springReverb.setMix(0.40);
+          this.tapeSat.setBypass(false);
+          this.tapeSat.setDrive(0.30);
+          this.tapeSat.setWarmth(0.65);
+          this.masterEq.setLowGain(1.0);
+          this.masterEq.setHighGain(2.0);
+          break;
 
-      case "synthesizer_you_pad":
-      case "juno_synth_pad":
-        this.setPresetTrim(1.0);
-        this.tube.setBypass(true);
-        this.autopan.setBypass(true);
-        this.phaser.setBypass(true);
-        this.rotary.setBypass(true);
-        this.slapback.setBypass(true);
-        this.delay.setBypass(true);
-        this.springReverb.setBypass(true);
-        this.gatedReverb.setBypass(true);
-        this.chorus.setBypass(false);
-        this.chorus.setRate(0.85);
-        this.chorus.setDepth(0.8);
-        this.chorus.setMix(0.45);
-        this.reverb.setBypass(false);
-        this.reverb.setMix(0.20);
-        this.reverb.setDecay(2.2);
-        this.tapeSat.setBypass(false);
-        this.tapeSat.setDrive(0.25);
-        this.tapeSat.setWarmth(0.70);
-        break;
+        case "synthesizer_you_pad":
+        case "juno_synth_pad":
+          this.setPresetTrim(1.0);
+          this.tube.setBypass(true);
+          this.autopan.setBypass(true);
+          this.phaser.setBypass(true);
+          this.rotary.setBypass(true);
+          this.slapback.setBypass(true);
+          this.delay.setBypass(true);
+          this.springReverb.setBypass(true);
+          this.gatedReverb.setBypass(true);
+          this.chorus.setBypass(false);
+          this.chorus.setRate(0.85);
+          this.chorus.setDepth(0.8);
+          this.chorus.setMix(0.45);
+          this.reverb.setBypass(false);
+          this.reverb.setMix(0.20);
+          this.reverb.setDecay(2.2);
+          this.tapeSat.setBypass(false);
+          this.tapeSat.setDrive(0.25);
+          this.tapeSat.setWarmth(0.70);
+          break;
 
-      case "synthesizer_you_vocal":
-      case "slapback_vocal":
-        this.setPresetTrim(1.0);
-        this.tube.setBypass(true);
-        this.autopan.setBypass(true);
-        this.chorus.setBypass(true);
-        this.phaser.setBypass(true);
-        this.rotary.setBypass(true);
-        this.delay.setBypass(true);
-        this.springReverb.setBypass(true);
-        this.gatedReverb.setBypass(true);
-        this.slapback.setBypass(false);
-        this.slapback.setDelayTime(0.095);
-        this.slapback.setTone(3200);
-        this.slapback.setMix(0.40);
-        this.reverb.setBypass(false);
-        this.reverb.setMix(0.10);
-        this.tapeSat.setBypass(false);
-        this.tapeSat.setDrive(0.35);
-        break;
+        case "synthesizer_you_vocal":
+        case "slapback_vocal":
+          this.setPresetTrim(1.0);
+          this.tube.setBypass(true);
+          this.autopan.setBypass(true);
+          this.chorus.setBypass(true);
+          this.phaser.setBypass(true);
+          this.rotary.setBypass(true);
+          this.delay.setBypass(true);
+          this.springReverb.setBypass(true);
+          this.gatedReverb.setBypass(true);
+          this.slapback.setBypass(false);
+          this.slapback.setDelayTime(0.095);
+          this.slapback.setTone(3200);
+          this.slapback.setMix(0.40);
+          this.reverb.setBypass(false);
+          this.reverb.setMix(0.10);
+          this.tapeSat.setBypass(false);
+          this.tapeSat.setDrive(0.35);
+          break;
 
-      case "synthesizer_you_gated":
-      case "gated_snare_room":
-        this.setPresetTrim(1.0);
-        this.tube.setBypass(true);
-        this.autopan.setBypass(true);
-        this.chorus.setBypass(true);
-        this.phaser.setBypass(true);
-        this.rotary.setBypass(true);
-        this.slapback.setBypass(true);
-        this.delay.setBypass(true);
-        this.reverb.setBypass(true);
-        this.springReverb.setBypass(true);
-        this.gatedReverb.setBypass(false);
-        this.gatedReverb.setGateTime(180);
-        this.gatedReverb.setMix(0.50);
-        this.tapeSat.setBypass(false);
-        this.tapeSat.setDrive(0.40);
-        break;
+        case "synthesizer_you_gated":
+        case "gated_snare_room":
+          this.setPresetTrim(1.0);
+          this.tube.setBypass(true);
+          this.autopan.setBypass(true);
+          this.chorus.setBypass(true);
+          this.phaser.setBypass(true);
+          this.rotary.setBypass(true);
+          this.slapback.setBypass(true);
+          this.delay.setBypass(true);
+          this.reverb.setBypass(true);
+          this.springReverb.setBypass(true);
+          this.gatedReverb.setBypass(false);
+          this.gatedReverb.setGateTime(180);
+          this.gatedReverb.setMix(0.50);
+          this.tapeSat.setBypass(false);
+          this.tapeSat.setDrive(0.40);
+          break;
 
-      case "whitney_ballad":
-      case "foster_ballad":
-        this.setPresetTrim(1.0);
-        this.tube.setBypass(true);
-        this.autopan.setBypass(true);
-        this.phaser.setBypass(true);
-        this.rotary.setBypass(true);
-        this.delay.setBypass(true);
-        this.chorus.setBypass(true);
-        this.reverb.setBypass(false);
-        this.reverb.setMix(0.15);
-        this.reverb.setDecay(2.0);
-        this.masterEq.setLowGain(1.0);
-        this.masterEq.setHighGain(2.2);
-        break;
+        case "whitney_ballad":
+        case "foster_ballad":
+          this.setPresetTrim(1.0);
+          this.tube.setBypass(true);
+          this.autopan.setBypass(true);
+          this.phaser.setBypass(true);
+          this.rotary.setBypass(true);
+          this.delay.setBypass(true);
+          this.chorus.setBypass(true);
+          this.reverb.setBypass(false);
+          this.reverb.setMix(0.15);
+          this.reverb.setDecay(2.0);
+          this.masterEq.setLowGain(1.0);
+          this.masterEq.setHighGain(2.2);
+          break;
 
-      case "rooftop_cathedral":
-      case "dx7_ep1":
-        this.setPresetTrim(1.0);
-        this.tube.setBypass(true);
-        this.autopan.setBypass(true);
-        this.phaser.setBypass(true);
-        this.flanger.setBypass(true);
-        this.rotary.setBypass(true);
-        this.delay.setBypass(true);
-        this.slapback.setBypass(true);
-        this.springReverb.setBypass(true);
-        this.gatedReverb.setBypass(true);
-        this.tapeSat.setBypass(true);
-        this.chorus.setBypass(false);
-        this.chorus.setRate(0.65);
-        this.chorus.setDepth(1.0);
-        this.chorus.setMix(0.65);
-        this.reverb.setBypass(false);
-        this.reverb.setMix(0.35);
-        this.reverb.setDecay(2.1);
-        this.masterEq.setLowGain(1.0);
-        this.masterEq.setHighGain(1.8);
-        break;
+        case "rooftop_cathedral":
+        case "dx7_ep1":
+          this.setPresetTrim(1.0);
+          this.tube.setBypass(true);
+          this.autopan.setBypass(true);
+          this.phaser.setBypass(true);
+          this.flanger.setBypass(true);
+          this.rotary.setBypass(true);
+          this.delay.setBypass(true);
+          this.slapback.setBypass(true);
+          this.springReverb.setBypass(true);
+          this.gatedReverb.setBypass(true);
+          this.tapeSat.setBypass(true);
+          this.chorus.setBypass(false);
+          this.chorus.setRate(0.65);
+          this.chorus.setDepth(1.0);
+          this.chorus.setMix(0.65);
+          this.reverb.setBypass(false);
+          this.reverb.setMix(0.35);
+          this.reverb.setDecay(2.1);
+          this.masterEq.setLowGain(1.0);
+          this.masterEq.setHighGain(1.8);
+          break;
 
-      case "triton_ep":
-      case "rnb_ep":
-      case "triton_dyno_ep":
-        this.setPresetTrim(1.0);
-        this.tube.setBypass(true);
-        this.autopan.setBypass(true);
-        this.chorus.setBypass(true);
-        this.phaser.setBypass(true);
-        this.rotary.setBypass(true);
-        this.delay.setBypass(true);
-        this.reverb.setBypass(false);
-        this.reverb.setMix(0.10);
-        this.reverb.setDecay(1.5);
-        break;
+        case "triton_ep":
+        case "rnb_ep":
+        case "triton_dyno_ep":
+          this.setPresetTrim(1.0);
+          this.tube.setBypass(true);
+          this.autopan.setBypass(true);
+          this.chorus.setBypass(true);
+          this.phaser.setBypass(true);
+          this.rotary.setBypass(true);
+          this.delay.setBypass(true);
+          this.reverb.setBypass(false);
+          this.reverb.setMix(0.10);
+          this.reverb.setDecay(1.5);
+          break;
 
-      case "distortion_guitar":
-      case "rock_lead":
-      case "shreddage_lead_guitar":
-        this.setPresetTrim(1.0);
-        this.tube.setBypass(false);
-        this.tube.setDrive(0.50);
-        this.tube.setMix(0.55);
-        this.tube.setTone(5000);
-        this.autopan.setBypass(true);
-        this.chorus.setBypass(true);
-        this.phaser.setBypass(true);
-        this.rotary.setBypass(true);
-        this.delay.setBypass(true);
-        this.reverb.setBypass(false);
-        this.reverb.setMix(0.12);
-        this.reverb.setDecay(1.5);
-        break;
+        case "distortion_guitar":
+        case "rock_lead":
+        case "shreddage_lead_guitar":
+          this.setPresetTrim(1.0);
+          this.tube.setBypass(false);
+          this.tube.setDrive(0.50);
+          this.tube.setMix(0.55);
+          this.tube.setTone(5000);
+          this.autopan.setBypass(true);
+          this.chorus.setBypass(true);
+          this.phaser.setBypass(true);
+          this.rotary.setBypass(true);
+          this.delay.setBypass(true);
+          this.reverb.setBypass(false);
+          this.reverb.setMix(0.12);
+          this.reverb.setDecay(1.5);
+          break;
 
-      case "m1_organ":
-      case "m1_rock_organ":
-      case "drawbar_organ":
-        this.setPresetTrim(1.0);
-        this.tube.setBypass(true);
-        this.autopan.setBypass(true);
-        this.chorus.setBypass(true);
-        this.phaser.setBypass(true);
-        this.rotary.setBypass(true);
-        this.delay.setBypass(true);
-        this.reverb.setBypass(false);
-        this.reverb.setMix(0.12);
-        this.reverb.setDecay(1.6);
-        break;
+        case "m1_organ":
+        case "m1_rock_organ":
+        case "drawbar_organ":
+          this.setPresetTrim(1.0);
+          this.tube.setBypass(true);
+          this.autopan.setBypass(true);
+          this.chorus.setBypass(true);
+          this.phaser.setBypass(true);
+          this.rotary.setBypass(true);
+          this.delay.setBypass(true);
+          this.reverb.setBypass(false);
+          this.reverb.setMix(0.12);
+          this.reverb.setDecay(1.6);
+          break;
 
-      case "warm_strings":
-      case "triton_warm_strings":
-      case "string_ensemble_1":
-      case "m1_universe":
-      case "m1_choir":
-        this.setPresetTrim(1.0);
-        this.tube.setBypass(true);
-        this.autopan.setBypass(true);
-        this.phaser.setBypass(true);
-        this.rotary.setBypass(true);
-        this.delay.setBypass(true);
-        this.chorus.setBypass(true);
-        this.reverb.setBypass(false);
-        this.reverb.setMix(0.15);
-        this.reverb.setDecay(2.0);
-        break;
+        case "warm_strings":
+        case "triton_warm_strings":
+        case "string_ensemble_1":
+        case "m1_universe":
+        case "m1_choir":
+          this.setPresetTrim(1.0);
+          this.tube.setBypass(true);
+          this.autopan.setBypass(true);
+          this.phaser.setBypass(true);
+          this.rotary.setBypass(true);
+          this.delay.setBypass(true);
+          this.chorus.setBypass(true);
+          this.reverb.setBypass(false);
+          this.reverb.setMix(0.15);
+          this.reverb.setDecay(2.0);
+          break;
 
-      case "synth_lead":
-      case "fat_brass_horns":
-      case "brass_section":
-      case "m1_fresh_air":
-        this.setPresetTrim(1.0);
-        this.tube.setBypass(true);
-        this.autopan.setBypass(true);
-        this.phaser.setBypass(true);
-        this.chorus.setBypass(true);
-        this.rotary.setBypass(true);
-        this.delay.setBypass(true);
-        this.reverb.setBypass(false);
-        this.reverb.setMix(0.12);
-        this.reverb.setDecay(1.5);
-        break;
+        case "synth_lead":
+        case "fat_brass_horns":
+        case "brass_section":
+        case "m1_fresh_air":
+          this.setPresetTrim(1.0);
+          this.tube.setBypass(true);
+          this.autopan.setBypass(true);
+          this.phaser.setBypass(true);
+          this.chorus.setBypass(true);
+          this.rotary.setBypass(true);
+          this.delay.setBypass(true);
+          this.reverb.setBypass(false);
+          this.reverb.setMix(0.12);
+          this.reverb.setDecay(1.5);
+          break;
 
-      default: // Acoustic Concert Grand Piano
-        this.setPresetTrim(1.0);
-        this.tube.setBypass(true);
-        this.autopan.setBypass(true);
-        this.phaser.setBypass(true);
-        this.chorus.setBypass(true);
-        this.rotary.setBypass(true);
-        this.delay.setBypass(true);
-        this.reverb.setBypass(true);
-        this.reverb.setMix(0.12);
-        this.reverb.setDecay(1.6);
-        this.masterEq.setLowGain(1.0);
-        this.masterEq.setHighGain(1.8);
-        break;
+        default: // Acoustic Concert Grand Piano
+          this.setPresetTrim(1.0);
+          this.tube.setBypass(true);
+          this.autopan.setBypass(true);
+          this.phaser.setBypass(true);
+          this.chorus.setBypass(true);
+          this.rotary.setBypass(true);
+          this.delay.setBypass(true);
+          this.reverb.setBypass(true);
+          this.reverb.setMix(0.12);
+          this.reverb.setDecay(1.6);
+          this.masterEq.setLowGain(1.0);
+          this.masterEq.setHighGain(1.8);
+          break;
+      }
+    } finally {
+      this._bootstrapping = false;
+      this._updateChainRouting();
     }
 
     if (this.onPresetChangeCallback) {

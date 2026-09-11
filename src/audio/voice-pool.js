@@ -186,25 +186,22 @@ export class PolyphonicVoice {
     const decTarget = instrumentConfig.isPercussive ? 0.0 : sustain;
 
     this.voiceGain.gain.cancelScheduledValues(now);
+    const aEnd = now + Math.max(0.003, attack);
     if (sameNote) {
-      // Legato same-note retrigger: blend smoothly from current level
-      const aStart = now + 0.001;
-      this.voiceGain.gain.setTargetAtTime(peakGain, aStart, Math.max(0.001, attack));
-      this.voiceGain.gain.setTargetAtTime(decTarget, aStart + Math.max(0.001, attack) * 3 + 0.003, decTau);
+      // Legato same-note retrigger: ramp smoothly from current level
+      this.voiceGain.gain.linearRampToValueAtTime(peakGain, aEnd);
+      this.voiceGain.gain.setTargetAtTime(decTarget, aEnd, Math.max(0.05, decTau));
     } else if (wasBusy) {
-      // Voice steal: quick gentle duck to zero, then clean attack
-      const zeroAt = now + 0.018;
-      this.voiceGain.gain.setTargetAtTime(0.0, now, 0.004);
-      this.voiceGain.gain.setValueAtTime(0.0, zeroAt);
-      const aStart = zeroAt + 0.002;
-      this.voiceGain.gain.setTargetAtTime(peakGain, aStart, attack);
-      this.voiceGain.gain.setTargetAtTime(decTarget, aStart + attack * 3 + 0.004, decTau);
+      // Voice steal: quick gentle duck to zero, then clean linear attack
+      this.voiceGain.gain.setValueAtTime(this.voiceGain.gain.value, now);
+      this.voiceGain.gain.linearRampToValueAtTime(0.0, now + 0.003);
+      this.voiceGain.gain.linearRampToValueAtTime(peakGain, aEnd + 0.003);
+      this.voiceGain.gain.setTargetAtTime(decTarget, aEnd + 0.003, Math.max(0.05, decTau));
     } else {
-      // Idle voice: clean attack from silent state
-      const aStart = now + 0.002;
+      // Idle voice: clean linear attack from silent state
       this.voiceGain.gain.setValueAtTime(0.0, now);
-      this.voiceGain.gain.setTargetAtTime(peakGain, aStart, attack);
-      this.voiceGain.gain.setTargetAtTime(decTarget, aStart + attack * 3 + 0.004, decTau);
+      this.voiceGain.gain.linearRampToValueAtTime(peakGain, aEnd);
+      this.voiceGain.gain.setTargetAtTime(decTarget, aEnd, Math.max(0.05, decTau));
     }
   }
 

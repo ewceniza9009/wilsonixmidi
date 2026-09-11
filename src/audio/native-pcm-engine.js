@@ -2047,7 +2047,7 @@ export class NativePcmEngine {
     const densityScale = 1 / Math.sqrt(1 + this.voiceQueue.length / 6);
     const peakGain = (0.24 + velNorm * 0.76) * customGain * trim * combiScale * densityScale;
 
-    voiceGain.gain.setValueAtTime(0.0001, now);
+    voiceGain.gain.setValueAtTime(0.0, now);
     if (isChoir) {
       voiceGain.gain.setTargetAtTime(peakGain, now, 0.06);
     } else if (isSax) {
@@ -2056,7 +2056,7 @@ export class NativePcmEngine {
       const attackTime = isFunkStab ? 0.008 : 0.028;
       voiceGain.gain.setTargetAtTime(peakGain, now, attackTime);
     } else {
-      voiceGain.gain.exponentialRampToValueAtTime(peakGain, now + 0.004);
+      voiceGain.gain.linearRampToValueAtTime(peakGain, now + 0.0035);
     }
 
     voiceGain.gain.setTargetAtTime(0.0001, now + 32.0, 3.5);
@@ -2068,44 +2068,7 @@ export class NativePcmEngine {
     src.onended = () => { this._releaseSpine(dest, spine); };
     src.start(0);
 
-    // Felt-hammer layer for piano voices: short bandpassed thock under the attack
-    try {
-      const isPianoHammer = instId === "abletunes_upright" || instId === "acoustic_grand_piano" || instId === "m1_piano_16";
-      if (isPianoHammer && this.hammerBuf) {
-        const hsrc = ctx.createBufferSource();
-        hsrc.buffer = this.hammerBuf;
-        const h = this._acquireHammer(dest);
-        const hbp = h.hbp;
-        const hg = h.hg;
-        hbp.frequency.value = 1400 + velNorm * 1800;
-        hbp.Q.value = 0.9;
-        hg.gain.setValueAtTime(0.22 * velNorm * velNorm, now);
-        hsrc.connect(hbp);
-        hsrc.onended = () => { this._releaseHammer(dest, h); };
-        hsrc.start(now);
-        hsrc.stop(now + 0.10);
-      }
-    } catch (e) {}
-
-    // Cane Reed / Breath Air Layer for genuine acoustic saxophone voices
-    if (isSax && this.reedChiffBuf) {
-      try {
-        const csrc = ctx.createBufferSource();
-        csrc.buffer = this.reedChiffBuf;
-        const c = this._acquireReedChiff(dest);
-        const cbp = c.cbp;
-        const cg = c.cg;
-        cbp.frequency.value = 2400 + velNorm * 1200;
-        cbp.Q.value = 1.1;
-        const chiffGain = 0.18 * Math.sqrt(velNorm);
-        cg.gain.setValueAtTime(chiffGain, now);
-        cg.gain.exponentialRampToValueAtTime(0.0001, now + 0.075);
-        csrc.connect(cbp);
-        csrc.onended = () => { this._releaseReedChiff(dest, c); };
-        csrc.start(now);
-        csrc.stop(now + 0.08);
-      } catch (e) {}
-    }
+    // Pure studio acoustic sample playback (zero synthetic noise burst overlays)
 
     // Voice record
     const voiceRecord = {
@@ -2289,7 +2252,7 @@ export class NativePcmEngine {
     const remaining = [];
 
     voices.forEach(v => {
-      if (!instId || v.instId === instId) {
+      if (!instId || v.instId === instId || !this.heldNotes.has(v.midiNote)) {
         if (this.sustainPedal) {
           // Damper pedal held: keep voice ringing in sustained set
           if (!this.sustainedVoices.has(midiNote)) {
@@ -2408,8 +2371,11 @@ export class NativePcmEngine {
       voices.forEach(v => {
         try {
           v.voiceGain.gain.cancelScheduledValues(now);
-          v.voiceGain.gain.setTargetAtTime(0, now, 0.005);
-          v.src.stop(now + 0.05);
+          v.voiceGain.gain.setValueAtTime(v.voiceGain.gain.value, now);
+          v.voiceGain.gain.linearRampToValueAtTime(0, now + 0.008);
+          v.src.stop(now + 0.015);
+          if (v.vibLfo) { try { v.vibLfo.stop(now + 0.02); } catch (e) {} }
+          if (v.growlLfo) { try { v.growlLfo.stop(now + 0.02); } catch (e) {} }
         } catch (e) {}
       });
     };
@@ -2418,6 +2384,8 @@ export class NativePcmEngine {
     this.sustainedVoices.forEach(silence);
     this.activeVoices.clear();
     this.sustainedVoices.clear();
+    this.heldNotes.clear();
+    this.voiceQueue.length = 0;
   }
 }
 

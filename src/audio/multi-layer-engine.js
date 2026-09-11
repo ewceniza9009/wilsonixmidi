@@ -742,18 +742,19 @@ export class MultiLayerEngine {
     this._vaEngines = new Map(); // VA oscillator engine per combi layer program
   }
 
-  getVaEngineFor(prog, gain = 1) {
-    const gainKey = Math.max(1, Math.min(150, Math.round((gain || 1) * 100)));
-    const key = prog.id + "|" + gainKey;
-    if (this._vaEngines.has(key)) return this._vaEngines.get(key);
-    const eng = new TritonVirtualAnalogEngine();
-    this.init();
-    eng.init();
+  getVaEngineFor(prog, gain = 1, slotIdx = 0) {
+    const key = "va_slot_" + slotIdx;
+    let eng = this._vaEngines.get(key);
+    if (!eng) {
+      eng = new TritonVirtualAnalogEngine();
+      this.init();
+      eng.init();
+      this._vaEngines.set(key, eng);
+    }
     eng.setProgram(prog);
     if (typeof gain === "number" && gain > 0 && eng.config) {
       eng.config.masterGain = (eng.config.masterGain || 0.72) * Math.min(1.25, 0.85 + gain);
     }
-    this._vaEngines.set(key, eng);
     return eng;
   }
 
@@ -912,6 +913,11 @@ export class MultiLayerEngine {
   }
 
   setSingleInstrument(instKey) {
+    if (this.pcmEngine) this.pcmEngine.allNotesOff();
+    tritonVaEngine.allNotesOff();
+    this.vaAllNotesOff();
+    synthEngine.panic();
+
     this.isSplitMode = false;
     this.isSynthMode = false;
     this.isTritonVaMode = false;
@@ -941,6 +947,11 @@ export class MultiLayerEngine {
   }
 
   setDualLayerEnabled(enabled) {
+    if (this.pcmEngine) this.pcmEngine.allNotesOff();
+    tritonVaEngine.allNotesOff();
+    this.vaAllNotesOff();
+    synthEngine.panic();
+
     this.isDualLayerActive = enabled !== undefined ? !!enabled : !this.isDualLayerActive;
     this.isSynthMode = false;
 
@@ -995,6 +1006,11 @@ export class MultiLayerEngine {
   }
 
   setSynthProgram(patchConfig) {
+    if (this.pcmEngine) this.pcmEngine.allNotesOff();
+    tritonVaEngine.allNotesOff();
+    this.vaAllNotesOff();
+    synthEngine.panic();
+
     this.isSplitMode = false;
     this.isSynthMode = true;
     this.isTritonVaMode = false;
@@ -1007,6 +1023,11 @@ export class MultiLayerEngine {
   }
 
   setTritonVaProgram(prog) {
+    if (this.pcmEngine) this.pcmEngine.allNotesOff();
+    tritonVaEngine.allNotesOff();
+    this.vaAllNotesOff();
+    synthEngine.panic();
+
     this.isSplitMode = false;
     this.isTritonVaMode = true;
     this.isCombiMode = false;
@@ -1027,8 +1048,10 @@ export class MultiLayerEngine {
       this.isSynthMode = false;
       this.isTritonVaMode = false;
       this.activeTritonVaProg = null;
+      if (this.pcmEngine) this.pcmEngine.allNotesOff();
       tritonVaEngine.allNotesOff();
       this.vaAllNotesOff();
+      synthEngine.panic();
     }
     this.init();
     this.notifyLayerChange();
@@ -1047,14 +1070,17 @@ export class MultiLayerEngine {
 
   setCombiPreset(presetId) {
     if (COMBI_PRESETS[presetId]) {
+      if (this.pcmEngine) this.pcmEngine.allNotesOff();
+      tritonVaEngine.allNotesOff();
+      this.vaAllNotesOff();
+      synthEngine.panic();
+
       this.activeCombi = COMBI_PRESETS[presetId];
       this.isCombiMode = true;
       this.isSplitMode = false;
       this.isSynthMode = false;
       this.isTritonVaMode = false;
       this.activeTritonVaProg = null;
-      tritonVaEngine.allNotesOff();
-      this.vaAllNotesOff();
       this.isDualLayerActive = false; // explicitly loaded a full 4-layer combi
       this.layers = JSON.parse(JSON.stringify(this.activeCombi.layers));
       this.init();
@@ -1246,7 +1272,7 @@ export class MultiLayerEngine {
       if (zone && zone.inst !== null && zone.inst !== undefined && zone.inst !== "current_stack") {
         const transposedMidi = Math.max(21, Math.min(108, midiNote + (zone.oct || 0) * 12));
         if (zone.vaProg) {
-          this.getVaEngineFor(zone.vaProg, zone.gain).noteOn(transposedMidi, velocity);
+          this.getVaEngineFor(zone.vaProg, zone.gain, isLower ? 4 : 5).noteOn(transposedMidi, velocity);
         } else if (this.pcmEngine) {
           const dest = (this.pcmEngine.splitZoneInserts && this.pcmEngine.splitZoneInserts[isLower ? "lower" : "upper"])
             ? this.pcmEngine.splitZoneInserts[isLower ? "lower" : "upper"].input
@@ -1274,7 +1300,7 @@ export class MultiLayerEngine {
 
         const transposedMidi = Math.max(21, Math.min(108, midiNote + layer.oct * 12));
         if (layer.vaProg) {
-          this.getVaEngineFor(layer.vaProg, layer.gain).noteOn(transposedMidi, velocity);
+          this.getVaEngineFor(layer.vaProg, layer.gain, i).noteOn(transposedMidi, velocity);
         } else if (this.pcmEngine) {
           this.pcmEngine.playNote(layer.inst, transposedMidi, velocity, layer.gain, i);
         }
@@ -1298,7 +1324,7 @@ export class MultiLayerEngine {
       if (zone && zone.inst !== null && zone.inst !== undefined && zone.inst !== "current_stack") {
         const transposedMidi = Math.max(21, Math.min(108, midiNote + (zone.oct || 0) * 12));
         if (zone.vaProg) {
-          this.getVaEngineFor(zone.vaProg, zone.gain).noteOff(transposedMidi);
+          this.getVaEngineFor(zone.vaProg, zone.gain, isLower ? 4 : 5).noteOff(transposedMidi);
         } else if (this.pcmEngine) {
           this.pcmEngine.stopNote(zone.inst, transposedMidi);
         }
@@ -1324,7 +1350,7 @@ export class MultiLayerEngine {
           const layer = this.layers[i];
           const transposedMidi = Math.max(21, Math.min(108, midiNote + layer.oct * 12));
           if (layer.vaProg) {
-            this.getVaEngineFor(layer.vaProg, layer.gain).noteOff(transposedMidi);
+            this.getVaEngineFor(layer.vaProg, layer.gain, i).noteOff(transposedMidi);
           } else {
             this.pcmEngine.stopNote(layer.inst, transposedMidi);
           }

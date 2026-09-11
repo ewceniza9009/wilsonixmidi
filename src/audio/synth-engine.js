@@ -109,22 +109,22 @@ export const INSTRUMENT_PATCHES = {
     name: "M1 / Triton Drawbar Organ",
     category: "Organ",
     osc1Type: "sine",
-    osc1Ratio: 1.0, // 8' fundamental
+    osc1Ratio: 1.0, // 8' fundamental drawbar
     osc2Type: "sine",
     osc2Ratio: 2.996, // 2-2/3' 3rd harmonic percussion
-    osc3Type: "square",
-    osc3Ratio: 0.5, // 16' sub drawbar
-    gain1: 0.55,
-    gain2: 0.38,
-    gain3: 0.22,
+    osc3Type: "sine",
+    osc3Ratio: 0.5, // 16' warm sub drawbar
+    gain1: 0.58,
+    gain2: 0.35,
+    gain3: 0.25,
     filterType: "lowpass",
-    filterCutoff: 7500,
-    filterQ: 0.7,
+    filterCutoff: 6500,
+    filterQ: 0.5,
     filterDecay: null,
-    attack: 0.001, // Click transient
-    decay: 0.1,
+    attack: 0.003, // Clean smooth transient
+    decay: 0.15,
     sustainLevel: 0.95,
-    release: 0.08,
+    release: 0.10,
     isPercussive: false,
     fxPreset: "m1_organ",
   },
@@ -143,9 +143,9 @@ export const INSTRUMENT_PATCHES = {
     gain3: 0.15,
     filterType: "lowpass",
     filterCutoff: 5200,
-    filterQ: 1.8,
+    filterQ: 1.2,
     filterDecay: 0.4,
-    attack: 0.0015,
+    attack: 0.003,
     decay: 1.9,
     sustainLevel: 0.05,
     release: 0.25,
@@ -163,13 +163,13 @@ export const INSTRUMENT_PATCHES = {
     osc3Type: "sine",
     osc3Ratio: 0.5, // Sub-bass reinforcement
     gain1: 0.52,
-    gain2: 0.45,
-    gain3: 0.4,
+    gain2: 0.40,
+    gain3: 0.38,
     filterType: "lowpass",
-    filterCutoff: 2200,
-    filterQ: 3.5, // Resonant juicy punch
+    filterCutoff: 2400,
+    filterQ: 1.8, // Controlled warm punch
     filterDecay: 0.35,
-    attack: 0.002,
+    attack: 0.003,
     decay: 1.2,
     sustainLevel: 0.4,
     release: 0.15,
@@ -191,9 +191,9 @@ export const INSTRUMENT_PATCHES = {
     gain3: 0.38,
     filterType: "lowpass",
     filterCutoff: 8200,
-    filterQ: 2.2,
+    filterQ: 1.4,
     filterDecay: 0.9,
-    attack: 0.004,
+    attack: 0.005,
     decay: 1.8,
     sustainLevel: 0.7,
     release: 0.45,
@@ -208,18 +208,18 @@ export const INSTRUMENT_PATCHES = {
     osc1Ratio: 1.0,
     osc2Type: "sine",
     osc2Ratio: 2.996, // 3rd harmonic percussive tine
-    osc3Type: "square",
-    osc3Ratio: 0.5,   // 16' sub punch
-    gain1: 0.68,
-    gain2: 0.48,
-    gain3: 0.32,
+    osc3Type: "sine",
+    osc3Ratio: 0.5,   // 16' clean sub drawbar
+    gain1: 0.65,
+    gain2: 0.42,
+    gain3: 0.28,
     filterType: "lowpass",
-    filterCutoff: 6800,
-    filterQ: 2.0,
-    attack: 0.001, // 1ms keyclick
-    decay: 0.20,   // Snappy percussive drop
-    sustainLevel: 0.50,
-    release: 0.06, // Tight staccato dance bass release
+    filterCutoff: 6200,
+    filterQ: 0.6,
+    attack: 0.003, // Clean non-clicking keyclick
+    decay: 0.25,   // Snappy percussive drop
+    sustainLevel: 0.55,
+    release: 0.10, // Smooth dance bass release
     isPercussive: false,
     fxPreset: "m1_organ",
   },
