@@ -48,3 +48,9 @@ scratch/
 
 src-tauri/target
 src-tauri/WixTools
+
+# Private Admin Licensing Tools (NEVER push publicly)
+tools/license-generator*
+admin-tools/
+private/
+*.lic

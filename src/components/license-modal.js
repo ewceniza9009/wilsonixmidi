@@ -1,6 +1,6 @@
 /**
- * Pro License & Access Control Modal
- * Allows entering cryptographically signed license keys and displays hardware fingerprint.
+ * WILSONIX MIDIKEY Elite - Pro License & 30-Day Trial Modal
+ * Displays hardware fingerprint, trial remaining time, activation form, and license status.
  */
 
 import { licenseManager } from "../security/license-manager.js";
@@ -17,9 +17,22 @@ export class LicenseModalUI {
   render() {
     if (!this.container) return;
 
-    const isPro = licenseManager.isLicensed();
-    const info = licenseManager.getLicenseInfo();
+    const access = licenseManager.getAccessStatus();
     const devId = licenseManager.deviceFingerprint;
+
+    let statusCardClass = "status-trial";
+    let statusTitle = "30-DAY PRO TRIAL ACTIVE";
+    let statusDesc = `Full access enabled. <strong>${access.daysRemaining} days remaining</strong> (Expires: ${access.expires || "in 30 days"}).`;
+
+    if (access.isLicensed) {
+      statusCardClass = "status-pro";
+      statusTitle = "PRO LICENSE ACTIVE";
+      statusDesc = `Registered to: <strong>${access.licensee}</strong> &bull; Access: <strong>${access.expires}</strong>`;
+    } else if (access.isExpired) {
+      statusCardClass = "status-expired";
+      statusTitle = "TRIAL EXPIRED";
+      statusDesc = "Your 30-day trial period has concluded. Enter a valid license key below to unlock lifetime stage access.";
+    }
 
     this.container.innerHTML = `
       <div class="license-modal-backdrop ${this.isOpen ? "open" : ""}" id="license-backdrop">
@@ -27,37 +40,34 @@ export class LicenseModalUI {
           <div class="dialog-header">
             <div class="dialog-title">
               <span class="lock-icon">🔒</span>
-              <h3>MIDIKEY ELITE PRO ACTIVATION</h3>
+              <h3>WILSONIX PRO ACTIVATION & ACCESS</h3>
             </div>
             <button class="dialog-close-btn" id="license-close-btn">✕</button>
           </div>
 
           <div class="dialog-body">
+            <!-- Hardware ID Card -->
             <div class="hardware-id-card">
-              <label>YOUR MACHINE HARDWARE FINGERPRINT:</label>
+              <label>MACHINE HARDWARE FINGERPRINT:</label>
               <div class="fingerprint-box">
                 <code id="hw-fingerprint-val">${devId}</code>
                 <button class="copy-hw-btn" id="copy-hw-btn">COPY ID</button>
               </div>
-              <p class="hw-tip">Give this ID to your administrator to receive your signed offline license key.</p>
+              <p class="hw-tip">Give this ID to your administrator to receive an authorized signed license key.</p>
             </div>
 
-            <div class="license-status-card ${isPro ? "status-pro" : "status-demo"}">
+            <!-- Access Status Card -->
+            <div class="license-status-card ${statusCardClass}">
               <div class="status-indicator-dot"></div>
               <div class="status-meta">
-                <div class="status-title">${isPro ? "PRO LICENSE ACTIVE" : "TRIAL / DEMO MODE"}</div>
-                <div class="status-desc">
-                  ${
-                    isPro
-                      ? `Registered to: <strong>${info?.licensee || "Pro User"}</strong> (${info?.expires || "Lifetime"})`
-                      : "Soundbanks and live looper are running in demo preview mode."
-                  }
-                </div>
+                <div class="status-title">${statusTitle}</div>
+                <div class="status-desc">${statusDesc}</div>
               </div>
             </div>
 
+            <!-- Activation / Deactivation -->
             ${
-              !isPro
+              !access.isLicensed
                 ? `
               <div class="activation-form">
                 <label>ENTER YOUR PRO LICENSE KEY:</label>
@@ -65,7 +75,7 @@ export class LicenseModalUI {
                   <input type="text" id="license-key-input" placeholder="MKPRO-NAME-LIFETIME-XXXXXXXX" spellcheck="false" autocomplete="off" />
                   <button class="activate-submit-btn" id="activate-submit-btn">ACTIVATE</button>
                 </div>
-                <div class="key-help-hint">Format: MKPRO-NAME-EXPIRY-SIGNATURE (e.g. MKPRO-VIP-MASTER-ACCESS)</div>
+                <div class="key-help-hint">Keys follow the format: MKPRO-NAME-EXPIRY-SIGNATURE</div>
                 <div class="activation-msg" id="activation-msg"></div>
               </div>
             `
@@ -122,7 +132,7 @@ export class LicenseModalUI {
       if (res.success) {
         if (msgEl) {
           msgEl.className = "activation-msg success";
-          msgEl.innerText = "✓ Activation Successful! Welcome to MidiKey Elite Pro.";
+          msgEl.innerText = "✓ Activation Successful! Welcome to WILSONIX MIDIKEY Pro.";
         }
         setTimeout(() => {
           this.render();

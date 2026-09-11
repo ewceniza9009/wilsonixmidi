@@ -1,12 +1,16 @@
 /**
  * Web MIDI API Manager
  * Handles plug-and-play USB MIDI controllers, hotplugging, velocity response,
- * sustain pedals (CC 64), pitch bend (14-bit), and modulation wheels (CC 1).
+ * sustain pedals (CC 64), pitch bend (14-bit), modulation wheels (CC 1),
+ * MIDI Learn controller mapping, and Program Change registration switching.
  */
 
 import { synthEngine } from "../audio/synth-engine.js";
 import { multiLayerEngine } from "../audio/multi-layer-engine.js";
 import { shapeVelocity } from "./velocity-curve.js";
+import { audioCore } from "../audio/audio-core.js";
+import { midiLearnManager } from "./midi-learn.js";
+import { registrationManager } from "../components/registration-manager.js";
 
 export class MidiManager {
   constructor() {
@@ -96,6 +100,11 @@ export class MidiManager {
         const ccNumber = note;
         const ccValue = velocity;
 
+        // 1. Dispatch to Universal MIDI Learn Manager first
+        try {
+          midiLearnManager.handleControlChange(channel, ccNumber, ccValue);
+        } catch (e) {}
+
         if (ccNumber === 64) {
           // Damper / Sustain Pedal (0-63 Off, 64-127 On)
           const isDown = ccValue >= 64;
@@ -115,6 +124,15 @@ export class MidiManager {
           multiLayerEngine.panic();
           if (audioCore.fxRack?.delay) audioCore.fxRack.delay.flush();
         }
+        break;
+
+      case 0xc: // Program Change (PC 0-127) for stage foot controllers
+        try {
+          const slotNum = (note % 8) + 1;
+          const bankLetters = ["A", "B", "C", "D"];
+          const bankIdx = Math.floor(note / 8) % 4;
+          registrationManager.recallSlot(bankLetters[bankIdx], slotNum);
+        } catch (e) {}
         break;
 
       case 0xe: // Pitch Bend (14-bit precision)

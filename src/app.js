@@ -90,7 +90,7 @@ class MidiKeyEliteApp {
     // 2. License Modal
     try {
       this.licenseModal = new LicenseModalUI("license-modal-mount", () => {
-        if (this.gigHud) this.gigHud.render();
+        if (this.gigHud) this.gigHud.refresh();
       });
     } catch (e) {
       console.warn("LicenseModalUI init:", e);
