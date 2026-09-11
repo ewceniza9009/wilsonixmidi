@@ -13,6 +13,7 @@ import { ChordPadsUI } from "./components/chord-pads.js";
 import { ClipLooper } from "./components/looper.js";
 import { VirtualKeyboardUI } from "./components/virtual-keyboard.js";
 import { LicenseModalUI } from "./components/license-modal.js";
+import { licenseManager } from "./security/license-manager.js";
 import { TritonWorkstationUI } from "./components/triton-workstation-ui.js";
 import { MultiLayerUI } from "./components/multi-layer-ui.js";
 import { SplitConsoleUI } from "./components/split-console-ui.js";
@@ -91,10 +92,24 @@ class MidiKeyEliteApp {
       });
     }
 
-    // 2. License Modal
+    // 2. License Modal & Floating Status Pill
+    const syncFloatingLicense = () => {
+      const btn = document.getElementById("floating-license-btn");
+      const label = document.getElementById("floating-license-label");
+      if (!btn || !label) return;
+      const access = licenseManager.getAccessStatus();
+      label.textContent = access.badgeText;
+      btn.className = `floating-license-pill ${access.badgeClass}`;
+    };
+
     try {
       this.licenseModal = new LicenseModalUI("license-modal-mount", () => {
         if (this.gigHud) this.gigHud.refresh();
+        syncFloatingLicense();
+      });
+      syncFloatingLicense();
+      document.getElementById("floating-license-btn")?.addEventListener("click", () => {
+        this.licenseModal?.open();
       });
     } catch (e) {
       console.warn("LicenseModalUI init:", e);
@@ -252,6 +267,22 @@ class MidiKeyEliteApp {
         document.exitFullscreen?.().catch(() => {});
         fullscreenBtn.classList.remove("active");
       }
+    });
+
+    // 14. Mobile Orientation & Resize Adaptation
+    window.addEventListener("orientationchange", () => {
+      setTimeout(() => {
+        const rollContainer = document.getElementById("piano-roll-container");
+        if (rollContainer) {
+          const middleC = document.getElementById("key-midi-60");
+          if (middleC) {
+            rollContainer.scrollTo({
+              left: Math.max(0, middleC.offsetLeft - (rollContainer.clientWidth / 2) + (middleC.offsetWidth / 2)),
+              behavior: "smooth"
+            });
+          }
+        }
+      }, 150);
     });
 
     console.log("MidiKey Elite Ready. Zero-lag pipeline armed.");

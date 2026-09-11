@@ -10,12 +10,15 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  height: 100%;
+  box-sizing: border-box;
 }
 
 .fx-rack-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
 }
 
 .rack-title {
@@ -34,14 +37,22 @@
   border-radius: var(--radius-full);
 }
 
-/* Responsive Studio FX Rack Grid - ZERO Horizontal Scrolling */
+/* Responsive Studio FX Rack Grid */
 .devices-scroll-bay {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  overflow-x: hidden;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
   width: 100%;
   box-sizing: border-box;
+}
+
+.devices-scroll-bay::-webkit-scrollbar {
+  display: none;
 }
 
 @media (max-width: 1150px) {
@@ -50,7 +61,7 @@
   }
 }
 
-@media (max-width: 650px) {
+@media (max-width: 650px) and (orientation: portrait) {
   .devices-scroll-bay {
     grid-template-columns: 1fr;
   }

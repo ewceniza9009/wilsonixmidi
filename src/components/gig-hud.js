@@ -219,9 +219,6 @@ export class GigHudUI {
           <div class="brand-logo">
             <span class="logo-accent">WILSONIX</span> MIDIKEY
           </div>
-          <button class="license-badge-btn ${access.badgeClass}" id="hud-license-btn" title="License & Access Info">
-            ${access.badgeText}
-          </button>
 
           <!-- Live Active Sound Status Badge (Zero Lag, Single Clean Icon) -->
           <div class="hud-live-badge" id="hud-live-badge" title="Active Sound Playing on Keyboard">
@@ -355,6 +352,7 @@ export class GigHudUI {
             <button class="ws-tab-btn" data-view="chords" title="Chord Harmony Pads">CHORDS</button>
             <button class="ws-tab-btn" data-view="grooves" title="Backing Grooves">GROOVES</button>
             <button class="ws-tab-btn" data-view="player" title="Media Player">PLAYER</button>
+            <button class="ws-tab-btn keys-toggle-btn active" id="btn-hud-toggle-keys" title="Toggle Piano Keyboard (F4)">🎹 KEYS</button>
             <button class="ws-tab-btn fullscreen-btn" id="btn-toggle-fullscreen" title="Toggle Fullscreen">⛶</button>
           </nav>
         </div>
@@ -367,6 +365,11 @@ export class GigHudUI {
     const recLabel = document.getElementById("hud-rec-label");
 
     recBtn?.addEventListener("click", () => {
+      if (!licenseManager.hasProAccess()) {
+        licenseManager.requirePro("Master WAV Audio Recording");
+        return;
+      }
+
       if (!masterRecorder.isRecording) {
         masterRecorder.start();
         recBtn.classList.add("recording");
@@ -410,6 +413,10 @@ export class GigHudUI {
     });
 
     document.getElementById("hud-rig-save-btn")?.addEventListener("click", () => {
+      if (!licenseManager.hasProAccess()) {
+        licenseManager.requirePro("Storing Custom Stage Rigs");
+        return;
+      }
       const saved = registrationManager.saveCurrentToSlot(registrationManager.currentBank, registrationManager.currentSlot);
       if (registrationManager.onRecallCallback) {
         registrationManager.onRecallCallback({ bank: registrationManager.currentBank, slot: registrationManager.currentSlot, preset: saved });
@@ -437,6 +444,11 @@ export class GigHudUI {
     if (!selectedId) return;
 
     if (selectedId.startsWith("combi:")) {
+      if (!licenseManager.hasProAccess()) {
+        licenseManager.requirePro("4-Timbre Layered Combi Presets");
+        this.syncSoundDisplay();
+        return;
+      }
       const combiId = selectedId.slice(6);
       multiLayerEngine.setCombiPreset(combiId);
       return;
@@ -672,6 +684,12 @@ export class GigHudUI {
       const val = parseInt(e.target.value);
       multiLayerEngine.setMasterVolumePct(val);
       if (volReadout) volReadout.innerText = `${val}%`;
+    });
+
+    // 9. Top HUD Piano Keys Toggle Button
+    const topKeysBtn = document.getElementById("btn-hud-toggle-keys");
+    topKeysBtn?.addEventListener("click", () => {
+      window.dispatchEvent(new CustomEvent("wilsonix-toggle-piano-collapse"));
     });
   }
 

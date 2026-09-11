@@ -280,15 +280,23 @@ export class ChordPadsUI {
         }
       });
 
-      pad.addEventListener("touchstart", e => {
-        e.preventDefault();
-        triggerOn();
-      });
+      pad.addEventListener(
+        "touchstart",
+        e => {
+          if (e.cancelable) e.preventDefault();
+          triggerOn();
+        },
+        { passive: false }
+      );
 
-      pad.addEventListener("touchend", e => {
-        e.preventDefault();
-        triggerOff();
-      });
+      pad.addEventListener(
+        "touchend",
+        e => {
+          if (e.cancelable) e.preventDefault();
+          triggerOff();
+        },
+        { passive: false }
+      );
     });
   }
 

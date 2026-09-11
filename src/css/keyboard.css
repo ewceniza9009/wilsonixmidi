@@ -15,19 +15,23 @@
   box-sizing: border-box;
 }
 
-/* Controls bar above piano roll (Compact Single Row, No Scrollbar) */
+/* Controls bar above piano roll (Standardized 32px Uniform DAW Strip) */
 .keyboard-controls-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   flex-wrap: nowrap;
   overflow-x: auto;
-  gap: 8px;
-  margin-bottom: 4px;
-  padding-bottom: 4px;
+  gap: 6px;
+  height: 34px;
+  min-height: 34px;
+  max-height: 34px;
+  margin-bottom: 3px;
+  padding: 0 4px 2px 4px;
   border-bottom: 1px solid var(--border-subtle);
-  -ms-overflow-style: none;
+  box-sizing: border-box;
   scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .keyboard-controls-bar::-webkit-scrollbar {
@@ -38,38 +42,42 @@
 
 .wheel-bay {
   display: flex;
-  gap: 6px;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
   flex-shrink: 0;
 }
 
 .wheel-unit {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
+  height: 28px;
 }
 
 .wheel-unit label {
-  font-size: 0.52rem;
+  font-size: 0.50rem;
   font-weight: 800;
   color: var(--text-muted);
   letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .wheel-track {
-  width: 20px;
-  height: 38px;
+  width: 16px;
+  height: 28px;
   background: #0d0f14;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-medium);
   position: relative;
   cursor: ns-resize;
+  touch-action: none;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.8);
 }
 
 .wheel-thumb {
   width: 100%;
-  height: 10px;
+  height: 8px;
   background: linear-gradient(180deg, #4b5563 0%, #1f242d 100%);
   border-radius: 2px;
   border-top: 2px solid var(--accent-amber);
@@ -85,27 +93,23 @@
   border-top-color: var(--accent-cyan);
 }
 
-/* Octave HUD Unit */
-.octave-hud-unit {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: var(--bg-card);
-  padding: 4px 8px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-subtle);
-}
-
+/* Universal Standardized HUD Buttons */
 .hud-btn {
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: #374151;
   color: #fff;
   border: none;
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 800;
-  padding: 6px 10px;
+  padding: 0 8px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all 0.15s ease;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .hud-btn:hover {
@@ -117,26 +121,50 @@
   color: #000;
 }
 
+/* Octave HUD Unit */
+.octave-hud-unit {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 28px;
+  background: var(--bg-card);
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.octave-hud-unit .hud-btn {
+  height: 22px;
+  padding: 0 6px;
+  font-size: 0.58rem;
+}
+
 .octave-readout {
   font-family: var(--font-family-mono);
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   font-weight: 800;
   color: var(--accent-amber);
-  min-width: 38px;
+  min-width: 28px;
   text-align: center;
+  line-height: 28px;
 }
 
 .sustain-btn {
-  display: flex;
+  height: 28px;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
+  padding: 0 8px;
+  flex-shrink: 0;
 }
 
 .pedal-led {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: #4b5563;
 }
@@ -146,80 +174,65 @@
   color: var(--accent-amber);
 }
 
+.sustain-btn.active .pedal-led {
+  background: var(--accent-amber);
+  box-shadow: 0 0 8px var(--accent-amber);
+}
+
 .chord-btn {
+  height: 28px;
   background: var(--bg-card);
   border: 1px solid var(--border-medium);
   color: var(--text-primary);
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 800;
-  letter-spacing: 0.5px;
+  padding: 0 8px;
+  flex-shrink: 0;
 }
 
 .chord-btn.active {
   background: linear-gradient(135deg, #9333ea, #c026d3);
   color: #fff;
   border-color: #f472b6;
-  box-shadow: 0 0 12px rgba(192, 38, 211, 0.45);
+  box-shadow: 0 0 10px rgba(192, 38, 211, 0.45);
 }
 
 .layout-btn {
+  height: 28px;
   background: var(--bg-card);
   border: 1px solid var(--border-medium);
   color: var(--accent-cyan);
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 800;
-  letter-spacing: 0.5px;
+  padding: 0 8px;
+  flex-shrink: 0;
 }
 
 .demo-play-btn {
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: linear-gradient(135deg, #f59e0b, #d97706);
   color: #000;
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 900;
-  letter-spacing: 0.5px;
+  padding: 0 8px;
   border: 1px solid #fbbf24;
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.35);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.35);
   transition: all 0.2s ease;
   white-space: nowrap;
-}
-
-.demo-play-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 0 16px rgba(245, 158, 11, 0.6);
-}
-
-.demo-play-btn.playing {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  color: #fff;
-  border-color: #f87171;
-  box-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
-  animation: demoPulse 1.2s infinite ease-in-out;
-}
-
-@keyframes demoPulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.03); opacity: 0.9; }
-}
-
-.sustain-btn.active .pedal-led {
-  background: var(--accent-amber);
-  box-shadow: 0 0 8px var(--accent-amber);
-}
-
-.toggle-pill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: var(--text-secondary);
-  cursor: pointer;
+  flex-shrink: 0;
 }
 
 .panic-btn {
+  height: 28px;
   background: rgba(239, 68, 68, 0.2);
   color: #ef4444;
   border: 1px solid rgba(239, 68, 68, 0.4);
+  font-size: 0.60rem;
+  padding: 0 8px;
+  flex-shrink: 0;
 }
 
 .panic-btn:hover {
@@ -227,36 +240,143 @@
   color: #fff;
 }
 
+/* Collapse / Expand Piano Keys HUD Button */
+.collapse-keys-unit {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.collapse-keys-btn {
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: linear-gradient(180deg, #1e2533 0%, #131722 100%);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #f59e0b;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 0 9px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.collapse-keys-btn:hover {
+  background: linear-gradient(180deg, #283244 0%, #1a202d 100%);
+  border-color: rgba(245, 158, 11, 0.8);
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+}
+
+.collapse-keys-btn.active {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #000000;
+  border-color: transparent;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.7);
+}
+
+.collapse-icon {
+  font-size: 0.70rem;
+  line-height: 1;
+}
+
+/* Dynamic Velocity & Expression HUD Unit */
+.velocity-accent-unit {
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-card);
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.accent-badge {
+  font-size: 0.58rem;
+  font-weight: 900;
+  color: #ea580c;
+  background: rgba(234, 88, 12, 0.2);
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
+.velocity-readout {
+  font-family: var(--font-family-mono);
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: #cbd5e1;
+}
+
+.accent-preset-btns {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.accent-mini-btn {
+  height: 20px;
+  background: #1e2433;
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.54rem;
+  font-weight: 800;
+  padding: 0 5px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.accent-mini-btn:hover {
+  background: #2b3348;
+  color: #fff;
+}
+
+.accent-mini-btn.active {
+  background: var(--accent-amber);
+  color: #000;
+  border-color: var(--accent-amber);
+}
+
 /* Mobile Key Zoom Unit */
 .key-zoom-unit {
-  display: flex;
+  height: 28px;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   background: var(--bg-card);
-  padding: 4px 8px;
-  border-radius: var(--radius-md);
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .zoom-label {
-  font-size: 0.6rem;
+  font-size: 0.55rem;
   font-weight: 800;
   color: var(--text-muted);
 }
 
 .zoom-pill-group {
-  display: flex;
-  gap: 4px;
+  display: inline-flex;
+  gap: 2px;
 }
 
 .zoom-btn {
-  background: #282d3a;
+  height: 20px;
+  background: #1e2433;
   color: var(--text-secondary);
   border: 1px solid var(--border-subtle);
-  font-size: 0.62rem;
+  font-size: 0.54rem;
   font-weight: 700;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
+  padding: 0 6px;
+  border-radius: 2px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -267,12 +387,74 @@
   border-color: var(--accent-amber);
 }
 
+/* QWERTY HUD Toggle Pill */
+.qwerty-toggle-unit {
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.toggle-pill {
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  padding: 0 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.58rem;
+  font-weight: 800;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.toggle-pill:hover {
+  background: #2b3348;
+  color: #fff;
+  border-color: var(--border-medium);
+}
+
+.toggle-pill input[type="checkbox"] {
+  width: 12px;
+  height: 12px;
+  accent-color: var(--accent-amber);
+  margin: 0;
+  cursor: pointer;
+}
+
+.toggle-pill input[type="checkbox"]:checked + span {
+  color: var(--accent-cyan);
+}
+
+.stage-toggle-unit,
+.panic-unit,
+.layout-hud-unit,
+.sustain-latch-unit {
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* On medium/narrow screens (< 1200px), collapse wide velocity/curve button lists */
+@media (max-width: 1200px) {
+  .accent-preset-btns {
+    display: none !important;
+  }
+}
+
 /* Piano Roll Container - Completely Hidden Scrollbars & Smooth Panning */
 .piano-roll-container {
   width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
-  padding-bottom: 2px;
+  padding: 2px 0 6px 0;
   background: #0b0d12;
   border-radius: var(--radius-md);
   box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.8);
@@ -295,8 +477,9 @@
 .piano-bed {
   display: flex;
   position: relative;
-  height: 165px;
-  padding: 4px 8px;
+  height: auto;
+  min-height: 165px;
+  padding: 4px 8px 10px 8px;
   width: max-content;
   margin: 0 auto;
   user-select: none;
@@ -304,6 +487,7 @@
   touch-action: none;
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
+  box-sizing: border-box;
 }
 
 /* Generous, full-sized playable keys */
@@ -346,16 +530,12 @@
 /* Individual Piano Keys - Hardware Accelerated, Zero Reflow */
 .piano-key {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  align-items: center;
-  padding-bottom: 6px;
   cursor: pointer;
   will-change: transform;
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   transition: transform 0.02s cubic-bezier(0, 0, 0.2, 1);
+  box-sizing: border-box;
 }
 
 .white-key {
@@ -403,36 +583,65 @@
   box-shadow: 0 0 10px rgba(234, 88, 12, 0.75);
 }
 
-/* Key labels: QWERTY badge + Note name */
+/* Key labels: Tier 1 (Upper) QWERTY badge + Tier 2 (Bottom) Note name */
 .key-qwerty-label {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   font-family: var(--font-family-mono);
-  font-size: 0.65rem;
-  font-weight: 800;
-  padding: 2px 4px;
+  font-size: 0.62rem;
+  font-weight: 900;
+  padding: 2px 4.5px;
   border-radius: 3px;
-  margin-bottom: 4px;
   pointer-events: none;
+  line-height: 1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  z-index: 3;
+  white-space: nowrap;
 }
 
 .white-key .key-qwerty-label {
-  background: #374151;
-  color: #fff;
+  bottom: 38px;
+  background: #1e2433;
+  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .black-key .key-qwerty-label {
+  bottom: 10px;
   background: var(--accent-amber);
   color: #000;
+  border: 1px solid rgba(0, 0, 0, 0.4);
 }
 
 .key-note-name {
-  font-size: 0.6rem;
-  font-weight: 800;
-  color: #6b7280;
+  position: absolute;
+  bottom: 10px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: var(--font-family-mono);
+  font-size: 0.72rem;
+  font-weight: 900;
+  color: #0f172a; /* Ultra-clear solid dark text */
   pointer-events: none;
+  line-height: 1;
+  letter-spacing: -0.2px;
+  user-select: none;
+  z-index: 3;
+}
+
+/* Highlight Octave Root 'C' Keys (C1, C2, C3, C4, C5, C6, C7, C8) */
+.white-key.note-c .key-note-name {
+  color: #0284c7;
+  font-weight: 900;
+  font-size: 0.78rem;
+  text-shadow: 0 0 1px rgba(2, 132, 199, 0.5);
 }
 
 .white-key.active .key-note-name {
   color: #000;
+  font-weight: 900;
 }
 
 /* Dynamic Velocity & Accent HUD */
@@ -510,35 +719,116 @@
 }
 
 /* ==========================================================================
-   KEYBOARD RESPONSIVE SIZING FOR ALL DEVICES
+   KEYBOARD RESPONSIVE SIZING & MOBILE STAGE KEYS MODE
    ========================================================================== */
+
+/* Stage Mode Button Styling */
+.stage-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, rgba(0, 210, 255, 0.2), rgba(0, 210, 255, 0.08));
+  border: 1px solid rgba(0, 210, 255, 0.4);
+  color: var(--accent-cyan);
+  font-weight: 800;
+  font-size: 0.65rem;
+  letter-spacing: 0.5px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.stage-mode-btn:hover {
+  background: rgba(0, 210, 255, 0.3);
+  box-shadow: 0 0 10px rgba(0, 210, 255, 0.4);
+}
+
+.stage-mode-btn.active {
+  background: linear-gradient(135deg, var(--accent-amber), #ea580c);
+  border-color: #f97316;
+  color: #000;
+  box-shadow: 0 0 12px var(--accent-amber-glow);
+}
+
+/* Fullscreen Stage Keys Mode for Phones & Tablets */
+body.mobile-stage-keys .virtual-instrument-station {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+body.mobile-stage-keys .piano-roll-container {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+}
+
+body.mobile-stage-keys .piano-bed {
+  height: clamp(180px, 60vh, 420px);
+}
+
+body.mobile-stage-keys .white-key {
+  min-width: 44px;
+  height: 100%;
+}
+
+body.mobile-stage-keys .black-key {
+  width: 28px;
+  height: 65%;
+  margin-left: -14px;
+  margin-right: -14px;
+}
+
+body.mobile-stage-keys .wheel-track {
+  height: 48px;
+  width: 24px;
+}
+
 @media (max-height: 820px) {
-  .piano-bed { height: 135px; }
+  .piano-bed { height: auto; min-height: 135px; padding-bottom: 8px; }
   .white-key { height: 125px; }
-  .black-key { height: 80px; }
+  .black-key { height: 78px; }
+  .white-key .key-qwerty-label { bottom: 32px; font-size: 0.58rem; padding: 1.5px 3.5px; }
+  .black-key .key-qwerty-label { bottom: 8px; font-size: 0.58rem; padding: 1.5px 3.5px; }
+  .key-note-name { bottom: 8px; font-size: 0.68rem; font-weight: 900; }
+  .white-key.note-c .key-note-name { font-size: 0.74rem; }
 }
 
 @media (max-height: 650px) {
-  .piano-bed { height: 110px; }
-  .white-key { height: 100px; }
+  .piano-bed { height: auto; min-height: 115px; padding-bottom: 6px; }
+  .white-key { height: 105px; }
   .black-key { height: 65px; }
   .keyboard-controls-bar { margin-bottom: 2px; padding-bottom: 2px; }
   .hud-btn { padding: 4px 6px; font-size: 0.60rem; }
   .octave-readout { font-size: 0.82rem; min-width: 30px; }
+  .white-key .key-qwerty-label { bottom: 26px; font-size: 0.52rem; padding: 1px 3px; }
+  .black-key .key-qwerty-label { bottom: 6px; font-size: 0.52rem; padding: 1px 3px; }
+  .key-note-name { bottom: 6px; font-size: 0.62rem; font-weight: 900; }
+  .white-key.note-c .key-note-name { font-size: 0.68rem; }
 }
 
 @media (max-width: 768px) {
   .keyboard-controls-bar {
     gap: 4px;
-    padding-bottom: 2px;
+    padding-bottom: 3px;
+    -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
+    scrollbar-width: none !important;
+    mask-image: linear-gradient(to right, black 88%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 88%, transparent 100%);
   }
+  .keyboard-controls-bar::-webkit-scrollbar { display: none !important; }
   .hud-btn {
-    padding: 4px 6px;
+    min-height: 34px;
+    padding: 4px 8px;
     font-size: 0.62rem;
   }
   .wheel-track {
-    width: 16px;
-    height: 32px;
+    width: 18px;
+    height: 36px;
   }
 }
 

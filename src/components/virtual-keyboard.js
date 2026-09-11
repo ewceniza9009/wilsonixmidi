@@ -165,8 +165,24 @@ export class VirtualKeyboardUI {
             </label>
           </div>
 
+          <!-- Mobile / Tablet Full-Screen Stage Keys Toggle -->
+          <div class="stage-toggle-unit">
+            <button class="hud-btn stage-mode-btn" id="btn-mobile-stage-toggle" title="Toggle Stage Performance Keys / Synth Console">
+              <span class="stage-mode-icon">🎹</span>
+              <span class="stage-mode-label">STAGE KEYS</span>
+            </button>
+          </div>
+
           <div class="panic-unit">
             <button class="hud-btn panic-btn" id="master-panic-btn" title="Silence All Notes (ESC)">PANIC</button>
+          </div>
+
+          <!-- Collapse / Expand Piano Keys Button (Expands Workstation & Effects to Full Screen) -->
+          <div class="collapse-keys-unit">
+            <button class="hud-btn collapse-keys-btn" id="btn-collapse-piano" title="Collapse / Expand Piano Keyboard (F4)">
+              <span class="collapse-icon">▼</span>
+              <span class="collapse-text">HIDE KEYS</span>
+            </button>
           </div>
         </div>
 
@@ -200,9 +216,10 @@ export class VirtualKeyboardUI {
       const isBlack = !WHITE_NOTES.includes(noteInOct);
       const noteName = NOTE_NAMES[noteInOct];
       const octave = Math.floor(midi / 12) - 1;
+      const isC = noteInOct === 0;
 
       html += `
-        <div class="piano-key ${isBlack ? "black-key" : "white-key"}" 
+        <div class="piano-key ${isBlack ? "black-key" : "white-key"} ${isC ? "note-c" : ""}" 
              id="key-midi-${midi}" 
              data-midi="${midi}">
           <div class="key-strike-zone" title="Top: Soft (Pianissimo) | Bottom: Hard (Fortissimo)"></div>
@@ -301,7 +318,7 @@ export class VirtualKeyboardUI {
     track.addEventListener(
       "touchstart",
       e => {
-        e.preventDefault();
+        if (e.cancelable) e.preventDefault();
         lastTouchTime = performance.now(); // Block synthetic mouse events
         for (let i = 0; i < e.changedTouches.length; i++) {
           const t = e.changedTouches[i];
@@ -324,7 +341,7 @@ export class VirtualKeyboardUI {
     track.addEventListener(
       "touchmove",
       e => {
-        e.preventDefault();
+        if (e.cancelable) e.preventDefault();
         for (let i = 0; i < e.changedTouches.length; i++) {
           const t = e.changedTouches[i];
           const prevTouch = this.activeTouches.get(t.identifier);
@@ -359,7 +376,7 @@ export class VirtualKeyboardUI {
     );
 
     track.addEventListener("touchend", e => {
-      e.preventDefault();
+      if (e.cancelable) e.preventDefault();
       for (let i = 0; i < e.changedTouches.length; i++) {
         const t = e.changedTouches[i];
         const prevTouch = this.activeTouches.get(t.identifier);
@@ -411,14 +428,44 @@ export class VirtualKeyboardUI {
         setPitchFromY(e.clientY);
       });
 
+      pitchTrack.addEventListener(
+        "touchstart",
+        e => {
+          if (e.cancelable) e.preventDefault();
+          isDragging = true;
+          if (e.touches[0]) setPitchFromY(e.touches[0].clientY);
+        },
+        { passive: false }
+      );
+
       window.addEventListener("mousemove", e => {
         if (isDragging) setPitchFromY(e.clientY);
       });
+
+      window.addEventListener(
+        "touchmove",
+        e => {
+          if (isDragging && e.touches[0]) {
+            if (e.cancelable) e.preventDefault();
+            setPitchFromY(e.touches[0].clientY);
+          }
+        },
+        { passive: false }
+      );
 
       window.addEventListener("mouseup", () => {
         if (isDragging) {
           isDragging = false;
           // Spring back to center
+          pitchThumb.style.top = "50%";
+          multiLayerEngine.setPitchBend(0);
+          synthEngine.setPitchBend(0);
+        }
+      });
+
+      window.addEventListener("touchend", () => {
+        if (isDragging) {
+          isDragging = false;
           pitchThumb.style.top = "50%";
           multiLayerEngine.setPitchBend(0);
           synthEngine.setPitchBend(0);
@@ -443,11 +490,36 @@ export class VirtualKeyboardUI {
         setModFromY(e.clientY);
       });
 
+      modTrack.addEventListener(
+        "touchstart",
+        e => {
+          if (e.cancelable) e.preventDefault();
+          isModDragging = true;
+          if (e.touches[0]) setModFromY(e.touches[0].clientY);
+        },
+        { passive: false }
+      );
+
       window.addEventListener("mousemove", e => {
         if (isModDragging) setModFromY(e.clientY);
       });
 
+      window.addEventListener(
+        "touchmove",
+        e => {
+          if (isModDragging && e.touches[0]) {
+            if (e.cancelable) e.preventDefault();
+            setModFromY(e.touches[0].clientY);
+          }
+        },
+        { passive: false }
+      );
+
       window.addEventListener("mouseup", () => {
+        isModDragging = false;
+      });
+
+      window.addEventListener("touchend", () => {
         isModDragging = false;
       });
     }
@@ -533,6 +605,58 @@ export class VirtualKeyboardUI {
           }
         }
       });
+    });
+
+    // Mobile / Tablet Fullscreen Stage Keys Mode Toggle
+    const stageToggleBtn = document.getElementById("btn-mobile-stage-toggle");
+    stageToggleBtn?.addEventListener("click", () => {
+      const isStage = document.body.classList.toggle("mobile-stage-keys");
+      stageToggleBtn.classList.toggle("active", isStage);
+      const label = stageToggleBtn.querySelector(".stage-mode-label");
+      if (label) {
+        label.textContent = isStage ? "CONSOLE" : "STAGE KEYS";
+      }
+      setTimeout(() => this.centerOnMiddleC(false), 50);
+    });
+
+    // Collapse / Expand Piano Keyboard (Expands effects, synth parameters & sound banks to full screen)
+    const collapseBtn = document.getElementById("btn-collapse-piano");
+    const toggleCollapse = (forceState = null) => {
+      const appRoot = document.getElementById("app-root");
+      const isCurrentlyCollapsed = appRoot?.classList.contains("piano-collapsed");
+      const nextCollapsed = forceState !== null ? forceState : !isCurrentlyCollapsed;
+
+      appRoot?.classList.toggle("piano-collapsed", nextCollapsed);
+      document.body.classList.toggle("piano-collapsed", nextCollapsed);
+
+      if (collapseBtn) {
+        collapseBtn.classList.toggle("active", nextCollapsed);
+        const icon = collapseBtn.querySelector(".collapse-icon");
+        const text = collapseBtn.querySelector(".collapse-text");
+        if (icon) icon.textContent = nextCollapsed ? "▲" : "▼";
+        if (text) text.textContent = nextCollapsed ? "SHOW KEYS" : "HIDE KEYS";
+      }
+
+      // Sync top HUD keys button
+      const topKeysBtn = document.getElementById("btn-hud-toggle-keys");
+      if (topKeysBtn) {
+        topKeysBtn.classList.toggle("active", !nextCollapsed);
+      }
+    };
+
+    collapseBtn?.addEventListener("click", () => toggleCollapse());
+
+    // Listen for custom toggle events (from top HUD, hotkey, or outside)
+    window.addEventListener("wilsonix-toggle-piano-collapse", (e) => {
+      toggleCollapse(e.detail?.collapsed ?? null);
+    });
+
+    // F4 hotkey to toggle piano collapse
+    window.addEventListener("keydown", e => {
+      if (e.key === "F4" && !e.altKey && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        toggleCollapse();
+      }
     });
   }
 

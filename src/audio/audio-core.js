@@ -247,22 +247,6 @@ export class AudioCore {
       }
     });
 
-    // Self-contained floating button — visible proof the tap is alive.
-    const pill = document.createElement("button");
-    pill.id = "midikey-diag-pill";
-    pill.textContent = "DIAG 8s";
-    Object.assign(pill.style, {
-      position: "fixed", left: "12px", bottom: "12px", zIndex: "99999",
-      padding: "6px 10px", fontSize: "11px", cursor: "pointer",
-      background: "rgba(0,0,0,0.55)", color: "#9ff0b0",
-      border: "1px solid rgba(255,255,255,0.25)", borderRadius: "6px",
-      fontFamily: "monospace", userSelect: "none",
-    });
-    pill.addEventListener("click", () => this.captureDiag(8, name => {
-      if (name) this._diagToast("saved: " + name);
-    }));
-    document.body.appendChild(pill);
-
     // Toast helper for non-technical users.
     if (!window.__midikeyDiagToastEl) {
       const toasts = document.createElement("div");

@@ -372,9 +372,21 @@
   padding-right: 4px;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
+  .touchview-program-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 850px) {
   .touchview-program-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .touchview-program-grid {
+    grid-template-columns: 1fr !important;
   }
 }
 
@@ -1565,4 +1577,193 @@
   font-size: 0.72rem;
   font-weight: 800;
   color: #38bdf8;
+}
+
+/* ==========================================================================
+   TRITON MOBILE & SMALL SCREEN RESPONSIVENESS
+   ========================================================================== */
+@media (max-width: 768px) {
+  .triton-hardware-chassis {
+    padding: 4px 6px;
+    gap: 4px;
+  }
+
+  .triton-top-header {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 4px !important;
+    padding: 4px 6px !important;
+  }
+
+  .korg-badge {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .korg-logo-text {
+    font-size: 0.95rem;
+    letter-spacing: 1px;
+  }
+
+  /* Row 1: Brand on Left, Knobs on Right */
+  .triton-top-header {
+    position: relative;
+  }
+
+  .triton-brand-badge {
+    display: none !important;
+  }
+
+  .triton-realtime-bay {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+  }
+
+  .rt-bay-label {
+    font-size: 0.52rem;
+    white-space: nowrap;
+  }
+
+  .rt-knobs-row {
+    gap: 8px;
+  }
+
+  .rt-knob-unit {
+    gap: 1px;
+  }
+
+  .rt-label {
+    font-size: 0.46rem;
+  }
+
+  .triton-silver-knob {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Row 2: Full-Width Clean TouchView LCD Screen */
+  .triton-lcd-display {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 4px 8px !important;
+    box-sizing: border-box !important;
+    border-radius: var(--radius-sm) !important;
+  }
+
+  .lcd-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    gap: 4px;
+    font-size: 0.54rem;
+    padding-bottom: 2px;
+  }
+  .lcd-meta-row::-webkit-scrollbar { display: none; }
+
+  .lcd-bank-cat,
+  .lcd-cat-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .lcd-main-title {
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0.2px;
+  }
+
+  /* Sub-tab & Search Bar */
+  .triton-subtab-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 2px 4px;
+  }
+
+  .nav-cluster-left {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+    width: 100%;
+    gap: 3px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .nav-cluster-left::-webkit-scrollbar { display: none; }
+
+  .triton-subtab {
+    flex: 1;
+    padding: 4px 6px;
+    font-size: 0.58rem;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .nav-cluster-right {
+    width: 100%;
+  }
+
+  .triton-search-box {
+    width: 100%;
+  }
+
+  .triton-search-box input {
+    width: 100%;
+    font-size: 0.65rem;
+  }
+
+  /* Banks Row - Smooth Swipe Indicator */
+  .triton-banks-row {
+    mask-image: linear-gradient(to right, black 85%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+    scrollbar-width: none !important;
+    padding-right: 12px;
+  }
+  .triton-banks-row::-webkit-scrollbar { display: none !important; }
+
+  .triton-bank-card {
+    min-width: 85px;
+    padding: 3px 6px;
+  }
+
+  .bank-card-title {
+    font-size: 0.58rem;
+  }
+
+  .bank-card-desc {
+    font-size: 0.46rem;
+  }
+
+  /* Single-column program list on mobile */
+  .touchview-program-grid {
+    grid-template-columns: 1fr !important;
+    gap: 3px;
+  }
+
+  .triton-prog-cell {
+    padding: 6px 8px;
+    min-height: 32px;
+  }
+
+  .prog-name {
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+
+  .easy-sliders-grid {
+    grid-template-columns: 1fr;
+  }
 }

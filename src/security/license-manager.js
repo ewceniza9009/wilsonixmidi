@@ -218,6 +218,31 @@ export class LicenseManager {
   }
 
   /**
+   * Checks whether the current user has active Pro access (Licensed or Trial)
+   */
+  hasProAccess() {
+    const status = this.getAccessStatus();
+    return status.isLicensed || status.isTrial;
+  }
+
+  /**
+   * Pro-feature guard: Returns true if unlocked, or prompts the activation modal with a friendly reason.
+   */
+  requirePro(featureName = "This Pro Feature") {
+    if (this.hasProAccess()) return true;
+
+    // Dispatch global event so LicenseModalUI opens and highlights the reason
+    window.dispatchEvent(
+      new CustomEvent("wilsonix-open-license-modal", {
+        detail: {
+          reason: `${featureName} is a Pro feature. Enter an authorized key to unlock.`,
+        },
+      })
+    );
+    return false;
+  }
+
+  /**
    * Validates a license key format:
    * Standard: MKPRO-<NAME>-<EXPIRY>-<SIG>
    * Hardware-locked: MKPRO-<NAME>-<EXPIRY>-<DEVID>-<SIG>

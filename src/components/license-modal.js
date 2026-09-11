@@ -10,8 +10,13 @@ export class LicenseModalUI {
     this.container = document.getElementById(containerId);
     this.onActivationSuccess = onActivationSuccess;
     this.isOpen = false;
+    this.promptReason = null;
     this.render();
     this.bindEvents();
+
+    window.addEventListener("wilsonix-open-license-modal", e => {
+      this.open(e.detail?.reason || null);
+    });
   }
 
   render() {
@@ -30,8 +35,8 @@ export class LicenseModalUI {
       statusDesc = `Registered to: <strong>${access.licensee}</strong> &bull; Access: <strong>${access.expires}</strong>`;
     } else if (access.isExpired) {
       statusCardClass = "status-expired";
-      statusTitle = "TRIAL EXPIRED";
-      statusDesc = "Your 30-day trial period has concluded. Enter a valid license key below to unlock lifetime stage access.";
+      statusTitle = "FREE MODE (TRIAL EXPIRED)";
+      statusDesc = "Basic piano, synths, and split keys remain 100% playable. Pro features (WAV Recording, Custom Rigs, 4-Timbre Combis) require activation.";
     }
 
     this.container.innerHTML = `
@@ -46,6 +51,16 @@ export class LicenseModalUI {
           </div>
 
           <div class="dialog-body">
+            ${
+              this.promptReason
+                ? `
+              <div class="license-reason-alert" style="background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; color: #fbbf24; padding: 8px 12px; border-radius: 6px; font-size: 0.76rem; font-weight: 700; margin-bottom: 12px;">
+                ⚠️ ${this.promptReason}
+              </div>
+            `
+                : ""
+            }
+
             <!-- Hardware ID Card -->
             <div class="hardware-id-card">
               <label>MACHINE HARDWARE FINGERPRINT:</label>
@@ -65,17 +80,43 @@ export class LicenseModalUI {
               </div>
             </div>
 
+            <!-- Feature Tier Comparison (Option A Soft Gating) -->
+            <div class="license-tier-box" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 10px; margin-bottom: 12px; font-size: 0.70rem;">
+              <div style="font-weight: 800; color: #94a3b8; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Feature Comparison:</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <div style="color: #cbd5e1;">
+                  <strong style="color: #38bdf8;">✓ Free / Standard:</strong>
+                  <ul style="margin: 4px 0 0 16px; padding: 0; line-height: 1.4;">
+                    <li>88-Key Virtual Piano</li>
+                    <li>Full Synth Engine & Soundbanks</li>
+                    <li>Keyboard Split & Octave Controls</li>
+                  </ul>
+                </div>
+                <div style="color: #cbd5e1;">
+                  <strong style="color: #f59e0b;">★ Pro Unlocked:</strong>
+                  <ul style="margin: 4px 0 0 16px; padding: 0; line-height: 1.4;">
+                    <li>Lossless Master WAV Recording</li>
+                    <li>Custom Stage Rig Memory Storage</li>
+                    <li>4-Timbre Combi Mixer Stacks</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
             <!-- Activation / Deactivation -->
             ${
               !access.isLicensed
                 ? `
               <div class="activation-form">
-                <label>ENTER YOUR PRO LICENSE KEY:</label>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <label style="margin: 0;">ENTER YOUR PRO LICENSE KEY:</label>
+                  <button type="button" id="btn-prefill-demo-key" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); font-size: 0.60rem; font-weight: 800; padding: 2px 7px; border-radius: 3px; cursor: pointer;">⚡ FILL DEMO KEY</button>
+                </div>
                 <div class="key-input-row">
                   <input type="text" id="license-key-input" placeholder="MKPRO-NAME-LIFETIME-XXXXXXXX" spellcheck="false" autocomplete="off" />
                   <button class="activate-submit-btn" id="activate-submit-btn">ACTIVATE</button>
                 </div>
-                <div class="key-help-hint">Keys follow the format: MKPRO-NAME-EXPIRY-SIGNATURE</div>
+                <div class="key-help-hint">Format: MKPRO-NAME-EXPIRY-SIGNATURE or Built-in VIP Key: MKPRO-VIP-MASTER-ACCESS</div>
                 <div class="activation-msg" id="activation-msg"></div>
               </div>
             `
@@ -99,6 +140,14 @@ export class LicenseModalUI {
     const keyInput = document.getElementById("license-key-input");
     const deactivateBtn = document.getElementById("deactivate-btn");
     const msgEl = document.getElementById("activation-msg");
+    const demoKeyBtn = document.getElementById("btn-prefill-demo-key");
+
+    demoKeyBtn?.addEventListener("click", () => {
+      if (keyInput) {
+        keyInput.value = "MKPRO-VIP-MASTER-ACCESS";
+        keyInput.focus();
+      }
+    });
 
     closeBtn?.addEventListener("click", () => this.close());
     backdrop?.addEventListener("click", e => {
@@ -135,6 +184,7 @@ export class LicenseModalUI {
           msgEl.innerText = "✓ Activation Successful! Welcome to WILSONIX MIDIKEY Pro.";
         }
         setTimeout(() => {
+          this.promptReason = null;
           this.render();
           this.bindEvents();
           if (this.onActivationSuccess) this.onActivationSuccess();
@@ -157,14 +207,16 @@ export class LicenseModalUI {
     });
   }
 
-  open() {
+  open(reason = null) {
     this.isOpen = true;
+    this.promptReason = reason;
     this.render();
     this.bindEvents();
   }
 
   close() {
     this.isOpen = false;
+    this.promptReason = null;
     const backdrop = document.getElementById("license-backdrop");
     if (backdrop) backdrop.classList.remove("open");
   }
