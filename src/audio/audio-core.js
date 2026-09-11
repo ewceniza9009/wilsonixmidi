@@ -5,6 +5,12 @@
 
 import { FxRackManager } from "./fx-rack-manager.js";
 
+export const LATENCY_PROFILES = {
+  "ultra-low": { id: "ultra-low", latencyHint: "interactive", label: "Stage Ultra-Low", targetMs: 2.9, description: "64–128 frames / Fastest response for dedicated audio interfaces" },
+  "balanced": { id: "balanced", latencyHint: "balanced", label: "Balanced Studio", targetMs: 5.8, description: "256 frames / Stable performance for general laptop audio" },
+  "safe": { id: "safe", latencyHint: "playback", label: "Safe Stage", targetMs: 11.6, description: "512 frames / Maximum glitch-free headroom for heavy polyphony" },
+};
+
 export class AudioCore {
   constructor() {
     this.ctx = null;
@@ -13,13 +19,18 @@ export class AudioCore {
     this.analyser = null;
     this.isUnlocked = false;
 
+    // Latency Profile
+    this.currentLatencyProfile = "balanced";
+    try {
+      const saved = localStorage.getItem("midikey_latency_profile");
+      if (saved && LATENCY_PROFILES[saved]) this.currentLatencyProfile = saved;
+    } catch (e) {}
+    this.profileListeners = [];
+
     // Pre-allocated buffer for zero GC overhead during 60/120fps metering
     this.peakBuffer = new Uint8Array(128);
 
-    // Diagnostics: taps the EXACT signal handed to the DAC (pre-driver, so a
-    // clean capture here shifts blame to the Windows endpoint; a dirty capture
-    // proves the app. Never audible — a dangling MediaStreamDestination costs
-    // nothing while no MediaRecorder is attached).
+    // Diagnostics: taps the EXACT signal handed to the DAC
     this.captureTap = null;
     this.captureRecorder = null;
     this.captureChunks = [];
@@ -28,16 +39,10 @@ export class AudioCore {
   init() {
     if (this.ctx) return this.ctx;
 
+    const profile = LATENCY_PROFILES[this.currentLatencyProfile] || LATENCY_PROFILES["balanced"];
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     try {
-      // "balanced" lets the browser use a larger WASAPI internal buffer than
-      // "interactive". On low-power chips (WILSONIX-tier SoCs) the audio thread
-      // can miss the tiny 128-frame (~2.9ms) interactive deadline during
-      // sustained bass-heavy patches -> 1-3ms dropout = an audible crackle.
-      // The tradeoff is a few extra ms of base latency, which is far less
-      // obnoxious than periodic crackles. If it feels laggy, switch back to
-      // "interactive" (measured tooling is unaffected either way).
-      this.ctx = new AudioContextClass({ latencyHint: "balanced" });
+      this.ctx = new AudioContextClass({ latencyHint: profile.latencyHint });
     } catch (e) {
       this.ctx = new AudioContextClass();
     }
@@ -96,13 +101,11 @@ export class AudioCore {
     this.busCompBypass.gain.value = 1.0;
     this.busCompEnabled = false;
 
-    // Routing: FX Rack -> Master Gain -> BusPad(trim) -> DC Blocker -> [BusComp OR Bypass] -> Analyser -> HardwareLimiter -> Destination
+    // Master bus pipeline: FX Rack -> Master Gain -> BusPad(trim) -> DC Blocker -> Analyser -> HardwareLimiter -> Destination
     this.fxRack.output.connect(this.masterGain);
     this.masterGain.connect(this.busPad);
     this.busPad.connect(this.dcBlocker);
-    // Default: fast bypass path (no compressor)
-    this.dcBlocker.connect(this.busCompBypass);
-    this.busCompBypass.connect(this.analyser);
+    this.dcBlocker.connect(this.analyser);
     this.analyser.connect(this.hardwareLimiter);
     this.hardwareLimiter.connect(this.ctx.destination);
 
@@ -185,7 +188,37 @@ export class AudioCore {
       lockMs: Math.round(driftSec * 10000) / 10,
       sampleRate: this.ctx.sampleRate || 48000,
       state: this.ctx.state,
+      profile: this.currentLatencyProfile,
+      profileLabel: (LATENCY_PROFILES[this.currentLatencyProfile] || LATENCY_PROFILES["balanced"]).label,
     };
+  }
+
+  setLatencyProfile(profileId) {
+    if (!LATENCY_PROFILES[profileId]) return false;
+    this.currentLatencyProfile = profileId;
+    try {
+      localStorage.setItem("midikey_latency_profile", profileId);
+    } catch (e) {}
+
+    if (this.ctx) {
+      const oldMasterGain = this.masterGain ? this.masterGain.gain.value : 1.0;
+      try {
+        this.ctx.close();
+      } catch (e) {}
+      this.ctx = null;
+      this.init();
+      if (this.masterGain) this.masterGain.gain.value = oldMasterGain;
+      this.unlock();
+    }
+
+    this.profileListeners.forEach(cb => {
+      try { cb(this.currentLatencyProfile); } catch (e) {}
+    });
+    return true;
+  }
+
+  onLatencyProfileChange(cb) {
+    if (typeof cb === "function") this.profileListeners.push(cb);
   }
 
   getPeakLevel() {
@@ -432,21 +465,8 @@ export class AudioCore {
 
   // Toggle the bus compressor on/off. When OFF, audio routes through a
   // bypass gain node with zero DSP overhead. When ON, the compressor
-  // contains sustained stacked chords before the limiter.
   setBusCompEnabled(enabled) {
-    if (this.busCompEnabled === enabled) return;
-    this.busCompEnabled = enabled;
-    try {
-      if (enabled) {
-        this.dcBlocker.disconnect(this.busCompBypass);
-        this.dcBlocker.connect(this.busComp);
-        this.busComp.connect(this.analyser);
-      } else {
-        this.dcBlocker.disconnect(this.busComp);
-        this.dcBlocker.connect(this.busCompBypass);
-        this.busCompBypass.connect(this.analyser);
-      }
-    } catch (e) {}
+    this.busCompEnabled = !!enabled;
   }
 
   // DIAG recorder: taps post-limiter master output so crackle reports can be

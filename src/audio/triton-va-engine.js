@@ -44,23 +44,36 @@ export class TritonVirtualAnalogEngine {
     const r1 = prog.r1 || 1.0;
     const r2 = prog.r2 || 1.0;
 
-    // Third osc: for leads = ultra-tight detuned mirror (fatness, no beating rumble).
-    // For every other timbre (EPs, organs, strings, brass) the sub is DISABLED --
-    // a wholetone sine under every voice was the "warm muddy stacking" noise.
+    // Oscillator 3 configuration and blend gains:
+    // 1. Pure Sine Leads (Smooth Sine Lead): strong fundamental core + octave sheen, no 3rd osc beating
+    // 2. Organs & E.Pianos (Dark Jazz, R&B EP, Phantom of Tine): body + harmonic drawbar/tine
+    // 3. Complex Synth Leads (Saw/Square/Trance): lush 3-osc supersaw detune
+    // 4. General Pads, Strings, Brass: clean 2-osc mix (no sub rumble)
+    const isLead = /(lead|trance|saw|synth|stabb|stab|fast|hit|motion)/i.test((prog.category || "") + " " + (prog.name || ""));
+    const isPureSineLead = (osc1 === "sine" && osc2 === "sine") && isLead;
+    const isOrganOrEP = /(organ|ep|piano|tine|clav|vibes|bell|wurly|rhodes)/i.test((prog.category || "") + " " + (prog.name || ""));
+
     let osc3Type = "sine";
     let osc3Ratio = 0.5;
-    const isLead = /(lead|trance|saw|synth|stabb|stab|fast|hit|motion)/i.test((prog.category || "") + " " + (prog.name || ""));
-    if (isLead) {
-      osc3Type = osc1;
-      osc3Ratio = r1 * 0.995; // Detuned mirror: slower, softer beating than the old 1%
-    }
-
-    // Blend gains: osc1 body, osc2 colour, osc3 mirror/sub. Sum kept near 1.0 pre-filter;
-    // the master busPad trim (0.7) + soft limiters provide all the headroom.
-    let gain1 = 0.48;
-    let gain2 = 0.34;
+    let gain1 = 0.50;
+    let gain2 = 0.35;
     let gain3 = 0.0; // sub disabled for non-leads
-    if (isLead) {
+
+    if (isPureSineLead) {
+      gain1 = 0.74;
+      gain2 = (Math.abs(r2 - r1) < 0.02) ? 0.0 : 0.26;
+      gain3 = 0.0;
+      osc3Type = "sine";
+      osc3Ratio = 0.5;
+    } else if (isOrganOrEP) {
+      gain1 = 0.58;
+      gain2 = 0.36;
+      gain3 = 0.0;
+      osc3Type = "sine";
+      osc3Ratio = 0.5;
+    } else if (isLead) {
+      osc3Type = osc1;
+      osc3Ratio = r1 * 0.995; // Detuned mirror: rich unison fatness
       gain1 = 0.40;
       gain2 = 0.34;
       gain3 = 0.26;

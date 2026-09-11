@@ -29,10 +29,10 @@ export class PingPongDelay {
     this.dryGain.connect(this.output);
     this.dryGain.gain.value = 1.0;
 
-    // DC Blocker filter on input
+    // DC Blocker filter on input (preserves bass notes down to sub-audible 25Hz)
     this.dcBlocker = ctx.createBiquadFilter();
     this.dcBlocker.type = "highpass";
-    this.dcBlocker.frequency.value = 140;
+    this.dcBlocker.frequency.value = 25;
     this.input.connect(this.dcBlocker);
 
     // Left delay line
@@ -153,21 +153,21 @@ export class PingPongDelay {
 
   setBypass(bypassed) {
     this.enabled = !bypassed;
-    const now = this.ctx.currentTime;
+    const now = this.ctx ? this.ctx.currentTime : 0;
     if (bypassed) {
-      this.wetGain.gain.setTargetAtTime(0, now, 0.02);
-      this.dryGain.gain.setTargetAtTime(1.0, now, 0.02);
-      this.feedbackL.gain.setTargetAtTime(0, now, 0.02);
-      this.feedbackR.gain.setTargetAtTime(0, now, 0.02);
+      this.wetGain.gain.setValueAtTime(0, now);
+      this.dryGain.gain.setValueAtTime(1.0, now);
+      this.feedbackL.gain.setValueAtTime(0, now);
+      this.feedbackR.gain.setValueAtTime(0, now);
     } else {
       const m = this.mix > 0 ? this.mix : 0.35;
       const fdbkComp = 1.0 / (1.0 + this.feedback * 0.35);
       const dry = Math.cos(m * Math.PI * 0.5);
       const wet = Math.sin(m * Math.PI * 0.5) * 0.80 * fdbkComp;
-      this.wetGain.gain.setTargetAtTime(wet, now, 0.02);
-      this.dryGain.gain.setTargetAtTime(dry, now, 0.02);
-      this.feedbackL.gain.setTargetAtTime(this.feedback, now, 0.02);
-      this.feedbackR.gain.setTargetAtTime(this.feedback, now, 0.02);
+      this.wetGain.gain.setValueAtTime(wet, now);
+      this.dryGain.gain.setValueAtTime(dry, now);
+      this.feedbackL.gain.setValueAtTime(this.feedback, now);
+      this.feedbackR.gain.setValueAtTime(this.feedback, now);
     }
   }
 }

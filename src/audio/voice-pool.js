@@ -90,34 +90,36 @@ export class PolyphonicVoice {
     this.gain3 = ctx.createGain();
     this.gain1.gain.value = 0.7;
     this.gain2.gain.value = 0.3;
-    this.gain3.gain.value = 0.15;
+    this.gain3.gain.value = 0.0;
 
-    // Hard-sync slave path: osc2 (the "harmony" oscillator) is silently gated when a
-    // program requests sync, and a phase-sync WaveShaper (fed by osc1 = master) drives
-    // gain2 instead. osc2 keeps running but contributes nothing while sync is active.
+    // Hard-sync slave path:
+    // osc2 passes through osc2Gate.
+    // osc1 passes through syncShaper -> syncGate.
+    // When sync is active: syncGate is 1.0, osc2Gate is 0.0.
+    // When sync is off: syncGate is 0.0, osc2Gate is 1.0 (zero oversampling noise/leakage).
     this.osc2Gate = ctx.createGain();
     this.osc2Gate.gain.value = 1.0;
     this.osc2.connect(this.osc2Gate);
     this.osc2Gate.connect(this.gain2);
 
     this.syncShaper = ctx.createWaveShaper();
-    this.syncShaper.oversample = "2x";
-    this.syncShaper.curve = new Float32Array(2); // all-zero = silent while no program uses sync
+    this.syncShaper.oversample = "none";
+    this.syncGate = ctx.createGain();
+    this.syncGate.gain.value = 0.0;
     this.osc1.connect(this.syncShaper);
-    this.syncShaper.connect(this.gain2);
+    this.syncShaper.connect(this.syncGate);
+    this.syncGate.connect(this.gain2);
 
-    // Permanent, click-free audio routing:
+    // Static, click-free audio routing:
     // Oscs -> Mixers -> Filter -> VoiceGain -> Destination
     this.osc1.connect(this.gain1);
     this.osc3.connect(this.gain3);
-    this._osc3Connected = true;
 
     this.gain1.connect(this.filter);
     this.gain2.connect(this.filter);
     this.gain3.connect(this.filter);
 
     this.filter.connect(this.voiceGain);
-    this._filterConnected = true;
     this.voiceGain.connect(this.destination);
 
     // Start oscillators once at boot time; envelope gating controls volume
@@ -132,14 +134,6 @@ export class PolyphonicVoice {
     const wasBusy = this.isBusy;
     this.isBusy = true;
     this.isSustained = false;
-
-    // If this voice was physically decoupled from the graph while silent
-    // (see release()/forceStop()), re-insert it BEFORE the attack ramps in.
-    // The envelope is 0.0001/0 until now+0.002, so reconnecting is click-free.
-    if (!this._filterConnected) {
-      try { this.filter.connect(this.voiceGain); } catch (e) {}
-      this._filterConnected = true;
-    }
 
     const ctx = this.ctx;
     const now = ctx.currentTime;
@@ -159,54 +153,30 @@ export class PolyphonicVoice {
     this.osc2.frequency.setValueAtTime(freq * (instrumentConfig.osc2Ratio || 2.001), now);
     this.osc3.frequency.setValueAtTime(freq * (instrumentConfig.osc3Ratio || 0.5), now);
 
-    // HARD SYNC: master = osc1, slave = WaveShaper(osc1 phase) mapped at osc2 ratio.
-    // The native osc2 is gated out (it would add a plain harmonic on top); the shaper
-    // renders (p * n) % 1 with the slave's own waveform = exact phase-reset sync.
+    // Hard Sync routing
     const syncActive = !!instrumentConfig.syncSlave && (instrumentConfig.osc1Ratio || 1.0) > 0;
     if (syncActive) {
       const syncRatio = Math.max(1.001, (instrumentConfig.osc2Ratio || 2.0) / (instrumentConfig.osc1Ratio || 1.0));
       this.syncShaper.curve = getSyncCurve(syncRatio, instrumentConfig.osc2Type || "sawtooth");
-      this.osc2Gate.gain.setTargetAtTime(0.0, now, 0.0015);
+      this.osc2Gate.gain.setTargetAtTime(0.0, now, 0.002);
+      this.syncGate.gain.setTargetAtTime(1.0, now, 0.002);
     } else {
-      this.osc2Gate.gain.setTargetAtTime(1.0, now, 0.0015);
-      if (this.syncShaper.curve.length > 2) this.syncShaper.curve = new Float32Array(2);
+      this.osc2Gate.gain.setTargetAtTime(1.0, now, 0.002);
+      this.syncGate.gain.setTargetAtTime(0.0, now, 0.002);
     }
 
-    // Dynamic Filter (smooth exponential slew; resonance scaled down ~55% so high-Q
-    // programs don't turn into boxy resonant clipping - the grainy/dirty wall)
+    // Dynamic Filter
     const baseCutoff = instrumentConfig.filterCutoff || 6000;
-    const filterEnv = Math.min(18000, baseCutoff * (0.5 + velRatio * 0.8));
+    const filterEnv = Math.min(18000, Math.max(baseCutoff * (0.5 + velRatio * 0.8), freq * 1.5));
     this.filter.type = instrumentConfig.filterType || "lowpass";
     this.filter.Q.setValueAtTime(Math.min(2.5, Math.max(0.25, (instrumentConfig.filterQ || 1.0) * 0.55)), now);
     this.filter.frequency.cancelScheduledValues(now);
     this.filter.frequency.setTargetAtTime(filterEnv, now, 0.012);
 
-    // Component balances (clean, balanced timbre mix without velocity-squaring)
+    // Component balances
     this.gain1.gain.setValueAtTime(instrumentConfig.gain1 || 0.7, now);
     this.gain2.gain.setValueAtTime(instrumentConfig.gain2 || 0.3, now);
-
-    // Decouple the sub oscillator whenever a program sets its gain to ZERO
-    // (organs/EPs/strings disable the sub entirely). A connected osc3 costs
-    // render time every quantum even at gain 0 -- physically dropping it keeps
-    // sustained sounding voices as lean as possible.
-    const osc3Gain = Number(instrumentConfig.gain3) || 0;
-    const osc3On = osc3Gain > 0.0001;
-    if (osc3On && !this._osc3Connected) {
-      // Reconnecting a running oscillator at gain>0 would step in mid-phase --
-      // fade the sub in over a few ms so the transition is click-free.
-      this.gain3.gain.setValueAtTime(0.0, now);
-      try { this.osc3.connect(this.gain3); } catch (e) {}
-      this._osc3Connected = true;
-      this.gain3.gain.setTargetAtTime(osc3Gain, now, 0.004);
-    } else if (osc3On) {
-      this.gain3.gain.setValueAtTime(osc3Gain, now);
-    } else {
-      this.gain3.gain.setValueAtTime(0.0, now);
-      if (this._osc3Connected) {
-        try { this.osc3.disconnect(this.gain3); } catch (e) {}
-        this._osc3Connected = false;
-      }
-    }
+    this.gain3.gain.setValueAtTime(Number(instrumentConfig.gain3) || 0.0, now);
 
     const attack = Math.max(0.0015, instrumentConfig.attack || 0.002);
     const peakGain = (0.35 + velRatio * 0.65) * (instrumentConfig.masterGain || 0.85);
@@ -215,26 +185,22 @@ export class PolyphonicVoice {
     const decTau = instrumentConfig.isPercussive ? decay * 0.45 : 0.25;
     const decTarget = instrumentConfig.isPercussive ? 0.0 : sustain;
 
-    // NEVER schedule two automation events at the same timestamp (Web Audio treats
-    // coincident events ambiguously) and NEVER hard-snap a sounding voice to zero.
     this.voiceGain.gain.cancelScheduledValues(now);
     if (sameNote) {
-      // Legato same-note retrigger (fast repeated keys): blend from the current
-      // level -- no zero gap, no duck, no chop, instant response.
+      // Legato same-note retrigger: blend smoothly from current level
       const aStart = now + 0.001;
       this.voiceGain.gain.setTargetAtTime(peakGain, aStart, Math.max(0.001, attack));
       this.voiceGain.gain.setTargetAtTime(decTarget, aStart + Math.max(0.001, attack) * 3 + 0.003, decTau);
     } else if (wasBusy) {
-      // Voice steal: fast duck to near-silence, then clean attack wave-in.
-      // 25ms duck is fast enough to feel instant on rapid re-triggers.
-      const zeroAt = now + 0.025;
-      this.voiceGain.gain.setTargetAtTime(0.0, now, 0.006);
+      // Voice steal: quick gentle duck to zero, then clean attack
+      const zeroAt = now + 0.018;
+      this.voiceGain.gain.setTargetAtTime(0.0, now, 0.004);
       this.voiceGain.gain.setValueAtTime(0.0, zeroAt);
       const aStart = zeroAt + 0.002;
       this.voiceGain.gain.setTargetAtTime(peakGain, aStart, attack);
       this.voiceGain.gain.setTargetAtTime(decTarget, aStart + attack * 3 + 0.004, decTau);
     } else {
-      // Idle voice: already silent, just run the attack envelope.
+      // Idle voice: clean attack from silent state
       const aStart = now + 0.002;
       this.voiceGain.gain.setValueAtTime(0.0, now);
       this.voiceGain.gain.setTargetAtTime(peakGain, aStart, attack);
@@ -247,7 +213,6 @@ export class PolyphonicVoice {
       this.isSustained = true;
       return;
     }
-    // CRITICAL FIX: Clear sustained status when releasing damper
     this.isSustained = false;
 
     const ctx = this.ctx;
@@ -256,34 +221,16 @@ export class PolyphonicVoice {
     const tau = Math.max(0.015, rel * 0.22);
     const gen = this._gen;
 
-    // Smooth, guaranteed exponential decay to absolute zero
+    // Smooth exponential decay to silence
     this.voiceGain.gain.cancelScheduledValues(now);
     this.voiceGain.gain.setTargetAtTime(0.0, now, tau);
-    // Force an EXACT digital zero once the fade completes. setTargetAtTime only
-    // approaches zero asymptotically (~-52dB residual at 6*tau), and disconnecting
-    // the voice's sub-graph over a barely-audible hair of signal is what leaked
-    // the soft "static hiss" across dense chord changes. Pinning an unambiguous
-    // 0.0 makes the subsequent physical disconnect a silent, sample-exact cut.
     const fadeSec = Math.max(0.08, tau * 6);
     this.voiceGain.gain.setValueAtTime(0.0, now + fadeSec);
 
-    // Free the voice only after it has physically faded to inaudibility AND the
-    // same generation still owns it (a reused/retriggered note must never be
-    // killed by a stale release timer from an earlier tap on the same key).
     setTimeout(() => {
       if (gen === this._gen && !this.isSustained) {
         this.isBusy = false;
         this.activeMidiNote = null;
-        // Fully silent now (exact zero since fadeSec): physically remove this
-        // voice's sub-graph from the render pull so an idle voice costs ZERO
-        // render time, not just a zeroed gain still being synthesized every
-        // quantum. Sustained warm sounds (organs, pads) release in waves --
-        // this frees the render thread in real time instead of leaving 96 dead
-        // oscillators running.
-        if (this._filterConnected) {
-          try { this.filter.disconnect(this.voiceGain); } catch (e) {}
-          this._filterConnected = false;
-        }
       }
     }, (fadeSec + 0.04) * 1000);
   }
@@ -295,21 +242,16 @@ export class PolyphonicVoice {
     this.isBusy = false;
     this.isSustained = false;
     this.activeMidiNote = null;
-    // Fade out fast, then pin an exact zero so the physical disconnect that
-    // follows is sample-exact silence (no residual -52dB step = no hiss).
-    const fadeSec = 0.09;
+    const fadeSec = 0.06;
     try {
       this.voiceGain.gain.cancelScheduledValues(now);
-      this.voiceGain.gain.setTargetAtTime(0.0, now, 0.015);
+      this.voiceGain.gain.setTargetAtTime(0.0, now, 0.012);
       this.voiceGain.gain.setValueAtTime(0.0, now + fadeSec);
     } catch (e) {}
     setTimeout(() => {
-      if (gen !== this._gen) return; // retriggered -- never kill the new note
-      if (this._filterConnected) {
-        try { this.filter.disconnect(this.voiceGain); } catch (e) {}
-        this._filterConnected = false;
-      }
-    }, (fadeSec + 0.05) * 1000);
+      if (gen !== this._gen) return;
+      this.isBusy = false;
+    }, (fadeSec + 0.02) * 1000);
   }
 
   // Permanently silence this voice's oscillators. Only safe for pools whose

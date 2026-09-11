@@ -28,10 +28,10 @@ export class KorgStereoChorus {
     this.dryGain.connect(this.output);
     this.dryGain.gain.value = 1.0;
 
-    // Wet Pre-Filters: 120Hz highpass + 8500Hz lowpass for clean studio sheen
+    // Wet Pre-Filters: 30Hz sub highpass + 8500Hz lowpass for clean studio sheen
     this.wetHp = ctx.createBiquadFilter();
     this.wetHp.type = "highpass";
-    this.wetHp.frequency.value = 120;
+    this.wetHp.frequency.value = 30;
 
     this.wetLp = ctx.createBiquadFilter();
     this.wetLp.type = "lowpass";
@@ -107,16 +107,16 @@ export class KorgStereoChorus {
 
   setBypass(bypassed) {
     this.enabled = !bypassed;
-    const now = this.ctx.currentTime;
+    const now = this.ctx ? this.ctx.currentTime : 0;
     if (bypassed) {
-      this.wetGain.gain.setTargetAtTime(0, now, 0.02);
-      this.dryGain.gain.setTargetAtTime(1.0, now, 0.02);
+      this.wetGain.gain.setValueAtTime(0, now);
+      this.dryGain.gain.setValueAtTime(1.0, now);
     } else {
       const m = this.mix > 0 ? this.mix : 0.25;
       const dryFrac = Math.cos(m * Math.PI * 0.5);
       const wetFrac = Math.sin(m * Math.PI * 0.5);
-      this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
-      this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
+      this.wetGain.gain.setValueAtTime(wetFrac, now);
+      this.dryGain.gain.setValueAtTime(dryFrac, now);
     }
   }
 }

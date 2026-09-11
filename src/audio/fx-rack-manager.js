@@ -80,7 +80,6 @@ export class FxRackManager {
     if (engaged.length === 0) {
       // FAST PATH: single unity gain — the absolute minimum graph.
       this.input.connect(this.fastPathGain);
-      audioCore.setBusCompEnabled(false);
     } else {
       // SERIES PATH: only engaged effects, in rack order.
       this.input.connect(engaged[0].input);
@@ -88,7 +87,6 @@ export class FxRackManager {
         engaged[i].output.connect(engaged[i + 1].input);
       }
       engaged[engaged.length - 1].output.connect(this.presetTrimNode);
-      audioCore.setBusCompEnabled(true);
     }
 
     this._chainEngaged = engaged;

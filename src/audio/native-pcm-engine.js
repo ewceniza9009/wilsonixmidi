@@ -13,6 +13,7 @@
 import { KORG_PCM_BANKS } from "./korg-pcm-data.js";
 import { ABLETUNES_BANKS } from "./abletunes-manifest.js";
 import { SfxSoundGenerator } from "./sfx-sound-generator.js";
+import { sampleCache } from "./sample-cache.js";
 
 const NOTE_MAP = {
   C: 0, "C#": 1, Db: 1, D: 2, "D#": 3, Eb: 3, E: 4, F: 5, "F#": 6, Gb: 6, G: 7, "G#": 8, Ab: 8, A: 9, "A#": 10, Bb: 10, B: 11
@@ -1430,7 +1431,12 @@ export class NativePcmEngine {
             const midi = noteNameToMidi(noteName);
             if (midi === null) return;
             try {
-              const arrayBuf = this.base64ToArrayBuffer(base64Uri);
+              const cacheKey = `sf_${instId}_${midi}`;
+              let arrayBuf = await sampleCache.getSample(cacheKey);
+              if (!arrayBuf) {
+                arrayBuf = this.base64ToArrayBuffer(base64Uri);
+                sampleCache.setSample(cacheKey, arrayBuf, { instId, midi });
+              }
               const audioBuf = await this.decodeAudioBuffer(ctx, arrayBuf);
               const processedBuf = this.createCrossfadedLoopBuffer(ctx, audioBuf, instId);
               instMap.set(midi, processedBuf);
@@ -1467,10 +1473,15 @@ export class NativePcmEngine {
       await Promise.all(
         batch.map(async (sample) => {
           try {
-            const url = `${bank.path}/${sample.f}`;
-            const resp = await fetch(url);
-            if (!resp.ok) return;
-            const arrayBuf = await resp.arrayBuffer();
+            const cacheKey = `able_${instId}_${sample.f}`;
+            let arrayBuf = await sampleCache.getSample(cacheKey);
+            if (!arrayBuf) {
+              const url = `${bank.path}/${sample.f}`;
+              const resp = await fetch(url);
+              if (!resp.ok) return;
+              arrayBuf = await resp.arrayBuffer();
+              sampleCache.setSample(cacheKey, arrayBuf, { instId, file: sample.f });
+            }
             const audioBuf = await this.decodeAudioBuffer(ctx, arrayBuf);
             // FM bank carries a low -48dB shimmer bed in its final seconds that stacks
             // audibly under sustain: fade the last 1.5s to silence (release character kept)

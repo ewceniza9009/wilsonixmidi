@@ -29,10 +29,10 @@ export class SpringReverb {
     this.dryGain.connect(this.output);
     this.dryGain.gain.value = 1.0;
 
-    // 1. Low-end highpass (<220Hz roll-off)
+    // 1. Low-end highpass (<35Hz DC roll-off)
     this.hpFilter = ctx.createBiquadFilter();
     this.hpFilter.type = "highpass";
-    this.hpFilter.frequency.value = 220;
+    this.hpFilter.frequency.value = 35;
 
     // 2. 2kHz - 5kHz Metallic "Drip" Resonance Peaking Filter
     this.dripFilter = ctx.createBiquadFilter();
@@ -149,11 +149,11 @@ export class SpringReverb {
       const m = this.mix > 0 ? this.mix : 0.35;
       const dryFrac = Math.cos(m * Math.PI * 0.5);
       const wetFrac = Math.sin(m * Math.PI * 0.5) * 0.70;
-      this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
-      this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
+      this.dryGain.gain.setValueAtTime(dryFrac, now);
+      this.wetGain.gain.setValueAtTime(wetFrac, now);
     } else {
-      this.dryGain.gain.setTargetAtTime(1.0, now, 0.02);
-      this.wetGain.gain.setTargetAtTime(0.0, now, 0.02);
+      this.dryGain.gain.setValueAtTime(1.0, now);
+      this.wetGain.gain.setValueAtTime(0.0, now);
     }
   }
 }

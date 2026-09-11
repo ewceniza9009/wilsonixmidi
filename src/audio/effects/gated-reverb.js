@@ -28,10 +28,10 @@ export class GatedReverb {
     this.dryGain.connect(this.output);
     this.dryGain.gain.value = 1.0;
 
-    // HP & LP sculpting for 80s digital plate
+    // HP & LP sculpting for 80s digital plate (30Hz sub highpass)
     this.hpFilter = ctx.createBiquadFilter();
     this.hpFilter.type = "highpass";
-    this.hpFilter.frequency.value = 180;
+    this.hpFilter.frequency.value = 30;
 
     this.lpFilter = ctx.createBiquadFilter();
     this.lpFilter.type = "lowpass";
@@ -128,11 +128,11 @@ export class GatedReverb {
       const m = this.mix > 0 ? this.mix : 0.45;
       const dryFrac = Math.cos(m * Math.PI * 0.5);
       const wetFrac = Math.sin(m * Math.PI * 0.5) * 0.75;
-      this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
-      this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
+      this.dryGain.gain.setValueAtTime(dryFrac, now);
+      this.wetGain.gain.setValueAtTime(wetFrac, now);
     } else {
-      this.dryGain.gain.setTargetAtTime(1.0, now, 0.02);
-      this.wetGain.gain.setTargetAtTime(0.0, now, 0.02);
+      this.dryGain.gain.setValueAtTime(1.0, now);
+      this.wetGain.gain.setValueAtTime(0.0, now);
     }
   }
 }

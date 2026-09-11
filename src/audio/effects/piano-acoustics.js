@@ -127,13 +127,13 @@ export class GrandPianoAcoustics {
 
   setBypass(bypassed) {
     this.enabled = !bypassed;
-    const now = this.ctx.currentTime;
+    const now = this.ctx ? this.ctx.currentTime : 0;
     if (bypassed) {
-      this.wetGain.gain.setTargetAtTime(0.0, now, 0.02);
-      this.dryGain.gain.setTargetAtTime(1.0, now, 0.02);
+      this.wetGain.gain.setValueAtTime(0.0, now);
+      this.dryGain.gain.setValueAtTime(1.0, now);
     } else {
-      this.wetGain.gain.setTargetAtTime(0.40, now, 0.02);
-      this.dryGain.gain.setTargetAtTime(0.65, now, 0.02);
+      this.wetGain.gain.setValueAtTime(0.40, now);
+      this.dryGain.gain.setValueAtTime(0.65, now);
     }
   }
 }

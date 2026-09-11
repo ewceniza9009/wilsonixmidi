@@ -110,16 +110,16 @@ export class MasterTapeSaturation {
 
   setBypass(bypass) {
     this.enabled = !bypass;
-    const now = this.ctx.currentTime;
+    const now = this.ctx ? this.ctx.currentTime : 0;
     if (this.enabled) {
       const m = this.mix > 0 ? this.mix : 0.85;
       const dryFrac = Math.cos(m * Math.PI * 0.5);
       const wetFrac = Math.sin(m * Math.PI * 0.5);
-      this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
-      this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
+      this.dryGain.gain.setValueAtTime(dryFrac, now);
+      this.wetGain.gain.setValueAtTime(wetFrac, now);
     } else {
-      this.dryGain.gain.setTargetAtTime(1.0, now, 0.02);
-      this.wetGain.gain.setTargetAtTime(0.0, now, 0.02);
+      this.dryGain.gain.setValueAtTime(1.0, now);
+      this.wetGain.gain.setValueAtTime(0.0, now);
     }
   }
 }

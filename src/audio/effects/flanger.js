@@ -29,10 +29,10 @@ export class StereoFlanger {
     this.dryGain.connect(this.output);
     this.dryGain.gain.value = 1.0;
 
-    // Input conditioning
+    // Input conditioning (sub highpass at 30Hz)
     this.hp = ctx.createBiquadFilter();
     this.hp.type = "highpass";
-    this.hp.frequency.value = 140;
+    this.hp.frequency.value = 30;
     this.input.connect(this.hp);
 
     // Stereo modulated delay lines (mono-compatible pair)
@@ -131,17 +131,17 @@ export class StereoFlanger {
 
   setBypass(bypassed) {
     this.enabled = !bypassed;
-    const now = this.ctx.currentTime;
+    const now = this.ctx ? this.ctx.currentTime : 0;
     if (bypassed) {
-      this.wetGain.gain.setTargetAtTime(0.0, now, 0.02);
-      this.dryGain.gain.setTargetAtTime(1.0, now, 0.02);
+      this.wetGain.gain.setValueAtTime(0.0, now);
+      this.dryGain.gain.setValueAtTime(1.0, now);
     } else {
       const m = this.mix > 0 ? this.mix : 0.45;
       const fdbkComp = 1.0 / (1.0 + this.feedback * 0.35);
       const wetFrac = Math.sin(m * Math.PI * 0.5) * 0.85 * fdbkComp;
       const dryFrac = Math.cos(m * Math.PI * 0.5);
-      this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
-      this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
+      this.wetGain.gain.setValueAtTime(wetFrac, now);
+      this.dryGain.gain.setValueAtTime(dryFrac, now);
     }
   }
 }

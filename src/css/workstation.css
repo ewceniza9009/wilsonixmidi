@@ -556,6 +556,76 @@
   color: #fff;
 }
 
+.latency-profile-section {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.latency-profile-title {
+  font-size: 0.60rem;
+  font-weight: 800;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+}
+
+.latency-profile-pills {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+}
+
+.latency-prof-btn {
+  background: #1e2433;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.latency-prof-btn:hover {
+  background: #283244;
+  border-color: rgba(0, 210, 255, 0.4);
+}
+
+.latency-prof-btn.active {
+  background: rgba(0, 210, 255, 0.18);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 8px rgba(0, 210, 255, 0.3);
+}
+
+.latency-prof-btn .prof-title {
+  font-size: 0.58rem;
+  font-weight: 800;
+  color: #f1f5f9;
+  letter-spacing: 0.3px;
+  text-align: center;
+}
+
+.latency-prof-btn.active .prof-title {
+  color: var(--accent-cyan);
+}
+
+.latency-prof-btn .prof-sub {
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: #94a3b8;
+  font-family: var(--font-family-mono);
+}
+
+.latency-prof-btn.active .prof-sub {
+  color: #38bdf8;
+}
+
 .latency-pop-body {
   display: flex;
   flex-direction: column;

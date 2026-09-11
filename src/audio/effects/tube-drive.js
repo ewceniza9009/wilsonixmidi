@@ -48,10 +48,10 @@ export class TubeDrive {
     this.shaper.oversample = "4x";
 
     // Post-distortion 4x12 Speaker Cabinet Simulation:
-    // 1. Sub-bass tightener (eliminates flabby mud below 85Hz)
+    // 1. Sub-bass tightener (preserves bass fundamentals down to 45Hz)
     this.cabHighpass = ctx.createBiquadFilter();
     this.cabHighpass.type = "highpass";
-    this.cabHighpass.frequency.value = 85;
+    this.cabHighpass.frequency.value = 45;
 
     // 2. Mid-presence punch (controlled British 4x12 bite without volume spike)
     this.cabPresence = ctx.createBiquadFilter();
@@ -141,15 +141,15 @@ export class TubeDrive {
 
   setBypass(bypassed) {
     this.enabled = !bypassed;
-    const now = this.ctx.currentTime;
+    const now = this.ctx ? this.ctx.currentTime : 0;
     if (bypassed) {
-      this.wetGain.gain.setTargetAtTime(0.0, now, 0.02);
-      this.dryGain.gain.setTargetAtTime(1.0, now, 0.02);
+      this.wetGain.gain.setValueAtTime(0.0, now);
+      this.dryGain.gain.setValueAtTime(1.0, now);
     } else {
       const wetFrac = Math.sin(this.mix * Math.PI * 0.5);
       const dryFrac = Math.cos(this.mix * Math.PI * 0.5);
-      this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
-      this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
+      this.wetGain.gain.setValueAtTime(wetFrac, now);
+      this.dryGain.gain.setValueAtTime(dryFrac, now);
     }
   }
 }

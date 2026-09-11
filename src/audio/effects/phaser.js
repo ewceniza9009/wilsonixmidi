@@ -113,17 +113,17 @@ export class StereoPhaser {
 
   setBypass(bypassed) {
     this.enabled = !bypassed;
-    const now = this.ctx.currentTime;
+    const now = this.ctx ? this.ctx.currentTime : 0;
     if (bypassed) {
-      this.wetGain.gain.setTargetAtTime(0.0, now, 0.02);
-      this.dryGain.gain.setTargetAtTime(1.0, now, 0.02);
+      this.wetGain.gain.setValueAtTime(0.0, now);
+      this.dryGain.gain.setValueAtTime(1.0, now);
     } else {
       const m = this.mix !== undefined ? this.mix : 0.85;
       const makeup = 1.0 + m * 0.10;
       const dryFrac = Math.cos(m * Math.PI * 0.5);
       const wetFrac = Math.sin(m * Math.PI * 0.5) * 0.70 * makeup;
-      this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
-      this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
+      this.wetGain.gain.setValueAtTime(wetFrac, now);
+      this.dryGain.gain.setValueAtTime(dryFrac, now);
     }
   }
 }

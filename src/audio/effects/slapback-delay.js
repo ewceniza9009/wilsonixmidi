@@ -37,10 +37,10 @@ export class SlapbackTapeDelay {
     this.tapeFilter.type = "lowpass";
     this.tapeFilter.frequency.value = this.tapeTone;
 
-    // Highpass to eliminate low-end mud
+    // Sub Highpass to eliminate sub-audio DC
     this.hpFilter = ctx.createBiquadFilter();
     this.hpFilter.type = "highpass";
-    this.hpFilter.frequency.value = 160;
+    this.hpFilter.frequency.value = 30;
 
     // Single Precision Delay Line (Zero Feedback)
     this.delayNode = ctx.createDelay(0.3);
@@ -83,16 +83,16 @@ export class SlapbackTapeDelay {
 
   setBypass(bypass) {
     this.enabled = !bypass;
-    const now = this.ctx.currentTime;
+    const now = this.ctx ? this.ctx.currentTime : 0;
     if (this.enabled) {
       const m = this.mix > 0 ? this.mix : 0.35;
       const dryFrac = Math.cos(m * Math.PI * 0.5);
       const wetFrac = Math.sin(m * Math.PI * 0.5) * 0.85;
-      this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
-      this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
+      this.dryGain.gain.setValueAtTime(dryFrac, now);
+      this.wetGain.gain.setValueAtTime(wetFrac, now);
     } else {
-      this.dryGain.gain.setTargetAtTime(1.0, now, 0.02);
-      this.wetGain.gain.setTargetAtTime(0.0, now, 0.02);
+      this.dryGain.gain.setValueAtTime(1.0, now);
+      this.wetGain.gain.setValueAtTime(0.0, now);
     }
   }
 }

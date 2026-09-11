@@ -448,6 +448,7 @@ export class GigHudUI {
     const stalled = l.lockMs !== null && Math.abs(l.lockMs) > 50;
 
     const rows = [
+      ["BUFFER PROFILE", l.profileLabel || "Balanced Studio"],
       ["ROUND-TRIP (Buffer+Output)", `${(l.measuredMs ?? 7.6).toFixed(1)} ms`],
       ["SMOOTHED (10Hz avg)", primary],
       ["Base buffer (input side)", `${(l.baseMs ?? 2.6).toFixed(1)} ms (${bufferSamples} samples @ ${((l.sampleRate || 48000) / 1000).toFixed(1)} kHz)`],
@@ -463,10 +464,29 @@ export class GigHudUI {
       )
       .join("");
 
+    const currentProf = l.profile || "balanced";
+
     pop.innerHTML = `
       <div class="latency-pop-head">
-        <span>ROUND-TRIP LATENCY ANALYSIS</span>
+        <span>ROUND-TRIP LATENCY & BUFFER CONTROL</span>
         <button class="latency-pop-close" id="hud-latency-close">✕</button>
+      </div>
+      <div class="latency-profile-section">
+        <div class="latency-profile-title">BUFFER / LATENCY PROFILE</div>
+        <div class="latency-profile-pills">
+          <button class="latency-prof-btn ${currentProf === 'ultra-low' ? 'active' : ''}" data-profile="ultra-low" title="64–128 frames / Fastest response for dedicated audio interfaces">
+            <span class="prof-title">STAGE ULTRA-LOW</span>
+            <span class="prof-sub">~2.9ms</span>
+          </button>
+          <button class="latency-prof-btn ${currentProf === 'balanced' ? 'active' : ''}" data-profile="balanced" title="256 frames / Stable performance for general laptop audio">
+            <span class="prof-title">BALANCED STUDIO</span>
+            <span class="prof-sub">~5.8ms</span>
+          </button>
+          <button class="latency-prof-btn ${currentProf === 'safe' ? 'active' : ''}" data-profile="safe" title="512 frames / Maximum glitch-free headroom for heavy polyphony">
+            <span class="prof-title">SAFE STAGE</span>
+            <span class="prof-sub">~11.6ms</span>
+          </button>
+        </div>
       </div>
       <div class="latency-pop-body">${rows}</div>
       <div class="latency-pop-tip">
@@ -486,6 +506,18 @@ export class GigHudUI {
     pop.addEventListener("click", e => e.stopPropagation());
 
     document.body.appendChild(pop);
+
+    pop.querySelectorAll(".latency-prof-btn").forEach(btn => {
+      btn.addEventListener("click", e => {
+        e.stopPropagation();
+        const prof = btn.getAttribute("data-profile");
+        if (prof) {
+          audioCore.setLatencyProfile(prof);
+          const newL = audioCore.measureLatency();
+          this._renderLatencyPopover(newL, this._latencySmoothed);
+        }
+      });
+    });
 
     pop.querySelector("#hud-latency-close")?.addEventListener("click", e => {
       e.stopPropagation();
