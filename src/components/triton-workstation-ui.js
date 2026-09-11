@@ -498,6 +498,26 @@ export class TritonWorkstationUI {
     });
   }
 
+  selectProgramById(progId) {
+    if (!progId) return;
+    for (const [bankId, bank] of Object.entries(TRITON_BANKS)) {
+      const prog = (bank.programs || []).find(p => p.id === progId);
+      if (prog) {
+        this.activeBankId = bankId;
+        this.activeProg = prog;
+        this.render();
+        this.applyTritonProgram(prog, true);
+        const lcdTitle = document.getElementById("triton-lcd-title");
+        const lcdBankCat = document.getElementById("triton-lcd-bank-cat");
+        const lcdCat = document.getElementById("triton-lcd-category");
+        if (lcdTitle) lcdTitle.innerText = prog.name;
+        if (lcdBankCat) lcdBankCat.innerText = `BANK: ${this.activeBankId.replace("_", " ")} ${prog.num}`;
+        if (lcdCat) lcdCat.innerText = `CATEGORY: ${prog.category.toUpperCase()}`;
+        return;
+      }
+    }
+  }
+
   applyTritonProgram(prog, isUserExplicit = false) {
     if (!prog) return;
 

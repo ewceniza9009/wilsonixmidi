@@ -139,10 +139,11 @@ const TRITON_BANK_NAME = {};
 Object.entries(TRITON_BANKS).forEach(([bankId, bank]) => {
   TRITON_BANK_NAME[bankId] = bank.name;
   (bank.programs || []).forEach(prog => {
+    const progWithBank = { ...prog, bank: bankId };
+    TRITON_PROGRAMS_BY_ID.set(prog.id, progWithBank);
     const resolved = resolveTritonProgram(prog);
     if (resolved.type === "va") {
-      TRITON_VA_PROGRAMS.push({ ...prog, bank: bankId });
-      TRITON_PROGRAMS_BY_ID.set(prog.id, { ...prog, bank: bankId });
+      TRITON_VA_PROGRAMS.push(progWithBank);
     } else {
       TRITON_PCM_ENTRIES.push({
         id: prog.id,

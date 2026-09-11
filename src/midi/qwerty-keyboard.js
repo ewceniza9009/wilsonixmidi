@@ -188,6 +188,11 @@ export class QwertyKeyboard {
     if (!this.enabled) return;
     if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.isContentEditable) return;
 
+    // Shift + 1-8 is reserved for Rig Snapshot saving (do not trigger black keys / music notes)
+    if (e.shiftKey && /^Digit[1-8]$/.test(e.code)) {
+      return;
+    }
+
     // CRITICAL: Always suppress browser/OS default for mapped music keys — even on repeat!
     // Without this, Windows plays its system alert "toot" sound on held keys (R+T+U, V+B+M etc.)
     const mapping = this.activeKeyMap[e.code];

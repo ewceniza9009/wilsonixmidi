@@ -1,12 +1,13 @@
 /**
  * WILSONIX MIDIKEY Elite - Stage Registration Memory & Live Setlist Manager
  * Provides 4 Banks × 8 Slots (32 Live Rig Snapshots) for instant 1-touch sound switching during live gigs.
- * Saves/Restores: Combi 4-timbre layers, Triton Program, Splits, FX settings, Transpose, BPM.
+ * Saves/Restores: Triton VA Programs (Brian's Sync, leads), Combi 4-timbre stacks, Rompler instruments, Splits, FX, Transpose.
  */
 
 import { synthEngine } from "../audio/synth-engine.js";
-import { multiLayerEngine } from "../audio/multi-layer-engine.js";
+import { multiLayerEngine, COMBI_PRESETS, HD_SOUNDBANKS } from "../audio/multi-layer-engine.js";
 import { audioCore } from "../audio/audio-core.js";
+import { getTritonProgramById } from "../triton/combi-timbres.js";
 
 export class RegistrationManager {
   constructor() {
@@ -23,7 +24,10 @@ export class RegistrationManager {
     try {
       const stored = localStorage.getItem(this.storageKey);
       if (stored) {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        if (parsed.A && parsed.B && parsed.C && parsed.D) {
+          return parsed;
+        }
       }
     } catch (e) {
       console.warn("Could not load registration banks:", e);
@@ -40,47 +44,123 @@ export class RegistrationManager {
   }
 
   getDefaultBanks() {
-    // Curated factory live gig templates
+    // Curated factory live gig templates across 4 Banks (A, B, C, D) × 8 Slots
     return {
       A: [
-        { slot: 1, name: "Concert Grand & Pad", synth: "acoustic_grand_piano", combi: true, split: false },
-        { slot: 2, name: "Vintage Rhodes & Tremolo", synth: "rhodes_stage_mp3", combi: false, split: false },
-        { slot: 3, name: "Split: Funk Bass & EP", synth: "synth_bass_1", combi: false, split: true },
-        { slot: 4, name: "M1 House Organ & Brass", synth: "m1_organ_2", combi: true, split: false },
-        { slot: 5, name: "Sensual Breathy Alto Sax", synth: "sax_sensual", combi: false, split: false },
-        { slot: 6, name: "Celestial Universe Pad", synth: "m1_universe", combi: true, split: false },
-        { slot: 7, name: "90s Slap Bass & Lead", synth: "m1_slap_bass", combi: false, split: true },
-        { slot: 8, name: "Cathedral Strings Tutti", synth: "string_ensemble_1", combi: true, split: false },
+        { slot: 1, name: "Concert Grand & Triton Strings", type: "combi", activeCombiId: "ballad_master", isCombiMode: true, isSplitMode: false },
+        { slot: 2, name: "Vintage Suitcase Stage EP", type: "single", activeSingleInst: "electric_piano_1", isCombiMode: false, isSplitMode: false },
+        {
+          slot: 3,
+          name: "Split: Moog Bass & Dyno EP",
+          type: "single",
+          activeSingleInst: "electric_piano_1",
+          isCombiMode: false,
+          isSplitMode: true,
+          splitPointMidi: 60,
+          splitZones: {
+            lower: { inst: "synth_bass_1", name: "Moog Punch Bass", fx: "punch_comp", gain: 1.0, oct: 0 },
+            upper: { inst: "electric_piano_1", name: "Suitcase EP", fx: "autopan_wide", gain: 1.0, oct: 0 },
+          },
+        },
+        { slot: 4, name: "Korg M1 House Organ 2", type: "single", activeSingleInst: "m1_organ_2", isCombiMode: false, isSplitMode: false },
+        { slot: 5, name: "🎷 Sensual Breathy Alto Sax", type: "single", activeSingleInst: "sax_sensual", isCombiMode: false, isSplitMode: false },
+        { slot: 6, name: "Korg M1 Universe Celestial Pad", type: "single", activeSingleInst: "m1_universe", isCombiMode: false, isSplitMode: false },
+        {
+          slot: 7,
+          name: "Split: 90s Slap Bass & Lead",
+          type: "single",
+          activeSingleInst: "brass_section",
+          isCombiMode: false,
+          isSplitMode: true,
+          splitPointMidi: 57,
+          splitZones: {
+            lower: { inst: "m1_slap_bass", name: "Korg M1 Slap Bass", fx: "punch_comp", gain: 1.0, oct: 0 },
+            upper: { inst: "brass_section", name: "Triton Fat Brass", fx: "tube_warm", gain: 1.0, oct: 0 },
+          },
+        },
+        { slot: 8, name: "Triton Stereo Strings Tutti", type: "single", activeSingleInst: "string_ensemble_1", isCombiMode: false, isSplitMode: false },
       ],
-      B: Array.from({ length: 8 }, (_, i) => ({ slot: i + 1, name: `Bank B - Rig ${i + 1}`, synth: "acoustic_grand_piano" })),
-      C: Array.from({ length: 8 }, (_, i) => ({ slot: i + 1, name: `Bank C - Rig ${i + 1}`, synth: "acoustic_grand_piano" })),
-      D: Array.from({ length: 8 }, (_, i) => ({ slot: i + 1, name: `Bank D - Rig ${i + 1}`, synth: "acoustic_grand_piano" })),
+      B: [
+        { slot: 1, name: "Abletunes Studio Upright Piano", type: "single", activeSingleInst: "abletunes_upright", isCombiMode: false, isSplitMode: false },
+        { slot: 2, name: "Abletunes Studio FM Piano DX7", type: "single", activeSingleInst: "abletunes_fm_piano", isCombiMode: false, isSplitMode: false },
+        { slot: 3, name: "Tokyo City Pop Stack", type: "combi", activeCombiId: "tokyo_city_pop", isCombiMode: true, isSplitMode: false },
+        { slot: 4, name: "Chicago Blues & Rock Stack", type: "combi", activeCombiId: "chicago_blues_rock", isCombiMode: true, isSplitMode: false },
+        { slot: 5, name: "Acid Jazz Groove Stack", type: "combi", activeCombiId: "acid_jazz_groove", isCombiMode: true, isSplitMode: false },
+        { slot: 6, name: "Miles Harmon Mute Trumpet", type: "single", activeSingleInst: "muted_trumpet", isCombiMode: false, isSplitMode: false },
+        { slot: 7, name: "Blue Note Jazz Trio", type: "combi", activeCombiId: "blue_note_trio", isCombiMode: true, isSplitMode: false },
+        { slot: 8, name: "Jazz-Funk Soul Stack", type: "combi", activeCombiId: "jazz_funk_soul", isCombiMode: true, isSplitMode: false },
+      ],
+      C: [
+        { slot: 1, name: "Sunday Pipe Praise Stack", type: "combi", activeCombiId: "sunday_pipe_praise", isCombiMode: true, isSplitMode: false },
+        { slot: 2, name: "Cathedral Pipe Organ", type: "single", activeSingleInst: "church_organ", isCombiMode: false, isSplitMode: false },
+        { slot: 3, name: "Cathedral Choir Aahs", type: "single", activeSingleInst: "choir_aahs", isCombiMode: false, isSplitMode: false },
+        { slot: 4, name: "Korg M1 03 Ooh-Ahh Formant", type: "single", activeSingleInst: "m1_ooh_ahh", isCombiMode: false, isSplitMode: false },
+        { slot: 5, name: "Neo-Classical Ambient Stack", type: "combi", activeCombiId: "neo_classical_ambient", isCombiMode: true, isSplitMode: false },
+        { slot: 6, name: "Cool Mallet Vibraphone", type: "single", activeSingleInst: "vibraphone", isCombiMode: false, isSplitMode: false },
+        { slot: 7, name: "Fender Strat Clean Chords", type: "single", activeSingleInst: "electric_guitar_clean", isCombiMode: false, isSplitMode: false },
+        { slot: 8, name: "Fantom Acoustic Nylon Pluck", type: "single", activeSingleInst: "acoustic_guitar_nylon", isCombiMode: false, isSplitMode: false },
+      ],
+      D: [
+        { slot: 1, name: "🎷 Expressive Solo Alto Sax", type: "single", activeSingleInst: "sax_genuine_solo", isCombiMode: false, isSplitMode: false },
+        { slot: 2, name: "Brian's Sync Lead", type: "triton_va", tritonProgId: "A017", isCombiMode: false, isSplitMode: false },
+        { slot: 3, name: "Smooth Sine Lead", type: "triton_va", tritonProgId: "A010", isCombiMode: false, isSplitMode: false },
+        { slot: 4, name: "🎷 Dirty Blues Sax Growl", type: "single", activeSingleInst: "sax_blues_growl", isCombiMode: false, isSplitMode: false },
+        { slot: 5, name: "🎷 Expressive Pitch Scoop Sax", type: "single", activeSingleInst: "sax_scoop", isCombiMode: false, isSplitMode: false },
+        { slot: 6, name: "🎷 Funk Brass & Sax Stab", type: "single", activeSingleInst: "sax_funk_stab", isCombiMode: false, isSplitMode: false },
+        { slot: 7, name: "Synthesizer You Neo-Soul Stack", type: "combi", activeCombiId: "synthesizer_you", isCombiMode: true, isSplitMode: false },
+        { slot: 8, name: "TR-808 Analog Drum Kit", type: "single", activeSingleInst: "tr808_kit", isCombiMode: false, isSplitMode: false },
+      ],
     };
   }
 
   getCurrentSnapshot() {
+    const isTritonVa = multiLayerEngine.isTritonVaMode && !!multiLayerEngine.activeTritonVaProg;
+    const isCombi = multiLayerEngine.isCombiMode && !isTritonVa;
+    const isSplit = multiLayerEngine.isSplitMode;
+
+    let snapshotName = "Custom Rig";
+    if (isTritonVa) {
+      snapshotName = multiLayerEngine.activeTritonVaProg.name || "Triton VA Lead";
+    } else if (isCombi) {
+      snapshotName = multiLayerEngine.activeCombi?.name || "Combi Stack";
+    } else if (isSplit) {
+      const lowerName = multiLayerEngine.splitZones?.lower?.name || "Bass";
+      const upperName = multiLayerEngine.splitZones?.upper?.name || "Lead";
+      snapshotName = `Split: ${lowerName} / ${upperName}`;
+    } else {
+      const instKey = multiLayerEngine.activeSingleInst || synthEngine.activePatch?.id || "acoustic_grand_piano";
+      snapshotName = HD_SOUNDBANKS[instKey]?.name || instKey;
+    }
+
     return {
-      name: "",
+      name: snapshotName,
       savedAt: new Date().toISOString(),
-      // 1. Synth & Master
+      type: isTritonVa ? "triton_va" : (isCombi ? "combi" : "single"),
+      // Triton VA Program
+      isTritonVaMode: isTritonVa,
+      tritonProgId: isTritonVa ? multiLayerEngine.activeTritonVaProg.id : null,
+      tritonProg: isTritonVa ? JSON.parse(JSON.stringify(multiLayerEngine.activeTritonVaProg)) : null,
+      // Single Rompler
+      activeSingleInst: multiLayerEngine.activeSingleInst || synthEngine.activePatch?.id || "acoustic_grand_piano",
       synthPatchId: synthEngine.activePatch?.id || "acoustic_grand_piano",
       masterOctave: synthEngine.octave || 0,
-      // 2. Combi 4-Timbre
-      isCombiMode: multiLayerEngine.isCombiMode,
+      // Combi 4-Timbre
+      isCombiMode: isCombi,
+      activeCombiId: multiLayerEngine.activeCombi?.id || null,
       layers: multiLayerEngine.layers.map(l => ({
-        enabled: l.enabled,
+        enabled: !!l.enabled,
         inst: l.inst,
-        volume: l.volume,
-        octave: l.octave,
-        pan: l.pan,
+        gain: l.gain ?? l.volume ?? 1.0,
+        oct: l.oct ?? l.octave ?? 0,
+        pan: l.pan ?? 0,
+        fx: l.fx || "clean",
+        minVel: l.minVel ?? 1,
+        maxVel: l.maxVel ?? 127,
       })),
-      // 3. Split Mode
-      isSplitMode: multiLayerEngine.isSplitMode,
-      splitPointNote: multiLayerEngine.splitPointNote || 60,
-      splitLowerInst: multiLayerEngine.splitLowerInst,
-      splitUpperInst: multiLayerEngine.splitUpperInst,
-      splitLowerVol: multiLayerEngine.splitLowerVol,
-      splitUpperVol: multiLayerEngine.splitUpperVol,
+      // Split Mode
+      isSplitMode: isSplit,
+      splitPointMidi: multiLayerEngine.splitPointMidi || 60,
+      splitZones: JSON.parse(JSON.stringify(multiLayerEngine.splitZones || {})),
     };
   }
 
@@ -90,11 +170,15 @@ export class RegistrationManager {
 
     const snapshot = this.getCurrentSnapshot();
     const existingName = this.banks[bank][slotIdx]?.name || `Rig ${bank}-${slotNumber}`;
-    snapshot.name = customName || existingName;
+    snapshot.name = customName || snapshot.name || existingName;
     snapshot.slot = slotNumber;
 
     this.banks[bank][slotIdx] = snapshot;
     this.saveBanks();
+
+    if (audioCore && typeof audioCore._diagToast === "function") {
+      audioCore._diagToast(`Saved Rig ${bank}-${slotNumber}: "${snapshot.name}"`);
+    }
     console.log(`Saved Live Rig to Bank ${bank} Slot ${slotNumber}: "${snapshot.name}"`);
     return snapshot;
   }
@@ -108,37 +192,66 @@ export class RegistrationManager {
     this.currentSlot = slotNumber;
 
     try {
-      // 1. Restore Synth Patch
-      if (item.synthPatchId) {
-        synthEngine.setPatch(item.synthPatchId);
-      }
-
-      // 2. Restore Combi 4-Timbre
-      if (typeof item.isCombiMode === "boolean") {
-        multiLayerEngine.toggleCombiMode(item.isCombiMode);
-      }
-      if (Array.isArray(item.layers)) {
-        item.layers.forEach((l, idx) => {
-          if (multiLayerEngine.layers[idx]) {
-            multiLayerEngine.layers[idx].enabled = l.enabled;
-            multiLayerEngine.layers[idx].inst = l.inst;
-            multiLayerEngine.layers[idx].volume = l.volume;
-            multiLayerEngine.layers[idx].octave = l.octave;
-            multiLayerEngine.layers[idx].pan = l.pan;
+      // 1. Triton VA Program (e.g. Brian's Sync A017, Smooth Sine A010)
+      if (item.type === "triton_va" || item.isTritonVaMode || item.tritonProgId || item.tritonProg) {
+        const prog = item.tritonProg || getTritonProgramById(item.tritonProgId);
+        if (prog) {
+          multiLayerEngine.setTritonVaProgram(prog);
+          if (window.__tritonConsole && typeof window.__tritonConsole.selectProgramById === "function") {
+            window.__tritonConsole.selectProgramById(prog.id);
           }
-        });
+        }
+      }
+      // 2. Combi 4-Timbre Stack
+      else if (item.type === "combi" || (item.isCombiMode && (item.activeCombiId || Array.isArray(item.layers)))) {
+        if (item.activeCombiId && COMBI_PRESETS[item.activeCombiId]) {
+          multiLayerEngine.setCombiPreset(item.activeCombiId);
+        } else {
+          multiLayerEngine.toggleCombiMode(true);
+          if (Array.isArray(item.layers)) {
+            item.layers.forEach((l, idx) => {
+              if (multiLayerEngine.layers[idx]) {
+                multiLayerEngine.layers[idx].enabled = !!l.enabled;
+                if (l.inst) multiLayerEngine.layers[idx].inst = l.inst;
+                if (l.gain !== undefined) multiLayerEngine.layers[idx].gain = l.gain;
+                if (l.oct !== undefined) multiLayerEngine.layers[idx].oct = l.oct;
+                if (l.pan !== undefined) multiLayerEngine.layers[idx].pan = l.pan;
+                if (l.fx !== undefined) multiLayerEngine.setLayerFx(idx, l.fx);
+              }
+            });
+            multiLayerEngine.notifyLayerChange();
+          }
+        }
+      }
+      // 3. Single Rompler / Acoustic Instrument
+      else {
+        const instId = item.activeSingleInst || item.instId || item.synthPatchId || item.synth || "acoustic_grand_piano";
+        multiLayerEngine.setSingleInstrument(instId);
+        synthEngine.setPatch(instId);
       }
 
-      // 3. Restore Split Mode
-      if (typeof item.isSplitMode === "boolean") {
-        multiLayerEngine.toggleSplitMode(item.isSplitMode);
-        synthEngine.toggleSplitMode(item.isSplitMode);
+      // 4. Restore Split Mode
+      if (item.isSplitMode || item.split) {
+        multiLayerEngine.toggleSplitMode(true);
+        if (item.splitPointMidi) multiLayerEngine.setSplitPointMidi(item.splitPointMidi);
+        if (item.splitZones) {
+          if (item.splitZones.lower) {
+            multiLayerEngine.splitZones.lower = { ...multiLayerEngine.splitZones.lower, ...item.splitZones.lower };
+          }
+          if (item.splitZones.upper) {
+            multiLayerEngine.splitZones.upper = { ...multiLayerEngine.splitZones.upper, ...item.splitZones.upper };
+          }
+          multiLayerEngine.syncSplitFx();
+          multiLayerEngine.notifySplitChange();
+        }
+      } else {
+        multiLayerEngine.toggleSplitMode(false);
       }
-      if (item.splitPointNote) multiLayerEngine.splitPointNote = item.splitPointNote;
-      if (item.splitLowerInst) multiLayerEngine.splitLowerInst = item.splitLowerInst;
-      if (item.splitUpperInst) multiLayerEngine.splitUpperInst = item.splitUpperInst;
 
-      console.log(`Recalled Live Rig Bank ${bank}-${slotNumber}: "${item.name}"`);
+      // 5. Toast Feedback
+      if (audioCore && typeof audioCore._diagToast === "function") {
+        audioCore._diagToast(`Rig ${bank}-${slotNumber}: ${item.name || "Active"}`);
+      }
 
       if (this.onRecallCallback) {
         this.onRecallCallback({ bank, slot: slotNumber, preset: item });
@@ -153,21 +266,35 @@ export class RegistrationManager {
       // Only handle if not typing in an input
       if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) return;
 
-      // Keys 1-8 recall slots in current bank
-      if (e.key >= "1" && e.key <= "8" && !e.ctrlKey && !e.altKey && !e.metaKey) {
-        const slotNum = parseInt(e.key);
-        this.recallSlot(this.currentBank, slotNum);
+      // Check for number keys 1 through 8 via standard code (Digit1..Digit8, Numpad1..Numpad8) or key
+      let slotNum = null;
+      const codeMatch = e.code.match(/^(?:Digit|Numpad)([1-8])$/);
+      if (codeMatch) {
+        slotNum = parseInt(codeMatch[1]);
+      } else if (e.key >= "1" && e.key <= "8") {
+        slotNum = parseInt(e.key);
+      } else if (e.shiftKey) {
+        // Shifted number symbols (!, @, #, $, %, ^, &, *)
+        const shiftedMap = { "!": 1, "@": 2, "#": 3, "$": 4, "%": 5, "^": 6, "&": 7, "*": 8 };
+        if (shiftedMap[e.key]) slotNum = shiftedMap[e.key];
       }
 
-      // Shift + 1-8 saves current rig to slot
-      if (e.shiftKey && e.key >= "1" && e.key <= "8") {
-        const slotNum = parseInt(e.key);
-        const name = prompt(`Enter name for Bank ${this.currentBank} - Slot ${slotNum}:`, `Rig ${this.currentBank}-${slotNum}`);
-        if (name !== null) {
-          this.saveCurrentToSlot(this.currentBank, slotNum, name || undefined);
+      if (slotNum !== null) {
+        // Shift + 1..8 OR Alt + 1..8 saves current rig to slot instantly
+        if (e.shiftKey || e.altKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          const saved = this.saveCurrentToSlot(this.currentBank, slotNum);
           if (this.onRecallCallback) {
-            this.onRecallCallback({ bank: this.currentBank, slot: slotNum, preset: this.banks[this.currentBank][slotNum - 1] });
+            this.onRecallCallback({ bank: this.currentBank, slot: slotNum, preset: saved });
           }
+          return;
+        }
+
+        // Plain 1..8 recalls slot in current bank
+        if (!e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          this.recallSlot(this.currentBank, slotNum);
         }
       }
     });

@@ -5,12 +5,14 @@
  */
 
 import { synthEngine, INSTRUMENT_PATCHES } from "../audio/synth-engine.js";
-import { multiLayerEngine, HD_SOUNDBANKS } from "../audio/multi-layer-engine.js";
+import { multiLayerEngine, HD_SOUNDBANKS, COMBI_PRESETS } from "../audio/multi-layer-engine.js";
 import { audioCore } from "../audio/audio-core.js";
 import { midiManager } from "../midi/midi-manager.js";
 import { licenseManager } from "../security/license-manager.js";
 import { masterRecorder } from "../audio/master-recorder.js";
 import { registrationManager } from "./registration-manager.js";
+import { TRITON_BANKS } from "../triton/triton-soundbanks.js";
+import { getTritonProgramById } from "../triton/combi-timbres.js";
 
 export class GigHudUI {
   constructor(containerId, onOpenLicenseModal) {
@@ -33,6 +35,9 @@ export class GigHudUI {
     this.bindRecorder();
     this.bindRegistration();
 
+    // Bidirectional sync: keep HUD sound dropdown updated with whatever sound is loaded
+    multiLayerEngine.addLayerChangeListener(() => this.syncSoundDisplay());
+
     if (!this.gigMode) {
       this.startVuMonitor();
     }
@@ -50,22 +55,143 @@ export class GigHudUI {
     }
   }
 
+  getPerformancePresetGroups() {
+    return [
+      {
+        label: "★ SIGNATURE 4-TIMBRE COMBIS",
+        items: [
+          { id: "combi:ballad_master", name: "★ Concert Grand & Triton Strings", type: "combi", combiId: "ballad_master" },
+          { id: "combi:tokyo_city_pop", name: "★ Tokyo City Pop (FM + Strat + Sax)", type: "combi", combiId: "tokyo_city_pop" },
+          { id: "combi:chicago_blues_rock", name: "★ Chicago Blues (Strat + B3 + Bass)", type: "combi", combiId: "chicago_blues_rock" },
+          { id: "combi:sunday_pipe_praise", name: "★ Sunday Pipe Praise (Organ + Choir)", type: "combi", combiId: "sunday_pipe_praise" },
+          { id: "combi:neo_soul_chill", name: "★ Neo-Soul Chill (DX7 FM + EP + Sax)", type: "combi", combiId: "neo_soul_chill" },
+          { id: "combi:gospel_praise", name: "★ Gospel Praise (Grand + B3 + Strings)", type: "combi", combiId: "gospel_praise" },
+          { id: "combi:acid_jazz_groove", name: "★ Acid Jazz Groove (Tine + Slap + B3)", type: "combi", combiId: "acid_jazz_groove" },
+          { id: "combi:blue_note_trio", name: "★ Blue Note Trio (Upright + Nylon + Bass)", type: "combi", combiId: "blue_note_trio" },
+          { id: "combi:neo_classical_ambient", name: "★ Neo-Classical (Grand + Nylon + Strings)", type: "combi", combiId: "neo_classical_ambient" },
+          { id: "combi:synthesizer_you", name: "★ Synthesizer You (Neo-Soul Tape Rhodes)", type: "combi", combiId: "synthesizer_you" },
+        ],
+      },
+      {
+        label: "✂️ KEYBOARD SPLIT PRESETS",
+        items: [
+          {
+            id: "split:moog_ep",
+            name: "✂️ Split: Moog Bass / Suitcase EP (C4)",
+            type: "split",
+            splitPoint: 60,
+            lower: { inst: "synth_bass_1", name: "Moog Punch Bass", fx: "punch_comp", gain: 1.0, oct: 0 },
+            upper: { inst: "electric_piano_1", name: "Suitcase EP", fx: "autopan_wide", gain: 1.0, oct: 0 },
+          },
+          {
+            id: "split:slap_brass",
+            name: "✂️ Split: 90s Slap Bass / Fat Brass (A3)",
+            type: "split",
+            splitPoint: 57,
+            lower: { inst: "m1_slap_bass", name: "Korg M1 Slap Bass", fx: "punch_comp", gain: 1.0, oct: 0 },
+            upper: { inst: "brass_section", name: "Triton Fat Brass", fx: "tube_warm", gain: 1.0, oct: 0 },
+          },
+          {
+            id: "split:upright_piano",
+            name: "✂️ Split: Upright Bass / Concert Grand (C4)",
+            type: "split",
+            splitPoint: 60,
+            lower: { inst: "acoustic_bass", name: "Upright Walking Bass", fx: "warm_eq", gain: 1.0, oct: 0 },
+            upper: { inst: "acoustic_grand_piano", name: "Concert Grand", fx: "clean", gain: 1.0, oct: 0 },
+          },
+          {
+            id: "split:synth_sync",
+            name: "✂️ Split: Sub Bass / Brian's Sync Lead (C4)",
+            type: "split",
+            splitPoint: 60,
+            lower: { inst: "synth_bass_1", name: "Analog Sub Bass", fx: "punch_comp", gain: 1.0, oct: 0 },
+            upper: { inst: "va:A017", name: "Brian's Sync Lead", fx: "tube_warm", gain: 1.0, oct: 0 },
+          },
+        ],
+      },
+      {
+        label: "🎷 STAGE SOLO RIGS & FAMOUS SOUNDS",
+        items: [
+          { id: "inst:sax_genuine_solo", name: "🎷 Solo Alto Sax (Expressive Breath & Vibrato)", type: "inst", instId: "sax_genuine_solo" },
+          { id: "inst:sax_sensual", name: "🎷 Sensual 80s Breathy Sax", type: "inst", instId: "sax_sensual" },
+          { id: "inst:sax_blues_growl", name: "🎷 Dirty Blues Sax Growl", type: "inst", instId: "sax_blues_growl" },
+          { id: "va:A017", name: "⚡ Brian's Sync Lead (Triton VA)", type: "va", progId: "A017" },
+          { id: "va:A010", name: "⚡ Smooth Sine Lead (Triton VA)", type: "va", progId: "A010" },
+          { id: "inst:abletunes_upright", name: "🎹 Abletunes Studio Upright Piano", type: "inst", instId: "abletunes_upright" },
+          { id: "inst:abletunes_fm_piano", name: "🎹 Abletunes Studio FM DX7 Piano", type: "inst", instId: "abletunes_fm_piano" },
+          { id: "inst:m1_organ_2", name: "🎹 Korg M1 House Organ 2", type: "inst", instId: "m1_organ_2" },
+          { id: "inst:m1_universe", name: "🌌 Korg M1 Universe Celestial Pad", type: "inst", instId: "m1_universe" },
+          { id: "inst:m1_ooh_ahh", name: "🎙️ Korg M1 03 Ooh-Ahh Formant Choir", type: "inst", instId: "m1_ooh_ahh" },
+          { id: "inst:church_organ", name: "⛪ Cathedral Pipe Organ", type: "inst", instId: "church_organ" },
+        ],
+      },
+    ];
+  }
+
+  getActiveSoundId() {
+    if (multiLayerEngine.isSplitMode) {
+      return "split:custom";
+    }
+    if (multiLayerEngine.isTritonVaMode && multiLayerEngine.activeTritonVaProg) {
+      return `va:${multiLayerEngine.activeTritonVaProg.id}`;
+    }
+    if (multiLayerEngine.isCombiMode && multiLayerEngine.activeCombi) {
+      return `combi:${multiLayerEngine.activeCombi.id}`;
+    }
+    const id = multiLayerEngine.activeSingleInst || synthEngine.activePatch?.id || "acoustic_grand_piano";
+    return `inst:${id}`;
+  }
+
+  getActiveSoundName() {
+    if (multiLayerEngine.isSplitMode) {
+      const lower = multiLayerEngine.splitZones?.lower?.name || "Bass";
+      const upper = multiLayerEngine.splitZones?.upper?.name || "Upper";
+      return `Split: ${lower} / ${upper}`;
+    }
+    if (multiLayerEngine.isTritonVaMode && multiLayerEngine.activeTritonVaProg) {
+      return multiLayerEngine.activeTritonVaProg.name;
+    }
+    if (multiLayerEngine.isCombiMode && multiLayerEngine.activeCombi) {
+      return multiLayerEngine.activeCombi.name;
+    }
+    const id = multiLayerEngine.activeSingleInst || synthEngine.activePatch?.id || "acoustic_grand_piano";
+    return HD_SOUNDBANKS[id]?.name || id;
+  }
+
+  getSoundIcon() {
+    if (multiLayerEngine.isSplitMode) return "✂️";
+    if (multiLayerEngine.isTritonVaMode) return "⚡";
+    if (multiLayerEngine.isCombiMode) return "★";
+    const inst = (multiLayerEngine.activeSingleInst || "").toLowerCase();
+    if (inst.includes("sax")) return "🎷";
+    if (inst.includes("organ")) return "⛪";
+    if (inst.includes("guitar")) return "🎸";
+    if (inst.includes("brass") || inst.includes("trumpet")) return "🎺";
+    if (inst.includes("choir") || inst.includes("ooh_ahh")) return "🎙️";
+    if (inst.includes("drum") || inst.includes("808")) return "🥁";
+    return "🎹";
+  }
+
   render() {
     if (!this.container) return;
 
     const access = licenseManager.getAccessStatus();
-    const patchList = Object.values(INSTRUMENT_PATCHES);
+    const presetGroups = this.getPerformancePresetGroups();
     const soundbanksList = Object.values(HD_SOUNDBANKS);
+    const activeSoundId = this.getActiveSoundId();
+    const activeSoundName = this.getActiveSoundName();
+    const soundIcon = this.getSoundIcon();
 
     const isLayerActive = multiLayerEngine.isCombiMode && (multiLayerEngine.layers[1]?.enabled ?? true);
     const activeLayerBank = multiLayerEngine.layers[1]?.inst || "string_ensemble_1";
 
     const curBank = registrationManager.currentBank || "A";
     const curSlot = registrationManager.currentSlot || 1;
+    const currentBankSlots = registrationManager.banks[curBank] || [];
 
     this.container.innerHTML = `
       <header class="gig-hud-bar">
-        <!-- 1. LEFT: Brand & Sound + Layer Controls -->
+        <!-- 1. LEFT: Brand & Live Performance Readout + Stacks Selector -->
         <div class="hud-section hud-left-group">
           <div class="brand-logo">
             <span class="logo-accent">WILSONIX</span> MIDIKEY
@@ -74,24 +200,33 @@ export class GigHudUI {
             ${access.badgeText}
           </button>
 
-          <!-- Primary Sound Picker -->
-          <div class="hud-sound-box">
-            <button class="preset-arrow-btn" id="hud-prev-preset" title="Previous Sound">◀</button>
-            <div class="sound-select-wrapper">
-              <span class="sound-cat-icon">🎹</span>
-              <select class="hud-sound-select" id="hud-sound-select" title="Switch Instrument Sound">
-                ${patchList
-                  .map(
-                    p => `
-                  <option value="${p.id}" ${synthEngine.activePatch?.id === p.id ? "selected" : ""}>
-                    ${p.name}
-                  </option>
-                `
-                  )
-                  .join("")}
-              </select>
-            </div>
-            <button class="preset-arrow-btn" id="hud-next-preset" title="Next Sound">▶</button>
+          <!-- Live Active Sound Status Badge (Zero Lag, Single Clean Icon) -->
+          <div class="hud-live-badge" id="hud-live-badge" title="Active Sound Playing on Keyboard">
+            <span class="live-badge-icon" id="hud-live-icon">${soundIcon}</span>
+            <span class="live-badge-text" id="hud-live-text">${activeSoundName}</span>
+          </div>
+
+          <!-- Fast Performance Stacks & Combi/Split Selector -->
+          <div class="hud-perf-mode-group">
+            <select class="hud-perf-select" id="hud-perf-select" title="Switch Signature Combis, Keyboard Splits & Solo Rigs">
+              ${presetGroups
+                .map(
+                  grp => `
+                <optgroup label="${grp.label}">
+                  ${grp.items
+                    .map(
+                      s => `
+                    <option value="${s.id}" ${s.id === activeSoundId ? "selected" : ""}>
+                      ${s.name}
+                    </option>
+                  `
+                    )
+                    .join("")}
+                </optgroup>
+              `
+                )
+                .join("")}
+            </select>
           </div>
 
           <!-- Permanent Layer Sound Control Group -->
@@ -113,26 +248,31 @@ export class GigHudUI {
           </div>
         </div>
 
-        <!-- 2. CENTER: Live Rig Presets & Transport -->
+        <!-- 2. CENTER: Live Stage Rig Presets & Transport -->
         <div class="hud-section hud-center-group">
           <!-- Stage Registration Rig Quick Bar -->
-          <div class="hud-rig-widget" title="Live Rig Snapshot (Keys 1-8 to recall, Shift+1-8 to save)">
+          <div class="hud-rig-widget" title="Live Stage Rig Snapshot (Click 1-8 to switch, Click STORE to save)">
             <span class="rig-label">RIG:</span>
             <div class="rig-bank-pills">
-              <button class="rig-bank-pill ${curBank === "A" ? "active" : ""}" data-bank="A">A</button>
-              <button class="rig-bank-pill ${curBank === "B" ? "active" : ""}" data-bank="B">B</button>
-              <button class="rig-bank-pill ${curBank === "C" ? "active" : ""}" data-bank="C">C</button>
-              <button class="rig-bank-pill ${curBank === "D" ? "active" : ""}" data-bank="D">D</button>
+              <button class="rig-bank-pill ${curBank === "A" ? "active" : ""}" data-bank="A" title="Bank A: Pop / Ballad Stage Set">A</button>
+              <button class="rig-bank-pill ${curBank === "B" ? "active" : ""}" data-bank="B" title="Bank B: Studio & Groove Set">B</button>
+              <button class="rig-bank-pill ${curBank === "C" ? "active" : ""}" data-bank="C" title="Bank C: Gospel & Worship Set">C</button>
+              <button class="rig-bank-pill ${curBank === "D" ? "active" : ""}" data-bank="D" title="Bank D: Solo Leads & Sax Set">D</button>
             </div>
             <div class="rig-slot-pills">
               ${[1, 2, 3, 4, 5, 6, 7, 8]
                 .map(
-                  num => `
-                <button class="rig-slot-pill ${curSlot === num ? "active" : ""}" data-slot="${num}" title="Rig ${curBank}-${num} (Key ${num})">${num}</button>
-              `
+                  num => {
+                    const slotData = currentBankSlots[num - 1];
+                    const slotTitle = slotData?.name || `Rig ${curBank}-${num}`;
+                    return `
+                      <button class="rig-slot-pill ${curSlot === num ? "active" : ""}" data-slot="${num}" title="Rig ${curBank}-${num}: ${slotTitle}">${num}</button>
+                    `;
+                  }
                 )
                 .join("")}
             </div>
+            <button class="rig-save-btn" id="hud-rig-save-btn" title="Store Current Sound & FX to Active Slot">💾 STORE</button>
           </div>
 
           <!-- Master WAV Recorder -->
@@ -246,14 +386,138 @@ export class GigHudUI {
       });
     });
 
-    registrationManager.onRecallCallback = ({ bank, slot }) => {
+    document.getElementById("hud-rig-save-btn")?.addEventListener("click", () => {
+      const saved = registrationManager.saveCurrentToSlot(registrationManager.currentBank, registrationManager.currentSlot);
+      if (registrationManager.onRecallCallback) {
+        registrationManager.onRecallCallback({ bank: registrationManager.currentBank, slot: registrationManager.currentSlot, preset: saved });
+      }
+    });
+
+    registrationManager.onRecallCallback = ({ bank, slot, preset }) => {
       bankBtns.forEach(b => b.classList.toggle("active", b.getAttribute("data-bank") === bank));
       slotBtns.forEach(b => b.classList.toggle("active", parseInt(b.getAttribute("data-slot")) === slot));
-      const soundSelect = document.getElementById("hud-sound-select");
-      if (soundSelect && synthEngine.activePatch) {
-        soundSelect.value = synthEngine.activePatch.id;
+      this.syncSoundDisplay();
+      const layerBtn = document.getElementById("btn-toggle-layer");
+      const layerSelect = document.getElementById("hud-layer-select");
+      const isLayerOn = preset?.isCombiMode || (multiLayerEngine.isCombiMode && (multiLayerEngine.layers[1]?.enabled ?? false));
+      if (layerBtn) {
+        layerBtn.classList.toggle("active", !!isLayerOn);
+        layerBtn.innerText = isLayerOn ? "LAYER ON" : "LAYER";
+      }
+      if (layerSelect) {
+        layerSelect.classList.toggle("active", !!isLayerOn);
       }
     };
+  }
+
+  applySelectedSound(selectedId) {
+    if (!selectedId) return;
+
+    if (selectedId.startsWith("combi:")) {
+      const combiId = selectedId.slice(6);
+      multiLayerEngine.setCombiPreset(combiId);
+      return;
+    }
+
+    if (selectedId.startsWith("split:")) {
+      const splitType = selectedId.slice(6);
+      if (splitType === "moog_ep") {
+        multiLayerEngine.toggleSplitMode(true);
+        multiLayerEngine.setSplitPointMidi(60);
+        multiLayerEngine.setSplitZoneInstrument("lower", "synth_bass_1");
+        multiLayerEngine.setSplitZoneInstrument("upper", "electric_piano_1");
+        multiLayerEngine.setSplitZoneFx("lower", "punch_comp");
+        multiLayerEngine.setSplitZoneFx("upper", "autopan_wide");
+      } else if (splitType === "slap_brass") {
+        multiLayerEngine.toggleSplitMode(true);
+        multiLayerEngine.setSplitPointMidi(57);
+        multiLayerEngine.setSplitZoneInstrument("lower", "m1_slap_bass");
+        multiLayerEngine.setSplitZoneInstrument("upper", "brass_section");
+        multiLayerEngine.setSplitZoneFx("lower", "punch_comp");
+        multiLayerEngine.setSplitZoneFx("upper", "tube_warm");
+      } else if (splitType === "upright_piano") {
+        multiLayerEngine.toggleSplitMode(true);
+        multiLayerEngine.setSplitPointMidi(60);
+        multiLayerEngine.setSplitZoneInstrument("lower", "acoustic_bass");
+        multiLayerEngine.setSplitZoneInstrument("upper", "acoustic_grand_piano");
+        multiLayerEngine.setSplitZoneFx("lower", "warm_eq");
+        multiLayerEngine.setSplitZoneFx("upper", "clean");
+      } else if (splitType === "synth_sync") {
+        multiLayerEngine.toggleSplitMode(true);
+        multiLayerEngine.setSplitPointMidi(60);
+        multiLayerEngine.setSplitZoneInstrument("lower", "synth_bass_1");
+        multiLayerEngine.setSplitZoneInstrument("upper", "va:A017");
+      }
+      return;
+    }
+
+    if (selectedId.startsWith("va:")) {
+      const progId = selectedId.slice(3);
+      const prog = getTritonProgramById(progId);
+      if (prog) {
+        multiLayerEngine.setTritonVaProgram(prog);
+        if (window.__tritonConsole && typeof window.__tritonConsole.selectProgramById === "function") {
+          window.__tritonConsole.selectProgramById(progId);
+        }
+      }
+      return;
+    }
+
+    if (selectedId.startsWith("inst:")) {
+      const instId = selectedId.slice(5);
+      multiLayerEngine.setSingleInstrument(instId);
+      synthEngine.setPatch(instId);
+      return;
+    }
+
+    // Direct fallback
+    if (COMBI_PRESETS[selectedId]) {
+      multiLayerEngine.setCombiPreset(selectedId);
+      return;
+    }
+    const tritonProg = getTritonProgramById(selectedId);
+    if (tritonProg) {
+      multiLayerEngine.setTritonVaProgram(tritonProg);
+      if (window.__tritonConsole && typeof window.__tritonConsole.selectProgramById === "function") {
+        window.__tritonConsole.selectProgramById(selectedId);
+      }
+      return;
+    }
+    multiLayerEngine.setSingleInstrument(selectedId);
+    synthEngine.setPatch(selectedId);
+  }
+
+  syncSoundDisplay() {
+    // 1. Update Live Active Sound Badge (Instant, zero lag readout)
+    const liveText = document.getElementById("hud-live-text");
+    const liveIcon = document.getElementById("hud-live-icon");
+    if (liveText) liveText.innerText = this.getActiveSoundName();
+    if (liveIcon) liveIcon.innerText = this.getSoundIcon();
+
+    // 2. Sync Performance Stacks / Combi / Split select dropdown
+    const perfSelect = document.getElementById("hud-perf-select");
+    if (perfSelect) {
+      const activeId = this.getActiveSoundId();
+      let found = false;
+      for (let i = 0; i < perfSelect.options.length; i++) {
+        if (perfSelect.options[i].value === activeId) {
+          perfSelect.selectedIndex = i;
+          found = true;
+          break;
+        }
+      }
+    }
+
+    // 3. Refresh rig slot pill titles and tooltips for current bank
+    const curBank = registrationManager.currentBank || "A";
+    const bankSlots = registrationManager.banks[curBank] || [];
+    const slotBtns = this.container.querySelectorAll(".rig-slot-pill");
+    slotBtns.forEach(btn => {
+      const slotNum = parseInt(btn.getAttribute("data-slot"));
+      const slotData = bankSlots[slotNum - 1];
+      const slotTitle = slotData?.name || `Rig ${curBank}-${slotNum}`;
+      btn.title = `Rig ${curBank}-${slotNum}: ${slotTitle}`;
+    });
   }
 
   bindPillInteractions() {
@@ -262,28 +526,11 @@ export class GigHudUI {
       if (this.onOpenLicenseModal) this.onOpenLicenseModal();
     });
 
-    // 2. Main Sound Picker
-    const soundSelect = document.getElementById("hud-sound-select");
-    soundSelect?.addEventListener("change", e => {
-      const pid = e.target.value;
-      synthEngine.setPatch(pid);
-      if (multiLayerEngine.layers[0]) {
-        multiLayerEngine.layers[0].inst = pid;
-      }
-    });
-
-    document.getElementById("hud-prev-preset")?.addEventListener("click", () => {
-      if (soundSelect && soundSelect.selectedIndex > 0) {
-        soundSelect.selectedIndex--;
-        soundSelect.dispatchEvent(new Event("change"));
-      }
-    });
-
-    document.getElementById("hud-next-preset")?.addEventListener("click", () => {
-      if (soundSelect && soundSelect.selectedIndex < soundSelect.options.length - 1) {
-        soundSelect.selectedIndex++;
-        soundSelect.dispatchEvent(new Event("change"));
-      }
+    // 2. Performance Stacks & Signature Sounds Picker
+    const perfSelect = document.getElementById("hud-perf-select");
+    perfSelect?.addEventListener("change", e => {
+      this.applySelectedSound(e.target.value);
+      this.syncSoundDisplay();
     });
 
     // 3. Layer Toggle & Sound Selection

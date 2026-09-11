@@ -122,6 +122,7 @@ class MidiKeyEliteApp {
     // 4. Korg Triton Hardware TouchView Console
     try {
       this.tritonConsole = new TritonWorkstationUI("triton-workstation-mount");
+      window.__tritonConsole = this.tritonConsole;
     } catch (e) {
       console.warn("TritonWorkstationUI init:", e);
     }
@@ -129,6 +130,7 @@ class MidiKeyEliteApp {
     // 5. Combi 4-Timbre Multi-Layer Mixer
     try {
       this.multiLayerConsole = new MultiLayerUI("multi-layer-mount");
+      window.__multiLayerConsole = this.multiLayerConsole;
     } catch (e) {
       console.warn("MultiLayerUI init:", e);
     }
