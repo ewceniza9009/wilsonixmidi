@@ -6,8 +6,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 3000",
+    "dev:desktop": "tools\\tauri-dev.bat",
     "build": "vite build",
+    "build:desktop": "tools\\tauri-build.bat",
     "preview": "vite preview",
+    "tauri": "tauri",
+    "start": "start src-tauri/target/release/wilsonix-midikey.exe",
     "gen-license": "node tools/license-generator.js"
   },
   "devDependencies": {
