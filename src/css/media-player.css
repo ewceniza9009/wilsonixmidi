@@ -644,3 +644,39 @@
   border-color: rgba(248, 113, 113, 0.5);
   background: rgba(248, 113, 113, 0.08);
 }
+
+/* Responsive Media Queries */
+@media (max-width: 900px) {
+  .media-body {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .media-player-panel {
+    flex: none;
+    width: 100%;
+  }
+  .media-playlist-panel {
+    flex: none;
+    width: 100%;
+    min-height: 200px;
+  }
+}
+
+@media (max-width: 600px) {
+  .media-console {
+    padding: 8px 10px;
+  }
+  .media-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .media-header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .media-btn {
+    padding: 5px 8px;
+    font-size: 0.60rem;
+  }
+}

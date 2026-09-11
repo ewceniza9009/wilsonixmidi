@@ -509,3 +509,36 @@
   background: linear-gradient(180deg, rgba(59, 130, 246, 0.12) 0%, rgba(245, 158, 11, 0.1) 50%, rgba(239, 68, 68, 0.18) 100%);
 }
 
+/* ==========================================================================
+   KEYBOARD RESPONSIVE SIZING FOR ALL DEVICES
+   ========================================================================== */
+@media (max-height: 820px) {
+  .piano-bed { height: 135px; }
+  .white-key { height: 125px; }
+  .black-key { height: 80px; }
+}
+
+@media (max-height: 650px) {
+  .piano-bed { height: 110px; }
+  .white-key { height: 100px; }
+  .black-key { height: 65px; }
+  .keyboard-controls-bar { margin-bottom: 2px; padding-bottom: 2px; }
+  .hud-btn { padding: 4px 6px; font-size: 0.60rem; }
+  .octave-readout { font-size: 0.82rem; min-width: 30px; }
+}
+
+@media (max-width: 768px) {
+  .keyboard-controls-bar {
+    gap: 4px;
+    padding-bottom: 2px;
+  }
+  .hud-btn {
+    padding: 4px 6px;
+    font-size: 0.62rem;
+  }
+  .wheel-track {
+    width: 16px;
+    height: 32px;
+  }
+}
+
