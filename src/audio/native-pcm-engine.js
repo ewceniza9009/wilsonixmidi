@@ -81,13 +81,29 @@ const INST_ALIASES = {
   vox_crowd_cheer: "dj_cheer_r",
 
   // Real Human Vocal Recordings
-  vox_yeah: "voice_oohs",
-  vox_hey: "voice_oohs",
+  vox_yeah: "vox_yeah_r",
+  vox_yeah_r: "vox_yeah_r",
+  vox_hey: "vox_hey_r",
+  vox_hey_r: "vox_hey_r",
+  vox_sigh: "vox_sigh_r",
+  vox_sigh_r: "vox_sigh_r",
   vox_whoa: "voice_oohs",
   vox_ohyeah: "voice_oohs",
   vox_whisper: "breath_noise",
   vox_hum: "voice_oohs",
   vox_beatbox: "drum_kick_r",
+  angelic_choir: "choir_aahs",
+
+  // Bells & Chimes
+  tubular_bells: "tubular_bells",
+  wind_chimes: "wind_chimes",
+  crystal_chimes: "crystal_chimes",
+
+  // DJ Authentic Samples
+  dj_scratch_r: "dj_scratch_r",
+  dj_partyhorn_r: "dj_partyhorn_r",
+  dj_siren_r: "dj_siren_r",
+  dj_whistle_r: "dj_whistle_r",
 
   // Real Nature Field Recordings
   seashore: "seashore",
@@ -140,6 +156,7 @@ const INST_ALIASES = {
   // Real Acoustic & Synth Drums
   taiko_drum: "taiko_drum",
   thunder_taiko: "taiko_drum",
+  percussion_taiko: "taiko_drum",
   synth_drum: "synth_drum",
   gunshot: "gunshot",
 
@@ -1463,12 +1480,16 @@ export class NativePcmEngine {
 
   async loadSoundfont(instId) {
     if (!instId || this.loadingSoundfonts.has(instId)) return;
+    if (this.sfxGenerator && this.sfxGenerator.isSfxInstrument(instId)) return;
     this.loadingSoundfonts.add(instId);
 
     try {
       const resp = await fetch(`/soundfonts/${instId}-mp3.js`);
       if (!resp.ok) return;
+      const contentType = resp.headers.get("content-type") || "";
+      if (contentType.includes("text/html")) return;
       const text = await resp.text();
+      if (!text || text.trim().startsWith("<")) return;
 
       const fn = new Function("MIDI", text);
       const MIDI = { Soundfont: {} };

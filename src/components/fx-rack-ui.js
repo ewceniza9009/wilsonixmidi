@@ -42,6 +42,9 @@ export class FxRackUI {
       else if (unit === "dB") valEl.innerText = `${v >= 0 ? "+" : ""}${v.toFixed(1)}dB`;
       else if (unit === "Hz") valEl.innerText = v >= 1000 ? `${(v / 1000).toFixed(1)}kHz` : `${Math.round(v)}Hz`;
       else if (unit === "ms") valEl.innerText = `${Math.round(v)}ms`;
+      else if (unit === ":1") valEl.innerText = `${Math.round(v)}:1`;
+      else if (unit === "bit") valEl.innerText = `${Math.round(v)}-bit`;
+      else if (unit === "x") valEl.innerText = `${v.toFixed(1)}x`;
       else if (unit === "s") valEl.innerText = v < 0.2 ? `${Math.round(v * 1000)}ms` : `${v.toFixed(1)}s`;
       else valEl.innerText = `${v.toFixed(1)}${unit}`;
     }
@@ -86,6 +89,43 @@ export class FxRackUI {
                   <div class="knob-face"><div class="knob-pointer"></div></div>
                   <span class="knob-label">PEDAL NOISE</span>
                   <span class="knob-value">40%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Device 0B: Studio Dynamics Compressor & Peak Leveler -->
+          <div class="ableton-device-box" id="dev-compressor">
+            <div class="device-bar">
+              <button class="dev-power-btn" data-dev="compressor">OFF</button>
+              <span class="dev-name">STUDIO MASTER COMPRESSOR</span>
+            </div>
+            <div class="dev-body">
+              <div class="knob-group">
+                <div class="rotary-knob" data-param="comp-thresh" data-min="-60" data-max="0" data-val="-24" data-unit="dB">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">THRESH</span>
+                  <span class="knob-value">-24.0dB</span>
+                </div>
+                <div class="rotary-knob" data-param="comp-ratio" data-min="1" data-max="20" data-val="4" data-unit=":1">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">RATIO</span>
+                  <span class="knob-value">4:1</span>
+                </div>
+                <div class="rotary-knob" data-param="comp-attack" data-min="1" data-max="200" data-val="15" data-unit="ms">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">ATTACK</span>
+                  <span class="knob-value">15ms</span>
+                </div>
+                <div class="rotary-knob" data-param="comp-makeup" data-min="0" data-max="18" data-val="3" data-unit="dB">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">MAKEUP</span>
+                  <span class="knob-value">+3.0dB</span>
+                </div>
+                <div class="rotary-knob" data-param="comp-mix" data-min="0" data-max="1" data-val="0.85" data-unit="%">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">MIX</span>
+                  <span class="knob-value">85%</span>
                 </div>
               </div>
             </div>
@@ -234,6 +274,65 @@ export class FxRackUI {
                   <div class="knob-face"><div class="knob-pointer"></div></div>
                   <span class="knob-label">TONE</span>
                   <span class="knob-value">12kHz</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Device 6B: Retro Bitcrusher & Sample Decimator -->
+          <div class="ableton-device-box" id="dev-bitcrusher">
+            <div class="device-bar">
+              <button class="dev-power-btn" data-dev="bitcrusher">OFF</button>
+              <span class="dev-name">RETRO BITCRUSHER / DECIMATOR</span>
+            </div>
+            <div class="dev-body">
+              <div class="knob-group">
+                <div class="rotary-knob" data-param="crush-bits" data-min="2" data-max="16" data-val="8" data-unit="bit">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">BITS</span>
+                  <span class="knob-value">8-bit</span>
+                </div>
+                <div class="rotary-knob" data-param="crush-downsample" data-min="1000" data-max="20000" data-val="8000" data-unit="Hz">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">DOWNSAMPLE</span>
+                  <span class="knob-value">8.0kHz</span>
+                </div>
+                <div class="rotary-knob" data-param="crush-drive" data-min="1" data-max="4" data-val="1.2" data-unit="x">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">DRIVE</span>
+                  <span class="knob-value">1.2x</span>
+                </div>
+                <div class="rotary-knob" data-param="crush-mix" data-min="0" data-max="1" data-val="0.65" data-unit="%">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">MIX</span>
+                  <span class="knob-value">65%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Device 6C: Haas & Mid-Side Stereo Spatial Widener -->
+          <div class="ableton-device-box" id="dev-widener">
+            <div class="device-bar">
+              <button class="dev-power-btn" data-dev="stereo-widener">OFF</button>
+              <span class="dev-name">HAAS STEREO SPATIAL WIDENER</span>
+            </div>
+            <div class="dev-body">
+              <div class="knob-group">
+                <div class="rotary-knob" data-param="widener-width" data-min="0" data-max="2.5" data-val="1.4" data-unit="%">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">WIDTH</span>
+                  <span class="knob-value">140%</span>
+                </div>
+                <div class="rotary-knob" data-param="widener-haas" data-min="1" data-max="35" data-val="18" data-unit="ms">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">HAAS DELAY</span>
+                  <span class="knob-value">18ms</span>
+                </div>
+                <div class="rotary-knob" data-param="widener-mix" data-min="0" data-max="1" data-val="0.70" data-unit="%">
+                  <div class="knob-face"><div class="knob-pointer"></div></div>
+                  <span class="knob-label">MIX</span>
+                  <span class="knob-value">70%</span>
                 </div>
               </div>
             </div>
@@ -441,6 +540,11 @@ export class FxRackUI {
         if (valEl) {
           if (unit === "%") valEl.innerText = `${Math.round(norm * 100)}%`;
           else if (unit === "dB") valEl.innerText = `${v >= 0 ? "+" : ""}${v.toFixed(1)}dB`;
+          else if (unit === "Hz") valEl.innerText = v >= 1000 ? `${(v / 1000).toFixed(1)}kHz` : `${Math.round(v)}Hz`;
+          else if (unit === "ms") valEl.innerText = `${Math.round(v)}ms`;
+          else if (unit === ":1") valEl.innerText = `${Math.round(v)}:1`;
+          else if (unit === "bit") valEl.innerText = `${Math.round(v)}-bit`;
+          else if (unit === "x") valEl.innerText = `${v.toFixed(1)}x`;
           else valEl.innerText = `${v.toFixed(1)}${unit}`;
         }
       };
@@ -501,6 +605,45 @@ export class FxRackUI {
         break;
       case "piano-pedal-noise":
         fx.pianoAcoustics?.setPedalNoise(val);
+        break;
+
+      case "comp-thresh":
+        fx.compressor?.setThreshold(val);
+        break;
+      case "comp-ratio":
+        fx.compressor?.setRatio(val);
+        break;
+      case "comp-attack":
+        fx.compressor?.setAttack(val / 1000);
+        break;
+      case "comp-makeup":
+        fx.compressor?.setMakeup(val);
+        break;
+      case "comp-mix":
+        fx.compressor?.setMix(val);
+        break;
+
+      case "crush-bits":
+        fx.bitcrusher?.setBits(val);
+        break;
+      case "crush-downsample":
+        fx.bitcrusher?.setDownsample(val);
+        break;
+      case "crush-drive":
+        fx.bitcrusher?.setDrive(val);
+        break;
+      case "crush-mix":
+        fx.bitcrusher?.setMix(val);
+        break;
+
+      case "widener-width":
+        fx.stereoWidener?.setWidth(val);
+        break;
+      case "widener-haas":
+        fx.stereoWidener?.setHaasDelay(val);
+        break;
+      case "widener-mix":
+        fx.stereoWidener?.setMix(val);
         break;
 
       case "autopan-rate":
@@ -633,6 +776,9 @@ export class FxRackUI {
         const fx = audioCore.fxRack;
 
         if (dev === "piano-acoustics") fx.pianoAcoustics?.setBypass(bypassed);
+        if (dev === "compressor") fx.compressor?.setBypass(bypassed);
+        if (dev === "bitcrusher") fx.bitcrusher?.setBypass(bypassed);
+        if (dev === "stereo-widener") fx.stereoWidener?.setBypass(bypassed);
         if (dev === "autopan") fx.autopan.setBypass(bypassed);
         if (dev === "chorus") fx.chorus.setBypass(bypassed);
         if (dev === "reverb") fx.reverb.setBypass(bypassed);
@@ -674,6 +820,9 @@ export class FxRackUI {
 
     const devMap = {
       "piano-acoustics": fx.pianoAcoustics?.enabled,
+      compressor: fx.compressor?.enabled,
+      bitcrusher: fx.bitcrusher?.enabled,
+      "stereo-widener": fx.stereoWidener?.enabled,
       autopan: fx.autopan?.enabled,
       chorus: fx.chorus?.enabled,
       reverb: fx.reverb?.enabled,
@@ -708,6 +857,24 @@ export class FxRackUI {
     }
 
     // Sync all knob parameters
+    if (fx.compressor) {
+      this.updateKnobVisual("comp-thresh", fx.compressor.threshold);
+      this.updateKnobVisual("comp-ratio", fx.compressor.ratio);
+      this.updateKnobVisual("comp-attack", fx.compressor.attack * 1000);
+      this.updateKnobVisual("comp-makeup", fx.compressor.makeup);
+      this.updateKnobVisual("comp-mix", fx.compressor.mix);
+    }
+    if (fx.bitcrusher) {
+      this.updateKnobVisual("crush-bits", fx.bitcrusher.bits);
+      this.updateKnobVisual("crush-downsample", fx.bitcrusher.downsampleFreq);
+      this.updateKnobVisual("crush-drive", fx.bitcrusher.drive);
+      this.updateKnobVisual("crush-mix", fx.bitcrusher.mix);
+    }
+    if (fx.stereoWidener) {
+      this.updateKnobVisual("widener-width", fx.stereoWidener.width);
+      this.updateKnobVisual("widener-haas", fx.stereoWidener.haasDelayMs);
+      this.updateKnobVisual("widener-mix", fx.stereoWidener.mix);
+    }
     if (fx.autopan) {
       this.updateKnobVisual("autopan-rate", fx.autopan.rate);
       this.updateKnobVisual("autopan-depth", fx.autopan.depth);

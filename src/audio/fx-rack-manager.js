@@ -24,6 +24,9 @@ import { DubSpaceEcho } from "./effects/dub-echo.js";
 import { DynamicAutoWah } from "./effects/auto-wah.js";
 import { TalkboxFormantFilter } from "./effects/talkbox-filter.js";
 import { VinylLoFiTape } from "./effects/vinyl-lofi.js";
+import { StudioCompressor } from "./effects/compressor.js";
+import { BitcrusherDecimator } from "./effects/bitcrusher.js";
+import { HaasStereoWidener } from "./effects/stereo-widener.js";
 
 export class FxRackManager {
   constructor(ctx) {
@@ -33,10 +36,13 @@ export class FxRackManager {
 
     // Instantiate all elite effects
     this.pianoAcoustics = new GrandPianoAcoustics(ctx);
+    this.compressor = new StudioCompressor(ctx);
     this.autoWah = new DynamicAutoWah(ctx);
     this.talkbox = new TalkboxFormantFilter(ctx);
     this.tube = new TubeDrive(ctx);
+    this.bitcrusher = new BitcrusherDecimator(ctx);
     this.vinylLoFi = new VinylLoFiTape(ctx);
+    this.stereoWidener = new HaasStereoWidener(ctx);
     this.autopan = new AutoPan(ctx);
     this.phaser = new StereoPhaser(ctx);
     this.flanger = new StereoFlanger(ctx);
@@ -118,10 +124,13 @@ export class FxRackManager {
 
     const chain = [
       this.pianoAcoustics,
+      this.compressor,
       this.autoWah,
       this.talkbox,
       this.tube,
+      this.bitcrusher,
       this.vinylLoFi,
+      this.stereoWidener,
       this.autopan,
       this.phaser,
       this.flanger,
@@ -156,10 +165,13 @@ export class FxRackManager {
 
     // Default: 100% Clean Studio Concert Grand (Pure pristine samples)
     this.pianoAcoustics.setBypass(true);
+    this.compressor.setBypass(true);
     this.autoWah.setBypass(true);
     this.talkbox.setBypass(true);
     this.tube.setBypass(true);
+    this.bitcrusher.setBypass(true);
     this.vinylLoFi.setBypass(true);
+    this.stereoWidener.setBypass(true);
     this.autopan.setBypass(true);
     this.phaser.setBypass(true);
     this.flanger.setBypass(true);
@@ -199,9 +211,12 @@ export class FxRackManager {
     this._bootstrapping = true;
     try {
       // Reset all modulation/time-based units
+      this.compressor.setBypass(true);
       this.autoWah.setBypass(true);
       this.talkbox.setBypass(true);
+      this.bitcrusher.setBypass(true);
       this.vinylLoFi.setBypass(true);
+      this.stereoWidener.setBypass(true);
       this.flanger.setBypass(true);
       this.tremolo.setBypass(true);
       this.slapback.setBypass(true);

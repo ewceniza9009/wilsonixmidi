@@ -99,11 +99,32 @@ export const HD_SOUNDBANKS = {
   dub_horn: { id: "dub_horn", name: "🎺 Dancehall Airhorn Blast", category: "Reggae & Dub SFX" },
   sub_boom: { id: "sub_boom", name: "💣 Heavy 808 Sub-Boom", category: "Reggae & Dub SFX" },
   noise_riser: { id: "noise_riser", name: "🌊 White Noise Sweep Riser", category: "Reggae & Dub SFX" },
+  fx_sub_resonator: { id: "fx_sub_resonator", name: "Sub-Atomic Resonator", category: "Weird & Sci-Fi FX" },
+
+  // Human Vocals & Choir
+  voice_oohs: { id: "voice_oohs", name: "Soul Gospel Vocal Oohs", category: "Human Voices" },
+  vox_yeah_r: { id: "vox_yeah_r", name: "Soul Vocal 'Yeah!' Shout", category: "Human Voices" },
+  vox_hey_r: { id: "vox_hey_r", name: "Hype Vocal 'Hey!' Shout", category: "Human Voices" },
+  angelic_choir: { id: "angelic_choir", name: "Angelic Worship Choir", category: "Human Voices" },
+  vox_hum: { id: "vox_hum", name: "Deep Male Vocal Hum", category: "Human Voices" },
+
+  // Bells & Chimes
+  tubular_bells: { id: "tubular_bells", name: "Orchestral Tubular Chimes", category: "Bells & Mallet" },
+  wind_chimes: { id: "wind_chimes", name: "Mark Tree Wind Chimes", category: "Bells & Mallet" },
+  crystal_chimes: { id: "crystal_chimes", name: "Crystal Shimmer Chimes", category: "Bells & Mallet" },
+
+  // Authentic DJ Samples
+  dj_scratch_r: { id: "dj_scratch_r", name: "Authentic Vinyl Scratch", category: "DJ & Cinematic FX" },
+  dj_partyhorn_r: { id: "dj_partyhorn_r", name: "Dancehall Reggae Airhorn", category: "DJ & Cinematic FX" },
+  dj_siren_r: { id: "dj_siren_r", name: "Sound System Dub Siren", category: "DJ & Cinematic FX" },
+  dj_whistle_r: { id: "dj_whistle_r", name: "Carnival Samba Whistle", category: "DJ & Cinematic FX" },
 
   // Percussions & Drums
   tr808_kit: { id: "tr808_kit", name: "TR-808 Analog Drum Kit", category: "Percussion & Drums" },
   percussion_conga: { id: "percussion_conga", name: "Afro-Cuban Congas", category: "Percussion & Drums" },
   percussion_shaker: { id: "percussion_shaker", name: "Latin Shaker & Maracas", category: "Percussion & Drums" },
+  taiko_drum: { id: "taiko_drum", name: "Cinematic Taiko Impact", category: "Percussion & Drums" },
+  percussion_taiko: { id: "taiko_drum", name: "Cinematic Taiko Impact", category: "Percussion & Drums" },
   // Synthesizer You (Ripped Sounds & Loops)
   sy_surf_spring: { id: "sy_surf_spring", name: "🏄 Synthesizer You - Surf Lead Riff", category: "Synthesizer You (80s)" },
   sy_chorus_swell: { id: "sy_chorus_swell", name: "🎹 Synthesizer You - Juno Chorus Pad Swell", category: "Synthesizer You (80s)" },
@@ -899,7 +920,10 @@ export class MultiLayerEngine {
       m1_ooh_ahh: "choir_aahs",
       ooh_ahh: "choir_aahs",
       choir_aahs: "choir_aahs",
-      voice_oohs: "choir_aahs",
+      voice_oohs: "voice_oohs",
+      tubular_bells: "tubular_bells",
+      wind_chimes: "wind_chimes",
+      crystal_chimes: "crystal_chimes",
       m1_piano_16: "acoustic_grand_piano",
       m1_organ_2: "drawbar_organ",
       m1_slap_bass: "synth_bass_1",
@@ -916,6 +940,9 @@ export class MultiLayerEngine {
       m1_12string: "acoustic_guitar_steel",
       m1_koto: "harpsichord",
       m1_bell_ring: "vibraphone",
+      taiko_drum: "taiko_drum",
+      percussion_taiko: "taiko_drum",
+      thunder_taiko: "taiko_drum",
     };
     return BANK_MAP[instKey] || instKey;
   }

@@ -2281,14 +2281,14 @@ body.mobile-stage-keys .studio-keyboard-deck {
   display: none !important;
 }
 
-/* 3. Ableton FX Rack View Mode (100% inside bay, zero scrolling!) */
+/* 3. Ableton FX Rack View Mode (100% inside bay, compact & readable!) */
 #app-root.view-fx #fx-rack-mount {
   display: flex !important;
   flex-direction: column;
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  justify-content: center;
+  justify-content: flex-start;
 }
 #app-root.view-fx #triton-workstation-mount,
 #app-root.view-fx #multi-layer-mount,
@@ -2300,7 +2300,8 @@ body.mobile-stage-keys .studio-keyboard-deck {
 }
 
 #app-root.view-fx .fx-rack-strip {
-  margin: auto 0;
+  margin: 0;
+  height: 100%;
 }
 
 /* 4. Chord Pads & Looper View Mode */

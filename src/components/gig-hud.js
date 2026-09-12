@@ -292,7 +292,7 @@ export class GigHudUI {
                 )
                 .join("")}
             </div>
-            <button class="rig-save-btn" id="hud-rig-save-btn" title="Store Current Sound & FX to Active Slot (Shift+F${curSlot})">💾 STORE</button>
+            <button class="rig-save-btn" id="hud-rig-save-btn" title="Store Current Sound & FX to Active Slot (Shift+F${curSlot})">💾</button>
           </div>
 
           <!-- Master WAV Recorder -->

@@ -234,6 +234,9 @@ export class TritonWorkstationUI {
 
   renderIfxMfxMatrix() {
     const fx = audioCore.fxRack;
+    const isCompressor = fx?.compressor?.enabled;
+    const isBitcrusher = fx?.bitcrusher?.enabled;
+    const isWidener = fx?.stereoWidener?.enabled;
     const isAutopan = fx?.autopan?.enabled;
     const isChorus = fx?.chorus?.enabled;
     const isTube = fx?.tube?.enabled;
@@ -247,15 +250,30 @@ export class TritonWorkstationUI {
     return `
       <div class="ifx-mfx-workspace">
         <div class="ifx-mfx-header">
-          <span class="ifx-title">MULTI-EFFECTS ROUTING MATRIX (IFX 1-5 + MFX 1-2 + MEQ)</span>
+          <span class="ifx-title">MULTI-EFFECTS ROUTING MATRIX (IFX 1-10 + MFX 1-2 + MEQ)</span>
           <span class="ifx-chip">102 EFFECT ALGORITHMS</span>
         </div>
 
         <div class="ifx-mfx-grid">
-          <!-- 5 Insert Effects (IFX) -->
+          <!-- Insert Effects (IFX) -->
           <div class="ifx-column">
             <h4 class="ifx-col-title">INSERT EFFECTS (IFX)</h4>
             
+            <!-- IFX 0: Studio Dynamics Compressor -->
+            <div class="ifx-slot-card">
+              <div class="slot-bar">
+                <span class="slot-tag">IFX 0</span>
+                <span class="slot-name">001: Studio Dynamics Compressor</span>
+                <button class="slot-toggle ${isCompressor ? "active" : ""}" data-fx="compressor">${isCompressor ? "ON" : "OFF"}</button>
+              </div>
+              <div class="slot-knobs">
+                <div class="slot-param"><span>THRESH</span><input type="range" class="fx-slider" data-fx-param="comp-thresh" min="-60" max="0" step="1" value="${fx?.compressor?.threshold || -24}"/></div>
+                <div class="slot-param"><span>RATIO</span><input type="range" class="fx-slider" data-fx-param="comp-ratio" min="1" max="20" step="0.5" value="${fx?.compressor?.ratio || 4}"/></div>
+                <div class="slot-param"><span>MAKEUP</span><input type="range" class="fx-slider" data-fx-param="comp-makeup" min="0" max="18" step="0.5" value="${fx?.compressor?.makeup || 3}"/></div>
+                <div class="slot-param"><span>MIX</span><input type="range" class="fx-slider" data-fx-param="comp-mix" min="0" max="1" step="0.05" value="${fx?.compressor?.mix || 0.85}"/></div>
+              </div>
+            </div>
+
             <!-- IFX 1: Rhodes Stereo Auto-Pan & Optical Tremolo -->
             <div class="ifx-slot-card">
               <div class="slot-bar">
@@ -347,6 +365,34 @@ export class TritonWorkstationUI {
                 <div class="slot-param"><span>RATE</span><input type="range" class="fx-slider" data-fx-param="tremolo-rate" min="0.2" max="12.0" step="0.1" value="${fx?.tremolo?.rate || 4.5}"/></div>
                 <div class="slot-param"><span>DEPTH</span><input type="range" class="fx-slider" data-fx-param="tremolo-depth" min="0" max="1" step="0.05" value="${fx?.tremolo?.depth || 0.55}"/></div>
                 <div class="slot-param"><span>MIX</span><input type="range" class="fx-slider" data-fx-param="tremolo-mix" min="0" max="1" step="0.05" value="${fx?.tremolo?.mix || 0.6}"/></div>
+              </div>
+            </div>
+
+            <!-- IFX 8: Retro Bitcrusher & Sample Decimator -->
+            <div class="ifx-slot-card">
+              <div class="slot-bar">
+                <span class="slot-tag">IFX 8</span>
+                <span class="slot-name">014: Retro Bitcrusher / Decimator</span>
+                <button class="slot-toggle ${isBitcrusher ? "active" : ""}" data-fx="bitcrusher">${isBitcrusher ? "ON" : "OFF"}</button>
+              </div>
+              <div class="slot-knobs">
+                <div class="slot-param"><span>BITS</span><input type="range" class="fx-slider" data-fx-param="crush-bits" min="2" max="16" step="1" value="${fx?.bitcrusher?.bits || 8}"/></div>
+                <div class="slot-param"><span>DOWNSAMPLE</span><input type="range" class="fx-slider" data-fx-param="crush-downsample" min="1000" max="20000" step="500" value="${fx?.bitcrusher?.downsampleFreq || 8000}"/></div>
+                <div class="slot-param"><span>MIX</span><input type="range" class="fx-slider" data-fx-param="crush-mix" min="0" max="1" step="0.05" value="${fx?.bitcrusher?.mix || 0.65}"/></div>
+              </div>
+            </div>
+
+            <!-- IFX 9: Haas Stereo Spatial Widener -->
+            <div class="ifx-slot-card">
+              <div class="slot-bar">
+                <span class="slot-tag">IFX 9</span>
+                <span class="slot-name">038: Haas Stereo Spatial Widener</span>
+                <button class="slot-toggle ${isWidener ? "active" : ""}" data-fx="stereo-widener">${isWidener ? "ON" : "OFF"}</button>
+              </div>
+              <div class="slot-knobs">
+                <div class="slot-param"><span>WIDTH</span><input type="range" class="fx-slider" data-fx-param="widener-width" min="0" max="2.5" step="0.1" value="${fx?.stereoWidener?.width || 1.4}"/></div>
+                <div class="slot-param"><span>HAAS DELAY</span><input type="range" class="fx-slider" data-fx-param="widener-haas" min="1" max="35" step="1" value="${fx?.stereoWidener?.haasDelayMs || 18}"/></div>
+                <div class="slot-param"><span>MIX</span><input type="range" class="fx-slider" data-fx-param="widener-mix" min="0" max="1" step="0.05" value="${fx?.stereoWidener?.mix || 0.70}"/></div>
               </div>
             </div>
           </div>
@@ -650,110 +696,242 @@ export class TritonWorkstationUI {
     const name = (prog.name || "").toLowerCase();
     const cat = (prog.category || "").toLowerCase();
 
-    // Healthy default trim
+    // Healthy default trim & disengage all series units to keep processing lean
     fx.setPresetTrim(1.0);
-    fx.tube.setBypass(true);
-    fx.autopan.setBypass(true);
-    fx.phaser.setBypass(true);
-    fx.flanger.setBypass(true);
-    fx.chorus.setBypass(true);
-    fx.rotary.setBypass(true);
-    fx.tremolo.setBypass(true);
-    fx.slapback.setBypass(true);
-    fx.delay.setBypass(true);
-    fx.springReverb.setBypass(true);
-    fx.gatedReverb.setBypass(true);
-    fx.tapeSat.setBypass(true);
-    fx.reverb.setBypass(false);
-    fx.reverb.setMix(0.12);
-    fx.reverb.setDecay(1.6);
-    fx.masterEq.setLowGain(0);
-    fx.masterEq.setMidGain(0);
-    fx.masterEq.setHighGain(0);
+    fx.compressor?.setBypass(true);
+    fx.autoWah?.setBypass(true);
+    fx.talkbox?.setBypass(true);
+    fx.tube?.setBypass(true);
+    fx.bitcrusher?.setBypass(true);
+    fx.vinylLoFi?.setBypass(true);
+    fx.stereoWidener?.setBypass(true);
+    fx.autopan?.setBypass(true);
+    fx.phaser?.setBypass(true);
+    fx.flanger?.setBypass(true);
+    fx.chorus?.setBypass(true);
+    fx.rotary?.setBypass(true);
+    fx.tremolo?.setBypass(true);
+    fx.slapback?.setBypass(true);
+    fx.dubEcho?.setBypass(true);
+    fx.delay?.setBypass(true);
+    fx.springReverb?.setBypass(true);
+    fx.gatedReverb?.setBypass(true);
+    fx.tapeSat?.setBypass(true);
+    fx.reverb?.setBypass(false);
+    fx.reverb?.setMix(0.12);
+    fx.reverb?.setDecay(1.6);
+    fx.masterEq?.setLowGain(0);
+    fx.masterEq?.setMidGain(0);
+    fx.masterEq?.setHighGain(0);
 
     const has = (s) => ifx.includes(s) || mfx.includes(s) || name.includes(s);
 
-    if (has("overdrive") || has("distortion") || has(" tube")) {
-      fx.tube.setBypass(false);
-      if (has("distortion")) {
-        fx.tube.setDrive(0.45);
-        fx.tube.setTone(6000); // bright, not muffled
+    // 1. DYNAMICS & COMPRESSION PRESETS
+    if (
+      has("compressor") ||
+      has("limiter") ||
+      has("punch") ||
+      cat.includes("percussion") ||
+      cat.includes("drum") ||
+      name.includes("fat brass") ||
+      name.includes("velo piano") ||
+      name.includes("piano 16") ||
+      name.includes("pick bass") ||
+      name.includes("beatbox")
+    ) {
+      fx.compressor?.setBypass(false);
+      if (cat.includes("percussion") || cat.includes("drum") || name.includes("beatbox")) {
+        // Punchy fast drum bus compression
+        fx.compressor?.setThreshold(-20);
+        fx.compressor?.setRatio(6.0);
+        fx.compressor?.setAttack(0.008);
+        fx.compressor?.setRelease(0.12);
+        fx.compressor?.setMakeup(4.0);
+        fx.compressor?.setMix(0.90);
+      } else if (name.includes("bass") || cat.includes("bass")) {
+        // Tight, leveled bass control
+        fx.compressor?.setThreshold(-24);
+        fx.compressor?.setRatio(4.5);
+        fx.compressor?.setAttack(0.015);
+        fx.compressor?.setRelease(0.18);
+        fx.compressor?.setMakeup(3.5);
+        fx.compressor?.setMix(0.85);
+      } else if (name.includes("piano") || cat.includes("keyboard")) {
+        // Transparent acoustic piano sustain and peak leveling
+        fx.compressor?.setThreshold(-18);
+        fx.compressor?.setRatio(3.0);
+        fx.compressor?.setAttack(0.025);
+        fx.compressor?.setRelease(0.25);
+        fx.compressor?.setMakeup(2.5);
+        fx.compressor?.setMix(0.80);
       } else {
-        fx.tube.setDrive(0.32);
-        fx.tube.setTone(5500);
+        // Bold brass and lead dynamics
+        fx.compressor?.setThreshold(-22);
+        fx.compressor?.setRatio(4.0);
+        fx.compressor?.setAttack(0.012);
+        fx.compressor?.setRelease(0.20);
+        fx.compressor?.setMakeup(3.0);
+        fx.compressor?.setMix(0.85);
       }
-      fx.tube.setMix(0.50);
     }
+
+    // 2. RETRO BITCRUSHER & DECIMATOR PRESETS
+    if (
+      has("decimat") ||
+      has("bit") ||
+      has("glitch") ||
+      has("chiptune") ||
+      has("bionic") ||
+      has("lfo trance") ||
+      has("techno phonic") ||
+      has("slap synth bass")
+    ) {
+      fx.bitcrusher?.setBypass(false);
+      if (has("bionic") || has("glitch")) {
+        // Heavy 4-bit crunchy alien foldback
+        fx.bitcrusher?.setBits(4);
+        fx.bitcrusher?.setDownsample(3800);
+        fx.bitcrusher?.setDrive(2.0);
+        fx.bitcrusher?.setMix(0.80);
+      } else if (has("techno phonic") || has("lfo trance")) {
+        // Classic 8-bit DAC bite and downsampled resonance
+        fx.bitcrusher?.setBits(8);
+        fx.bitcrusher?.setDownsample(7000);
+        fx.bitcrusher?.setDrive(1.3);
+        fx.bitcrusher?.setMix(0.65);
+      } else {
+        // 10-bit vintage sampler character
+        fx.bitcrusher?.setBits(10);
+        fx.bitcrusher?.setDownsample(9500);
+        fx.bitcrusher?.setDrive(1.2);
+        fx.bitcrusher?.setMix(0.50);
+      }
+    }
+
+    // 3. HAAS STEREO SPATIAL WIDENER PRESETS
+    if (
+      has("dimension") ||
+      has("wide") ||
+      has("spatial") ||
+      has("universe") ||
+      has("nimbus") ||
+      has("ooh-ahh") ||
+      has("ooh_ahh") ||
+      has("chair of light") ||
+      has("angelic") ||
+      has("12-string") ||
+      has("abletunes") ||
+      has("chime") ||
+      has("tubular") ||
+      cat.includes("choir")
+    ) {
+      fx.stereoWidener?.setBypass(false);
+      fx.stereoWidener?.setWidth(1.6);
+      fx.stereoWidener?.setHaasDelay(20);
+      fx.stereoWidener?.setMix(0.80);
+    }
+
+    // 4. OVERDRIVE & TUBE SATURATION
+    if (has("overdrive") || has("distortion") || has(" tube")) {
+      fx.tube?.setBypass(false);
+      if (has("distortion")) {
+        fx.tube?.setDrive(0.48);
+        fx.tube?.setTone(6200);
+      } else {
+        fx.tube?.setDrive(0.32);
+        fx.tube?.setTone(5500);
+      }
+      fx.tube?.setMix(0.55);
+    }
+
+    // 5. MODULATION
     if (has("phaser")) {
-      fx.phaser.setBypass(false);
-      fx.phaser.setRate(1.0);
-      fx.phaser.setMix(0.30);
+      fx.phaser?.setBypass(false);
+      fx.phaser?.setRate(1.0);
+      fx.phaser?.setMix(0.35);
     }
     if (has("flanger")) {
-      fx.flanger.setBypass(false);
-      fx.flanger.setRate(0.45);
-      fx.flanger.setMix(0.30);
+      fx.flanger?.setBypass(false);
+      fx.flanger?.setRate(0.45);
+      fx.flanger?.setMix(0.35);
     }
     if (has("chorus") || has("ensemble")) {
-      fx.chorus.setBypass(false);
-      fx.chorus.setRate(0.85);
-      fx.chorus.setDepth(0.7);
-      fx.chorus.setMix(0.35);
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setRate(0.85);
+      fx.chorus?.setDepth(0.75);
+      fx.chorus?.setMix(0.40);
     }
     if (has("rotary")) {
-      fx.rotary.setBypass(false);
-      fx.rotary.setMix(0.45);
+      fx.rotary?.setBypass(false);
+      fx.rotary?.setMix(0.50);
     }
     if (has("tremolo") || has("pan")) {
-      fx.tremolo.setBypass(false);
-      fx.tremolo.setDepth(0.4);
-      fx.tremolo.setMix(0.35);
+      fx.tremolo?.setBypass(false);
+      fx.tremolo?.setDepth(0.45);
+      fx.tremolo?.setMix(0.40);
     }
+
+    // 6. DELAYS & ECHOES
     if (has("delay") || has("echo") || has("ping-pong")) {
-      fx.delay.setBypass(false);
-      fx.delay.setMix(0.30);
-      fx.delay.setFeedback(0.35);
+      fx.delay?.setBypass(false);
+      fx.delay?.setMix(0.32);
+      fx.delay?.setFeedback(0.38);
       if (has("dotted") || has("dub") || has("ping-pong")) {
-        fx.delay.setDivision(0.375);
+        fx.delay?.setDivision(0.375);
       }
     }
+    if (has("slapback")) {
+      fx.slapback?.setBypass(false);
+      fx.slapback?.setMix(0.38);
+    }
+
+    // 7. REVERBS
     if (has("spring")) {
-      fx.springReverb.setBypass(false);
-      fx.springReverb.setMix(0.35);
-      fx.springReverb.setDecay(2.2);
+      fx.springReverb?.setBypass(false);
+      fx.springReverb?.setMix(0.35);
+      fx.springReverb?.setDecay(2.2);
     }
     if (has("gated")) {
-      fx.gatedReverb.setBypass(false);
-      fx.gatedReverb.setMix(0.35);
+      fx.gatedReverb?.setBypass(false);
+      fx.gatedReverb?.setMix(0.38);
     } else if (has("cathedral") || has("hall")) {
-      fx.reverb.setBypass(false);
-      fx.reverb.setMix(0.20);
-      fx.reverb.setDecay(2.0);
+      fx.reverb?.setBypass(false);
+      fx.reverb?.setMix(0.22);
+      fx.reverb?.setDecay(2.2);
     } else if (has("plate") || has("room")) {
-      fx.reverb.setBypass(false);
-      fx.reverb.setMix(0.15);
-      fx.reverb.setDecay(1.4);
+      fx.reverb?.setBypass(false);
+      fx.reverb?.setMix(0.16);
+      fx.reverb?.setDecay(1.5);
     }
+
+    // 8. TAPE & VINYL
     if (has("tape") && !has("tape delay")) {
-      fx.tapeSat.setBypass(false);
-      fx.tapeSat.setDrive(0.30);
-      fx.tapeSat.setWarmth(0.6);
+      fx.tapeSat?.setBypass(false);
+      fx.tapeSat?.setDrive(0.32);
+      fx.tapeSat?.setWarmth(0.65);
     }
-    if (has("auto-wah") || has("wah")) {
-      // Vibrato-style movement + resonant filter flavor
-      fx.phaser.setBypass(false);
-      fx.phaser.setRate(2.6);
-      fx.phaser.setMix(0.40);
+    if (has("vinyl") || has("lofi") || has("lo-fi") || has("crackle")) {
+      fx.vinylLoFi?.setBypass(false);
+      fx.vinylLoFi?.setWobble(0.45);
+      fx.vinylLoFi?.setMix(0.60);
     }
+
+    // 9. TALKBOX & AUTO-WAH
+    if (has("auto-wah") || has("wah") || has("clavinet")) {
+      fx.autoWah?.setBypass(false);
+      fx.autoWah?.setSensitivity(1.0);
+      fx.autoWah?.setResonance(2.2);
+    }
+    if (has("talkbox") || has("throats")) {
+      fx.talkbox?.setBypass(false);
+      fx.talkbox?.setMix(0.45);
+    }
+
+    // 10. STUDIO EQ ENHANCER
     if (has(" paramet") || has("eq")) {
-      fx.masterEq.setLowGain(1.0);
-      fx.masterEq.setMidGain(0.6);
-      fx.masterEq.setHighGain(1.4);
-    }
-    if (has("decimat") || has("bit") || has("mega")) {
-      // Grungy digital character
-      fx.reverb.setBypass(false);
-      fx.reverb.setMix(0.10);
+      fx.masterEq?.setLowGain(1.0);
+      fx.masterEq?.setMidGain(0.6);
+      fx.masterEq?.setHighGain(1.4);
     }
 
     this.syncFxPowerButtons();
@@ -762,11 +940,27 @@ export class TritonWorkstationUI {
   syncFxPowerButtons() {
     const fx = audioCore.fxRack;
     if (!fx) return;
-    const fxDevs = ["autopan", "chorus", "tube", "phaser", "flanger", "rotary", "tremolo", "delay", "reverb", "springReverb", "gatedReverb", "tapeSat"];
-    fxDevs.forEach(dev => {
-      const unit = fx[dev];
+    const fxDevMap = {
+      compressor: "compressor",
+      bitcrusher: "bitcrusher",
+      stereoWidener: "stereo-widener",
+      autopan: "autopan",
+      chorus: "chorus",
+      tube: "tube",
+      phaser: "phaser",
+      flanger: "flanger",
+      rotary: "rotary",
+      tremolo: "tremolo",
+      delay: "delay",
+      reverb: "reverb",
+      springReverb: "spring-reverb",
+      gatedReverb: "gated-reverb",
+      tapeSat: "tape-sat",
+    };
+    Object.entries(fxDevMap).forEach(([fxKey, devDomName]) => {
+      const unit = fx[fxKey];
       const isEn = unit && unit.enabled !== false;
-      const btn = document.querySelector(`.dev-power-btn[data-dev="${dev}"]`);
+      const btn = document.querySelector(`.dev-power-btn[data-dev="${devDomName}"]`);
       if (btn) {
         btn.classList.toggle("active", !!isEn);
         btn.innerText = isEn ? "ON" : "OFF";
@@ -786,8 +980,9 @@ export class TritonWorkstationUI {
         btn.innerText = isNowActive ? "ON" : "OFF";
         const bypassed = !isNowActive;
 
-        if (fx[fxKey] && typeof fx[fxKey].setBypass === "function") {
-          fx[fxKey].setBypass(bypassed);
+        const effectObj = fxKey === "stereo-widener" ? fx.stereoWidener : fx[fxKey];
+        if (effectObj && typeof effectObj.setBypass === "function") {
+          effectObj.setBypass(bypassed);
         }
 
         const devBtn = document.querySelector(`.dev-power-btn[data-dev="${fxKey}"]`);
@@ -819,6 +1014,16 @@ export class TritonWorkstationUI {
     const fx = audioCore.fxRack;
     if (!fx) return;
     switch (param) {
+      case "comp-thresh": fx.compressor?.setThreshold(val); break;
+      case "comp-ratio": fx.compressor?.setRatio(val); break;
+      case "comp-makeup": fx.compressor?.setMakeup(val); break;
+      case "comp-mix": fx.compressor?.setMix(val); break;
+      case "crush-bits": fx.bitcrusher?.setBits(val); break;
+      case "crush-downsample": fx.bitcrusher?.setDownsample(val); break;
+      case "crush-mix": fx.bitcrusher?.setMix(val); break;
+      case "widener-width": fx.stereoWidener?.setWidth(val); break;
+      case "widener-haas": fx.stereoWidener?.setHaasDelay(val); break;
+      case "widener-mix": fx.stereoWidener?.setMix(val); break;
       case "autopan-rate": fx.autopan?.setRate(val); break;
       case "autopan-depth": fx.autopan?.setDepth(val); break;
       case "autopan-mix": fx.autopan?.setMix(val); break;

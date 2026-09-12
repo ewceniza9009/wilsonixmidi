@@ -1364,89 +1364,385 @@ export class SfxSoundGenerator {
     return osc;
   }
 
-  triggerSubResonator(velocity = 100, customGain = 1.0, destNode = null) {
+  triggerSubResonator(pitchMidi = 48, velocity = 100, customGain = 1.0, destNode = null) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
-    const vel = velocity / 127;
+    const vel = Math.max(0.12, Math.min(1.0, velocity / 127));
     const dest = this.getDest(destNode);
     if (!dest) return null;
 
-    const osc = ctx.createOscillator();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(48, now);
+    // Musical pitch tracking based on keyboard MIDI note
+    const rawFreq = 440 * Math.pow(2, (pitchMidi - 69) / 12);
+    // Keep fundamental in rich resonant sub-bass to low-mid range (48Hz to 360Hz)
+    const baseFreq = Math.max(48, Math.min(360, rawFreq > 280 ? rawFreq * 0.5 : rawFreq));
 
+    // 1. Deep Sub Sine Fundamental (for subwoofer power)
+    const subOsc = ctx.createOscillator();
+    subOsc.type = "sine";
+    subOsc.frequency.setValueAtTime(baseFreq, now);
+
+    // 2. Resonant Atomic Harmonic Core: Detuned Sawtooth + Triangle for rich audible harmonics on laptops
+    const harmOsc1 = ctx.createOscillator();
+    harmOsc1.type = "sawtooth";
+    harmOsc1.frequency.setValueAtTime(baseFreq, now);
+
+    const harmOsc2 = ctx.createOscillator();
+    harmOsc2.type = "triangle";
+    harmOsc2.frequency.setValueAtTime(baseFreq * 1.008 + 1.2, now); // Atomic phase pulsation
+
+    // 3. Sub-Atomic LFO Modulation (pulsating quantum flutter)
     const lfo = ctx.createOscillator();
     lfo.type = "sine";
-    lfo.frequency.setValueAtTime(4.5, now);
-    const lfoG = ctx.createGain();
-    lfoG.gain.value = 12;
-    lfo.connect(lfoG);
-    lfoG.connect(osc.frequency);
+    lfo.frequency.setValueAtTime(5.2, now);
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.setValueAtTime(baseFreq * 0.08 + 6, now);
+    lfo.connect(lfoGain);
+    lfoGain.connect(harmOsc1.frequency);
+    lfoGain.connect(harmOsc2.frequency);
 
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(0.001, now);
-    g.gain.linearRampToValueAtTime(0.90 * vel * customGain, now + 0.05);
-    g.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
+    // 4. Swept Resonant Atomic Filter (Lowpass with pronounced Q peak)
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    const startCutoff = Math.min(8000, baseFreq * 7.5);
+    const endCutoff = Math.max(180, baseFreq * 1.8);
+    filter.frequency.setValueAtTime(startCutoff, now);
+    filter.frequency.exponentialRampToValueAtTime(endCutoff, now + 1.4);
+    filter.Q.setValueAtTime(6.0, now);
 
-    osc.connect(g);
-    g.connect(dest);
+    // 5. Soft-Clip Saturation for harmonic punch and warmth
+    const saturator = ctx.createWaveShaper();
+    const curve = new Float32Array(256);
+    for (let i = 0; i < 256; i++) {
+      const x = (i / 128) - 1;
+      curve[i] = (Math.PI + 2.5) * x / (Math.PI + 2.5 * Math.abs(x));
+    }
+    saturator.curve = curve;
+    saturator.oversample = "2x";
 
-    osc.start(now);
+    // 6. Gain Envelopes
+    const subGain = ctx.createGain();
+    subGain.gain.setValueAtTime(0.001, now);
+    subGain.gain.linearRampToValueAtTime(0.95 * vel * customGain, now + 0.02);
+    subGain.gain.exponentialRampToValueAtTime(0.001, now + 2.8);
+
+    const harmGain = ctx.createGain();
+    harmGain.gain.setValueAtTime(0.001, now);
+    harmGain.gain.linearRampToValueAtTime(0.75 * vel * customGain, now + 0.025);
+    harmGain.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
+
+    // Routing
+    subOsc.connect(subGain);
+    subGain.connect(dest);
+
+    harmOsc1.connect(filter);
+    harmOsc2.connect(filter);
+    filter.connect(saturator);
+    saturator.connect(harmGain);
+    harmGain.connect(dest);
+
+    // Start & Stop
+    subOsc.start(now);
+    harmOsc1.start(now);
+    harmOsc2.start(now);
     lfo.start(now);
-    osc.stop(now + 2.6);
-    lfo.stop(now + 2.6);
-    return osc;
+
+    const stopTime = now + 2.9;
+    subOsc.stop(stopTime);
+    harmOsc1.stop(stopTime);
+    harmOsc2.stop(stopTime);
+    lfo.stop(stopTime);
+
+    this.trackSfx([subOsc, harmOsc1, harmOsc2, lfo, subGain, harmGain], 3.0);
+    return harmOsc1;
   }
 
   // =========================================================================
   // EXPANDED 4. DJ & CINEMATIC FX
   // =========================================================================
 
-  triggerCinemaBraam(velocity = 100, customGain = 1.0, destNode = null) {
+  triggerCinemaBraam(pitchMidi = 48, velocity = 100, customGain = 1.0, destNode = null) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
-    const vel = velocity / 127;
+    const vel = Math.max(0.2, Math.min(1.0, velocity / 127));
     const dest = this.getDest(destNode);
     if (!dest) return null;
 
+    const rawFreq = 440 * Math.pow(2, (pitchMidi - 69) / 12);
+    const baseFreq = Math.max(38, Math.min(140, rawFreq > 130 ? rawFreq * 0.25 : rawFreq));
+
+    // Hans Zimmer Inception Braam: Triple detuned brass saws + sub-bass
     const osc1 = ctx.createOscillator();
     const osc2 = ctx.createOscillator();
+    const sub = ctx.createOscillator();
     osc1.type = "sawtooth";
-    osc2.type = "square";
-    osc1.frequency.setValueAtTime(55, now);
-    osc2.frequency.setValueAtTime(55.4, now);
+    osc2.type = "sawtooth";
+    sub.type = "sine";
 
+    osc1.frequency.setValueAtTime(baseFreq, now);
+    osc2.frequency.setValueAtTime(baseFreq * 1.012, now); // Detune
+    sub.frequency.setValueAtTime(baseFreq * 0.5, now); // Sub rumble
+
+    // Waveshaper drive for authentic brass rasp and bite
     const dist = ctx.createWaveShaper();
     const n = 512;
     const curve = new Float32Array(n);
     for (let i = 0; i < n; i++) {
       const x = (i * 2) / n - 1;
-      curve[i] = Math.tanh(2.5 * x);
+      curve[i] = Math.tanh(3.0 * x);
     }
     dist.curve = curve;
 
+    // Resonant brass lowpass filter sweep
     const lp = ctx.createBiquadFilter();
     lp.type = "lowpass";
-    lp.frequency.setValueAtTime(1600, now);
-    lp.frequency.exponentialRampToValueAtTime(400, now + 1.8);
-    lp.Q.setValueAtTime(2.0, now);
+    lp.frequency.setValueAtTime(Math.min(3200, baseFreq * 24), now);
+    lp.frequency.exponentialRampToValueAtTime(baseFreq * 3.5, now + 1.8);
+    lp.Q.setValueAtTime(3.5, now);
 
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.001, now);
-    g.gain.linearRampToValueAtTime(0.95 * vel * customGain, now + 0.04);
-    g.gain.exponentialRampToValueAtTime(0.001, now + 2.2);
+    g.gain.linearRampToValueAtTime(1.10 * vel * customGain, now + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
 
     osc1.connect(dist);
     osc2.connect(dist);
     dist.connect(lp);
     lp.connect(g);
+    sub.connect(g);
     g.connect(dest);
 
     osc1.start(now);
     osc2.start(now);
-    osc1.stop(now + 2.3);
-    osc2.stop(now + 2.3);
+    sub.start(now);
+    osc1.stop(now + 2.6);
+    osc2.stop(now + 2.6);
+    sub.stop(now + 2.6);
+
+    this.trackSfx([osc1, osc2, sub, g], 2.8);
     return osc1;
+  }
+
+  // =========================================================================
+  // 6. BELLS & CHIMES (Tubular Bells, Wind Chimes & Crystal Chimes)
+  // =========================================================================
+
+  triggerTubularBells(pitchMidi = 72, velocity = 100, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = Math.max(0.15, Math.min(1.0, velocity / 127));
+    const dest = this.getDest(destNode);
+    if (!dest) return null;
+
+    const baseFreq = 440 * Math.pow(2, (pitchMidi - 69) / 12);
+    // Acoustic Euler-Bernoulli flexural partial ratios for struck metal tube
+    const partials = [
+      { ratio: 1.000, gain: 0.85, decay: 4.2 },
+      { ratio: 2.756, gain: 0.55, decay: 2.8 },
+      { ratio: 5.404, gain: 0.35, decay: 1.9 },
+      { ratio: 8.932, gain: 0.20, decay: 1.1 }
+    ];
+
+    const oscs = [];
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(0.90 * vel * customGain, now);
+
+    // Initial strike transient: metallic mallet impact burst
+    const noise = this.createNoiseSource(false);
+    const strikeFlt = ctx.createBiquadFilter();
+    strikeFlt.type = "highpass";
+    strikeFlt.frequency.setValueAtTime(2800, now);
+    const strikeGain = ctx.createGain();
+    strikeGain.gain.setValueAtTime(0.50 * vel, now);
+    strikeGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.025);
+    noise.connect(strikeFlt);
+    strikeFlt.connect(strikeGain);
+    strikeGain.connect(masterGain);
+    noise.start(now);
+    noise.stop(now + 0.03);
+
+    // Resonating tubular partials
+    partials.forEach(p => {
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(baseFreq * p.ratio, now);
+
+      const pGain = ctx.createGain();
+      pGain.gain.setValueAtTime(0.001, now);
+      pGain.gain.linearRampToValueAtTime(p.gain, now + 0.003);
+      pGain.exponentialRampToValueAtTime(0.0001, now + p.decay);
+
+      osc.connect(pGain);
+      pGain.connect(masterGain);
+      osc.start(now);
+      osc.stop(now + p.decay + 0.1);
+      oscs.push(osc);
+    });
+
+    masterGain.connect(dest);
+    this.trackSfx([...oscs, masterGain], 4.5);
+    return oscs[0];
+  }
+
+  triggerWindChimes(pitchMidi = 72, velocity = 100, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = Math.max(0.2, Math.min(1.0, velocity / 127));
+    const dest = this.getDest(destNode);
+    if (!dest) return null;
+
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(0.85 * vel * customGain, now);
+    masterGain.connect(dest);
+
+    // Cascading Mark Tree glissando: 12 cascading bar chime strikes
+    const numBars = 12;
+    const baseFreq = 2200 * Math.pow(2, (pitchMidi - 72) / 24);
+    const oscs = [];
+
+    for (let i = 0; i < numBars; i++) {
+      const strikeTime = now + i * 0.038 + (Math.random() * 0.008);
+      const freq = baseFreq * Math.pow(1.075, i);
+
+      // Fundamental chime tine
+      const o1 = ctx.createOscillator();
+      o1.type = "sine";
+      o1.frequency.setValueAtTime(freq, strikeTime);
+
+      // Inharmonic sparkle overtone
+      const o2 = ctx.createOscillator();
+      o2.type = "triangle";
+      o2.frequency.setValueAtTime(freq * 2.76, strikeTime);
+
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.setValueAtTime(0.0001, strikeTime);
+      g.gain.linearRampToValueAtTime(0.35 * (1 - i * 0.03), strikeTime + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, strikeTime + 1.6);
+
+      o1.connect(g);
+      o2.connect(g);
+      g.connect(masterGain);
+
+      o1.start(strikeTime);
+      o2.start(strikeTime);
+      o1.stop(strikeTime + 1.7);
+      o2.stop(strikeTime + 1.7);
+      oscs.push(o1, o2);
+    }
+
+    this.trackSfx([...oscs, masterGain], 2.8);
+    return oscs[0];
+  }
+
+  triggerCrystalChimes(pitchMidi = 72, velocity = 100, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = Math.max(0.15, Math.min(1.0, velocity / 127));
+    const dest = this.getDest(destNode);
+    if (!dest) return null;
+
+    const baseFreq = 440 * Math.pow(2, (pitchMidi - 69) / 12);
+
+    // FM Crystal Bells: Carrier + Dual Shimmer Modulators
+    const carrier = ctx.createOscillator();
+    carrier.type = "sine";
+    carrier.frequency.setValueAtTime(baseFreq, now);
+
+    const mod1 = ctx.createOscillator();
+    mod1.type = "sine";
+    mod1.frequency.setValueAtTime(baseFreq * 3.5, now);
+    const mod1G = ctx.createGain();
+    mod1G.gain.setValueAtTime(baseFreq * 1.8, now);
+    mod1G.gain.exponentialRampToValueAtTime(baseFreq * 0.05, now + 1.5);
+    mod1.connect(mod1G);
+    mod1G.connect(carrier.frequency);
+
+    const mod2 = ctx.createOscillator();
+    mod2.type = "triangle";
+    mod2.frequency.setValueAtTime(baseFreq * 7.01, now);
+    const mod2G = ctx.createGain();
+    mod2G.gain.setValueAtTime(baseFreq * 0.8, now);
+    mod2G.gain.exponentialRampToValueAtTime(0.1, now + 0.8);
+    mod2.connect(mod2G);
+    mod2G.connect(carrier.frequency);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, now);
+    g.gain.linearRampToValueAtTime(0.80 * vel * customGain, now + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 3.0);
+
+    carrier.connect(g);
+    g.connect(dest);
+
+    carrier.start(now);
+    mod1.start(now);
+    mod2.start(now);
+    carrier.stop(now + 3.1);
+    mod1.stop(now + 3.1);
+    mod2.stop(now + 3.1);
+
+    this.trackSfx([carrier, mod1, mod2, g], 3.2);
+    return carrier;
+  }
+
+  triggerAngelicChoir(pitchMidi = 69, velocity = 95, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = Math.max(0.15, Math.min(1.0, velocity / 127));
+    const dest = this.getDest(destNode);
+    if (!dest) return null;
+
+    const baseFreq = 440 * Math.pow(2, (pitchMidi - 69) / 12);
+
+    // Dual-octave ethereal soprano choir with gentle detune
+    const o1 = ctx.createOscillator();
+    const o2 = ctx.createOscillator();
+    const o3 = ctx.createOscillator();
+    o1.type = "sawtooth";
+    o2.type = "sine";
+    o3.type = "triangle";
+    o1.frequency.setValueAtTime(baseFreq, now);
+    o2.frequency.setValueAtTime(baseFreq * 1.006, now);
+    o3.frequency.setValueAtTime(baseFreq * 2.002, now); // Upper octave celestial shimmer
+
+    // Airy formant bandpass filter cluster
+    const f1 = ctx.createBiquadFilter();
+    f1.type = "bandpass";
+    f1.frequency.setValueAtTime(850, now);
+    f1.Q.setValueAtTime(4.0, now);
+
+    const f2 = ctx.createBiquadFilter();
+    f2.type = "bandpass";
+    f2.frequency.setValueAtTime(2800, now);
+    f2.Q.setValueAtTime(5.0, now);
+
+    const airFlt = ctx.createBiquadFilter();
+    airFlt.type = "highshelf";
+    airFlt.frequency.setValueAtTime(4500, now);
+    airFlt.gain.setValueAtTime(6.0, now);
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.linearRampToValueAtTime(0.75 * vel * customGain, now + 0.22);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 2.8);
+
+    o1.connect(f1);
+    o2.connect(f1);
+    o3.connect(f2);
+    f1.connect(airFlt);
+    f2.connect(airFlt);
+    airFlt.connect(g);
+    g.connect(dest);
+
+    o1.start(now);
+    o2.start(now);
+    o3.start(now);
+    o1.stop(now + 2.9);
+    o2.stop(now + 2.9);
+    o3.stop(now + 2.9);
+
+    this.trackSfx([o1, o2, o3, g], 3.0);
+    return o1;
   }
 
   triggerClubDownlifter(duration = 3.5, velocity = 95, customGain = 1.0, destNode = null) {
@@ -1710,28 +2006,50 @@ export class SfxSoundGenerator {
     return noise;
   }
 
-  triggerTaiko(velocity = 100, customGain = 1.0, destNode = null) {
+  triggerTaiko(velocity = 100, customGain = 1.0, destNode = null, midiNote = 48) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
     const dest = this.getDest(destNode);
     if (!dest) return null;
 
+    const baseFreq = 440 * Math.pow(2, ((midiNote || 48) - 69) / 12);
+    const fundamental = Math.max(45, Math.min(180, baseFreq));
+
+    // 1. Heavy resonant drum head (sine with quick pitch bend)
     const osc = ctx.createOscillator();
     osc.type = "sine";
-    osc.frequency.setValueAtTime(140, now);
-    osc.frequency.exponentialRampToValueAtTime(45, now + 0.08);
+    osc.frequency.setValueAtTime(fundamental * 2.2, now);
+    osc.frequency.exponentialRampToValueAtTime(fundamental, now + 0.09);
 
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.001, now);
-    g.gain.linearRampToValueAtTime(0.95 * vel * customGain, now + 0.006);
-    g.gain.exponentialRampToValueAtTime(0.001, now + 0.90);
+    g.gain.linearRampToValueAtTime(1.1 * vel * customGain, now + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 1.6);
+
+    // 2. Wooden stick strike transient
+    const noise = this.createNoiseSource(false);
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.setValueAtTime(1200, now);
+    bp.Q.setValueAtTime(2.5, now);
+
+    const clickGain = ctx.createGain();
+    clickGain.gain.setValueAtTime(0.6 * vel * customGain, now);
+    clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+
+    noise.connect(bp);
+    bp.connect(clickGain);
+    clickGain.connect(dest);
 
     osc.connect(g);
     g.connect(dest);
 
     osc.start(now);
-    osc.stop(now + 0.95);
+    osc.stop(now + 1.65);
+    noise.start(now);
+    noise.stop(now + 0.05);
+
     return osc;
   }
 
@@ -1993,7 +2311,20 @@ export class SfxSoundGenerator {
     if (!instId) return false;
     if (instId.endsWith("_r")) return false;
     const id = String(instId).toLowerCase();
-    return id.startsWith("sy_");
+    if (id === "percussion_taiko" || id === "taiko_drum" || id === "thunder_taiko") return false;
+    if (id === "voice_oohs" || id === "choir_aahs") return false;
+    if (id === "tubular_bells" || id === "wind_chimes" || id === "crystal_chimes") return true;
+    if (id === "angelic_choir") return true;
+    if (id.startsWith("sy_")) return true;
+    if (id.startsWith("nature_")) return true;
+    if (id.startsWith("vox_")) return true;
+    if (id.startsWith("fx_")) return true;
+    if (id.startsWith("percussion_")) return true;
+    if (id === "tr808_kit" || id === "tr909_kit" || id === "drums1" || id === "m1_drums") return true;
+    if (id === "dub_siren" || id === "reggae_siren" || id === "spring_splash" || id === "dub_splash") return true;
+    if (id === "laser_zap" || id === "dub_laser" || id === "dub_horn" || id === "airhorn" || id === "sub_boom" || id === "sub_drop" || id === "noise_riser") return true;
+    if (id === "kalimba" || id === "m1_kalimba") return true;
+    return false;
   }
 
   playSfxNote(instId, midiNote = 60, velocity = 95, customGain = 1.0, destNode = null) {
@@ -2044,12 +2375,22 @@ export class SfxSoundGenerator {
         return this.triggerWhisper(3.5, velocity, customGain, destNode);
       case "vox_hum":
         return this.triggerVocalHum(midiNote, velocity, customGain, destNode);
+      case "angelic_choir":
+        return this.triggerAngelicChoir(midiNote, velocity, customGain, destNode);
       case "vox_beatbox": {
         const mod = midiNote % 3;
         if (mod === 0) return this.triggerBeatbox("kick", velocity, customGain, destNode);
         if (mod === 1) return this.triggerBeatbox("snare", velocity, customGain, destNode);
         return this.triggerBeatbox("hat", velocity, customGain, destNode);
       }
+
+      // Bells & Chimes
+      case "tubular_bells":
+        return this.triggerTubularBells(midiNote, velocity, customGain, destNode);
+      case "wind_chimes":
+        return this.triggerWindChimes(midiNote, velocity, customGain, destNode);
+      case "crystal_chimes":
+        return this.triggerCrystalChimes(midiNote, velocity, customGain, destNode);
 
       // 3. Weird Sci-Fi FX
       case "fx_laser":
@@ -2067,7 +2408,7 @@ export class SfxSoundGenerator {
       case "fx_cyber_sweep":
         return this.triggerCyberSweep(velocity, customGain, destNode);
       case "fx_sub_resonator":
-        return this.triggerSubResonator(velocity, customGain, destNode);
+        return this.triggerSubResonator(midiNote, velocity, customGain, destNode);
 
       // 4. DJ & Cinematic FX
       case "fx_scratch":
@@ -2079,7 +2420,7 @@ export class SfxSoundGenerator {
       case "fx_airhorn":
         return this.triggerReggaeAirhorn(velocity, customGain, destNode);
       case "fx_cinema_braam":
-        return this.triggerCinemaBraam(velocity, customGain, destNode);
+        return this.triggerCinemaBraam(midiNote, velocity, customGain, destNode);
       case "fx_downlifter":
         return this.triggerClubDownlifter(3.5, velocity, customGain, destNode);
       case "fx_rev_cymbal":
@@ -2126,7 +2467,8 @@ export class SfxSoundGenerator {
       case "percussion_crash":
         return this.triggerCrashGong(velocity, customGain, destNode);
       case "percussion_taiko":
-        return this.triggerTaiko(velocity, customGain, destNode);
+      case "taiko_drum":
+        return this.triggerTaiko(velocity, customGain, destNode, midiNote);
 
 
       // 7. Reggae, Dub & Stage Sound FX
