@@ -7,8 +7,10 @@ node_modules/
 dist/
 dist-ssr/
 dist-apk/
+dist-installer/
 *.apk
 *.aab
+*.exe
 *.local
 
 # Android & Gradle Build Artifacts
