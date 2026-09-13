@@ -27,6 +27,13 @@ export class GigHudUI {
     this._vuRunning = false;
     this.vuAnimationId = null;
 
+    const savedTools = localStorage.getItem("midikey_tools_expanded");
+    if (savedTools !== null) {
+      this.toolsExpanded = savedTools === "1";
+    } else {
+      this.toolsExpanded = window.innerWidth > 1024;
+    }
+
     if (this.sunlightMode) {
       document.body.classList.add("stage-sunlight-mode");
     }
@@ -35,9 +42,13 @@ export class GigHudUI {
     this.bindPillInteractions();
     this.bindRecorder();
     this.bindRegistration();
+    this.syncToolsIndicator();
 
     // Bidirectional sync: keep HUD sound dropdown updated with whatever sound is loaded
-    multiLayerEngine.addLayerChangeListener(() => this.syncSoundDisplay());
+    multiLayerEngine.addLayerChangeListener(() => {
+      this.syncSoundDisplay();
+      this.syncToolsIndicator();
+    });
 
     if (!this.gigMode) {
       this.startVuMonitor();
@@ -214,171 +225,191 @@ export class GigHudUI {
     const currentBankSlots = registrationManager.banks[curBank] || [];
 
     this.container.innerHTML = `
-      <header class="gig-hud-bar">
-        <!-- 1. LEFT: Brand & Live Performance Readout + Stacks Selector -->
-        <div class="hud-section hud-left-group">
-          <div class="brand-logo">
-            <span class="logo-accent">WILSONIX</span><span class="brand-sub"> MIDIKEY</span>
+      <div class="gig-hud-wrapper">
+        <!-- 1. PRIMARY TOP BAR (Ultra clean, spacious, zero collisions) -->
+        <header class="gig-hud-bar">
+          <!-- LEFT: Brand & Live Performance Readout + Stacks Selector -->
+          <div class="hud-section hud-left-group">
+            <div class="brand-logo">
+              <span class="logo-accent">WILSONIX</span><span class="brand-sub"> MIDIKEY</span>
+            </div>
+
+            <!-- Live Active Sound Status Badge -->
+            <div class="hud-live-badge" id="hud-live-badge" title="Active Sound Playing on Keyboard">
+              <span class="live-badge-icon" id="hud-live-icon">${soundIcon}</span>
+              <span class="live-badge-text" id="hud-live-text">${activeSoundName}</span>
+            </div>
+
+            <!-- Fast Performance Stacks & Combi/Split Selector -->
+            <div class="hud-perf-mode-group">
+              <select class="hud-perf-select" id="hud-perf-select" title="Switch Signature Combis, Keyboard Splits & Solo Rigs">
+                ${presetGroups
+                  .map(
+                    grp => `
+                  <optgroup label="${grp.label}">
+                    ${grp.items
+                      .map(
+                        s => `
+                      <option value="${s.id}" ${s.id === activeSoundId ? "selected" : ""}>
+                        ${s.name}
+                      </option>
+                    `
+                      )
+                      .join("")}
+                  </optgroup>
+                `
+                  )
+                  .join("")}
+              </select>
+            </div>
           </div>
 
-          <!-- Live Active Sound Status Badge (Zero Lag, Single Clean Icon) -->
-          <div class="hud-live-badge" id="hud-live-badge" title="Active Sound Playing on Keyboard">
-            <span class="live-badge-icon" id="hud-live-icon">${soundIcon}</span>
-            <span class="live-badge-text" id="hud-live-text">${activeSoundName}</span>
-          </div>
+          <!-- RIGHT: Master Volume, Workspace Tabs, Keys, Tools Drawer Toggle & Fullscreen -->
+          <div class="hud-section hud-right-group">
+            <!-- Master Volume -->
+            <div class="hud-volume-unit" data-midi-param="master_vol" title="Master Volume (Right-click to MIDI Learn)">
+              <span class="hud-vol-icon">🔊</span>
+              <input type="range" id="hud-master-vol" min="0" max="100" value="50" class="hud-vol-slider" />
+              <span class="hud-vol-readout" id="hud-master-vol-val">50%</span>
+            </div>
 
-          <!-- Fast Performance Stacks & Combi/Split Selector -->
-          <div class="hud-perf-mode-group">
-            <select class="hud-perf-select" id="hud-perf-select" title="Switch Signature Combis, Keyboard Splits & Solo Rigs">
-              ${presetGroups
-                .map(
-                  grp => `
-                <optgroup label="${grp.label}">
-                  ${grp.items
+            <!-- Workspace Tabs & Utility Controls -->
+            <nav class="ws-tabs-bar" id="hud-workspace-tabs">
+              <select class="ws-tabs-dropdown" id="hud-ws-tabs-select" title="Switch Workspace View">
+                <option value="triton">🎛️ MAIN</option>
+                <option value="combi">🎚️ COMBI</option>
+                <option value="split">🎹 SPLIT</option>
+                <option value="fx">⚡ FX RACK</option>
+                <option value="chords">🎼 CHORDS</option>
+                <option value="grooves">🥁 GROOVES</option>
+                <option value="player">🎵 PLAYER</option>
+              </select>
+              <div class="ws-tabs-buttons">
+                <button class="ws-tab-btn active" data-view="triton" title="Main Workstation Console">MAIN</button>
+                <button class="ws-tab-btn" data-view="combi" title="4-Timbre Combi Mixer">COMBI</button>
+                <button class="ws-tab-btn" data-view="split" title="Split Keyboard Console">SPLIT</button>
+                <button class="ws-tab-btn" data-view="fx" title="Master FX Rack">FX</button>
+                <button class="ws-tab-btn" data-view="chords" title="Chord Harmony Pads">CHORDS</button>
+                <button class="ws-tab-btn" data-view="grooves" title="Backing Grooves">GROOVES</button>
+                <button class="ws-tab-btn" data-view="player" title="Media Player">PLAYER</button>
+              </div>
+              <button class="ws-tab-btn keys-toggle-btn active" id="btn-hud-toggle-keys" title="Toggle Piano Keyboard (F4)">🎹 KEYS</button>
+
+              <!-- Collapsible Tools Shelf Toggle Button -->
+              <button class="hud-tools-toggle ${this.toolsExpanded ? "active" : ""}" id="btn-hud-toggle-tools" title="Toggle Rig Snapshots, Sound Layers, Arp & Transport">
+                <span class="tools-btn-icon">${this.toolsExpanded ? "▲" : "⚙️"}</span>
+                <span class="tools-btn-label">TOOLS</span>
+                ${isLayerActive || arpeggiator.enabled || multiLayerEngine.isPadDuckingEnabled ? `<span class="tools-active-dot"></span>` : ""}
+              </button>
+
+              <button class="ws-tab-btn fullscreen-btn" id="btn-toggle-fullscreen" title="Toggle Fullscreen">⛶</button>
+            </nav>
+          </div>
+        </header>
+
+        <!-- 2. COLLAPSIBLE SECONDARY STAGE TOOLS SHELF -->
+        <div class="hud-tools-drawer ${this.toolsExpanded ? "expanded" : "collapsed"}" id="hud-tools-drawer">
+          <div class="tools-drawer-inner">
+            <!-- Bay 1: Live Stage Rig Quick Bar -->
+            <div class="hud-drawer-bay rig-bay">
+              <div class="hud-rig-widget" title="Live Stage Rig Snapshot (Press F1-F8 to switch, Shift+F1-F8 or STORE to save)">
+                <span class="rig-label">RIG:</span>
+                <div class="rig-bank-pills">
+                  <button class="rig-bank-pill ${curBank === "A" ? "active" : ""}" data-bank="A" title="Bank A: Pop / Ballad Stage Set (F9)">A</button>
+                  <button class="rig-bank-pill ${curBank === "B" ? "active" : ""}" data-bank="B" title="Bank B: Studio & Groove Set (F10)">B</button>
+                  <button class="rig-bank-pill ${curBank === "C" ? "active" : ""}" data-bank="C" title="Bank C: Gospel & Worship Set (F11)">C</button>
+                  <button class="rig-bank-pill ${curBank === "D" ? "active" : ""}" data-bank="D" title="Bank D: Solo Leads & Sax Set (F12)">D</button>
+                </div>
+                <div class="rig-slot-pills">
+                  ${[1, 2, 3, 4, 5, 6, 7, 8]
                     .map(
-                      s => `
-                    <option value="${s.id}" ${s.id === activeSoundId ? "selected" : ""}>
-                      ${s.name}
+                      num => {
+                        const slotData = currentBankSlots[num - 1];
+                        const slotTitle = slotData?.name || `Rig ${curBank}-${num}`;
+                        return `
+                          <button class="rig-slot-pill ${curSlot === num ? "active" : ""}" data-slot="${num}" title="Rig ${curBank}-${num}: ${slotTitle} (Press F${num}, Shift+F${num} to Store)">${num}</button>
+                        `;
+                      }
+                    )
+                    .join("")}
+                </div>
+                <button class="rig-save-btn" id="hud-rig-save-btn" title="Store Current Sound & FX to Active Slot (Shift+F${curSlot})">💾</button>
+              </div>
+            </div>
+
+            <!-- Bay 2: Sound Layer 2 & Pad Ducking -->
+            <div class="hud-drawer-bay layer-bay">
+              <div class="hud-layer-box">
+                <button class="layer-toggle-btn ${isLayerActive ? "active" : ""}" id="btn-toggle-layer" title="Toggle 2nd Sound Layer">
+                  ${isLayerActive ? "LAYER ON" : "LAYER"}
+                </button>
+                <select class="hud-layer-select ${isLayerActive ? "active" : ""}" id="hud-layer-select" title="Choose 2nd Layer Instrument">
+                  ${soundbanksList
+                    .map(
+                      b => `
+                    <option value="${b.id}" ${activeLayerBank === b.id ? "selected" : ""}>
+                      + ${b.name}
                     </option>
                   `
                     )
                     .join("")}
-                </optgroup>
-              `
-                )
-                .join("")}
-            </select>
-          </div>
+                </select>
+              </div>
 
-          <!-- Permanent Layer Sound Control Group -->
-          <div class="hud-layer-box">
-            <button class="layer-toggle-btn ${isLayerActive ? "active" : ""}" id="btn-toggle-layer" title="Toggle 2nd Sound Layer">
-              ${isLayerActive ? "LAYER ON" : "LAYER"}
-            </button>
-            <select class="hud-layer-select ${isLayerActive ? "active" : ""}" id="hud-layer-select" title="Choose 2nd Layer Instrument">
-              ${soundbanksList
-                .map(
-                  b => `
-                <option value="${b.id}" ${activeLayerBank === b.id ? "selected" : ""}>
-                  + ${b.name}
-                </option>
-              `
-                )
-                .join("")}
-            </select>
-          </div>
-
-          <!-- Ambient Pad Sidechain Ducking Toggle -->
-          <button class="duck-toggle-btn ${multiLayerEngine.isPadDuckingEnabled ? "active" : ""}" id="btn-toggle-duck" title="Auto Ambient Pad Sidechain Ducker (Smoothly dips background pad/strings when piano strikes)">
-            <span class="duck-led"></span>
-            DUCK
-          </button>
-        </div>
-
-        <!-- 2. CENTER: Live Stage Rig Presets & Transport -->
-        <div class="hud-section hud-center-group">
-          <!-- Stage Registration Rig Quick Bar -->
-          <div class="hud-rig-widget" title="Live Stage Rig Snapshot (Press F1-F8 to switch, Shift+F1-F8 or STORE to save)">
-            <span class="rig-label">RIG:</span>
-            <div class="rig-bank-pills">
-              <button class="rig-bank-pill ${curBank === "A" ? "active" : ""}" data-bank="A" title="Bank A: Pop / Ballad Stage Set (F9)">A</button>
-              <button class="rig-bank-pill ${curBank === "B" ? "active" : ""}" data-bank="B" title="Bank B: Studio & Groove Set (F10)">B</button>
-              <button class="rig-bank-pill ${curBank === "C" ? "active" : ""}" data-bank="C" title="Bank C: Gospel & Worship Set (F11)">C</button>
-              <button class="rig-bank-pill ${curBank === "D" ? "active" : ""}" data-bank="D" title="Bank D: Solo Leads & Sax Set (F12)">D</button>
+              <!-- Ambient Pad Sidechain Ducking Toggle -->
+              <button class="duck-toggle-btn ${multiLayerEngine.isPadDuckingEnabled ? "active" : ""}" id="btn-toggle-duck" title="Auto Ambient Pad Sidechain Ducker (Smoothly dips background pad/strings when piano strikes)">
+                <span class="duck-led"></span>
+                DUCK
+              </button>
             </div>
-            <div class="rig-slot-pills">
-              ${[1, 2, 3, 4, 5, 6, 7, 8]
-                .map(
-                  num => {
-                    const slotData = currentBankSlots[num - 1];
-                    const slotTitle = slotData?.name || `Rig ${curBank}-${num}`;
-                    return `
-                      <button class="rig-slot-pill ${curSlot === num ? "active" : ""}" data-slot="${num}" title="Rig ${curBank}-${num}: ${slotTitle} (Press F${num}, Shift+F${num} to Store)">${num}</button>
-                    `;
-                  }
-                )
-                .join("")}
+
+            <!-- Bay 3: Master Lossless WAV Recorder & Arpeggiator -->
+            <div class="hud-drawer-bay transport-bay">
+              <button class="hud-rec-btn" id="hud-master-rec-btn" title="Record Master Bus to Lossless WAV">
+                <span class="rec-dot"></span>
+                <span class="rec-label" id="hud-rec-label">REC</span>
+              </button>
+
+              <div class="tempo-control-box">
+                <button class="hud-btn arp-btn ${arpeggiator.enabled ? "active" : ""}" id="btn-toggle-arp" title="Live Groove Arpeggiator (Rhythmic Chord Rolls)">
+                  <span class="arp-led"></span>
+                  ARP
+                </button>
+                <button class="tempo-tap-btn" id="btn-tap-tempo" title="Tap Tempo">TAP</button>
+                <span class="bpm-counter" id="bpm-val">${this.bpm}</span>
+                <span class="bpm-label">BPM</span>
+              </div>
             </div>
-            <button class="rig-save-btn" id="hud-rig-save-btn" title="Store Current Sound & FX to Active Slot (Shift+F${curSlot})">💾</button>
-          </div>
 
-          <!-- Master WAV Recorder -->
-          <button class="hud-rec-btn" id="hud-master-rec-btn" title="Record Master Bus to Lossless WAV">
-            <span class="rec-dot"></span>
-            <span class="rec-label" id="hud-rec-label">REC</span>
-          </button>
+            <!-- Bay 4: Live Status Cluster -->
+            <div class="hud-drawer-bay status-bay">
+              <div class="hud-status-cluster">
+                <!-- GIG Mode Pill -->
+                <button class="gig-mode-btn ${this.gigMode ? "active" : ""}" id="hud-gig-btn" title="GIG MODE: Disables background UI meters to eliminate audio jitter during live stage gigs">
+                  GIG
+                </button>
 
-          <!-- Tempo & Arpeggiator -->
-          <div class="tempo-control-box">
-            <button class="hud-btn arp-btn ${arpeggiator.enabled ? "active" : ""}" id="btn-toggle-arp" title="Live Groove Arpeggiator (Rhythmic Chord Rolls)">
-              <span class="arp-led"></span>
-              ARP
-            </button>
-            <button class="tempo-tap-btn" id="btn-tap-tempo" title="Tap Tempo">TAP</button>
-            <span class="bpm-counter" id="bpm-val">${this.bpm}</span>
-            <span class="bpm-label">BPM</span>
+                <!-- Floating Anchored Latency Pill (Click for analysis popover) -->
+                <div class="latency-hud-pill interactive" id="hud-latency-pill" title="Click for round-trip latency analysis">
+                  <span class="latency-dot"></span>
+                  <span id="hud-latency-val">--</span>
+                </div>
+
+                <!-- MIDI Status Pill -->
+                <div class="midi-status-pill" id="hud-midi-pill" title="Hardware MIDI Status">
+                  <span class="midi-indicator"></span>
+                  <span>MIDI</span>
+                </div>
+
+                <!-- Sunlight / Dark Mode -->
+                <button class="sunlight-mode-btn ${this.sunlightMode ? "active" : ""}" id="hud-sunlight-btn" title="Toggle Stage Sunlight Contrast">
+                  ${this.sunlightMode ? "☀️" : "🌙"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-
-        <!-- 3. RIGHT: Master Volume, Status & Workspace Tabs -->
-        <div class="hud-section hud-right-group">
-          <!-- Master Volume -->
-          <div class="hud-volume-unit" data-midi-param="master_vol" title="Master Volume (Right-click to MIDI Learn)">
-            <span class="hud-vol-icon">🔊</span>
-            <input type="range" id="hud-master-vol" min="0" max="100" value="50" class="hud-vol-slider" />
-            <span class="hud-vol-readout" id="hud-master-vol-val">50%</span>
-          </div>
-
-          <!-- Compact Status Pills -->
-          <div class="hud-status-cluster">
-            <!-- GIG Mode Pill -->
-            <button class="gig-mode-btn ${this.gigMode ? "active" : ""}" id="hud-gig-btn" title="GIG MODE: Disables background UI meters to eliminate audio jitter during live stage gigs">
-              GIG
-            </button>
-
-            <!-- Floating Anchored Latency Pill (Click for analysis popover) -->
-            <div class="latency-hud-pill interactive" id="hud-latency-pill" title="Click for round-trip latency analysis">
-              <span class="latency-dot"></span>
-              <span id="hud-latency-val">--</span>
-            </div>
-
-            <!-- MIDI Status Pill -->
-            <div class="midi-status-pill" id="hud-midi-pill" title="Hardware MIDI Status">
-              <span class="midi-indicator"></span>
-              <span>MIDI</span>
-            </div>
-
-            <!-- Sunlight / Dark Mode -->
-            <button class="sunlight-mode-btn ${this.sunlightMode ? "active" : ""}" id="hud-sunlight-btn" title="Toggle Stage Sunlight Contrast">
-              ${this.sunlightMode ? "☀️" : "🌙"}
-            </button>
-          </div>
-
-          <!-- Workspace Tabs -->
-          <nav class="ws-tabs-bar" id="hud-workspace-tabs">
-            <select class="ws-tabs-dropdown" id="hud-ws-tabs-select" title="Switch Workspace View">
-              <option value="triton">🎛️ MAIN</option>
-              <option value="combi">🎚️ COMBI</option>
-              <option value="split">🎹 SPLIT</option>
-              <option value="fx">⚡ FX RACK</option>
-              <option value="chords">🎼 CHORDS</option>
-              <option value="grooves">🥁 GROOVES</option>
-              <option value="player">🎵 PLAYER</option>
-            </select>
-            <div class="ws-tabs-buttons">
-              <button class="ws-tab-btn active" data-view="triton" title="Main Workstation Console">MAIN</button>
-              <button class="ws-tab-btn" data-view="combi" title="4-Timbre Combi Mixer">COMBI</button>
-              <button class="ws-tab-btn" data-view="split" title="Split Keyboard Console">SPLIT</button>
-              <button class="ws-tab-btn" data-view="fx" title="Master FX Rack">FX</button>
-              <button class="ws-tab-btn" data-view="chords" title="Chord Harmony Pads">CHORDS</button>
-              <button class="ws-tab-btn" data-view="grooves" title="Backing Grooves">GROOVES</button>
-              <button class="ws-tab-btn" data-view="player" title="Media Player">PLAYER</button>
-            </div>
-            <button class="ws-tab-btn keys-toggle-btn active" id="btn-hud-toggle-keys" title="Toggle Piano Keyboard (F4)">🎹 KEYS</button>
-            <button class="ws-tab-btn fullscreen-btn" id="btn-toggle-fullscreen" title="Toggle Fullscreen">⛶</button>
-          </nav>
-        </div>
-      </header>
+      </div>
     `;
   }
 
@@ -408,6 +439,7 @@ export class GigHudUI {
       } else {
         if (recLabel) recLabel.innerText = "REC";
       }
+      this.syncToolsIndicator();
     };
   }
 
@@ -615,6 +647,7 @@ export class GigHudUI {
       if (layerSelect) {
         layerSelect.classList.toggle("active", nextActive);
       }
+      this.syncToolsIndicator();
     });
 
     layerSelect?.addEventListener("change", e => {
@@ -629,6 +662,7 @@ export class GigHudUI {
         layerBtn.innerText = "LAYER ON";
       }
       layerSelect.classList.add("active");
+      this.syncToolsIndicator();
     });
 
     // Ambient Pad Sidechain Ducking Toggle
@@ -637,6 +671,7 @@ export class GigHudUI {
       multiLayerEngine.togglePadDucking();
       const isActive = multiLayerEngine.isPadDuckingEnabled;
       duckBtn.classList.toggle("active", isActive);
+      this.syncToolsIndicator();
     });
 
     // Arpeggiator Toggle
@@ -645,6 +680,7 @@ export class GigHudUI {
       arpeggiator.setEnabled();
       const isActive = arpeggiator.enabled;
       arpBtn.classList.toggle("active", isActive);
+      this.syncToolsIndicator();
     });
 
     // Sync Arpeggiator callback
@@ -653,6 +689,7 @@ export class GigHudUI {
       if (b) b.classList.toggle("active", enabled);
       const bpmEl = document.getElementById("bpm-val");
       if (bpmEl && typeof bpm === "number") bpmEl.innerText = bpm;
+      this.syncToolsIndicator();
     };
 
     // Tap Tempo Interaction
@@ -741,6 +778,49 @@ export class GigHudUI {
     topKeysBtn?.addEventListener("click", () => {
       window.dispatchEvent(new CustomEvent("wilsonix-toggle-piano-collapse"));
     });
+
+    // 10. Tools Drawer Toggle Button
+    const toolsBtn = document.getElementById("btn-hud-toggle-tools");
+    toolsBtn?.addEventListener("click", () => {
+      this.toggleToolsDrawer();
+    });
+  }
+
+  toggleToolsDrawer() {
+    this.toolsExpanded = !this.toolsExpanded;
+    localStorage.setItem("midikey_tools_expanded", this.toolsExpanded ? "1" : "0");
+    const drawer = document.getElementById("hud-tools-drawer");
+    const btn = document.getElementById("btn-hud-toggle-tools");
+    if (drawer) {
+      drawer.classList.toggle("expanded", this.toolsExpanded);
+      drawer.classList.toggle("collapsed", !this.toolsExpanded);
+    }
+    if (btn) {
+      btn.classList.toggle("active", this.toolsExpanded);
+      const icon = btn.querySelector(".tools-btn-icon");
+      if (icon) icon.innerText = this.toolsExpanded ? "▲" : "⚙️";
+    }
+  }
+
+  syncToolsIndicator() {
+    const btn = document.getElementById("btn-hud-toggle-tools");
+    if (!btn) return;
+    const isLayerActive = multiLayerEngine.isCombiMode && (multiLayerEngine.layers[1]?.enabled ?? false);
+    const isArpActive = arpeggiator.enabled;
+    const isDuckActive = multiLayerEngine.isPadDuckingEnabled;
+    const isRecActive = masterRecorder.isRecording;
+    const hasActiveTools = isLayerActive || isArpActive || isDuckActive || isRecActive;
+
+    let dot = btn.querySelector(".tools-active-dot");
+    if (hasActiveTools) {
+      if (!dot) {
+        dot = document.createElement("span");
+        dot.className = "tools-active-dot";
+        btn.appendChild(dot);
+      }
+    } else if (dot) {
+      dot.remove();
+    }
   }
 
   startVuMonitor() {
