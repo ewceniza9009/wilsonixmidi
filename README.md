@@ -25,13 +25,32 @@
 ---
 
 ### 🆕 What's New in v1.0.1:
+- **📱 Android Tablet Multi-Touch & Gesture Exclusion**:
+  - Implemented strict `touch-action: none !important`, `-webkit-user-drag: none`, and global pointer listeners across keys, allowing simultaneous 10-finger chords without dropped notes or horizontal scroll cancellations.
+  - Native Android gesture exclusion rects (`setSystemGestureExclusionRects`) on Android 10+ / API 29+ to prevent OS navigation gestures from hijacking piano playing.
+  - Dedicated on-screen `📱 TABLET TIP` guide for Xiaomi Pad (MIUI/HyperOS) users to prevent 3-finger screenshot snipping conflicts.
+- **🎤 Talkbox & Resonant Lead DSP Stabilization (Zapp & Roger Fix)**:
+  - Eliminated mathematical float-overflow (`NaN` / denormals) that caused buzzing, hissing, and audio core crashes when playing chords with sustain.
+  - Tamed formant filter Q values to safe vocal sweet spots (2.2–3.2) and balanced gain staging.
+  - Integrated dedicated anti-clip brickwall limiter (`DynamicsCompressorNode`) in the Talkbox effect chain.
+  - Added 8-voice polyphony cap and natural damper decay (`tau = 2.4s`) for sustained virtual-analog leads.
+  - Added automatic audio context watchdog to recover instantly from Android OS audio interruptions.
 - **🎛️ Responsive Tablet & Mobile Gig-HUD**: Added compact collapsible control drawer for tablet and mobile views, preventing top-bar clutter and button stacking.
 - **⚡ Zero-Flash Instant Dropdowns**: Accelerated combo-box rendering to eliminate white background flash during preset switching.
 - **🔊 Triton VA Engine Noise & Buzz Elimination**:
-  - Re-calibrated master voice pool headroom and safety limiter to eliminate dynamic compression buzz.
   - Pure integer harmonic overtone tuning on *Dark Jazz-Organ*, *Smooth Sine Lead*, *R&B E.Piano*, *Studio Stage EP*, and *Phantom Of Tine*.
   - Butterworth filter resonance damping to eliminate high-frequency hiss.
 - **🌐 Unified Version Synchronization**: Synchronized global versioning (`v1.0.1`) across Windows Desktop, Android APK, and Web.
+
+---
+
+### 📱 Xiaomi Pad & Tablet Multi-Touch Setup Tip
+Xiaomi tablets (MIUI / HyperOS) have a system-wide gesture enabled by default that intercepts 3 simultaneous touches to capture screenshots. To play 3+ finger chords freely without interruption:
+1. Open your tablet's **Settings** app.
+2. Go to **Additional settings** → **Gesture shortcuts**.
+3. Under **Take a screenshot**, select **None** (or turn off *Slide 3 fingers down*).
+4. Under **Partial screenshot**, turn off *Press and hold with 3 fingers*.
+*(Alternatively, open Xiaomi's **Game Turbo** app, add MIDIKey, and toggle on "Turn off 3-finger screenshot".)*
 
 ---
 
