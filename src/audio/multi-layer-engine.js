@@ -1561,7 +1561,7 @@ export class MultiLayerEngine {
       try {
         if (audioCore.fxRack.delay) audioCore.fxRack.delay.setBypass(true);
         if (audioCore.fxRack.dubEcho) audioCore.fxRack.dubEcho.setBypass(true);
-        if (audioCore.fxRack.talkbox?.reset) audioCore.fxRack.talkbox.reset();
+        if (audioCore.fxRack.talkbox) audioCore.fxRack.talkbox.setBypass(true);
       } catch (e) {}
     }
     if (audioCore.recoverAudioGraph) {

@@ -697,6 +697,11 @@ export class TritonWorkstationUI {
     const name = (prog.name || "").toLowerCase();
     const cat = (prog.category || "").toLowerCase();
 
+    // Batch all setBypass calls under the bootstrapping guard so the audio
+    // chain is rebuilt exactly ONCE at the end, not 20+ times per switch.
+    fx._bootstrapping = true;
+    try {
+
     // Healthy default trim & disengage all series units to keep processing lean
     fx.setPresetTrim(1.0);
     fx.compressor?.setBypass(true);
@@ -933,6 +938,11 @@ export class TritonWorkstationUI {
       fx.masterEq?.setLowGain(1.0);
       fx.masterEq?.setMidGain(0.6);
       fx.masterEq?.setHighGain(1.4);
+    }
+
+    } finally {
+      fx._bootstrapping = false;
+      fx._updateChainRouting();
     }
 
     this.syncFxPowerButtons();

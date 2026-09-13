@@ -182,8 +182,13 @@ export class AudioCore {
         // Reset compressor gain reduction if wedged
         this.hardwareLimiter.threshold.setValueAtTime(-0.5, now);
       }
-      if (this.fxRack?.talkbox?.reset) {
-        this.fxRack.talkbox.reset();
+      if (this.fxRack?.talkbox) {
+        // Force-bypass and tear down any active wet-path nodes to guarantee
+        // fresh IIR state. The nuclear rebuild on next engage will fix everything.
+        this.fxRack.talkbox.setBypass(true);
+        if (this.fxRack.talkbox._wetNodes) {
+          this.fxRack.talkbox._teardownWetPath();
+        }
       }
     } catch (e) {}
   }
