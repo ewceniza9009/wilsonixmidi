@@ -29,14 +29,16 @@ export class RotarySpeaker {
     this.dryGain.connect(this.output);
     this.dryGain.gain.value = 1.0;
 
-    // 800Hz Crossover Filter
+    // 800Hz Crossover Filter (Butterworth flat-sum Q=0.5 prevents cancellation/buzzing)
     this.crossoverHigh = ctx.createBiquadFilter();
     this.crossoverHigh.type = "highpass";
     this.crossoverHigh.frequency.value = 800;
+    this.crossoverHigh.Q.value = 0.5;
 
     this.crossoverLow = ctx.createBiquadFilter();
     this.crossoverLow.type = "lowpass";
     this.crossoverLow.frequency.value = 800;
+    this.crossoverLow.Q.value = 0.5;
 
     this.input.connect(this.crossoverHigh);
     this.input.connect(this.crossoverLow);

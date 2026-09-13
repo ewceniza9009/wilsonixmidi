@@ -596,6 +596,8 @@ export class TritonWorkstationUI {
         cat.includes("stab") ||
         cat.includes("bells & pad") ||
         cat.includes("bells") ||
+        cat.includes("electric piano") ||
+        cat.includes("organ") ||
         cat.includes("strings") ||
         cat.includes("bass & sub") ||
         name.includes("trance") ||
@@ -607,7 +609,11 @@ export class TritonWorkstationUI {
         name.includes("throats") ||
         name.includes("techno") ||
         name.includes("hypersaw") ||
-        name.includes("synth"));
+        name.includes("synth") ||
+        name.includes("tine") ||
+        name.includes("rhodes") ||
+        name.includes("r&b") ||
+        name.includes("fm piano"));
 
     if (isSynthTimbre) {
       // EVERY synth-timbre program plays its own genuine oscillator voice.
@@ -622,19 +628,11 @@ export class TritonWorkstationUI {
 
     if (prog.instId) {
       instKey = prog.instId;
-    } else if (prog.id === "A005") {
-      instKey = "drawbar_organ";
     } else if (prog.id === "A006") {
       // SG Hybrid Piano = HYBRID grand: acoustic attack + electric bell shimmer.
       // Routes to the Rhodes-style EP sample so it sounds clearly DIFFERENT from
       // the other pianos instead of collapsing onto the same acoustic grand.
       instKey = "electric_piano_1";
-    } else if (prog.id === "A015" || prog.id === "A020") {
-      instKey = "electric_piano_1";
-    } else if (prog.id === "A025") {
-      instKey = "abletunes_fm_piano";
-    } else if (prog.id === "A028") {
-      instKey = "rhodes_stage_mp3";
     } else if (prog.id === "A036") {
       // Velo Piano ST = real velocity-layered acoustic grand piano
       instKey = "acoustic_grand_piano";

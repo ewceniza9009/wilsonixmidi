@@ -158,21 +158,28 @@ export class PolyphonicVoice {
     if (syncActive) {
       const syncRatio = Math.max(1.001, (instrumentConfig.osc2Ratio || 2.0) / (instrumentConfig.osc1Ratio || 1.0));
       this.syncShaper.curve = getSyncCurve(syncRatio, instrumentConfig.osc2Type || "sawtooth");
-      this.osc2Gate.gain.setTargetAtTime(0.0, now, 0.002);
-      this.syncGate.gain.setTargetAtTime(1.0, now, 0.002);
+      this.osc2Gate.gain.cancelScheduledValues(now);
+      this.syncGate.gain.cancelScheduledValues(now);
+      this.osc2Gate.gain.setValueAtTime(0.0, now);
+      this.syncGate.gain.setValueAtTime(1.0, now);
     } else {
-      this.osc2Gate.gain.setTargetAtTime(1.0, now, 0.002);
-      this.syncGate.gain.setTargetAtTime(0.0, now, 0.002);
+      this.osc2Gate.gain.cancelScheduledValues(now);
+      this.syncGate.gain.cancelScheduledValues(now);
+      this.osc2Gate.gain.setValueAtTime(1.0, now);
+      this.syncGate.gain.setValueAtTime(0.0, now);
     }
 
     // Dynamic Filter
     const isPureSine = (instrumentConfig.osc1Type === "sine" && instrumentConfig.osc2Type === "sine");
     const baseCutoff = instrumentConfig.filterCutoff || 6000;
     const filterEnv = isPureSine
-      ? Math.min(baseCutoff, Math.max(800, baseCutoff * (0.7 + velRatio * 0.3)))
-      : Math.min(18000, Math.max(baseCutoff * (0.5 + velRatio * 0.8), freq * 1.5));
+      ? Math.min(8500, Math.max(800, baseCutoff * (0.8 + velRatio * 0.3)))
+      : Math.min(11000, Math.max(baseCutoff * (0.5 + velRatio * 0.8), freq * 1.5));
     this.filter.type = instrumentConfig.filterType || "lowpass";
-    this.filter.Q.setValueAtTime(isPureSine ? 0.3 : Math.min(2.5, Math.max(0.25, (instrumentConfig.filterQ ?? 1.0) * 0.55)), now);
+    const qVal = isPureSine
+      ? Math.min(0.7, Math.max(0.2, (instrumentConfig.filterQ ?? 0.7) * 0.5))
+      : Math.min(1.2, Math.max(0.25, (instrumentConfig.filterQ ?? 1.0) * 0.55));
+    this.filter.Q.setValueAtTime(qVal, now);
     this.filter.frequency.cancelScheduledValues(now);
     this.filter.frequency.setTargetAtTime(filterEnv, now, 0.012);
 
@@ -181,7 +188,7 @@ export class PolyphonicVoice {
     this.gain2.gain.setValueAtTime(instrumentConfig.gain2 ?? 0.3, now);
     this.gain3.gain.setValueAtTime(instrumentConfig.gain3 ?? 0.0, now);
 
-    const attack = Math.max(0.004, instrumentConfig.attack || 0.005);
+    const attack = Math.max(0.005, instrumentConfig.attack || 0.005);
     const peakGain = (0.35 + velRatio * 0.65) * (instrumentConfig.masterGain || 0.85);
     const decay = instrumentConfig.decay || 2.2;
     const sustain = peakGain * (instrumentConfig.sustainLevel || 0.35);
