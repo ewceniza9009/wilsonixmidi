@@ -187,6 +187,13 @@ export class VirtualKeyboardUI {
           <div class="velocity-accent-unit" title="Dynamic Velocity (Use Shift for FF accent, Alt/Ctrl for PP soft)">
             <span class="accent-badge" id="hud-accent-badge">MF</span>
             <span class="velocity-readout" id="hud-velocity-readout">VEL: ${qwertyKeyboard.velocity}</span>
+            <select class="hud-dropdown-select velocity-dropdown-select" id="hud-velocity-select" title="Choose Dynamic Velocity Preset">
+              <option value="35">35 (PP)</option>
+              <option value="60">60 (MP)</option>
+              <option value="95" selected>95 (MF)</option>
+              <option value="120">120 (FF)</option>
+              <option value="127">127 (SFZ)</option>
+            </select>
             <div class="accent-preset-btns">
               <button class="accent-mini-btn" data-vel="35" title="Pianissimo (1)">PP</button>
               <button class="accent-mini-btn" data-vel="60" title="Mezzo-Piano">MP</button>
@@ -198,7 +205,12 @@ export class VirtualKeyboardUI {
 
           <!-- Velocity Curve (keybed feel) -->
           <div class="velocity-accent-unit" title="Keybed response curve for MIDI & touch keys — springy keys bite sooner on PUNCH">
-            <span class="velocity-readout" id="hud-curve-readout" style="margin-right:6px;">CURVE</span>
+            <span class="velocity-readout" id="hud-curve-readout" style="margin-right:4px;">CURVE</span>
+            <select class="hud-dropdown-select curve-dropdown-select" id="hud-curve-select" title="Choose Velocity Response Curve">
+              <option value="linear" selected>LIN (Flat)</option>
+              <option value="punch">PUNCH (Bite)</option>
+              <option value="soft">SOFT (Wide)</option>
+            </select>
             <div class="accent-preset-btns" id="hud-curve-btns">
               <button class="accent-mini-btn active" data-curve="linear" title="Flat, as played">LIN</button>
               <button class="accent-mini-btn" data-curve="punch" title="Soft hits jump to bite sooner">PUNCH</button>
@@ -704,14 +716,28 @@ export class VirtualKeyboardUI {
       this.updateQwertyLabels();
     });
 
-    // Accent mini buttons (PP, MP, MF, FF, SFZ)
+    // Accent mini buttons (PP, MP, MF, FF, SFZ) & Tablet/Mobile Dropdown
     const accentBtns = this.container.querySelectorAll(".accent-mini-btn[data-vel]");
+    const velSelect = document.getElementById("hud-velocity-select");
+
+    velSelect?.addEventListener("change", e => {
+      const vel = parseInt(e.target.value);
+      qwertyKeyboard.setVelocity(vel);
+      accentBtns.forEach(b => {
+        b.classList.toggle("active", parseInt(b.getAttribute("data-vel")) === vel);
+      });
+      this.updateHudReadouts();
+    });
+
     accentBtns.forEach(btn => {
       btn.addEventListener("click", () => {
         accentBtns.forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
         const vel = parseInt(btn.getAttribute("data-vel"));
         qwertyKeyboard.setVelocity(vel);
+        if (velSelect) {
+          velSelect.value = vel.toString();
+        }
       });
     });
 
@@ -928,6 +954,18 @@ export class VirtualKeyboardUI {
       layoutBtn.innerText = `LAYOUT: ${qwertyKeyboard.layoutMode === "melody" ? "MELODY (Q-P)" : "DAW (A-')"}`;
     }
 
+    const velSelect = document.getElementById("hud-velocity-select");
+    if (velSelect) {
+      const v = qwertyKeyboard.velocity;
+      let closest = "95";
+      if (v <= 45) closest = "35";
+      else if (v <= 75) closest = "60";
+      else if (v <= 105) closest = "95";
+      else if (v <= 124) closest = "120";
+      else closest = "127";
+      velSelect.value = closest;
+    }
+
     const accentBadge = document.getElementById("hud-accent-badge");
     if (accentBadge) {
       const v = qwertyKeyboard.velocity;
@@ -958,10 +996,24 @@ export class VirtualKeyboardUI {
   // velocity-curve.js; programmed velocities (pads/arp/loops) are untouched.
   initCurveButtons() {
     const wrapper = document.getElementById("hud-curve-btns");
+    const curveSelect = document.getElementById("hud-curve-select");
+    const saved = getVelocityCurve();
+
+    if (curveSelect) {
+      curveSelect.value = saved || "linear";
+      curveSelect.addEventListener("change", e => {
+        const val = e.target.value;
+        setVelocityCurve(val);
+        if (wrapper) {
+          const btns = wrapper.querySelectorAll(".accent-mini-btn");
+          btns.forEach(b => b.classList.toggle("active", b.getAttribute("data-curve") === val));
+        }
+      });
+    }
+
     if (!wrapper) return;
 
     // Restore the previously chosen curve (if any) from localStorage.
-    const saved = getVelocityCurve();
     const active = wrapper.querySelector(`[data-curve="${saved}"]`);
     if (active) active.classList.add("active");
 
@@ -970,7 +1022,9 @@ export class VirtualKeyboardUI {
       btn.addEventListener("click", () => {
         btns.forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
-        setVelocityCurve(btn.getAttribute("data-curve"));
+        const val = btn.getAttribute("data-curve");
+        setVelocityCurve(val);
+        if (curveSelect) curveSelect.value = val;
       });
     });
   }

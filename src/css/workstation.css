@@ -257,7 +257,7 @@ body.mobile-stage-keys .studio-keyboard-deck {
 /* Floating Non-Invasive License Pill Widget (A bit lower than top header tabs) */
 .floating-license-pill {
   position: fixed !important;
-  top: 48px !important;
+  top: 38px !important;
   right: 14px !important;
   z-index: 99999 !important;
   display: inline-flex !important;
