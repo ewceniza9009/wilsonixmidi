@@ -8,17 +8,30 @@
 [![Audio: Web Audio API](https://img.shields.io/badge/Audio-Direct%20PCM%20Engine-FF6F00?style=for-the-badge&logo=audio)](https://github.com/ewceniza9009/wilsonixmidi)
 [![Framework: Tauri v2 + Vite](https://img.shields.io/badge/Framework-Tauri%20v2%20%7C%20Rust-673AB7?style=for-the-badge)](https://tauri.app/)
 [![License: Proprietary](https://img.shields.io/badge/License-WILSONIX%20Commercial-red?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi)
+[![Version: v1.0.1](https://img.shields.io/badge/Version-v1.0.1%20Stable-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
 
 ---
 
-## 🚀 Quick Downloads
+## 🚀 Quick Downloads (v1.0.1 Latest Release)
 
 | Installer / Package | Target System | Direct Link | File Size |
 |:---|:---|:---:|:---:|
-| **Windows Desktop Installer** | Windows 10 / 11 (x64) | [⬇️ Download `.exe` Setup](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX.MIDIKEY_1.0.0_x64-setup.exe) | ~207 MB |
-| **Android Package** | Android 8.0+ (ARM64 / x86_64) | [⬇️ Download `.apk`](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/wilsonix-midikey.apk) | ~221 MB |
+| **Windows Desktop Installer** | Windows 10 / 11 (x64) | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX_MIDIKEY_1.0.1_x64-setup.exe) | ~207 MB |
+| **Windows Portable App** | Windows 10 / 11 (x64) | [⬇️ Download Portable (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/wilsonix-midikey.exe) | ~211 MB |
+| **Android Package** | Android 8.0+ (ARM64 / x86_64) | [⬇️ Download APK (`.apk`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/wilsonix-midikey.apk) | ~221 MB |
 
 *Or inspect all installer builds and assets on the official [GitHub Releases page](https://github.com/ewceniza9009/wilsonixmidi/releases).*
+
+---
+
+### 🆕 What's New in v1.0.1:
+- **🎛️ Responsive Tablet & Mobile Gig-HUD**: Added compact collapsible control drawer for tablet and mobile views, preventing top-bar clutter and button stacking.
+- **⚡ Zero-Flash Instant Dropdowns**: Accelerated combo-box rendering to eliminate white background flash during preset switching.
+- **🔊 Triton VA Engine Noise & Buzz Elimination**:
+  - Re-calibrated master voice pool headroom and safety limiter to eliminate dynamic compression buzz.
+  - Pure integer harmonic overtone tuning on *Dark Jazz-Organ*, *Smooth Sine Lead*, *R&B E.Piano*, *Studio Stage EP*, and *Phantom Of Tine*.
+  - Butterworth filter resonance damping to eliminate high-frequency hiss.
+- **🌐 Unified Version Synchronization**: Synchronized global versioning (`v1.0.1`) across Windows Desktop, Android APK, and Web.
 
 ---
 
