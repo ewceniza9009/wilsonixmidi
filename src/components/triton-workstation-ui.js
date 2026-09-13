@@ -925,7 +925,7 @@ export class TritonWorkstationUI {
     }
     if (has("talkbox") || has("throats")) {
       fx.talkbox?.setBypass(false);
-      fx.talkbox?.setMix(0.96);
+      fx.talkbox?.setMix(0.68);
     }
 
     // 10. STUDIO EQ ENHANCER

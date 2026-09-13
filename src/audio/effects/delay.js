@@ -115,6 +115,14 @@ export class PingPongDelay {
     this.delayR.delayTime.setTargetAtTime(dt * 1.333, now, 0.05);
   }
 
+  setTime(sec) {
+    if (typeof sec !== "number" || !Number.isFinite(sec)) return;
+    const clamped = Math.max(0.01, Math.min(2.0, sec));
+    const now = this.ctx.currentTime;
+    this.delayL.delayTime.setTargetAtTime(clamped, now, 0.05);
+    this.delayR.delayTime.setTargetAtTime(clamped * 1.333, now, 0.05);
+  }
+
   setFeedback(val) {
     // Strictly bounded to 0.55 max so delay repeats always naturally decay and NEVER ring indefinitely
     this.feedback = Math.max(0, Math.min(0.55, val));
