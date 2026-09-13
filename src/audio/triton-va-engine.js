@@ -60,11 +60,11 @@ export class TritonVirtualAnalogEngine {
     let gain3 = 0.0; // sub disabled for non-leads
 
     if (isPureSineLead) {
-      gain1 = 0.74;
-      gain2 = (Math.abs(r2 - r1) < 0.02) ? 0.0 : 0.26;
+      gain1 = 0.85;
+      gain2 = 0.0;
       gain3 = 0.0;
       osc3Type = "sine";
-      osc3Ratio = 0.5;
+      osc3Ratio = 1.0;
     } else if (isOrganOrEP) {
       gain1 = 0.58;
       gain2 = 0.36;
@@ -97,10 +97,10 @@ export class TritonVirtualAnalogEngine {
       gain2,
       gain3,
       filterType: "lowpass",
-      filterCutoff: prog.cutoff || 7000,
-      filterQ: prog.Q || 1.5,
+      filterCutoff: isPureSineLead ? 3600 : (prog.cutoff || 7000),
+      filterQ: isPureSineLead ? 0.3 : (prog.Q || 1.5),
       filterDecay: null,
-      attack: Math.max(0.001, prog.attack ?? 0.01),
+      attack: Math.max(isPureSineLead ? 0.015 : 0.002, prog.attack ?? 0.01),
       decay: prog.decay || 2.0,
       sustainLevel: prog.sustain ?? 0.65,
       release: prog.release ?? 0.35,

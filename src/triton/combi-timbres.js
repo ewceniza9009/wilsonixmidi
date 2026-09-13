@@ -50,6 +50,7 @@ const M1_INST = {
 
 // Mirror of applyTritonProgram(): trait of a VA oscillator program
 function isSynthTimbre(prog) {
+  if (prog.instId) return false;
   const cat = (prog.category || "").toLowerCase();
   const name = (prog.name || "").toLowerCase();
   const hasOsc = !!prog.osc1 || !!prog.osc2;
@@ -64,8 +65,6 @@ function isSynthTimbre(prog) {
       cat.includes("stab") ||
       cat.includes("bells & pad") ||
       cat.includes("bells") ||
-      cat.includes("electric piano") ||
-      cat.includes("organ") ||
       cat.includes("strings") ||
       cat.includes("bass & sub") ||
       name.includes("trance") ||
@@ -77,11 +76,7 @@ function isSynthTimbre(prog) {
       name.includes("throats") ||
       name.includes("techno") ||
       name.includes("hypersaw") ||
-      name.includes("synth") ||
-      name.includes("tine") ||
-      name.includes("rhodes") ||
-      name.includes("r&b") ||
-      name.includes("fm piano"))
+      name.includes("synth"))
   );
 }
 
@@ -94,7 +89,11 @@ function resolvePcmByProgram(prog) {
   const isBass = cat.includes("bass") || name.includes("bass");
 
   if (prog.instId) return prog.instId;
+  if (prog.id === "A005") return "drawbar_organ";
   if (prog.id === "A006") return "electric_piano_1";
+  if (prog.id === "A015" || prog.id === "A020") return "electric_piano_1";
+  if (prog.id === "A025") return "abletunes_fm_piano";
+  if (prog.id === "A028") return "rhodes_stage_mp3";
   if (prog.id === "A036") return "acoustic_grand_piano";
   if (name.includes("distortion") || name.includes("*dist") || prog.id === "A042") return "distortion_guitar";
   if (name.includes("feedback") || name.includes("overdrive") || prog.id === "A037") return "overdriven_guitar";

@@ -166,19 +166,22 @@ export class PolyphonicVoice {
     }
 
     // Dynamic Filter
+    const isPureSine = (instrumentConfig.osc1Type === "sine" && instrumentConfig.osc2Type === "sine");
     const baseCutoff = instrumentConfig.filterCutoff || 6000;
-    const filterEnv = Math.min(18000, Math.max(baseCutoff * (0.5 + velRatio * 0.8), freq * 1.5));
+    const filterEnv = isPureSine
+      ? Math.min(baseCutoff, Math.max(800, baseCutoff * (0.7 + velRatio * 0.3)))
+      : Math.min(18000, Math.max(baseCutoff * (0.5 + velRatio * 0.8), freq * 1.5));
     this.filter.type = instrumentConfig.filterType || "lowpass";
-    this.filter.Q.setValueAtTime(Math.min(2.5, Math.max(0.25, (instrumentConfig.filterQ || 1.0) * 0.55)), now);
+    this.filter.Q.setValueAtTime(isPureSine ? 0.3 : Math.min(2.5, Math.max(0.25, (instrumentConfig.filterQ ?? 1.0) * 0.55)), now);
     this.filter.frequency.cancelScheduledValues(now);
     this.filter.frequency.setTargetAtTime(filterEnv, now, 0.012);
 
-    // Component balances
-    this.gain1.gain.setValueAtTime(instrumentConfig.gain1 || 0.7, now);
-    this.gain2.gain.setValueAtTime(instrumentConfig.gain2 || 0.3, now);
-    this.gain3.gain.setValueAtTime(Number(instrumentConfig.gain3) || 0.0, now);
+    // Component balances - use nullish coalescing so explicit 0.0 gains are respected!
+    this.gain1.gain.setValueAtTime(instrumentConfig.gain1 ?? 0.7, now);
+    this.gain2.gain.setValueAtTime(instrumentConfig.gain2 ?? 0.3, now);
+    this.gain3.gain.setValueAtTime(instrumentConfig.gain3 ?? 0.0, now);
 
-    const attack = Math.max(0.0015, instrumentConfig.attack || 0.002);
+    const attack = Math.max(0.004, instrumentConfig.attack || 0.005);
     const peakGain = (0.35 + velRatio * 0.65) * (instrumentConfig.masterGain || 0.85);
     const decay = instrumentConfig.decay || 2.2;
     const sustain = peakGain * (instrumentConfig.sustainLevel || 0.35);
