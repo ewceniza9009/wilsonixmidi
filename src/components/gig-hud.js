@@ -14,6 +14,7 @@ import { registrationManager } from "./registration-manager.js";
 import { TRITON_BANKS } from "../triton/triton-soundbanks.js";
 import { getTritonProgramById } from "../triton/combi-timbres.js";
 import { arpeggiator } from "../audio/arpeggiator.js";
+import { APP_VERSION, BUILD_NUMBER, BUILD_DATE, getFullVersionString } from "../version.js";
 
 export class GigHudUI {
   constructor(containerId, onOpenLicenseModal) {
@@ -23,6 +24,11 @@ export class GigHudUI {
     this.lastTapTimes = [];
     this._latencySmoothed = null;
     this.gigMode = localStorage.getItem("midikey_gig_mode") === "1";
+
+    if (typeof window !== "undefined") {
+      window.WILSONIX_VERSION = { version: APP_VERSION, build: BUILD_NUMBER, date: BUILD_DATE };
+      console.log(`%c[WILSONIX MIDIKEY]%c ${getFullVersionString()}`, 'color: #ff764d; font-weight: bold;', 'color: #94a3b8;');
+    }
     this.sunlightMode = localStorage.getItem("wilsonix_sunlight_mode") === "1";
     this._vuRunning = false;
     this.vuAnimationId = null;
@@ -407,6 +413,12 @@ export class GigHudUI {
                 <button class="sunlight-mode-btn ${this.sunlightMode ? "active" : ""}" id="hud-sunlight-btn" title="Toggle Stage Sunlight Contrast">
                   ${this.sunlightMode ? "☀️" : "🌙"}
                 </button>
+
+                <!-- Global Build & Version Badge -->
+                <div class="hud-drawer-version" id="hud-drawer-version" title="${getFullVersionString()}">
+                  <span class="version-dot"></span>
+                  <span class="version-text">v${APP_VERSION}b${BUILD_NUMBER}</span>
+                </div>
               </div>
             </div>
           </div>

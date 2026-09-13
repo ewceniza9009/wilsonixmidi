@@ -1,6 +1,6 @@
 {
   "name": "midikey-elite",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "WILSONIX MIDIKEY - Ableton-inspired Live Performance Workstation & DAW for Desktop and Android",
   "type": "module",
@@ -15,7 +15,12 @@
     "clean:drive-x": "powershell -ExecutionPolicy Bypass -NoProfile -File tools\\clean-cache.ps1 -Target drive-x",
     "preview": "vite preview",
     "tauri": "tauri",
-    "start": "start src-tauri/target/release/wilsonix-midikey.exe",
+    "version:patch": "node tools/bump-version.js patch",
+    "version:minor": "node tools/bump-version.js minor",
+    "version:major": "node tools/bump-version.js major",
+    "version:sync": "node tools/bump-version.js sync",
+    "version:set": "node tools/bump-version.js",
+    "build:all": "npm run build && npm run build:android && npm run build:desktop",
     "gen-license": "node tools/license-generator.js"
   },
   "devDependencies": {

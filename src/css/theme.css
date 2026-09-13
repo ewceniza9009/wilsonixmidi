@@ -339,3 +339,31 @@ button:active {
   transform: translateY(1px) scale(0.98);
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.7);
 }
+
+/* Global Version Badge in HUD Tools Drawer */
+.hud-drawer-version {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  font-family: var(--font-family-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.04em;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.hud-drawer-version .version-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 5px rgba(34, 197, 94, 0.7);
+  flex-shrink: 0;
+}
+
