@@ -255,9 +255,6 @@ export class GigHudUI {
             <button class="layer-toggle-btn ${isLayerActive ? "active" : ""}" id="btn-toggle-layer" title="Toggle 2nd Sound Layer">
               ${isLayerActive ? "LAYER ON" : "LAYER"}
             </button>
-            <button class="hud-btn duck-btn ${multiLayerEngine.isPadDuckingEnabled ? "active" : ""}" id="btn-toggle-duck" title="Auto Ambient Pad Sidechain Ducker (Smoothly dips background pad/strings when piano strikes)">
-              ${multiLayerEngine.isPadDuckingEnabled ? "DUCK ON" : "DUCK"}
-            </button>
             <select class="hud-layer-select ${isLayerActive ? "active" : ""}" id="hud-layer-select" title="Choose 2nd Layer Instrument">
               ${soundbanksList
                 .map(
@@ -270,6 +267,12 @@ export class GigHudUI {
                 .join("")}
             </select>
           </div>
+
+          <!-- Ambient Pad Sidechain Ducking Toggle -->
+          <button class="duck-toggle-btn ${multiLayerEngine.isPadDuckingEnabled ? "active" : ""}" id="btn-toggle-duck" title="Auto Ambient Pad Sidechain Ducker (Smoothly dips background pad/strings when piano strikes)">
+            <span class="duck-led"></span>
+            DUCK
+          </button>
         </div>
 
         <!-- 2. CENTER: Live Stage Rig Presets & Transport -->
@@ -623,7 +626,6 @@ export class GigHudUI {
       multiLayerEngine.togglePadDucking();
       const isActive = multiLayerEngine.isPadDuckingEnabled;
       duckBtn.classList.toggle("active", isActive);
-      duckBtn.innerText = isActive ? "DUCK ON" : "DUCK";
     });
 
     // Arpeggiator Toggle

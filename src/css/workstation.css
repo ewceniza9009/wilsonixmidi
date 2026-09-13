@@ -357,28 +357,27 @@ body.mobile-stage-keys .studio-keyboard-deck {
   color: #f3f4f6;
 }
 
-/* Layer Box - Responsive Width */
+/* Layer Box - Generous Clean Width */
 .hud-layer-box {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   background: linear-gradient(180deg, #161a25 0%, #0d1017 100%);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: var(--radius-sm);
   padding: 1px 4px;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
-  flex: 0 1 125px;
-  min-width: 65px;
-  max-width: 140px;
+  flex: 0 1 155px;
+  min-width: 95px;
+  max-width: 180px;
   box-sizing: border-box;
-  overflow: hidden;
 }
 
 .layer-toggle-btn {
   background: #1e2433;
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: #94a3b8;
-  font-size: 0.56rem;
+  font-size: 0.54rem;
   font-weight: 800;
   padding: 2px 5px;
   border-radius: 3px;
@@ -386,6 +385,10 @@ body.mobile-stage-keys .studio-keyboard-deck {
   white-space: nowrap;
   transition: all 0.12s ease;
   flex-shrink: 0;
+  height: 20px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
 }
 
 .layer-toggle-btn:hover {
@@ -404,12 +407,12 @@ body.mobile-stage-keys .studio-keyboard-deck {
   background: transparent;
   color: #64748b;
   border: none;
-  font-size: 0.64rem;
+  font-size: 0.62rem;
   font-weight: 800;
   outline: none;
   cursor: pointer;
   flex: 1;
-  min-width: 0;
+  min-width: 50px;
   text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
@@ -425,6 +428,54 @@ body.mobile-stage-keys .studio-keyboard-deck {
 .hud-layer-select option {
   background: #141722;
   color: #fff;
+}
+
+/* Standalone Ambient Pad Sidechain Ducking Toggle */
+.duck-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+  background: linear-gradient(180deg, #181d28 0%, #0d1118 100%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius-sm);
+  padding: 1px 6px;
+  font-size: 0.54rem;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: #94a3b8;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.duck-toggle-btn:hover {
+  background: #232b3a;
+  color: #fff;
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.duck-toggle-btn.active {
+  background: rgba(245, 158, 11, 0.20);
+  color: #f59e0b;
+  border-color: #f59e0b;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.45);
+}
+
+.duck-led {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #475569;
+  display: inline-block;
+  transition: background 0.15s ease;
+}
+
+.duck-toggle-btn.active .duck-led {
+  background: #f59e0b;
+  box-shadow: 0 0 6px #f59e0b;
 }
 
 /* Stage Registration Rig Widget */
@@ -601,53 +652,28 @@ body.mobile-stage-keys .studio-keyboard-deck {
   color: var(--text-muted);
 }
 
-/* Ambient Pad Sidechain Ducker Button */
-.duck-btn {
-  background: #1e2433;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #94a3b8;
-  font-size: 0.54rem;
-  font-weight: 800;
-  padding: 2px 5px;
-  border-radius: 3px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.15s ease;
-  flex-shrink: 0;
-}
-
-.duck-btn:hover {
-  background: #2b3348;
-  color: #fff;
-}
-
-.duck-btn.active {
-  background: rgba(245, 158, 11, 0.22);
-  color: #f59e0b;
-  border-color: #f59e0b;
-  box-shadow: 0 0 8px rgba(245, 158, 11, 0.45);
-}
-
 /* Live Groove Arpeggiator Button */
 .arp-btn {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  background: #1e2433;
+  height: 18px;
+  background: #222938;
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: #94a3b8;
-  font-size: 0.54rem;
+  font-size: 0.52rem;
   font-weight: 800;
-  padding: 2px 5px;
-  border-radius: 3px;
+  padding: 1px 5px;
+  border-radius: 2px;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s ease;
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .arp-btn:hover {
-  background: #2b3348;
+  background: #2d374b;
   color: #fff;
 }
 
@@ -655,12 +681,12 @@ body.mobile-stage-keys .studio-keyboard-deck {
   background: rgba(16, 185, 129, 0.25);
   color: #10b981;
   border-color: #10b981;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.45);
 }
 
 .arp-led {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
   border-radius: 50%;
   background: #475569;
   display: inline-block;
@@ -669,7 +695,7 @@ body.mobile-stage-keys .studio-keyboard-deck {
 
 .arp-btn.active .arp-led {
   background: #10b981;
-  box-shadow: 0 0 6px #10b981;
+  box-shadow: 0 0 5px #10b981;
   animation: pulse-glow 0.8s infinite alternate ease-in-out;
 }
 
