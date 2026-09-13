@@ -322,13 +322,13 @@ export const COMBI_PRESETS = {
   },
   talkbox_funk_master: {
     id: "talkbox_funk_master",
-    name: "★ Roger Troutman Talkbox Lead & Slap Funk",
+    name: "★ Roger Troutman Talkbox Lead (Zapp & Roger)",
     category: "Funk & Groove",
     fxPreset: "talkbox_vocal",
     layers: [
-      { id: 0, name: "Roger Talkbox Synth Lead (Zapp)", inst: "va:A017", fx: "tube_warm", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Korg M1 Slap Bass", inst: "m1_slap_bass", fx: "punch_comp", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Funky Clavinet D6", inst: "electric_piano_1", fx: "clean", gain: 0.65, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 0, name: "Roger Talkbox Lead (Zapp)", inst: "va:A045", fx: "tube_warm", gain: 1.25, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Korg M1 Slap Bass", inst: "m1_slap_bass", fx: "punch_comp", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: false },
+      { id: 2, name: "Funky Clavinet D6", inst: "electric_piano_1", fx: "clean", gain: 0.65, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: false },
       { id: 3, name: "Fat Brass Horns", inst: "brass_section", fx: "air_eq", gain: 0.60, pan: -0.05, oct: 0, minVel: 60, maxVel: 127, enabled: false },
     ],
   },
@@ -743,6 +743,12 @@ export class MultiLayerEngine {
     this.activeSingleInst = "acoustic_grand_piano";
     this.synthPatch = null;
     this.layers = JSON.parse(JSON.stringify(this.activeCombi.layers));
+    this.layers.forEach(layer => {
+      if (layer.inst && layer.inst.startsWith("va:")) {
+        const prog = getTritonProgramById(layer.inst.slice(3));
+        if (prog) layer.vaProg = prog;
+      }
+    });
     this.isDualLayerActive = false; // Dedicated dual-layer toggle state for live stage performance
 
     // Keyboard split: two fully assignable zones. Notes below splitPointMidi hit the
@@ -897,6 +903,12 @@ export class MultiLayerEngine {
       if (!s || !Array.isArray(s.layers) || s.layers.length !== 4) return null;
       if (!s.layers.every(l => l && typeof l.inst === "string")) return null;
       this.layers = s.layers;
+      this.layers.forEach(layer => {
+        if (layer.inst && layer.inst.startsWith("va:")) {
+          const prog = getTritonProgramById(layer.inst.slice(3));
+          if (prog) layer.vaProg = prog;
+        }
+      });
       this.isCombiMode = s.isCombiMode !== false;
       this.isSynthMode = false;
       if (this.isCombiMode && s.activeCombiId) {
@@ -1119,8 +1131,10 @@ export class MultiLayerEngine {
     this.isSynthMode = true;
     this.activeTritonVaProg = prog;
     const ctx = audioCore.init();
-    if (ctx) tritonVaEngine.init();
     tritonVaEngine.setProgram(prog);
+    if ((prog.id === "A045" || prog.ifx === "Talkbox") && audioCore.fxRack) {
+      audioCore.fxRack.applyPreset("talkbox_vocal");
+    }
     this.init();
     this.notifyLayerChange();
     this.notifySplitChange();
@@ -1166,8 +1180,14 @@ export class MultiLayerEngine {
       this.isSynthMode = false;
       this.isTritonVaMode = false;
       this.activeTritonVaProg = null;
-      this.isDualLayerActive = false; // explicitly loaded a full 4-layer combi
+      this.isDualLayerActive = false;
       this.layers = JSON.parse(JSON.stringify(this.activeCombi.layers));
+      this.layers.forEach(layer => {
+        if (layer.inst && layer.inst.startsWith("va:")) {
+          const prog = getTritonProgramById(layer.inst.slice(3));
+          if (prog) layer.vaProg = prog;
+        }
+      });
       this.init();
       this.syncLayerFx();
       if (this.activeCombi.fxPreset && audioCore.fxRack) {
@@ -1347,6 +1367,10 @@ export class MultiLayerEngine {
   noteOn(midiNote, velocity = 95) {
     if (!this.pcmEngine) this.init();
     audioCore.ensureRunning();
+
+    if (audioCore.fxRack?.talkbox && audioCore.fxRack.talkbox.enabled) {
+      audioCore.fxRack.talkbox.triggerVocalAttack(velocity);
+    }
 
     // Split zone: route through the dedicated zone bus (triggers assigned instrument
     // or the current stack, so each half gets its own insert FX like a combi strip)

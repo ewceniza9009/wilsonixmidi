@@ -276,10 +276,17 @@ export class FxRackManager {
           break;
 
         case "talkbox_vocal":
-          this.setPresetTrim(1.0);
+          this.setPresetTrim(1.15);
           this.talkbox.setBypass(false);
-          this.talkbox.setMix(0.40);
-          this.tube.setBypass(true);
+          this.talkbox.setMix(0.96);
+          this.tube.setBypass(false);
+          this.tube.setDrive(0.35);
+          this.chorus.setBypass(false);
+          this.chorus.setMix(0.25);
+          this.slapback.setBypass(false);
+          this.slapback.setMix(0.22);
+          this.reverb.setBypass(false);
+          this.reverb.setMix(0.12);
           this.delay.setBypass(true);
           break;
 

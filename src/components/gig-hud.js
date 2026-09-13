@@ -74,7 +74,7 @@ export class GigHudUI {
         items: [
           { id: "combi:reggae_bubble", name: "★ Kingston Bubble & Reggae Skank (B3 + Piano + Guitar)", type: "combi", combiId: "reggae_bubble" },
           { id: "combi:shimmer_worship_celestial", name: "★ Celestial Shimmer & Grand (Octave Reverb)", type: "combi", combiId: "shimmer_worship_celestial" },
-          { id: "combi:talkbox_funk_master", name: "★ Roger Troutman Talkbox Lead & Slap Funk", type: "combi", combiId: "talkbox_funk_master" },
+          { id: "combi:talkbox_funk_master", name: "★ Roger Troutman Talkbox Lead (Zapp & Roger)", type: "combi", combiId: "talkbox_funk_master" },
           { id: "combi:lofi_vinyl_ep", name: "★ Lo-Fi Vintage Tape Rhodes (Wow & Flutter)", type: "combi", combiId: "lofi_vinyl_ep" },
           { id: "combi:ballad_master", name: "★ Concert Grand & Triton Strings", type: "combi", combiId: "ballad_master" },
           { id: "combi:tokyo_city_pop", name: "★ Tokyo City Pop (FM + Strat + Sax)", type: "combi", combiId: "tokyo_city_pop" },
@@ -150,6 +150,7 @@ export class GigHudUI {
           { id: "inst:sax_genuine_solo", name: "🎷 Solo Alto Sax (Expressive Breath & Vibrato)", type: "inst", instId: "sax_genuine_solo" },
           { id: "inst:sax_sensual", name: "🎷 Sensual 80s Breathy Sax", type: "inst", instId: "sax_sensual" },
           { id: "inst:sax_blues_growl", name: "🎷 Dirty Blues Sax Growl", type: "inst", instId: "sax_blues_growl" },
+          { id: "va:A045", name: "🎤 Roger Troutman Zapp Talkbox Lead (Solo)", type: "va", progId: "A045" },
           { id: "va:A017", name: "⚡ Brian's Sync Lead (Triton VA)", type: "va", progId: "A017" },
           { id: "va:A010", name: "⚡ Smooth Sine Lead (Triton VA)", type: "va", progId: "A010" },
           { id: "inst:abletunes_upright", name: "🎹 Abletunes Studio Upright Piano", type: "inst", instId: "abletunes_upright" },
@@ -195,6 +196,7 @@ export class GigHudUI {
 
   getSoundIcon() {
     if (multiLayerEngine.isSplitMode) return "✂️";
+    if (multiLayerEngine.activeTritonVaProg?.id === "A045" || multiLayerEngine.activeCombi?.id === "talkbox_funk_master") return "🎤";
     if (multiLayerEngine.isTritonVaMode) return "⚡";
     if (multiLayerEngine.isCombiMode) return "★";
     const inst = (multiLayerEngine.activeSingleInst || "").toLowerCase();

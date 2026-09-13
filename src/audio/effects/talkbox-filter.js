@@ -55,7 +55,7 @@ export class TalkboxFormantFilter {
     this.formantFilters = [];
     this.formantGains = [];
     this.mouthSum = ctx.createGain();
-    this.mouthSum.gain.value = 0.55;
+    this.mouthSum.gain.value = 2.4; // Makeup gain for 4 narrow vocal tract bandpass filters
 
     for (let i = 0; i < 4; i++) {
       const filter = ctx.createBiquadFilter();
@@ -90,7 +90,11 @@ export class TalkboxFormantFilter {
     this.input.connect(this.analyser);
     this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
 
-    this.setVowelPosition(0.0);
+    this._vocalAttackTime = 0;
+    this._vocalPeak = 0.85;
+    this._vocalRest = 0.38;
+
+    this.setVowelPosition(0.35);
     this.startDynamicMouthTracking();
   }
 
@@ -133,13 +137,30 @@ export class TalkboxFormantFilter {
       const gain = v1.g[i] + blend * (v2.g[i] - v1.g[i]);
       const q = v1.q[i] + blend * (v2.q[i] - v1.q[i]);
 
-      this.formantFilters[i].frequency.setTargetAtTime(freq, now, 0.035);
-      this.formantFilters[i].Q.setTargetAtTime(q, now, 0.035);
-      this.formantGains[i].gain.setTargetAtTime(gain * 0.9, now, 0.035);
+      this.formantFilters[i].frequency.setTargetAtTime(freq, now, 0.025);
+      this.formantFilters[i].Q.setTargetAtTime(q, now, 0.025);
+      this.formantGains[i].gain.setTargetAtTime(gain * 1.25, now, 0.025);
     }
   }
 
+  /**
+   * Triggers an authentic Roger Troutman phonetic vocal onset:
+   * Key Strike -> Mouth opens "OO -> YEA/AH" (0.08 -> 0.85) -> Settles into resonant singing "OH" (0.38)
+   */
+  triggerVocalAttack(velocity = 95) {
+    if (!this.enabled || !this.ctx) return;
+    const velNorm = Math.max(0.2, Math.min(1.0, velocity / 127));
+    const now = this.ctx.currentTime;
+    this._vocalAttackTime = now;
+    this._vocalPeak = 0.65 + velNorm * 0.28; // 0.70 - 0.93 based on touch dynamics
+    this._vocalRest = 0.36;
+    this.setVowelPosition(0.08); // Start at initial closed mouth onset
+  }
+
   startDynamicMouthTracking() {
+    let lastRms = 0;
+    let smoothedMorph = 0.35;
+
     const update = () => {
       if (this.enabled && this.ctx && this.ctx.state === "running") {
         this.analyser.getByteTimeDomainData(this.dataArray);
@@ -149,9 +170,35 @@ export class TalkboxFormantFilter {
           sum += v * v;
         }
         const rms = Math.sqrt(sum / this.dataArray.length);
-        // Dynamic envelope sweeps mouth from OO to AH/EE and back
-        const targetMorph = Math.min(1.0, rms * this.sensitivity * 3.8);
-        this.setVowelPosition(targetMorph);
+        const delta = Math.max(0, rms - lastRms);
+        lastRms = rms * 0.85 + lastRms * 0.15;
+
+        const now = this.ctx.currentTime;
+        let vocalEnv = 0.35;
+        if (this._vocalAttackTime) {
+          const elapsed = now - this._vocalAttackTime;
+          if (elapsed < 0.045) {
+            // Rapid consonant opening: OOH -> YEA (0.08 to peak)
+            const t = elapsed / 0.045;
+            vocalEnv = 0.08 + t * (this._vocalPeak - 0.08);
+          } else if (elapsed < 0.32) {
+            // Vocal decay settling into resonant "OH"
+            const t = (elapsed - 0.045) / 0.275;
+            vocalEnv = this._vocalPeak - t * (this._vocalPeak - this._vocalRest);
+          } else {
+            // Organic 5.2Hz human vocal cord vibrato modulation
+            const lfo = Math.sin((elapsed - 0.32) * Math.PI * 2 * 5.2) * 0.055;
+            vocalEnv = this._vocalRest + lfo;
+          }
+        }
+
+        // Dynamic transient accent push
+        const transientPush = Math.min(0.35, delta * this.sensitivity * 2.0);
+        const targetMorph = Math.max(0.05, Math.min(0.98, vocalEnv + transientPush));
+
+        // Smooth interpolation eliminates filter clicking
+        smoothedMorph = smoothedMorph * 0.72 + targetMorph * 0.28;
+        this.setVowelPosition(smoothedMorph);
       }
       this.animId = requestAnimationFrame(update);
     };
@@ -165,16 +212,20 @@ export class TalkboxFormantFilter {
       this.wetGain.gain.setTargetAtTime(0.0, now, 0.03);
       this.dryGain.gain.setTargetAtTime(1.0, now, 0.03);
     } else {
+      // In physical talkbox, 100% of sound goes through mouth tube into microphone
+      const dryVal = Math.max(0.0, 1.0 - this.mix);
       this.wetGain.gain.setTargetAtTime(this.mix, now, 0.03);
-      this.dryGain.gain.setTargetAtTime(1.0 - this.mix * 0.7, now, 0.03);
+      this.dryGain.gain.setTargetAtTime(dryVal, now, 0.03);
     }
   }
 
   setMix(val) {
     this.mix = Math.max(0, Math.min(1.0, val));
     if (this.enabled) {
-      this.wetGain.gain.setTargetAtTime(this.mix, this.ctx.currentTime, 0.03);
-      this.dryGain.gain.setTargetAtTime(1.0 - this.mix * 0.7, this.ctx.currentTime, 0.03);
+      const now = this.ctx.currentTime;
+      const dryVal = Math.max(0.0, 1.0 - this.mix);
+      this.wetGain.gain.setTargetAtTime(this.mix, now, 0.03);
+      this.dryGain.gain.setTargetAtTime(dryVal, now, 0.03);
     }
   }
 
