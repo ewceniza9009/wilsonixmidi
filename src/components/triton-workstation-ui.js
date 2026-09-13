@@ -579,68 +579,46 @@ export class TritonWorkstationUI {
     const isGuitar = cat.includes("guitar") || name.includes("guitar");
     const isBass = cat.includes("bass") || name.includes("bass");
 
-    let instKey = "acoustic_grand_piano";
-    const ifx = (prog.ifx || "").toLowerCase();
-    const mfx = (prog.mfx || "").toLowerCase();
+    const isDedicatedPcm =
+      prog.instId ||
+      prog.id === "A036" ||
+      prog.id === "A037" ||
+      prog.id === "A042" ||
+      prog.id === "A043" ||
+      prog.id === "A044" ||
+      prog.id === "B007";
 
-    if (prog.instId) {
-      instKey = prog.instId;
-    } else if (name.includes("distortion") || name.includes("*dist") || prog.id === "A042" || prog.id === "M014") {
-      instKey = "distortion_guitar";
-    } else if (name.includes("feedback") || name.includes("overdrive") || prog.id === "A037") {
-      instKey = "overdriven_guitar";
-    } else if (name.includes("nylon") || (isGuitar && cat.includes("acoustic")) || prog.id === "B007") {
-      instKey = "acoustic_guitar_nylon";
-    } else if (name.includes("12-string") || name.includes("guitar") || isGuitar) {
-      instKey = "electric_guitar_clean";
-    } else if (prog.id === "A006") {
-      instKey = "electric_piano_1";
-    } else if (prog.id === "A036" || prog.id === "M001") {
-      instKey = "acoustic_grand_piano";
-    } else if (name.includes("fm piano") || name.includes("dx7") || prog.id === "A043") {
-      instKey = "abletunes_fm_piano";
-    } else if (cat.includes("electric piano") || cat.includes("ep") || name.includes("ep") || name.includes("tine") || name.includes("r&b") || name.includes("wurly") || name.includes("rhodes")) {
-      instKey = "electric_piano_2";
-    } else if (cat.includes("organ") || name.includes("organ") || ifx.includes("rotary")) {
-      instKey = "drawbar_organ";
-    } else if (isBass || cat.includes("bass")) {
-      instKey = "synth_bass_1";
-    } else if (cat.includes("choir") || cat.includes("vocal") || name.includes("choir") || name.includes("voice") || name.includes("vox") || name.includes("ooh") || name.includes("ahh")) {
-      instKey = "choir_aahs";
-    } else if (cat.includes("strings") || cat.includes("pad") || cat.includes("orchestra") || name.includes("universe")) {
-      instKey = "string_ensemble_1";
-    } else if (name.includes("trumpet") || prog.id === "M012") {
-      instKey = "trumpet";
-    } else if (name.includes("trombone") || prog.id === "A030") {
-      instKey = "trombone";
-    } else if (cat.includes("brass") || name.includes("brass")) {
-      instKey = "brass_section";
-    } else if (name.includes("flute") || cat.includes("flute")) {
-      instKey = "flute";
-    } else if (name.includes("clarinet") || cat.includes("clarinet")) {
-      instKey = "clarinet";
-    } else if (cat.includes("woodwind") || name.includes("sax") || name.includes("harmonica")) {
-      instKey = "alto_sax";
-    } else if (name.includes("kalimba") || cat.includes("kalimba")) {
-      instKey = "kalimba";
-    } else if (name.includes("vibes") || name.includes("bell") || cat.includes("mallet") || cat.includes("bell")) {
-      instKey = "vibraphone";
-    } else if (prog.id === "A045" || name.includes("talkbox") || ifx === "talkbox") {
-      instKey = "brass_section";
-    } else if (cat.includes("lead") || cat.includes("fast synth") || cat.includes("motion") || cat.includes("hit") || cat.includes("stab") || cat.includes("synthesizer")) {
-      // For pure electronic synth leads, check if user specifically wants the VA oscillator voice
-      const isPureVaLead = !prog.instId && (prog.osc1 === "sawtooth" || prog.osc1 === "square") && (name.includes("trance") || name.includes("sync") || name.includes("scream") || name.includes("hypersaw"));
-      if (isPureVaLead) {
-        multiLayerEngine.setTritonVaProgram(prog);
+    if (isDedicatedPcm) {
+      let instKey = "acoustic_grand_piano";
+      if (prog.instId) instKey = prog.instId;
+      else if (prog.id === "A036") instKey = "acoustic_grand_piano";
+      else if (prog.id === "A037") instKey = "overdriven_guitar";
+      else if (prog.id === "A042") instKey = "distortion_guitar";
+      else if (prog.id === "A043") instKey = "abletunes_fm_piano";
+      else if (prog.id === "A044") instKey = "abletunes_upright";
+      else if (prog.id === "B007") instKey = "acoustic_guitar_nylon";
+
+      multiLayerEngine.setSingleInstrument(instKey);
+      if (audioCore.fxRack) {
         this.applyIfxMfx(prog);
-        return;
       }
-      instKey = "brass_section";
-    } else {
-      instKey = "acoustic_grand_piano";
+      return;
     }
 
+    // All other Triton Classic User A, B, C, D programs have their OWN unique oscillator timbres & IFX/MFX
+    if (prog.osc1 || prog.osc2) {
+      multiLayerEngine.setTritonVaProgram(prog);
+      if (audioCore.fxRack) {
+        this.applyIfxMfx(prog);
+      }
+      return;
+    }
+
+    let instKey = "acoustic_grand_piano";
     multiLayerEngine.setSingleInstrument(instKey);
+    if (audioCore.fxRack) {
+      this.applyIfxMfx(prog);
+    }
 
     // Configure matched KORG TRITON IFX & MFX Routing
     if (audioCore.fxRack) {
