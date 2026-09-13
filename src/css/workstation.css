@@ -2405,6 +2405,18 @@ body.mobile-stage-keys .studio-keyboard-deck {
   height: calc(100vh - 110px) !important;
 }
 
+#app-root.view-keys .piano-roll-container.zoom-touch .white-key {
+  min-width: 62px;
+  height: calc(100vh - 130px) !important;
+}
+
+#app-root.view-keys .piano-roll-container.zoom-touch .black-key {
+  width: 38px;
+  height: calc((100vh - 130px) * 0.65) !important;
+  margin-left: -19px;
+  margin-right: -19px;
+}
+
 #app-root.view-keys .piano-roll-container.zoom-wide .white-key {
   height: calc(100vh - 130px) !important;
 }

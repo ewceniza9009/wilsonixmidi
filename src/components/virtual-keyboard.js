@@ -22,6 +22,20 @@ import { shapeVelocity, setVelocityCurve, getVelocityCurve } from "../midi/veloc
 const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const WHITE_NOTES = [0, 2, 4, 5, 7, 9, 11];
 
+function detectTabletOrTouch() {
+  try {
+    const ua = (navigator.userAgent || "").toLowerCase();
+    const isAndroid = ua.includes("android");
+    const isTablet = /(ipad|tablet|playbook|silk)|(android(?!.*mobile))/i.test(ua);
+    const isTouchDevice = typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0);
+    const isMediumWidth = typeof window !== "undefined" && window.innerWidth >= 600 && window.innerWidth <= 1366;
+    const isCapacitor = typeof window !== "undefined" && window.Capacitor?.isNativePlatform?.();
+    return isAndroid || isTablet || isCapacitor || (isTouchDevice && isMediumWidth);
+  } catch (e) {
+    return false;
+  }
+}
+
 export class VirtualKeyboardUI {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
@@ -33,23 +47,39 @@ export class VirtualKeyboardUI {
     this.keyStates = new Uint8Array(128); // Fast state deduplication cache
     this.activeMouseChord = null;
 
+    const savedZoom = typeof localStorage !== "undefined" ? localStorage.getItem("midikey_zoom_mode") : null;
+    const isTouchPlatform = detectTabletOrTouch();
+    this.currentZoomMode = savedZoom || (isTouchPlatform ? "touch" : "compact");
+
     this.render();
     this.bindMouseAndTouch();
     this.bindWheels();
     this.updateHudState();
 
-    // Auto-center view on Middle C (C4 = MIDI 60) on startup
+    // Auto-center / frame view on Middle C or C3-C5 on startup
     requestAnimationFrame(() => {
-      this.centerOnMiddleC(false);
+      if (this.currentZoomMode === "touch") {
+        this.frameC3C5(false);
+      } else {
+        this.centerOnMiddleC(false);
+      }
     });
     setTimeout(() => {
-      this.centerOnMiddleC(false);
+      if (this.currentZoomMode === "touch") {
+        this.frameC3C5(false);
+      } else {
+        this.centerOnMiddleC(false);
+      }
     }, 60);
 
     window.addEventListener("resize", () => {
       const rollContainer = document.getElementById("piano-roll-container");
       if (rollContainer && !rollContainer.classList.contains("zoom-full")) {
-        this.centerOnMiddleC(false);
+        if (this.currentZoomMode === "touch") {
+          this.frameC3C5(false);
+        } else {
+          this.centerOnMiddleC(false);
+        }
       }
     }, { passive: true });
 
@@ -101,6 +131,7 @@ export class VirtualKeyboardUI {
             <button class="hud-btn" id="oct-down-btn" title="Octave Down (Minus)">- OCT</button>
             <div class="octave-readout" id="oct-display">C${qwertyKeyboard.baseOctave}</div>
             <button class="hud-btn" id="oct-up-btn" title="Octave Up (Plus)">+ OCT</button>
+            <button class="hud-btn range-btn" id="hud-c3-c5-btn" title="Jump & Frame 2.5 Octaves (C3 - C5)">C3-C5</button>
           </div>
 
           <!-- Smart Chord Voicing Button -->
@@ -152,9 +183,10 @@ export class VirtualKeyboardUI {
           <div class="key-zoom-unit">
             <span class="zoom-label">KEYS:</span>
             <div class="zoom-pill-group">
-              <button class="zoom-btn" data-zoom="wide">WIDE (TOUCH)</button>
-              <button class="zoom-btn active" data-zoom="compact">COMPACT</button>
-              <button class="zoom-btn" data-zoom="full">88 FULL</button>
+              <button class="zoom-btn ${this.currentZoomMode === "touch" ? "active" : ""}" data-zoom="touch" title="2.5 Octaves Wide Touch Keys (C3 to C5/G5) for Android Tablets & Touchscreens">2.5 OCT TOUCH</button>
+              <button class="zoom-btn ${this.currentZoomMode === "wide" ? "active" : ""}" data-zoom="wide" title="Wide Stage Keys (3.5 Octaves)">WIDE</button>
+              <button class="zoom-btn ${this.currentZoomMode === "compact" ? "active" : ""}" data-zoom="compact" title="Compact Stage Keys (5 Octaves)">COMPACT</button>
+              <button class="zoom-btn ${this.currentZoomMode === "full" ? "active" : ""}" data-zoom="full" title="All 88 Grand Piano Keys">88 FULL</button>
             </div>
           </div>
 
@@ -187,7 +219,7 @@ export class VirtualKeyboardUI {
         </div>
 
         <!-- Interactive Piano Bed (88 Keys) -->
-        <div class="piano-roll-container zoom-compact" id="piano-roll-container">
+        <div class="piano-roll-container zoom-${this.currentZoomMode}" id="piano-roll-container">
           <div class="piano-bed" id="piano-keys-track">
             ${this.buildKeysHtml()}
           </div>
@@ -588,23 +620,22 @@ export class VirtualKeyboardUI {
     this.initCurveButtons();
 
     // Mobile / Screen Key Zoom Mode Switcher
-    const rollContainer = document.getElementById("piano-roll-container");
     const zoomBtns = this.container.querySelectorAll(".zoom-btn");
     zoomBtns.forEach(btn => {
       btn.addEventListener("click", () => {
         zoomBtns.forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
         const mode = btn.getAttribute("data-zoom");
-        if (rollContainer) {
-          rollContainer.classList.remove("zoom-wide", "zoom-compact", "zoom-full");
-          rollContainer.classList.add(`zoom-${mode}`);
-          if (mode === "full") {
-            rollContainer.scrollTo({ left: 0, behavior: "smooth" });
-          } else {
-            this.centerOnMiddleC(true);
-          }
-        }
+        this.setZoomMode(mode, true);
       });
+    });
+
+    // C3-C5 2.5 Octaves Quick Jump & Frame button
+    const c3c5Btn = document.getElementById("hud-c3-c5-btn");
+    c3c5Btn?.addEventListener("click", () => {
+      this.setZoomMode("touch", false);
+      zoomBtns.forEach(b => b.classList.toggle("active", b.getAttribute("data-zoom") === "touch"));
+      this.frameC3C5(true);
     });
 
     // Mobile / Tablet Fullscreen Stage Keys Mode Toggle
@@ -616,7 +647,13 @@ export class VirtualKeyboardUI {
       if (label) {
         label.textContent = isStage ? "CONSOLE" : "STAGE KEYS";
       }
-      setTimeout(() => this.centerOnMiddleC(false), 50);
+      setTimeout(() => {
+        if (this.currentZoomMode === "touch") {
+          this.frameC3C5(false);
+        } else {
+          this.centerOnMiddleC(false);
+        }
+      }, 50);
     });
 
     // Collapse / Expand Piano Keyboard (Expands effects, synth parameters & sound banks to full screen)
@@ -677,6 +714,44 @@ export class VirtualKeyboardUI {
         behavior: smooth ? "smooth" : "auto",
       });
     }
+  }
+
+  setZoomMode(mode, smooth = true) {
+    this.currentZoomMode = mode;
+    try {
+      localStorage.setItem("midikey_zoom_mode", mode);
+    } catch (e) {}
+
+    const rollContainer = document.getElementById("piano-roll-container");
+    if (rollContainer) {
+      rollContainer.classList.remove("zoom-touch", "zoom-wide", "zoom-compact", "zoom-full");
+      rollContainer.classList.add(`zoom-${mode}`);
+      if (mode === "full") {
+        rollContainer.scrollTo({ left: 0, behavior: smooth ? "smooth" : "auto" });
+      } else if (mode === "touch") {
+        this.frameC3C5(smooth);
+      } else {
+        this.centerOnMiddleC(smooth);
+      }
+    }
+  }
+
+  frameC3C5(smooth = false) {
+    const c3El = this.keyElements.get(48); // C3 = MIDI 48
+    const c5El = this.keyElements.get(72); // C5 = MIDI 72
+    const container = document.getElementById("piano-roll-container");
+    if (!c3El || !c5El || !container) {
+      this.centerOnMiddleC(smooth);
+      return;
+    }
+    const rangeStart = c3El.offsetLeft;
+    const rangeEnd = c5El.offsetLeft + c5El.offsetWidth;
+    const rangeCenter = (rangeStart + rangeEnd) / 2;
+    const targetScroll = Math.max(0, rangeCenter - (container.clientWidth / 2));
+    container.scrollTo({
+      left: targetScroll,
+      behavior: smooth ? "smooth" : "auto",
+    });
   }
 
   centerOnMiddleC(smooth = false) {
