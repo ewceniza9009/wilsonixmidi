@@ -278,18 +278,18 @@ export class FxRackManager {
         case "talkbox_vocal":
           this.setPresetTrim(1.0);
           this.talkbox.setBypass(false);
-          this.talkbox.setMix(0.65);
+          this.talkbox.setMix(1.0); // 100% genuine talkbox mouth tube sound
           this.tube.setBypass(false);
-          this.tube.setDrive(0.18);
+          this.tube.setDrive(0.35); // Heil driver tube saturation
           this.chorus.setBypass(false);
           this.chorus.setMix(0.18);
           this.slapback.setBypass(true);
           this.reverb.setBypass(false);
-          this.reverb.setMix(0.15);
+          this.reverb.setMix(0.18);
           this.delay.setBypass(false);
-          this.delay.setMix(0.20);
+          this.delay.setMix(0.22);
           this.delay.setTime(0.280);
-          this.delay.setFeedback(0.22);
+          this.delay.setFeedback(0.25);
           break;
 
         case "lofi_vinyl_tape":

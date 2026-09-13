@@ -785,19 +785,25 @@ export class FxRackUI {
 
         if (dev === "piano-acoustics") fx.pianoAcoustics?.setBypass(bypassed);
         if (dev === "compressor") fx.compressor?.setBypass(bypassed);
+        if (dev === "auto-wah") fx.autoWah?.setBypass(bypassed);
+        if (dev === "talkbox") fx.talkbox?.setBypass(bypassed);
+        if (dev === "tube") fx.tube?.setBypass(bypassed);
         if (dev === "bitcrusher") fx.bitcrusher?.setBypass(bypassed);
+        if (dev === "vinyl-lofi") fx.vinylLoFi?.setBypass(bypassed);
         if (dev === "stereo-widener") fx.stereoWidener?.setBypass(bypassed);
-        if (dev === "autopan") fx.autopan.setBypass(bypassed);
-        if (dev === "chorus") fx.chorus.setBypass(bypassed);
-        if (dev === "reverb") fx.reverb.setBypass(bypassed);
-        if (dev === "delay") fx.delay.setBypass(bypassed);
-        if (dev === "rotary") fx.rotary.setBypass(bypassed);
-        if (dev === "tube") fx.tube.setBypass(bypassed);
-        if (dev === "phaser") fx.phaser.setBypass(bypassed);
-        if (dev === "spring-reverb") fx.springReverb?.setBypass(bypassed);
-        if (dev === "slapback") fx.slapback?.setBypass(bypassed);
-        if (dev === "gated-reverb") fx.gatedReverb?.setBypass(bypassed);
+        if (dev === "autopan") fx.autopan?.setBypass(bypassed);
+        if (dev === "phaser") fx.phaser?.setBypass(bypassed);
+        if (dev === "flanger") fx.flanger?.setBypass(bypassed);
+        if (dev === "chorus") fx.chorus?.setBypass(bypassed);
+        if (dev === "rotary") fx.rotary?.setBypass(bypassed);
         if (dev === "tremolo") fx.tremolo?.setBypass(bypassed);
+        if (dev === "slapback") fx.slapback?.setBypass(bypassed);
+        if (dev === "dub-echo") fx.dubEcho?.setBypass(bypassed);
+        if (dev === "delay") fx.delay?.setBypass(bypassed);
+        if (dev === "spring-reverb") fx.springReverb?.setBypass(bypassed);
+        if (dev === "shimmer-reverb") fx.shimmerReverb?.setBypass(bypassed);
+        if (dev === "gated-reverb") fx.gatedReverb?.setBypass(bypassed);
+        if (dev === "reverb") fx.reverb?.setBypass(bypassed);
         if (dev === "tape-sat") fx.tapeSat?.setBypass(bypassed);
         if (dev === "eq") fx.masterEq?.setBypass(bypassed);
       };
@@ -846,19 +852,25 @@ export class FxRackUI {
     const devMap = {
       "piano-acoustics": fx.pianoAcoustics?.enabled,
       compressor: fx.compressor?.enabled,
+      "auto-wah": fx.autoWah?.enabled,
+      talkbox: fx.talkbox?.enabled,
+      tube: fx.tube?.enabled,
       bitcrusher: fx.bitcrusher?.enabled,
+      "vinyl-lofi": fx.vinylLoFi?.enabled,
       "stereo-widener": fx.stereoWidener?.enabled,
       autopan: fx.autopan?.enabled,
-      chorus: fx.chorus?.enabled,
-      reverb: fx.reverb?.enabled,
-      delay: fx.delay?.enabled,
-      rotary: fx.rotary?.enabled,
-      tube: fx.tube?.enabled,
       phaser: fx.phaser?.enabled,
-      "spring-reverb": fx.springReverb?.enabled,
-      slapback: fx.slapback?.enabled,
-      "gated-reverb": fx.gatedReverb?.enabled,
+      flanger: fx.flanger?.enabled,
+      chorus: fx.chorus?.enabled,
+      rotary: fx.rotary?.enabled,
       tremolo: fx.tremolo?.enabled,
+      slapback: fx.slapback?.enabled,
+      "dub-echo": fx.dubEcho?.enabled,
+      delay: fx.delay?.enabled,
+      "spring-reverb": fx.springReverb?.enabled,
+      "shimmer-reverb": fx.shimmerReverb?.enabled,
+      "gated-reverb": fx.gatedReverb?.enabled,
+      reverb: fx.reverb?.enabled,
       "tape-sat": fx.tapeSat?.enabled,
       eq: fx.masterEq?.enabled,
     };

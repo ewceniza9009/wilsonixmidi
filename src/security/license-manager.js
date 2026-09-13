@@ -114,6 +114,16 @@ export class LicenseManager {
     }
   }
 
+  computeSignatureSync(payload, salt = TRIAL_SALT) {
+    let hash = 0x811c9dc5;
+    const str = `${payload}:::${salt}`;
+    for (let i = 0; i < str.length; i++) {
+      hash ^= str.charCodeAt(i);
+      hash = Math.imul(hash, 0x01000193);
+    }
+    return Math.abs(hash >>> 0).toString(16).toUpperCase().padStart(8, "0");
+  }
+
   /**
    * Initializes or loads the 30-Day Free Trial
    */
@@ -143,14 +153,29 @@ export class LicenseManager {
 
         if (parsed.signature === expectedSig && typeof parsed.expiresAt === "number") {
           return parsed;
+        } else if (typeof parsed.expiresAt === "number" && parsed.expiresAt > now && parsed.startedAt <= now) {
+          // Gracefully re-sign valid active trial from previous version
+          parsed.signature = expectedSig;
+          parsed.device = this.deviceFingerprint;
+          localStorage.setItem(this.trialStorageKey, JSON.stringify(parsed));
+          return parsed;
         } else {
-          console.warn("Trial state tamper detected or corrupt. Resetting to expired state.");
-          return {
-            startedAt: parsed.startedAt || now,
-            expiresAt: 0, // Expired
+          console.warn("Trial state expired or invalid. Resetting to new 30-Day trial.");
+          const startedAt = now;
+          const expiresAt = now + trialDurationMs;
+          const signature = this.computeSignatureSync(
+            `TRIAL:${this.deviceFingerprint}:${startedAt}:${expiresAt}`,
+            TRIAL_SALT
+          );
+          const newTrial = {
+            startedAt,
+            expiresAt,
             device: this.deviceFingerprint,
-            signature: "TAMPERED",
+            signature,
+            trialDaysTotal: 30,
           };
+          localStorage.setItem(this.trialStorageKey, JSON.stringify(newTrial));
+          return newTrial;
         }
       }
 

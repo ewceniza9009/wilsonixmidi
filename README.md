@@ -8,49 +8,52 @@
 [![Audio: Web Audio API](https://img.shields.io/badge/Audio-Direct%20PCM%20%2B%20VA%20Engine-FF6F00?style=for-the-badge&logo=audio)](https://github.com/ewceniza9009/wilsonixmidi)
 [![Framework: Tauri v2 + Vite](https://img.shields.io/badge/Framework-Tauri%20v2%20%7C%20Rust-673AB7?style=for-the-badge)](https://tauri.app/)
 [![License: Proprietary](https://img.shields.io/badge/License-WILSONIX%20Commercial-red?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi)
-[![Version: v1.0.6](https://img.shields.io/badge/Version-v1.0.6%20Production-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
+[![Version: v1.0.9](https://img.shields.io/badge/Version-v1.0.9%20Build%2010%20Production-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
 
 ---
 
-## 🚀 Official Production Downloads (v1.0.6 Latest Release)
+## 🚀 Official Production Downloads (v1.0.9 Build 10 Latest Release)
 
-| Package / Distribution | Target Operating System | Architecture | Direct Download Link | File Size |
-|:---|:---|:---:|:---:|:---:|
-| **Windows Desktop Installer** | Windows 10 / 11 | x64 | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX_MIDIKEY_1.0.6_x64-setup.exe) | `~217 MB` |
-| **Android Package (APK)** | Android 8.0+ (Oreo to Android 15) | ARM64 / x86_64 | [⬇️ Download Android APK (`.apk`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/wilsonix-midikey.apk) | `~233 MB` |
+| Package / Distribution | Target Operating System | Architecture | Direct Download Link |
+|:---|:---|:---:|:---:|
+| **Windows Desktop Installer** | Windows 10 / 11 | x64 | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX.MIDIKEY_1.0.9_x64-setup.exe) |
+| **Android Package (APK)** | Android 8.0+ (Oreo to Android 15) | ARM64 / x86_64 | [⬇️ Download Android APK (`.apk`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/wilsonix-midikey.apk) |
 
 *Official binaries and checksums are verified and hosted on the [GitHub Releases page](https://github.com/ewceniza9009/wilsonixmidi/releases).*
 
 ---
 
-## 📑 Granular Changelog & Release Notes (v1.0.6)
+## 📑 Granular Changelog & Release Notes (v1.0.9 • Build 10)
 
-### 1. 🎹 Live Stage Rig Snapshots & Instant Performance Recall
-- **8-Slot Rig Memory per Bank**: Store and recall entire multi-layer combinations, active FX chains, master EQ curves, transpositions, and split points with a single keypress (`F1`–`F8`) or touch.
-- **Seamless Live Patch Switching**: Voice-pool preservation ensures sustained chords do not abruptly cut off when switching rigs or instruments mid-song.
-- **Dedicated Setlist Manager**: Sequence complex song arrangements with custom tempo markers, layer mutes, and instantaneous pedal triggers.
+### 1. 🎤 Authentic Roger Troutman / Heil Physical Talkbox Emulation (`A045`)
+- **Triple Formant Resonance Peaks**: High-gain series resonant peaking filters precisely tuned to physical human vocal tract cavities:
+  - **F1 (Throat / Jaw Height)**: 650 Hz (+15 dB)
+  - **F2 (Mouth Cavity / Tongue Shape)**: 1550 Hz (+14 dB)
+  - **F3 (Nasal / Teeth Resonance)**: 2850 Hz (+10 dB)
+- **Dynamic Vowel Articulation Morphing**: Key strikes trigger an organic vowel shape sweep (closed-mouth "W" consonant opening dynamically into "AH / OH / EE" singing vowels depending on velocity).
+- **Physical Driver Saturation & Damping**: Heil Talk Box compression driver tube saturation curve with 5.4 kHz vinyl acoustic tube damping and brickwall vocal safety limiting.
 
-### 2. ⚡ Live Preset Selection & TouchView Highlighting
-- **Reactivity & Engine Synchronization**: Fixed cross-component state desynchronization between `multiLayerEngine`, `GigHudUI`, and `TritonWorkstationUI`. Selecting any sound (e.g. `USER A 015 R&B E.Piano`) from the grid, top HUD badge, combi mixer, or registration rig instantaneously:
-  - Updates the blue Triton LCD display (`BANK: USER A 015`, `CATEGORY: ELECTRIC PIANO`, Title: `R&B E.Piano`).
-  - Illuminates the corresponding grid cell with a bright neon blue highlight (`.triton-prog-cell.active`).
-  - Refreshes the top Performance HUD dropdown without stale option mismatches.
-- **Sub-Millisecond Touch Response**: Migrated all program grid cells, bank selectors, chord pads, and FX toggles to native `pointerdown` / `touchstart` event listeners, eliminating the 300ms mobile touch delay.
-- **Pointer-Events Shielding**: Child labels (`.prog-name-label`, `.prog-num`, `.prog-star`, `.prog-bank-code`) are shielded with `pointer-events: none;` to ensure 100% reliable tap hit-testing across tablets and touchscreen laptops.
+### 2. 🥁 Real Acoustic Drum Kit & Physical Modeling Synthesis (Grooves & Soundbanks)
+- **Zero-Latency 0.00ms Physical Modeling**: Instant strike response without heavyweight sample buffering.
+- **Punchy Acoustic Sub-Kick**: Dual-layer 52 Hz / 36 Hz resonant sub-bass pitch envelope + acoustic wood beater attack click.
+- **Crisp Acoustic Snare**: Resonant wood shell body + dual-band filtered wire rattle (>3.8 kHz) + rim/stick impact.
+- **Metallic Bronze Hi-Hats with Instant Optical Choke**: Pure high-frequency bronze shimmer (>8.5 kHz) with natural decay on open hits and instant sub-millisecond choke when striking closed hats or pedal.
+- **Cymbals & Latin Percussion**: Natural bell ping acoustic ride cymbal, explosive crash cymbal, resonant toms, Latin cowbell, and multi-tone wind chimes.
 
-### 3. ⏳ Animated Startup Stage Boot Loader
-- **Stage-Ready Visual Booting**: Replaced blank black startup screen transitions with an animated hardware console bootloader featuring a spinning neon ring, brand crest, dynamic progress track, and stage status readout.
-- **Smooth Fade-Out**: Seamlessly dissolves when sound engines and PCM buffers finish bootstrapping.
+### 3. 🪘 Dedicated Congas & Analog Synth Drum Presets
+- **Afro-Cuban Congas**: Open/slap acoustic conga synthesis mapped across soundbank `PRC07`, `C007`, and Combi preset `afro_cuban_congas`.
+- **Analog Synth Drum (Simmons SDSV Space Drum)**: Classic 80s downward pitch-sweep space drum synth with sub-punch on `PRC11`, `C008`, `C009`, and Combi `analog_synth_drum_space`.
+- **Studio Acoustic Kit**: Full General MIDI mapped acoustic kit preset on `PRC12` and Combi `studio_acoustic_kit`.
 
-### 4. 🎹 Expressive Dynamic Touch Velocity & TVF Filtering
-- **Dynamic TVA / TVF Tracking**:
-  - **Soft Touch (Velocity 1–40)**: Natural warm harmonic response with low-pass filter cutoff seated at 1,000 Hz and smooth acoustic decay.
-  - **Medium Velocity (Velocity 41–90)**: Balanced studio clarity with full dynamic presence.
-  - **Hard Strike (Velocity 91–127)**: Complete overtone excitation up to 20,000 Hz brilliance with punchy transient attack.
-- **Stage Velocity Curves**: One-tap toggle on the HUD and keyboard between:
-  - **LIN**: Linear 1:1 natural acoustic response.
-  - **PUNCH**: Power exponent (0.50) designed to cut through dense band mixes and live concert speakers.
-  - **SOFT**: Intimate exponential curve (1.85) tailored for ballads, expressive neo-soul chords, and delicate classical passages.
+### 4. 🎹 Full Chromatic Pitch Tracking Across 88 Keys for Drums & Percussions
+- Every key across all 88 keys now features distinct chromatic pitch tracking or General MIDI drum key mapping (from B0 to C6), replacing previous monotone percussions.
+
+### 5. ⚡ Permanent Zero-Drop Web Audio Architecture
+- Redesigned the entire FX rack routing with permanent static audio graph nodes.
+- Eliminated dynamic node recreation and teardown disconnect timers, achieving zero audio dropouts, 0.00% CPU overhead when bypassed, and zero garbage collection memory spikes.
+
+### 6. 🎛️ Live Preset Selection & TouchView Highlighting Fixes
+- Resolved audio node connection exceptions across rotary speakers and chorus processors during rapid preset switching.
 
 ---
 
@@ -116,24 +119,16 @@
 1. **★ Kingston Bubble & Reggae Skank**: B3 Tonewheel Organ + Concert Grand + Muted Reggae Guitar Skank.
 2. **★ Celestial Shimmer & Grand**: Concert Grand Piano + Octave Shimmer Reverb + Ambient String Pad.
 3. **★ Roger Troutman Talkbox Funk**: Talkbox Lead + Moog Punch Bass + Strat Funk Chank.
-4. **★ Lo-Fi Vintage Tape Rhodes**: Vintage Rhodes + Wow & Flutter Tape Saturation + 8-bit Vinyl Decimator.
-5. **★ Tokyo City Pop**: Studio FM Piano + Stratocaster Guitar + Breathy Alto Sax.
-6. **★ Chicago Blues Rock**: Overdriven Blues Strat + B3 Drawbar Organ + Walking Bass.
-7. **★ Sunday Pipe Praise**: Cathedral Pipe Organ + Angelic Soprano Choir + Grand Piano.
-8. **★ Neo-Soul Chill**: DX7 FM Tines + Breathy Sax + Lo-Fi Auto-Pan Rhodes.
-9. **★ Gospel Praise**: Concert Grand + Hammond B3 Organ + Symphonic Strings.
-10. **★ Acid Jazz Groove**: Dyno Tine EP + 90s Slap Bass + Leslie Rotary Organ.
-11. **★ Blue Note Trio**: Studio Upright Piano + Acoustic Nylon Guitar + Upright Walking Bass.
-12. **★ Neo-Classical Ambient**: Concert Grand + Nylon Guitar + Lush Cello Ensemble.
-13. **★ Synthesizer You**: Signature Neo-Soul Tape Rhodes with wide chorus and plate reverb.
-
-### 5. 🚨 Sound Effects, Dub Siren & Reggae FX
-- **🚨 Jamaican Dub Siren**: Oscillating square/sine dub siren with tempo-synced tape feedback echo.
-- **💥 Vintage Spring Reverb Splash**: Dub crash spring tank kick effect.
-- **⚡ Sound System Laser Zap**: High-frequency downward frequency sweep for dancehall transitions.
-- **🎺 Dancehall Airhorn Blast**: Multi-voiced brass airhorn fanfare.
-- **💣 808 Sub-Boom**: Subterranean 30Hz bass drop with soft saturation.
-- **🌊 White Noise Sweep Riser**: 4-bar ascending transition riser for live drops.
+4. **★ Afro-Cuban Congas & Percussion**: Open/Slap Acoustic Congas + Latin Percussion + Grand Piano.
+5. **★ Analog Synth Drum Space**: Simmons SDSV Synth Drum + 80s Analog Bass + Synth Brass.
+6. **★ Studio Acoustic Drum Kit**: Full GM Acoustic Drum Set + Electric Bass + Rhodes EP.
+7. **★ Lo-Fi Vintage Tape Rhodes**: Vintage Rhodes + Wow & Flutter Tape Saturation + 8-bit Vinyl Decimator.
+8. **★ Tokyo City Pop**: Studio FM Piano + Stratocaster Guitar + Breathy Alto Sax.
+9. **★ Chicago Blues Rock**: Overdriven Blues Strat + B3 Drawbar Organ + Walking Bass.
+10. **★ Sunday Pipe Praise**: Cathedral Pipe Organ + Angelic Soprano Choir + Grand Piano.
+11. **★ Neo-Soul Chill**: DX7 FM Tines + Breathy Sax + Lo-Fi Auto-Pan Rhodes.
+12. **★ Gospel Praise**: Concert Grand + Hammond B3 Organ + Symphonic Strings.
+13. **★ Acid Jazz Groove**: Dyno Tine EP + 90s Slap Bass + Leslie Rotary Organ.
 
 ---
 
@@ -150,7 +145,8 @@
 | **IFX 6** | Stereo Tape Flanger | Rate, Feedback, Mix | Jet-plane resonant comb-filtering for leads & synth stabs |
 | **IFX 7** | Vintage Optical Tremolo | Rate (0.5–12Hz), Depth, Mix | Photocell amplitude pulsing for surf guitars & vintage keys |
 | **IFX 8** | Retro Bitcrusher / Decimator | Bits (2–16), Downsample (1k–20kHz), Drive, Mix | 8-bit / 12-bit vintage sampler crunch and aliasing |
-| **IFX 9** | Haas Stereo Spatial Widener | Width (0–250%), Haas Delay (1–35ms), Mix | Mid/Side psychoacoustic stereo widening without phase cancel |
+| **IFX 9** | Heil Formant Talk Box | Formants F1/F2/F3, Vowel Morph, Tube Drive, Mix | Roger Troutman vocal articulation & Heil mouth tube modeling |
+| **IFX 10** | Haas Stereo Spatial Widener | Width (0–250%), Haas Delay (1–35ms), Mix | Mid/Side psychoacoustic stereo widening without phase cancel |
 | **MFX 1** | Ping-Pong Tape Delay | Division (1/16 to 1/1), Feedback, Mix | Dual-channel tempo-synchronized stereo echo |
 | **MFX 2** | Concert Hall / Plate Reverb | Decay (0.5–5s), Room Size, Pre-Delay, Mix | Smooth diffusion reverberation for live stage ambiance |
 | **MEQ** | Master 3-Band Parametric EQ | Low (80Hz), Mid (1.4kHz), High (10kHz) | Master console output sweetening and stage tone balancing |
@@ -200,7 +196,7 @@ npm run dev
 
 # 3. Build Windows Desktop NSIS Setup Installer (.exe)
 npm run build:desktop
-# Output: src-tauri/target/release/bundle/nsis/WILSONIX MIDIKEY_1.0.6_x64-setup.exe
+# Output: src-tauri/target/release/bundle/nsis/WILSONIX MIDIKEY_1.0.9_x64-setup.exe
 
 # 4. Build Android APK (.apk)
 npm run build:apk

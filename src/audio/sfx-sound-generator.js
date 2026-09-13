@@ -721,28 +721,189 @@ export class SfxSoundGenerator {
     return noise;
   }
 
-  triggerConga(high = true, velocity = 95, customGain = 1.0, destNode = null) {
+  triggerConga(high = true, velocity = 105, customGain = 1.0, destNode = null, midiNote = 60) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
     const dest = this.getDest(destNode);
-    const freq = high ? 290 : 190;
+    const pitchFactor = Math.pow(2, (midiNote - 60) / 12);
+    const baseFreq = high ? 330 : 195;
+    const freq = Math.max(60, Math.min(1200, baseFreq * pitchFactor));
+    const dur = high ? 0.22 : 0.38;
+
+    // Skin fundamental resonance
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(freq * 1.5, now);
+    osc.frequency.exponentialRampToValueAtTime(freq, now + 0.025);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(1.15 * vel * customGain, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+    // Palm slap skin attack
+    const slap = ctx.createOscillator();
+    slap.type = "triangle";
+    slap.frequency.setValueAtTime(Math.min(3500, 1200 * pitchFactor), now);
+    slap.frequency.exponentialRampToValueAtTime(Math.min(1000, 250 * pitchFactor), now + 0.015);
+    const slapGain = ctx.createGain();
+    slapGain.gain.setValueAtTime(0.65 * vel * customGain, now);
+    slapGain.gain.exponentialRampToValueAtTime(0.001, now + 0.022);
+
+    osc.connect(gain);
+    slap.connect(slapGain);
+    if (dest) {
+      gain.connect(dest);
+      slapGain.connect(dest);
+    }
+
+    osc.start(now);
+    slap.start(now);
+    osc.stop(now + dur + 0.05);
+    slap.stop(now + 0.03);
+
+    return { osc, slap };
+  }
+
+  triggerBongos(high = true, velocity = 100, customGain = 1.0, destNode = null, midiNote = 60) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = this.getDest(destNode);
+    const pitchFactor = Math.pow(2, (midiNote - 60) / 12);
+    const baseFreq = high ? 440 : 260;
+    const freq = Math.max(90, Math.min(1600, baseFreq * pitchFactor));
+    const dur = high ? 0.18 : 0.28;
 
     const osc = ctx.createOscillator();
     osc.type = "sine";
-    osc.frequency.setValueAtTime(freq * 1.4, now);
+    osc.frequency.setValueAtTime(freq * 1.6, now);
+    osc.frequency.exponentialRampToValueAtTime(freq, now + 0.02);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(1.10 * vel * customGain, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+    const slap = ctx.createOscillator();
+    slap.type = "triangle";
+    slap.frequency.setValueAtTime(Math.min(4000, 1500 * pitchFactor), now);
+    slap.frequency.exponentialRampToValueAtTime(Math.min(1200, 300 * pitchFactor), now + 0.012);
+    const slapGain = ctx.createGain();
+    slapGain.gain.setValueAtTime(0.60 * vel * customGain, now);
+    slapGain.gain.exponentialRampToValueAtTime(0.001, now + 0.018);
+
+    osc.connect(gain);
+    slap.connect(slapGain);
+    if (dest) {
+      gain.connect(dest);
+      slapGain.connect(dest);
+    }
+
+    osc.start(now);
+    slap.start(now);
+    osc.stop(now + dur + 0.05);
+    slap.stop(now + 0.025);
+
+    return { osc, slap };
+  }
+
+  triggerTimbales(midiNote = 60, velocity = 105, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = this.getDest(destNode);
+    const pitchFactor = Math.pow(2, (midiNote - 60) / 12);
+    const freq = Math.max(120, Math.min(1800, 380 * pitchFactor));
+    const dur = 0.25;
+
+    // Steel cascara shell ring
+    const osc = ctx.createOscillator();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(freq * 2.2, now);
     osc.frequency.exponentialRampToValueAtTime(freq, now + 0.03);
 
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.80 * vel * customGain, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    gain.gain.setValueAtTime(1.15 * vel * customGain, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+    // Metallic rimshot strike
+    const rim = ctx.createOscillator();
+    rim.type = "square";
+    rim.frequency.setValueAtTime(Math.min(5000, 2400 * pitchFactor), now);
+    rim.frequency.exponentialRampToValueAtTime(600, now + 0.01);
+    const rimGain = ctx.createGain();
+    rimGain.gain.setValueAtTime(0.55 * vel * customGain, now);
+    rimGain.gain.exponentialRampToValueAtTime(0.001, now + 0.015);
 
     osc.connect(gain);
-    if (dest) gain.connect(dest);
+    rim.connect(rimGain);
+    if (dest) {
+      gain.connect(dest);
+      rimGain.connect(dest);
+    }
 
     osc.start(now);
-    osc.stop(now + 0.26);
-    return osc;
+    rim.start(now);
+    osc.stop(now + dur + 0.05);
+    rim.stop(now + 0.02);
+
+    return { osc, rim };
+  }
+
+  triggerAnalogSynthDrum(velocity = 115, customGain = 1.0, destNode = null, midiNote = 60) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = this.getDest(destNode);
+    const dur = 0.45;
+
+    // Pitch tracked from MIDI note
+    const semitones = (midiNote - 60);
+    const pitchFactor = Math.pow(2, semitones / 12);
+    const startFreq = Math.max(180, Math.min(3500, 1100 * pitchFactor));
+    const endFreq = Math.max(40, Math.min(500, 65 * pitchFactor));
+
+    // Classic 80s Simmons SDSV Space Drum / Synth Tom Pitch Sweep
+    const osc = ctx.createOscillator();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(startFreq, now);
+    osc.frequency.exponentialRampToValueAtTime(endFreq, now + 0.20);
+
+    const oscGain = ctx.createGain();
+    oscGain.gain.setValueAtTime(1.30 * vel * customGain, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+    // Click attack transient
+    const click = ctx.createOscillator();
+    click.type = "square";
+    click.frequency.setValueAtTime(Math.min(4500, 1600 * pitchFactor), now);
+    click.frequency.exponentialRampToValueAtTime(250, now + 0.015);
+    const clickGain = ctx.createGain();
+    clickGain.gain.setValueAtTime(0.60 * vel * customGain, now);
+    clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+
+    // Resonant lowpass
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(Math.min(8000, 5500 * pitchFactor), now);
+    lp.frequency.exponentialRampToValueAtTime(500, now + 0.22);
+    lp.Q.value = 4.0;
+
+    osc.connect(lp);
+    lp.connect(oscGain);
+    click.connect(clickGain);
+
+    if (dest) {
+      oscGain.connect(dest);
+      clickGain.connect(dest);
+    }
+
+    osc.start(now);
+    click.start(now);
+    osc.stop(now + dur + 0.05);
+    click.stop(now + 0.025);
+
+    return { osc, click };
   }
 
   triggerShaker(velocity = 85, customGain = 1.0, destNode = null) {
@@ -767,6 +928,462 @@ export class SfxSoundGenerator {
 
     noise.start(now);
     noise.stop(now + 0.10);
+    return noise;
+  }
+
+  // =========================================================================
+  // 5b. REAL ACOUSTIC DRUM SET, CHIMES & COWBELL (Pure Zero-Latency DSP)
+  // =========================================================================
+
+  triggerAcousticKick(velocity = 118, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = this.getDest(destNode);
+
+    // 1. Sharp Beater Click Transient (instant attack definition)
+    const click = ctx.createOscillator();
+    click.type = "triangle";
+    click.frequency.setValueAtTime(4500, now);
+    click.frequency.exponentialRampToValueAtTime(400, now + 0.012);
+    const clickGain = ctx.createGain();
+    clickGain.gain.setValueAtTime(0.85 * vel * customGain, now);
+    clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.018);
+    click.connect(clickGain);
+    if (dest) clickGain.connect(dest);
+    click.start(now);
+    click.stop(now + 0.022);
+
+    // 2. Heavy Sub / Shell Thump (165Hz -> 52Hz -> 36Hz)
+    const body = ctx.createOscillator();
+    body.type = "sine";
+    body.frequency.setValueAtTime(165, now);
+    body.frequency.exponentialRampToValueAtTime(52, now + 0.045);
+    body.frequency.exponentialRampToValueAtTime(36, now + 0.45);
+
+    const bodyGain = ctx.createGain();
+    bodyGain.gain.setValueAtTime(1.40 * vel * customGain, now);
+    bodyGain.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
+    body.connect(bodyGain);
+    if (dest) bodyGain.connect(dest);
+    body.start(now);
+    body.stop(now + 0.50);
+
+    // 3. 120Hz Punch Body (for small speakers & headphones)
+    const punch = ctx.createOscillator();
+    punch.type = "triangle";
+    punch.frequency.setValueAtTime(180, now);
+    punch.frequency.exponentialRampToValueAtTime(75, now + 0.06);
+    const punchGain = ctx.createGain();
+    punchGain.gain.setValueAtTime(0.75 * vel * customGain, now);
+    punchGain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+    punch.connect(punchGain);
+    if (dest) punchGain.connect(dest);
+    punch.start(now);
+    punch.stop(now + 0.10);
+
+    return { body, click, punch };
+  }
+
+  triggerAcousticSnare(velocity = 112, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = this.getDest(destNode);
+
+    // 1. Drumstick head smack transient
+    const stick = ctx.createOscillator();
+    stick.type = "triangle";
+    stick.frequency.setValueAtTime(3200, now);
+    stick.frequency.exponentialRampToValueAtTime(450, now + 0.01);
+    const stickGain = ctx.createGain();
+    stickGain.gain.setValueAtTime(0.75 * vel * customGain, now);
+    stickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.015);
+    stick.connect(stickGain);
+    if (dest) stickGain.connect(dest);
+    stick.start(now);
+    stick.stop(now + 0.02);
+
+    // 2. Wood Shell Body Tone (215Hz -> 155Hz)
+    const tone = ctx.createOscillator();
+    tone.type = "sine";
+    tone.frequency.setValueAtTime(215, now);
+    tone.frequency.exponentialRampToValueAtTime(155, now + 0.05);
+
+    const toneGain = ctx.createGain();
+    toneGain.gain.setValueAtTime(1.10 * vel * customGain, now);
+    toneGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+    tone.connect(toneGain);
+    if (dest) toneGain.connect(dest);
+    tone.start(now);
+    tone.stop(now + 0.20);
+
+    // 3. Crisp Snare Wires (Filtered Pink/White Noise with Dual Bands)
+    const noise = this.createNoiseSource(false);
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 1800;
+
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = 4200;
+    bp.Q.value = 1.4;
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(1.25 * vel * customGain, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+
+    noise.connect(hp);
+    hp.connect(bp);
+    bp.connect(noiseGain);
+    if (dest) noiseGain.connect(dest);
+    noise.start(now);
+    noise.stop(now + 0.26);
+
+    return { tone, noise, stick };
+  }
+
+  triggerAcousticHiHat(closed = true, velocity = 108, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = this.getDest(destNode);
+    const dur = closed ? 0.038 : 0.60;
+
+    // Choke previous open hat if closed is struck
+    if (closed && this._activeOpenHatGain) {
+      try {
+        this._activeOpenHatGain.gain.cancelScheduledValues(now);
+        this._activeOpenHatGain.gain.setValueAtTime(this._activeOpenHatGain.gain.value, now);
+        this._activeOpenHatGain.gain.linearRampToValueAtTime(0.0001, now + 0.01);
+      } catch (e) {}
+      this._activeOpenHatGain = null;
+    }
+
+    // 1. High Metallic Cymbal Sizzle (Highpass noise: 8500Hz + 11500Hz bandpass)
+    const noise = this.createNoiseSource(false);
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 8500;
+
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = 11500;
+    bp.Q.value = 2.0;
+
+    const gainNode = ctx.createGain();
+    gainNode.gain.setValueAtTime(1.20 * vel * customGain, now);
+    if (closed) {
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    } else {
+      gainNode.gain.exponentialRampToValueAtTime(0.40 * vel * customGain, now + 0.12);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + dur);
+      this._activeOpenHatGain = gainNode;
+    }
+
+    noise.connect(hp);
+    hp.connect(bp);
+    bp.connect(gainNode);
+
+    // 2. High Metallic Bronze Sheen (High-frequency inharmonic cluster, ALL > 8kHz)
+    const freqs = [8200, 9950, 11400, 13200, 15100];
+    const bronzeMaster = ctx.createGain();
+    bronzeMaster.gain.value = 0.15;
+
+    freqs.forEach(f => {
+      const osc = ctx.createOscillator();
+      osc.type = "square";
+      osc.frequency.setValueAtTime(f, now);
+      const og = ctx.createGain();
+      og.gain.value = 0.18;
+      osc.connect(og);
+      og.connect(bronzeMaster);
+      osc.start(now);
+      osc.stop(now + dur + 0.02);
+    });
+
+    bronzeMaster.connect(gainNode);
+
+    if (dest) gainNode.connect(dest);
+    noise.start(now);
+    noise.stop(now + dur + 0.02);
+
+    return gainNode;
+  }
+
+  triggerAcousticTom(pitch = "high", velocity = 105, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = this.getDest(destNode);
+    const startFreq = pitch === "high" ? 180 : 95;
+    const endFreq = pitch === "high" ? 115 : 62;
+    const dur = pitch === "high" ? 0.35 : 0.55;
+
+    // Wood shell resonance with pitch bend
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(startFreq, now);
+    osc.frequency.exponentialRampToValueAtTime(endFreq, now + 0.12);
+
+    const oscGain = ctx.createGain();
+    oscGain.gain.setValueAtTime(1.20 * vel * customGain, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+    // Stick attack click
+    const click = ctx.createOscillator();
+    click.type = "triangle";
+    click.frequency.setValueAtTime(startFreq * 6, now);
+    click.frequency.exponentialRampToValueAtTime(200, now + 0.02);
+    const clickGain = ctx.createGain();
+    clickGain.gain.setValueAtTime(0.45 * vel * customGain, now);
+    clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.025);
+
+    osc.connect(oscGain);
+    click.connect(clickGain);
+    if (dest) {
+      oscGain.connect(dest);
+      clickGain.connect(dest);
+    }
+
+    osc.start(now);
+    click.start(now);
+    osc.stop(now + dur + 0.05);
+    click.stop(now + 0.03);
+
+    return { osc, click };
+  }
+
+  triggerAcousticCrash(velocity = 115, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = this.getDest(destNode);
+    const dur = 2.4;
+
+    // Bronze Inharmonic Chime Core + Highpass Shimmer Noise
+    const freqs = [380, 520, 710, 890, 1150, 1420];
+    const crashMaster = ctx.createGain();
+
+    freqs.forEach(f => {
+      const osc = ctx.createOscillator();
+      osc.type = "square";
+      osc.frequency.setValueAtTime(f * 3.6, now);
+      const g = ctx.createGain();
+      g.gain.value = 0.12;
+      osc.connect(g);
+      g.connect(crashMaster);
+      osc.start(now);
+      osc.stop(now + dur);
+    });
+
+    const noise = this.createNoiseSource(false);
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 5200;
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = 9200;
+    bp.Q.value = 1.2;
+
+    noise.connect(hp);
+    hp.connect(bp);
+    bp.connect(crashMaster);
+    noise.start(now);
+    noise.stop(now + dur);
+
+    const gainNode = ctx.createGain();
+    gainNode.gain.setValueAtTime(1.15 * vel * customGain, now);
+    gainNode.gain.exponentialRampToValueAtTime(0.35 * vel * customGain, now + 0.35);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+    crashMaster.connect(gainNode);
+    if (dest) gainNode.connect(dest);
+
+    return gainNode;
+  }
+
+  triggerAcousticRide(velocity = 108, customGain = 1.0, destNode = null, bellOnly = false) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = this.getDest(destNode);
+    const dur = 1.8;
+
+    // 1. Bronze Bell Overtones (2650Hz & 5100Hz)
+    const bell1 = ctx.createOscillator();
+    bell1.type = "sine";
+    bell1.frequency.setValueAtTime(2650, now);
+
+    const bell2 = ctx.createOscillator();
+    bell2.type = "sine";
+    bell2.frequency.setValueAtTime(5100, now);
+
+    const bellGain = ctx.createGain();
+    bellGain.gain.setValueAtTime((bellOnly ? 1.2 : 0.85) * vel * customGain, now);
+    bellGain.gain.exponentialRampToValueAtTime(0.001, now + (bellOnly ? 1.2 : 0.9));
+
+    bell1.connect(bellGain);
+    bell2.connect(bellGain);
+
+    // 2. Stick Tip Click
+    const tip = ctx.createOscillator();
+    tip.type = "triangle";
+    tip.frequency.setValueAtTime(5500, now);
+    tip.frequency.exponentialRampToValueAtTime(1200, now + 0.008);
+    const tipGain = ctx.createGain();
+    tipGain.gain.setValueAtTime(0.65 * vel * customGain, now);
+    tipGain.gain.exponentialRampToValueAtTime(0.001, now + 0.012);
+    tip.connect(tipGain);
+
+    // 3. Shimmering Cymbal Wash
+    const noise = this.createNoiseSource(false);
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 7500;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.70 * vel * customGain, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+    noise.connect(hp);
+    hp.connect(noiseGain);
+
+    if (dest) {
+      bellGain.connect(dest);
+      tipGain.connect(dest);
+      noiseGain.connect(dest);
+    }
+
+    bell1.start(now);
+    bell2.start(now);
+    tip.start(now);
+    noise.start(now);
+    bell1.stop(now + dur);
+    bell2.stop(now + dur);
+    tip.stop(now + 0.02);
+    noise.stop(now + dur);
+
+    return { bellGain, noiseGain };
+  }
+
+  triggerCowbell(velocity = 110, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = this.getDest(destNode);
+    const dur = 0.38;
+
+    // Dual square wave fundamental (587Hz & 845Hz) for authentic Latin cowbell bite
+    const osc1 = ctx.createOscillator();
+    osc1.type = "square";
+    osc1.frequency.setValueAtTime(587, now);
+
+    const osc2 = ctx.createOscillator();
+    osc2.type = "square";
+    osc2.frequency.setValueAtTime(845, now);
+
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = 780;
+    bp.Q.value = 4.2;
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(1.10 * vel * customGain, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+    // Initial woodstick click
+    const click = ctx.createOscillator();
+    click.type = "triangle";
+    click.frequency.setValueAtTime(1800, now);
+    click.frequency.exponentialRampToValueAtTime(400, now + 0.015);
+    const clickGain = ctx.createGain();
+    clickGain.gain.setValueAtTime(0.50 * vel * customGain, now);
+    clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+
+    osc1.connect(bp);
+    osc2.connect(bp);
+    bp.connect(gain);
+    click.connect(clickGain);
+
+    if (dest) {
+      gain.connect(dest);
+      clickGain.connect(dest);
+    }
+
+    osc1.start(now);
+    osc2.start(now);
+    click.start(now);
+    osc1.stop(now + dur + 0.05);
+    osc2.stop(now + dur + 0.05);
+    click.stop(now + 0.025);
+
+    return { gain, clickGain };
+  }
+
+  triggerWindChimes(velocity = 100, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = this.getDest(destNode);
+
+    // 12 Cascading Orchestral Bar Chime Frequencies (Pentatonic crystal sweep)
+    const chimeFreqs = [2093, 2349, 2637, 2793, 3136, 3520, 3951, 4186, 4698, 5274, 5587, 6272];
+    const chimesMaster = ctx.createGain();
+
+    chimeFreqs.forEach((freq, idx) => {
+      const chimeTime = now + idx * 0.028; // Staggered glissando strike
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, chimeTime);
+
+      const overtone = ctx.createOscillator();
+      overtone.type = "sine";
+      overtone.frequency.setValueAtTime(freq * 2.76, chimeTime);
+
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.001, chimeTime);
+      g.gain.linearRampToValueAtTime(0.28 * vel * customGain, chimeTime + 0.005);
+      g.gain.exponentialRampToValueAtTime(0.001, chimeTime + 1.8);
+
+      osc.connect(g);
+      overtone.connect(g);
+      g.connect(chimesMaster);
+
+      osc.start(chimeTime);
+      overtone.start(chimeTime);
+      osc.stop(chimeTime + 1.85);
+      overtone.stop(chimeTime + 1.85);
+    });
+
+    if (dest) chimesMaster.connect(dest);
+    return chimesMaster;
+  }
+
+  triggerTambourine(velocity = 95, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dest = this.getDest(destNode);
+
+    // Initial slap (5500Hz highpass) + delayed zill shake
+    const noise = this.createNoiseSource(false);
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 6500;
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.70 * vel * customGain, now + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.15 * vel * customGain, now + 0.04);
+    gain.gain.linearRampToValueAtTime(0.45 * vel * customGain, now + 0.055);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+    noise.connect(hp);
+    hp.connect(gain);
+    if (dest) gain.connect(dest);
+
+    noise.start(now);
+    noise.stop(now + 0.24);
     return noise;
   }
 
@@ -2320,6 +2937,8 @@ export class SfxSoundGenerator {
     if (id.startsWith("vox_")) return true;
     if (id.startsWith("fx_")) return true;
     if (id.startsWith("percussion_")) return true;
+    if (id.startsWith("drum_")) return true;
+    if (id === "synth_drum" || id === "analog_synth_drum" || id === "real_drum_kit" || id === "percussion_conga" || id === "congas") return true;
     if (id === "tr808_kit" || id === "tr909_kit" || id === "drums1" || id === "m1_drums") return true;
     if (id === "dub_siren" || id === "reggae_siren" || id === "spring_splash" || id === "dub_splash") return true;
     if (id === "laser_zap" || id === "dub_laser" || id === "dub_horn" || id === "airhorn" || id === "sub_boom" || id === "sub_drop" || id === "noise_riser") return true;
@@ -2388,7 +3007,8 @@ export class SfxSoundGenerator {
       case "tubular_bells":
         return this.triggerTubularBells(midiNote, velocity, customGain, destNode);
       case "wind_chimes":
-        return this.triggerWindChimes(midiNote, velocity, customGain, destNode);
+      case "drum_chimes":
+        return this.triggerWindChimes(velocity, customGain, destNode);
       case "crystal_chimes":
         return this.triggerCrystalChimes(midiNote, velocity, customGain, destNode);
 
@@ -2430,46 +3050,139 @@ export class SfxSoundGenerator {
       case "fx_vinyl_crackle":
         return this.triggerVinylCrackle(4.0, velocity, customGain, destNode);
 
-      // 5. Percussions & Drum Kit
+      // 5. Pure Acoustic Drum Kit (Full GM Keyboard Map with unique sound per key)
+      case "real_drum_kit": {
+        switch (midiNote) {
+          case 35: return this.triggerAcousticKick(velocity, customGain, destNode); // Deep Sub Kick
+          case 36: return this.triggerAcousticKick(velocity * 1.1, customGain, destNode); // Maple Kick Punch
+          case 37: return this.triggerAcousticSnare(velocity * 0.8, customGain, destNode); // Side Stick
+          case 38: return this.triggerAcousticSnare(velocity, customGain, destNode); // Snare Center Hit
+          case 39: return this.triggerStereoClap(velocity, customGain, destNode); // Handclap
+          case 40: return this.triggerAcousticSnare(velocity * 1.2, customGain, destNode); // Snare Rimshot Crack
+          case 41: return this.triggerAcousticTom("low", velocity, customGain, destNode); // Low Floor Tom
+          case 42: return this.triggerAcousticHiHat(true, velocity, customGain, destNode); // Closed Hi-Hat (Tight)
+          case 43: return this.triggerAcousticTom("low", velocity * 1.05, customGain, destNode); // High Floor Tom
+          case 44: return this.triggerAcousticHiHat(true, velocity * 0.85, customGain, destNode); // Pedal Hi-Hat Chick
+          case 45: return this.triggerAcousticTom("high", velocity * 0.9, customGain, destNode); // Low Rack Tom
+          case 46: return this.triggerAcousticHiHat(false, velocity, customGain, destNode); // Open Hi-Hat Wash
+          case 47: return this.triggerAcousticTom("high", velocity, customGain, destNode); // Mid Rack Tom
+          case 48: return this.triggerAcousticTom("high", velocity * 1.1, customGain, destNode); // High Rack Tom
+          case 49: return this.triggerAcousticCrash(velocity, customGain, destNode); // Crash Cymbal 1 (18in)
+          case 50: return this.triggerAcousticTom("high", velocity * 1.25, customGain, destNode); // Very High Tom
+          case 51: return this.triggerAcousticRide(velocity, customGain, destNode, false); // Ride Tip Ping
+          case 52: return this.triggerAcousticCrash(velocity * 0.9, customGain, destNode); // China Cymbal
+          case 53: return this.triggerAcousticRide(velocity, customGain, destNode, true); // Ride Bell Ping
+          case 54: return this.triggerTambourine(velocity, customGain, destNode); // Tambourine
+          case 55: return this.triggerAcousticCrash(velocity * 0.8, customGain, destNode); // Splash Cymbal
+          case 56: return this.triggerCowbell(velocity, customGain, destNode, 56); // Latin Cowbell
+          case 57: return this.triggerAcousticCrash(velocity * 1.15, customGain, destNode); // Crash Cymbal 2 (16in)
+          case 58: return this.triggerVocalChant("yeah", midiNote, velocity, customGain, destNode);
+          case 59: return this.triggerAcousticRide(velocity * 1.05, customGain, destNode, false); // Ride Edge Wash
+          case 60: return this.triggerBongos(true, velocity, customGain, destNode, 60); // High Bongo Slap
+          case 61: return this.triggerBongos(false, velocity, customGain, destNode, 61); // Low Bongo Open
+          case 62: return this.triggerConga(true, velocity, customGain, destNode, 62); // High Conga Palm Mute
+          case 63: return this.triggerConga(true, velocity, customGain, destNode, 63); // High Conga Open Tone
+          case 64: return this.triggerConga(false, velocity, customGain, destNode, 64); // Low Tumba Conga Open
+          case 65: return this.triggerTimbales(65, velocity, customGain, destNode); // High Timbale Rim
+          case 66: return this.triggerTimbales(66, velocity, customGain, destNode); // Low Timbale Shell
+          case 67: return this.triggerCowbell(velocity, customGain, destNode, 67); // High Agogo Bell
+          case 68: return this.triggerCowbell(velocity, customGain, destNode, 68); // Low Agogo Bell
+          case 69: return this.triggerShaker(velocity, customGain, destNode); // Latin Cabasa
+          case 70: return this.triggerShaker(velocity * 1.15, customGain, destNode); // Maracas
+          case 71: return this.triggerWindChimes(velocity, customGain, destNode); // Studio Wind Chimes
+          default: {
+            if (midiNote < 35) {
+              return this.triggerAcousticKick(velocity, customGain, destNode);
+            } else if (midiNote <= 48) {
+              return this.triggerAcousticTom("high", velocity, customGain, destNode);
+            } else if (midiNote <= 60) {
+              return this.triggerAcousticRide(velocity, customGain, destNode, midiNote % 2 === 1);
+            } else if (midiNote <= 72) {
+              return this.triggerConga(midiNote % 2 === 1, velocity, customGain, destNode, midiNote);
+            } else {
+              return this.triggerAnalogSynthDrum(velocity, customGain, destNode, midiNote);
+            }
+          }
+        }
+      }
+
+      // Individual Real Drum Triggers (with pitch tracking per key)
+      case "drum_kick":
+        return this.triggerAcousticKick(velocity, customGain, destNode);
+      case "drum_snare":
+        return this.triggerAcousticSnare(velocity, customGain, destNode);
+      case "drum_hhclosed":
+        return this.triggerAcousticHiHat(true, velocity, customGain, destNode);
+      case "drum_hhopen":
+        return this.triggerAcousticHiHat(false, velocity, customGain, destNode);
+      case "drum_tom_hi":
+        return this.triggerAcousticTom("high", velocity, customGain, destNode);
+      case "drum_tom_low":
+        return this.triggerAcousticTom("low", velocity, customGain, destNode);
+      case "drum_crash":
+        return this.triggerAcousticCrash(velocity, customGain, destNode);
+      case "drum_ride":
+        return this.triggerAcousticRide(velocity, customGain, destNode);
+      case "drum_cowbell":
+      case "percussion_cowbell":
+        return this.triggerCowbell(velocity, customGain, destNode, midiNote);
+      case "drum_tambourine":
+        return this.triggerTambourine(velocity, customGain, destNode);
+
+      // Congas (Fully Chromatic Pitch-Tracked Across ALL Keys)
+      case "percussion_conga":
+      case "congas":
+      case "drum_conga_hi":
+        return this.triggerConga(true, velocity, customGain, destNode, midiNote);
+      case "drum_conga_low":
+        return this.triggerConga(false, velocity, customGain, destNode, midiNote);
+
+      // Bongos (Chromatic)
+      case "percussion_bongo":
+        return this.triggerBongos(midiNote >= 60, velocity, customGain, destNode, midiNote);
+
+      // Timbales (Chromatic)
+      case "percussion_timbales":
+        return this.triggerTimbales(midiNote, velocity, customGain, destNode);
+
+      // Analog Synth Drum (Fully Chromatic Pitch-Tracked 80s Simmons Space Drum)
+      case "synth_drum":
+      case "analog_synth_drum":
+      case "percussion_synthdrum":
+      case "drum_synth_analog":
+        return this.triggerAnalogSynthDrum(velocity, customGain, destNode, midiNote);
+
+      // 6. Vintage TR-808 & TR-909 Drum Kits (with per-key pitch differentiation)
       case "tr808_kit":
       case "drums1":
       case "m1_drums": {
-        if (midiNote === 35 || midiNote === 36 || midiNote % 12 === 0) {
+        if (midiNote === 35 || midiNote === 36) {
           return this.trigger808Kick(velocity, customGain, destNode);
-        } else if (midiNote === 38 || midiNote === 40 || midiNote % 12 === 2) {
+        } else if (midiNote === 38 || midiNote === 40) {
           return this.trigger808Snare(velocity, customGain, destNode);
-        } else if (midiNote === 42 || midiNote % 12 === 6) {
+        } else if (midiNote === 42 || midiNote === 44) {
           return this.trigger808Hat(true, velocity, customGain, destNode);
-        } else if (midiNote === 46 || midiNote % 12 === 10) {
+        } else if (midiNote === 46) {
           return this.trigger808Hat(false, velocity, customGain, destNode);
-        } else if (midiNote === 56 || midiNote % 12 === 8) {
-          return this.triggerCowbell(velocity, customGain, destNode);
-        } else if (midiNote === 39 || midiNote % 12 === 3) {
+        } else if (midiNote === 56) {
+          return this.triggerCowbell(velocity, customGain, destNode, midiNote);
+        } else if (midiNote === 39) {
           return this.triggerShaker(velocity, customGain, destNode);
         } else {
-          return this.triggerConga(midiNote >= 60, velocity, customGain, destNode);
+          return this.triggerConga(midiNote >= 60, velocity, customGain, destNode, midiNote);
         }
       }
       case "tr909_kit":
         return this.trigger909Kick(velocity, customGain, destNode);
-      case "percussion_conga":
-        return this.triggerConga(midiNote >= 60, velocity, customGain, destNode);
       case "percussion_shaker":
         return this.triggerShaker(velocity, customGain, destNode);
-      case "percussion_cowbell":
-        return this.triggerCowbell(velocity, customGain, destNode);
       case "percussion_clap":
         return this.triggerStereoClap(velocity, customGain, destNode);
-      case "percussion_bongo":
-        return this.triggerBongos(midiNote >= 60, velocity, customGain, destNode);
-      case "percussion_timbales":
-        return this.triggerTimbales(midiNote, velocity, customGain, destNode);
       case "percussion_crash":
         return this.triggerCrashGong(velocity, customGain, destNode);
       case "percussion_taiko":
       case "taiko_drum":
         return this.triggerTaiko(velocity, customGain, destNode, midiNote);
-
 
       // 7. Reggae, Dub & Stage Sound FX
       case "dub_siren":

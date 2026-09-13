@@ -113,6 +113,9 @@ export const TRITON_BANKS = {
       { id: "C004", num: "004", name: "Orchestral Tubular Chimes", category: "Bells & Mallet", instId: "tubular_bells", ifx: "Studio Dimension", mfx: "Cathedral Hall" },
       { id: "C005", num: "005", name: "Mark Tree Wind Chimes", category: "Bells & Mallet", instId: "wind_chimes", ifx: "High-Shelf Air", mfx: "Concert Hall" },
       { id: "C006", num: "006", name: "Crystal Shimmer Chimes", category: "Bells & Mallet", instId: "crystal_chimes", ifx: "Stereo Chorus", mfx: "Cathedral Hall" },
+      { id: "C007", num: "007", name: "Afro-Cuban Congas", category: "Percussion & Drums", instId: "percussion_conga", ifx: "Mid-Warmth EQ", mfx: "Room Reverb" },
+      { id: "C008", num: "008", name: "Analog Synth Drum (Simmons SDSV)", category: "Percussion & Drums", instId: "synth_drum", ifx: "Resonant Filter", mfx: "Plate Reverb" },
+      { id: "C009", num: "009", name: "Real Acoustic Drum Kit", category: "Percussion & Drums", instId: "real_drum_kit", ifx: "Punch Limiter", mfx: "Room Reverb" },
     ],
   },
   USER_D: {
@@ -221,6 +224,8 @@ export const TRITON_BANKS = {
       { id: "PRC08", num: "08", name: "Multi Handclap Stack", category: "Percussion & Drums", instId: "percussion_clap", ifx: "Studio Dimension", mfx: "Room Reverb" },
       { id: "PRC09", num: "09", name: "Orchestral Crash Gong", category: "Percussion & Drums", instId: "percussion_crash", ifx: "High-Shelf Air", mfx: "Cathedral Hall" },
       { id: "PRC10", num: "10", name: "Cinematic Taiko Impact", category: "Percussion & Drums", instId: "taiko_drum", ifx: "Sub Limiter", mfx: "Concert Hall" },
+      { id: "PRC11", num: "11", name: "Analog Synth Drum (Simmons SDSV)", category: "Percussion & Drums", instId: "synth_drum", ifx: "Resonant Filter", mfx: "Plate Reverb" },
+      { id: "PRC12", num: "12", name: "Real Acoustic Drum Kit", category: "Percussion & Drums", instId: "real_drum_kit", ifx: "Punch Limiter", mfx: "Room Reverb" },
     ],
   },
 };

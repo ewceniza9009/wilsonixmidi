@@ -33,20 +33,12 @@ export class AutoPan {
       this.panner = ctx.createStereoPanner();
       this.panner.pan.value = 0.0;
 
-      this.lfo = ctx.createOscillator();
-      this.lfo.type = "sine";
-      this.lfo.frequency.value = this.rate;
-
       this.lfoGain = ctx.createGain();
       this.lfoGain.gain.value = this.depth;
-
-      this.lfo.connect(this.lfoGain);
       this.lfoGain.connect(this.panner.pan);
 
       this.input.connect(this.panner);
       this.panner.connect(this.wetGain);
-
-      this.lfo.start();
     } else {
       // Fallback dual gain panner
       this.panL = ctx.createGain();
@@ -54,13 +46,8 @@ export class AutoPan {
       this.panL.gain.value = 0.5;
       this.panR.gain.value = 0.5;
 
-      this.lfo = ctx.createOscillator();
-      this.lfo.type = "sine";
-      this.lfo.frequency.value = this.rate;
-
       this.lfoGain = ctx.createGain();
       this.lfoGain.gain.value = this.depth * 0.5;
-      this.lfo.connect(this.lfoGain);
       this.lfoGain.connect(this.panL.gain);
 
       this.input.connect(this.panL);
@@ -68,7 +55,6 @@ export class AutoPan {
 
       this.panL.connect(this.wetGain);
       this.panR.connect(this.wetGain);
-      this.lfo.start();
     }
 
     this.wetGain.gain.value = 0.0; // Bypassed by default

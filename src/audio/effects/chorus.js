@@ -47,6 +47,23 @@ export class KorgStereoChorus {
     this.delayR = ctx.createDelay(0.1);
     this.delayR.delayTime.value = 0.0175;
 
+    this.lfoGainL = ctx.createGain();
+    this.lfoGainL.gain.value = this.depth;
+    this.lfoGainL.connect(this.delayL.delayTime);
+
+    this.lfoGainR = ctx.createGain();
+    this.lfoGainR.gain.value = -this.depth;
+    this.lfoGainR.connect(this.delayR.delayTime);
+
+    // Route wet audio through stereo delays to wetGain
+    const merger = ctx.createChannelMerger(2);
+    this.wetLp.connect(this.delayL);
+    this.wetLp.connect(this.delayR);
+    this.delayL.connect(merger, 0, 0);
+    this.delayR.connect(merger, 0, 1);
+    merger.connect(this.wetGain);
+    this.wetGain.connect(this.output);
+
     this.lfo = null;
     this._lfoRunning = false;
   }
@@ -58,8 +75,8 @@ export class KorgStereoChorus {
     this.lfo = ctx.createOscillator();
     this.lfo.type = "sine";
     this.lfo.frequency.value = this.rate;
-    this.lfo.connect(this.lfoGainL);
-    this.lfo.connect(this.lfoGainR);
+    if (this.lfoGainL) this.lfo.connect(this.lfoGainL);
+    if (this.lfoGainR) this.lfo.connect(this.lfoGainR);
     this.lfo.start();
   }
 

@@ -791,7 +791,9 @@ export class VirtualKeyboardUI {
       accentBtns.forEach(b => {
         b.classList.toggle("active", parseInt(b.getAttribute("data-vel")) === vel);
       });
-      this.updateHudReadouts();
+      if (typeof this.updateHudReadouts === "function") {
+        this.updateHudReadouts();
+      }
     });
 
     accentBtns.forEach(btn => {

@@ -120,9 +120,9 @@ export class RotarySpeaker {
     this.hornLfo.frequency.value = hornRate;
     this.drumLfo.frequency.value = drumRate;
 
-    this.hornLfo.connect(this.hornLfoGain);
-    if (this.hornPannerLfoGain) this.hornLfo.connect(this.hornPannerLfoGain);
-    this.drumLfo.connect(this.drumLfoGain);
+    if (this.hornDoppler) this.hornLfo.connect(this.hornDoppler);
+    if (this.hornPanGain) this.hornLfo.connect(this.hornPanGain);
+    if (this.drumDepth) this.drumLfo.connect(this.drumDepth);
 
     this.hornLfo.start();
     this.drumLfo.start();

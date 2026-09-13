@@ -121,7 +121,9 @@ export const HD_SOUNDBANKS = {
 
   // Percussions & Drums
   tr808_kit: { id: "tr808_kit", name: "TR-808 Analog Drum Kit", category: "Percussion & Drums" },
-  percussion_conga: { id: "percussion_conga", name: "Afro-Cuban Congas", category: "Percussion & Drums" },
+  percussion_conga: { id: "percussion_conga", name: "Afro-Cuban Congas (Slap & Open)", category: "Percussion & Drums" },
+  synth_drum: { id: "synth_drum", name: "Analog Synth Drum (Simmons SDSV Space)", category: "Percussion & Drums" },
+  real_drum_kit: { id: "real_drum_kit", name: "Real Acoustic Drum Kit (Zero-Latency)", category: "Percussion & Drums" },
   percussion_shaker: { id: "percussion_shaker", name: "Latin Shaker & Maracas", category: "Percussion & Drums" },
   taiko_drum: { id: "taiko_drum", name: "Cinematic Taiko Impact", category: "Percussion & Drums" },
   percussion_taiko: { id: "taiko_drum", name: "Cinematic Taiko Impact", category: "Percussion & Drums" },
@@ -728,6 +730,42 @@ export const COMBI_PRESETS = {
       { id: 1, name: "Rhodes Stereo Width", inst: "rhodes_stage_mp3", fx: "autopan_wide", gain: 0.30, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 2, name: "Warm Tape Bass", inst: "synth_bass_1", fx: "warm_eq", gain: 0.70, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
       { id: 3, name: "Tape Compress Pad", inst: "string_ensemble_1", fx: "punch_comp", gain: 0.10, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: false },
+    ],
+  },
+
+  afro_cuban_congas: {
+    id: "afro_cuban_congas",
+    name: "🪘 Afro-Cuban Congas & Latin Percussion Stack",
+    category: "Percussion & Drums",
+    layers: [
+      { id: 0, name: "High & Low Congas", inst: "percussion_conga", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Latin Shaker & Maracas", inst: "percussion_shaker", fx: "air_eq", gain: 0.65, pan: 0.15, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Brass Section Cowbell", inst: "percussion_cowbell", fx: "clean", gain: 0.70, pan: -0.15, oct: 0, minVel: 60, maxVel: 127, enabled: true },
+      { id: 3, name: "Mark Tree Wind Chimes", inst: "wind_chimes", fx: "reverb_hall", gain: 0.60, pan: 0.10, oct: 1, minVel: 85, maxVel: 127, enabled: false },
+    ],
+  },
+
+  analog_synth_drum_space: {
+    id: "analog_synth_drum_space",
+    name: "🥁 Simmons SDSV Analog Synth Drum (80s Space)",
+    category: "Percussion & Drums",
+    layers: [
+      { id: 0, name: "Simmons SDSV Pitch-Sweep Drum", inst: "synth_drum", fx: "tape_sat_master", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "TR-808 Analog Kit", inst: "tr808_kit", fx: "clean", gain: 0.80, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Analog Synth Bassline", inst: "synth_bass_1", fx: "tape_sat_master", gain: 0.75, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "White Noise Sweep Riser", inst: "noise_riser", fx: "reverb_hall", gain: 0.50, pan: 0, oct: 0, minVel: 90, maxVel: 127, enabled: false },
+    ],
+  },
+
+  studio_acoustic_kit: {
+    id: "studio_acoustic_kit",
+    name: "🥁 Real Studio Acoustic Drum Kit (Zero-Latency)",
+    category: "Percussion & Drums",
+    layers: [
+      { id: 0, name: "Acoustic Drum Kit Master", inst: "real_drum_kit", fx: "punch_comp", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Latin Cowbell & Ride Bell", inst: "percussion_cowbell", fx: "clean", gain: 0.75, pan: 0.15, oct: 0, minVel: 65, maxVel: 127, enabled: true },
+      { id: 2, name: "Afro-Cuban Congas", inst: "percussion_conga", fx: "clean", gain: 0.70, pan: -0.15, oct: 0, minVel: 45, maxVel: 127, enabled: true },
+      { id: 3, name: "Studio Wind Chimes", inst: "wind_chimes", fx: "reverb_hall", gain: 0.60, pan: 0.20, oct: 0, minVel: 85, maxVel: 127, enabled: false },
     ],
   },
 };

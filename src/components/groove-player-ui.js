@@ -228,12 +228,20 @@ export class GroovePlayerUI {
         { id: "percussion_shaker", icon: "🪇", name: "Latin Shaker", desc: "Dynamic forward & back shake" },
       ],
       drums: [
-        { id: "drum_kick", icon: "🥁", name: "Acoustic Kick", desc: "REAL studio kick drum hit" },
-        { id: "drum_snare", icon: "🥁", name: "Acoustic Snare", desc: "REAL 14in brass snare crack" },
-        { id: "drum_hhclosed", icon: "🥁", name: "Closed Hi-Hat", desc: "REAL tight closed-hat tick" },
-        { id: "drum_hhopen", icon: "🥁", name: "Open Hi-Hat", desc: "REAL sizzling open-hat wash" },
-        { id: "drum_crash", icon: "🥁", name: "Crash Cymbal", desc: "REAL 18in crash splash" },
-        { id: "drum_ride", icon: "🥁", name: "Ride Cymbal", desc: "REAL ride cymbal ring" },
+        { id: "drum_kick", icon: "🥁", name: "Acoustic Kick", desc: "Studio maple kick with beater snap & sub thump" },
+        { id: "drum_snare", icon: "🥁", name: "Acoustic Snare", desc: "14in brass/wood snare with snappy wire crack" },
+        { id: "drum_hhclosed", icon: "🥢", name: "Closed Hi-Hat", desc: "Instant metallic 0.00ms closed-hat tick (Zero Latency)" },
+        { id: "drum_hhopen", icon: "🔔", name: "Open Hi-Hat", desc: "Sizzling bronze open-hat wash with instant choke" },
+        { id: "drum_tom_hi", icon: "🪘", name: "Rack Tom", desc: "Tuned high rack tom with warm acoustic resonance" },
+        { id: "drum_tom_low", icon: "🪘", name: "Floor Tom", desc: "Deep thunderous 16in floor tom punch" },
+        { id: "drum_crash", icon: "💥", name: "Crash Cymbal", desc: "18in explosive bronze crash splash with long shimmer" },
+        { id: "drum_ride", icon: "✨", name: "Ride Cymbal & Bell", desc: "Crisp stick tip ping with resonant bell ping" },
+        { id: "drum_cowbell", icon: "🔔", name: "Latin Cowbell", desc: "Authentic Latin/Rock acoustic cowbell strike" },
+        { id: "drum_chimes", icon: "🎐", name: "Studio Wind Chimes", desc: "12-note cascading metallic bar chimes glissando" },
+        { id: "drum_conga_hi", icon: "🪘", name: "High Conga Slap", desc: "Crisp Afro-Cuban high palm slap" },
+        { id: "drum_conga_low", icon: "🪘", name: "Low Conga Open", desc: "Deep resonant open conga drum tone" },
+        { id: "drum_synth_analog", icon: "⚡", name: "Analog Synth Drum", desc: "Classic 80s Simmons SDSV space drum pitch sweep" },
+        { id: "drum_tambourine", icon: "🪇", name: "Tambourine", desc: "Acoustic jingle tambourine slap" },
       ],
       dj: [
         { id: "fx_subboom", icon: "💣", name: "Cinematic Sub-Boom", desc: "Real sub-bass explosive impact" },
@@ -500,24 +508,48 @@ export class GroovePlayerUI {
         this.sfxGen.triggerShaker(95, 1.0);
         break;
 
-      // 4b. REAL Acoustic Drum Kit (field-recorded one-shots)
+      // 4b. REAL Acoustic Drum Kit, Chimes, Cowbell & Congas (0.00ms Zero Latency DSP)
       case "drum_kick":
-        this.toggleRealSample("drum_kick_r", 60, 122, 1.3);
+        this.sfxGen.triggerAcousticKick(118, 1.25);
         break;
       case "drum_snare":
-        this.toggleRealSample("drum_snare_r", 60, 118, 1.3);
+        this.sfxGen.triggerAcousticSnare(112, 1.2);
         break;
       case "drum_hhclosed":
-        this.toggleRealSample("drum_hhclosed_r", 60, 110, 1.1);
+        this.sfxGen.triggerAcousticHiHat(true, 108, 1.15);
         break;
       case "drum_hhopen":
-        this.toggleRealSample("drum_hhopen_r", 60, 116, 1.2);
+        this.sfxGen.triggerAcousticHiHat(false, 112, 1.2);
+        break;
+      case "drum_tom_hi":
+        this.sfxGen.triggerAcousticTom("high", 110, 1.2);
+        break;
+      case "drum_tom_low":
+        this.sfxGen.triggerAcousticTom("low", 115, 1.25);
         break;
       case "drum_crash":
-        this.toggleRealSample("drum_crash_r", 60, 125, 1.3);
+        this.sfxGen.triggerAcousticCrash(115, 1.25);
         break;
       case "drum_ride":
-        this.toggleRealSample("drum_ride_r", 60, 122, 1.3);
+        this.sfxGen.triggerAcousticRide(108, 1.2);
+        break;
+      case "drum_cowbell":
+        this.sfxGen.triggerCowbell(118, 1.25);
+        break;
+      case "drum_chimes":
+        this.sfxGen.triggerWindChimes(110, 1.3);
+        break;
+      case "drum_conga_hi":
+        this.sfxGen.triggerConga(true, 112, 1.2);
+        break;
+      case "drum_conga_low":
+        this.sfxGen.triggerConga(false, 115, 1.25);
+        break;
+      case "drum_synth_analog":
+        this.sfxGen.triggerAnalogSynthDrum(115, 1.25);
+        break;
+      case "drum_tambourine":
+        this.sfxGen.triggerTambourine(108, 1.15);
         break;
 
       // 5. DJ & Cinematic

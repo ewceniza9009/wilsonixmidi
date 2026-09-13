@@ -292,10 +292,12 @@
   display: flex;
   flex-wrap: nowrap;
   overflow-x: auto;
-  gap: 4px;
-  margin-bottom: 5px;
+  gap: 6px;
+  margin-bottom: 6px;
   flex-shrink: 0;
-  padding-bottom: 2px;
+  padding: 2px 2px 4px 2px;
+  position: relative;
+  z-index: 5;
   scrollbar-width: thin;
   scrollbar-color: rgba(56, 189, 248, 0.4) transparent;
 }
@@ -316,11 +318,13 @@
   background: #181e29;
   border: 1px solid #334155;
   border-radius: 3px;
-  padding: 3px 6px;
+  padding: 4px 8px;
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
   transition: all 0.12s ease;
+  user-select: none;
+  touch-action: manipulation;
 }
 
 .triton-bank-card:hover {
@@ -347,6 +351,7 @@
   flex-direction: column;
   text-align: left;
   line-height: 1.1;
+  pointer-events: none;
 }
 
 .bank-card-title {
@@ -365,11 +370,13 @@
 .touchview-program-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
+  gap: 6px;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding-right: 4px;
+  padding: 4px 4px 8px 2px;
+  position: relative;
+  z-index: 2;
 }
 
 @media (max-width: 1100px) {

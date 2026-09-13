@@ -31,77 +31,44 @@ export class TritonWorkstationUI {
     if (this.activeSubTab !== "BROWSER") return;
     if (this._suppressAutoBankSwitch) return;
 
-    // 1. Combi Bank sync
+    // 1. Combi Mode
     if (multiLayerEngine.isCombiMode && multiLayerEngine.activeCombi) {
-      const combiId = multiLayerEngine.activeCombi.id;
-      if (this.activeBankId !== "COMBI") {
-        this.activeBankId = "COMBI";
-        this.render();
-      } else {
-        this.updateLcdAndGridHighlight(combiId, multiLayerEngine.activeCombi.name, "BANK: COMBI", `CATEGORY: ${(multiLayerEngine.activeCombi.category || "COMBI").toUpperCase()}`);
+      const combiProg = multiLayerEngine.activeCombi;
+      if (!this.activeProg || this.activeBankId === "COMBI") {
+        this.activeProg = combiProg;
+      }
+      if (this.activeProg) {
+        this.updateLcdAndGridHighlight(
+          this.activeProg.id,
+          this.activeProg.name,
+          this.activeBankId === "COMBI" ? "BANK: COMBI" : `BANK: ${this.activeBankId.replace("_", " ")} ${this.activeProg.num || ""}`,
+          `CATEGORY: ${(this.activeProg.category || "COMBI").toUpperCase()}`
+        );
       }
       return;
     }
 
-    // 2. Triton VA Program sync
+    // 2. Triton Virtual Analog (VA) Mode
     if (multiLayerEngine.isTritonVaMode && multiLayerEngine.activeTritonVaProg) {
       const prog = multiLayerEngine.activeTritonVaProg;
-      const currentBank = TRITON_BANKS[this.activeBankId];
-      const isAlreadyInCurrentBank = currentBank && (currentBank.programs || []).some(p => p.id === prog.id);
-
-      let targetBankId = this.activeBankId;
-      if (!isAlreadyInCurrentBank) {
-        for (const [bankId, bank] of Object.entries(TRITON_BANKS)) {
-          if ((bank.programs || []).some(p => p.id === prog.id)) {
-            targetBankId = bankId;
-            break;
-          }
-        }
-      }
-
       this.activeProg = prog;
-      if (this.activeBankId !== targetBankId) {
-        this.activeBankId = targetBankId;
-        this.render();
-      } else {
-        this.updateLcdAndGridHighlight(prog.id, prog.name, `BANK: ${this.activeBankId.replace("_", " ")} ${prog.num}`, `CATEGORY: ${(prog.category || "").toUpperCase()}`);
-      }
+      this.updateLcdAndGridHighlight(
+        prog.id,
+        prog.name,
+        `BANK: ${this.activeBankId.replace("_", " ")} ${prog.num || ""}`,
+        `CATEGORY: ${(prog.category || "").toUpperCase()}`
+      );
       return;
     }
 
-    // 3. Single instrument / PCM bank sync
-    if (multiLayerEngine.activeSingleInst) {
-      const instKey = multiLayerEngine.activeSingleInst;
-      const currentBank = TRITON_BANKS[this.activeBankId];
-      
-      // If the currently active program in the currently viewed bank already corresponds to this instrument, DO NOT switch banks!
-      if (this.activeProg && currentBank && (currentBank.programs || []).some(p => p.id === this.activeProg.id)) {
-        this.updateLcdAndGridHighlight(this.activeProg.id, this.activeProg.name, `BANK: ${this.activeBankId.replace("_", " ")} ${this.activeProg.num || ""}`, `CATEGORY: ${(this.activeProg.category || "").toUpperCase()}`);
-        return;
-      }
-
-      // Check if current bank has any program matching this instrument
-      const matchInCurrentBank = currentBank && (currentBank.programs || []).find(pr => pr.instId === instKey);
-      if (matchInCurrentBank) {
-        this.activeProg = matchInCurrentBank;
-        this.updateLcdAndGridHighlight(matchInCurrentBank.id, matchInCurrentBank.name, `BANK: ${this.activeBankId.replace("_", " ")} ${matchInCurrentBank.num || ""}`, `CATEGORY: ${(matchInCurrentBank.category || "").toUpperCase()}`);
-        return;
-      }
-
-      // Fallback search only when triggered externally
-      for (const [bankId, bank] of Object.entries(TRITON_BANKS)) {
-        const p = (bank.programs || []).find(pr => pr.instId === instKey || (pr.id === "A036" && instKey === "acoustic_grand_piano"));
-        if (p) {
-          this.activeProg = p;
-          if (this.activeBankId !== bankId) {
-            this.activeBankId = bankId;
-            this.render();
-          } else {
-            this.updateLcdAndGridHighlight(p.id, p.name, `BANK: ${this.activeBankId.replace("_", " ")} ${p.num}`, `CATEGORY: ${(p.category || "").toUpperCase()}`);
-          }
-          return;
-        }
-      }
+    // 3. Single Instrument / Dedicated PCM Mode
+    if (multiLayerEngine.activeSingleInst && this.activeProg) {
+      this.updateLcdAndGridHighlight(
+        this.activeProg.id,
+        this.activeProg.name,
+        `BANK: ${this.activeBankId.replace("_", " ")} ${this.activeProg.num || ""}`,
+        `CATEGORY: ${(this.activeProg.category || "").toUpperCase()}`
+      );
     }
   }
 
@@ -126,6 +93,15 @@ export class TritonWorkstationUI {
 
   isCombiBank() {
     return this.activeBankId === "COMBI";
+  }
+
+  isGridCellActive(p) {
+    if (this.isCombiBank()) {
+      if (multiLayerEngine.isCombiMode && multiLayerEngine.activeCombi) {
+        return multiLayerEngine.activeCombi.id === p.id;
+      }
+    }
+    return this.activeProg && this.activeProg.id === p.id;
   }
 
   // Normalized grid list for the active bank (combi presets get display numbers)
@@ -153,17 +129,6 @@ export class TritonWorkstationUI {
       );
     }
     return programs;
-  }
-
-  isGridCellActive(p) {
-    if (this.isCombiBank()) {
-      try {
-        return multiLayerEngine.activeCombi.id === p.id;
-      } catch (e) {
-        return false;
-      }
-    }
-    return this.activeProg && this.activeProg.id === p.id;
   }
 
   render() {
@@ -604,9 +569,13 @@ export class TritonWorkstationUI {
   bindBankButtons() {
     this.container.querySelectorAll(".triton-bank-card").forEach(btn => {
       let lastTap = 0;
-      const handleBank = () => {
+      const handleBank = (e) => {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
         const now = performance.now();
-        if (now - lastTap < 120) return;
+        if (now - lastTap < 100) return;
         lastTap = now;
         const newBank = btn.getAttribute("data-bank");
         if (this.activeBankId !== newBank) {
@@ -615,7 +584,6 @@ export class TritonWorkstationUI {
         }
       };
       btn.addEventListener("pointerdown", handleBank);
-      btn.addEventListener("click", handleBank);
     });
   }
 
@@ -624,48 +592,77 @@ export class TritonWorkstationUI {
       let lastTap = 0;
       const handleSelect = (e) => {
         if (e) {
+          e.preventDefault();
           e.stopPropagation();
         }
         const now = performance.now();
-        if (now - lastTap < 120) return;
+        if (now - lastTap < 80) return;
         lastTap = now;
 
         const progId = cell.getAttribute("data-prog-id");
+        if (!progId) return;
+
         // COMBI bank: trigger 4-timbre stack + update LCD
         if (this.isCombiBank()) {
           const cp = COMBI_PRESETS[progId];
           if (cp) {
+            this.activeProg = cp;
             this._suppressAutoBankSwitch = true;
             try {
               multiLayerEngine.setCombiPreset(progId);
               this.updateLcdAndGridHighlight(progId, cp.name, "BANK: COMBI", `CATEGORY: ${(cp.category || "COMBI").toUpperCase()}`);
             } finally {
-              this._suppressAutoBankSwitch = false;
+              setTimeout(() => { this._suppressAutoBankSwitch = false; }, 120);
             }
           }
           return;
         }
-        const bank = TRITON_BANKS[this.activeBankId] || TRITON_BANKS.USER_A;
-        const prog = bank.programs.find(p => p.id === progId);
+
+        const currentBank = TRITON_BANKS[this.activeBankId] || TRITON_BANKS.USER_A;
+        let prog = (currentBank.programs || []).find(p => p.id === progId);
+        if (!prog) {
+          for (const bank of Object.values(TRITON_BANKS)) {
+            prog = (bank.programs || []).find(p => p.id === progId);
+            if (prog) break;
+          }
+        }
+
         if (prog) {
           this.activeProg = prog;
           this._suppressAutoBankSwitch = true;
           try {
             this.applyTritonProgram(prog, true);
-            this.updateLcdAndGridHighlight(prog.id, prog.name, `BANK: ${this.activeBankId.replace("_", " ")} ${prog.num}`, `CATEGORY: ${(prog.category || "").toUpperCase()}`);
+            this.updateLcdAndGridHighlight(
+              prog.id,
+              prog.name,
+              `BANK: ${this.activeBankId.replace("_", " ")} ${prog.num || ""}`,
+              `CATEGORY: ${(prog.category || "").toUpperCase()}`
+            );
           } finally {
-            this._suppressAutoBankSwitch = false;
+            setTimeout(() => { this._suppressAutoBankSwitch = false; }, 120);
           }
         }
       };
 
       cell.addEventListener("pointerdown", handleSelect);
-      cell.addEventListener("click", handleSelect);
     });
   }
 
   selectProgramById(progId) {
     if (!progId) return;
+
+    // Check COMBI presets
+    if (COMBI_PRESETS[progId]) {
+      const cp = COMBI_PRESETS[progId];
+      this.activeBankId = "COMBI";
+      this.activeProg = cp;
+      this.render();
+      multiLayerEngine.setCombiPreset(progId);
+      this.updateLcdAndGridHighlight(progId, cp.name, "BANK: COMBI", `CATEGORY: ${(cp.category || "COMBI").toUpperCase()}`);
+      return;
+    }
+
+    // Check TRITON_BANKS
     for (const [bankId, bank] of Object.entries(TRITON_BANKS)) {
       const prog = (bank.programs || []).find(p => p.id === progId);
       if (prog) {
@@ -673,7 +670,7 @@ export class TritonWorkstationUI {
         this.activeProg = prog;
         this.render();
         this.applyTritonProgram(prog, true);
-        this.updateLcdAndGridHighlight(prog.id, prog.name, `BANK: ${this.activeBankId.replace("_", " ")} ${prog.num}`, `CATEGORY: ${(prog.category || "").toUpperCase()}`);
+        this.updateLcdAndGridHighlight(prog.id, prog.name, `BANK: ${this.activeBankId.replace("_", " ")} ${prog.num || ""}`, `CATEGORY: ${(prog.category || "").toUpperCase()}`);
         return;
       }
     }
@@ -991,7 +988,7 @@ export class TritonWorkstationUI {
     }
     if (has("talkbox") || has("throats")) {
       fx.talkbox?.setBypass(false);
-      fx.talkbox?.setMix(0.68);
+      fx.talkbox?.setMix(1.0);
     }
 
     // 10. STUDIO EQ ENHANCER
@@ -1023,20 +1020,29 @@ export class TritonWorkstationUI {
       flanger: "flanger",
       rotary: "rotary",
       tremolo: "tremolo",
+      slapback: "slapback",
+      dubEcho: "dub-echo",
       delay: "delay",
-      reverb: "reverb",
       springReverb: "spring-reverb",
+      shimmerReverb: "shimmer-reverb",
       gatedReverb: "gated-reverb",
+      reverb: "reverb",
       tapeSat: "tape-sat",
+      autoWah: "auto-wah",
+      talkbox: "talkbox",
+      vinylLoFi: "vinyl-lofi",
     };
     Object.entries(fxDevMap).forEach(([fxKey, devDomName]) => {
       const unit = fx[fxKey];
-      const isEn = unit && unit.enabled !== false;
-      const btn = document.querySelector(`.dev-power-btn[data-dev="${devDomName}"]`);
-      if (btn) {
-        btn.classList.toggle("active", !!isEn);
+      const isEn = unit && !!unit.enabled;
+      document.querySelectorAll(`.dev-power-btn[data-dev="${devDomName}"]`).forEach(btn => {
+        btn.classList.toggle("active", isEn);
         btn.innerText = isEn ? "ON" : "OFF";
-      }
+      });
+      document.querySelectorAll(`.slot-toggle[data-fx="${devDomName}"]`).forEach(btn => {
+        btn.classList.toggle("active", isEn);
+        btn.innerText = isEn ? "ON" : "OFF";
+      });
     });
   }
 
@@ -1046,22 +1052,36 @@ export class TritonWorkstationUI {
     if (!fx) return;
 
     this.container.querySelectorAll(".slot-toggle[data-fx]").forEach(btn => {
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", (e) => {
+        if (e) e.stopPropagation();
         const fxKey = btn.getAttribute("data-fx");
         const isNowActive = btn.classList.toggle("active");
         btn.innerText = isNowActive ? "ON" : "OFF";
         const bypassed = !isNowActive;
 
-        const effectObj = fxKey === "stereo-widener" ? fx.stereoWidener : fx[fxKey];
+        const effectObj = fxKey === "stereo-widener"
+          ? fx.stereoWidener
+          : fxKey === "spring-reverb"
+          ? fx.springReverb
+          : fxKey === "gated-reverb"
+          ? fx.gatedReverb
+          : fxKey === "shimmer-reverb"
+          ? fx.shimmerReverb
+          : fxKey === "dub-echo"
+          ? fx.dubEcho
+          : fxKey === "auto-wah"
+          ? fx.autoWah
+          : fxKey === "vinyl-lofi"
+          ? fx.vinylLoFi
+          : fxKey === "tape-sat"
+          ? fx.tapeSat
+          : fx[fxKey];
+
         if (effectObj && typeof effectObj.setBypass === "function") {
           effectObj.setBypass(bypassed);
         }
 
-        const devBtn = document.querySelector(`.dev-power-btn[data-dev="${fxKey}"]`);
-        if (devBtn) {
-          devBtn.classList.toggle("active", isNowActive);
-          devBtn.innerText = isNowActive ? "ON" : "OFF";
-        }
+        this.syncFxPowerButtons();
       });
     });
 
