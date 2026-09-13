@@ -45,8 +45,7 @@ export const TRITON_BANKS = {
       { id: "A041", num: "041", name: "Techno Phonic", category: "Motion Synth", osc1: "square", osc2: "sawtooth", r1: 1.0, r2: 2.0, cutoff: 6000, Q: 3.5, attack: 0.005, decay: 1.2, sustain: 0.4, release: 0.2, ifx: "Decimator", mfx: "Ping-Pong Delay" },
       { id: "A042", num: "042", name: "*DistortionGuitar", category: "Guitar", osc1: "sawtooth", osc2: "square", r1: 1.0, r2: 1.004, cutoff: 5800, Q: 4.2, attack: 0.004, decay: 2.8, sustain: 0.7, release: 0.35, ifx: "Heavy Overdrive", mfx: "Room Reverb" },
       { id: "A043", num: "043", name: "Abletunes FM Piano (DX7)", category: "Electric Piano", ifx: "Auto-Pan / Chorus", mfx: "Plate Reverb" },
-      { id: "A044", num: "044", name: "Abletunes Upright Studio", category: "Acoustic Piano", ifx: "Studio Dimension", mfx: "Concert Hall" },
-      { id: "A045", num: "045", name: "Roger Talkbox Lead", category: "Lead Synth", osc1: "sawtooth", osc2: "square", r1: 1.0, r2: 1.006, cutoff: 9500, Q: 3.5, attack: 0.003, decay: 2.2, sustain: 0.95, release: 0.22, ifx: "Talkbox", mfx: "Tape Delay" },
+      { id: "A045", num: "045", name: "Roger Talkbox Lead", category: "Lead Synth", osc1: "sawtooth", osc2: "square", r1: 1.0, r2: 1.006, cutoff: 8800, Q: 2.2, attack: 0.003, decay: 2.2, sustain: 0.82, release: 0.22, ifx: "Talkbox", mfx: "Tape Delay" },
     ],
   },
   KORG_M1: {

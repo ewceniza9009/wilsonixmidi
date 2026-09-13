@@ -326,7 +326,7 @@ export const COMBI_PRESETS = {
     category: "Funk & Groove",
     fxPreset: "talkbox_vocal",
     layers: [
-      { id: 0, name: "Roger Talkbox Lead (Zapp)", inst: "va:A045", fx: "tube_warm", gain: 1.25, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 0, name: "Roger Talkbox Lead (Zapp)", inst: "va:A045", fx: "tube_warm", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 1, name: "Korg M1 Slap Bass", inst: "m1_slap_bass", fx: "punch_comp", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: false },
       { id: 2, name: "Funky Clavinet D6", inst: "electric_piano_1", fx: "clean", gain: 0.65, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: false },
       { id: 3, name: "Fat Brass Horns", inst: "brass_section", fx: "air_eq", gain: 0.60, pan: -0.05, oct: 0, minVel: 60, maxVel: 127, enabled: false },
@@ -830,7 +830,7 @@ export class MultiLayerEngine {
     }
     eng.setProgram(prog);
     if (typeof gain === "number" && gain > 0 && eng.config) {
-      eng.config.masterGain = (eng.config.masterGain || 0.72) * Math.min(1.25, 0.85 + gain);
+      eng.config.masterGain = 0.48 * Math.min(1.15, Math.max(0.5, gain));
     }
     return eng;
   }
@@ -1561,7 +1561,11 @@ export class MultiLayerEngine {
       try {
         if (audioCore.fxRack.delay) audioCore.fxRack.delay.setBypass(true);
         if (audioCore.fxRack.dubEcho) audioCore.fxRack.dubEcho.setBypass(true);
+        if (audioCore.fxRack.talkbox?.reset) audioCore.fxRack.talkbox.reset();
       } catch (e) {}
+    }
+    if (audioCore.recoverAudioGraph) {
+      audioCore.recoverAudioGraph();
     }
   }
 

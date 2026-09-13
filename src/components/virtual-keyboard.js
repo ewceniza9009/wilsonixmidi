@@ -254,6 +254,7 @@ export class VirtualKeyboardUI {
 
           <div class="panic-unit">
             <button class="hud-btn panic-btn" id="master-panic-btn" title="Silence All Notes (ESC)">PANIC</button>
+            <button class="hud-btn" id="btn-tablet-multitouch-help" title="Xiaomi Pad & Android Tablet Multi-Touch Setup" style="font-size: 10px; padding: 2px 7px; color: #a5b4fc; border-color: rgba(165,180,252,0.3); margin-left: 4px;">📱 TABLET TIP</button>
           </div>
 
           <!-- Collapse / Expand Piano Keys Button (Expands Workstation & Effects to Full Screen) -->
@@ -416,12 +417,14 @@ export class VirtualKeyboardUI {
       isMouseDown = false;
     });
 
-    // Multi-touch for mobile / tablet / touchscreen laptops
+    // Robust Multi-Touch Engine for Mobile, Tablets & Android Touchscreens
     track.addEventListener(
       "touchstart",
       e => {
         if (e.cancelable) e.preventDefault();
+        e.stopPropagation();
         lastTouchTime = performance.now(); // Block synthetic mouse events
+
         for (let i = 0; i < e.changedTouches.length; i++) {
           const t = e.changedTouches[i];
           const key = getKeyFromPoint(t.clientX, t.clientY);
@@ -446,21 +449,98 @@ export class VirtualKeyboardUI {
       { passive: false }
     );
 
-    track.addEventListener(
-      "touchmove",
-      e => {
-        if (e.cancelable) e.preventDefault();
-        for (let i = 0; i < e.changedTouches.length; i++) {
-          const t = e.changedTouches[i];
-          const prevTouch = this.activeTouches.get(t.identifier);
-          const key = getKeyFromPoint(t.clientX, t.clientY);
+    const handleTouchMove = e => {
+      if (this.activeTouches.size === 0) return;
+      if (e.cancelable) e.preventDefault();
 
-          if (key) {
-            const snappedMidi = scaleLock.isLocked ? scaleLock.snapToScale(key.midi) : key.midi;
-            if (snappedMidi === null) continue;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i];
+        const prevTouch = this.activeTouches.get(t.identifier);
+        const key = getKeyFromPoint(t.clientX, t.clientY);
 
-            if (!prevTouch || snappedMidi !== prevTouch.snappedMidi) {
-              // Glissando / slide to new key
+        if (key) {
+          const snappedMidi = scaleLock.isLocked ? scaleLock.snapToScale(key.midi) : key.midi;
+          if (snappedMidi === null) continue;
+
+          if (!prevTouch || snappedMidi !== prevTouch.snappedMidi) {
+            // Glissando / slide to new key
+            if (prevTouch && prevTouch.chordNotes) {
+              prevTouch.chordNotes.forEach(n => {
+                this.setKeyVisualState(n, false);
+                if (arpeggiator.enabled) {
+                  arpeggiator.handleNoteOff(n);
+                } else {
+                  multiLayerEngine.noteOff(n);
+                }
+              });
+            }
+            const vel = calculateVelocity(t.clientY, key.rect);
+            const notes = qwertyKeyboard.generateSmartVoicing(snappedMidi, qwertyKeyboard.chordMode);
+            this.activeTouches.set(t.identifier, { midi: key.midi, snappedMidi, rect: key.rect, chordNotes: notes });
+
+            notes.forEach(n => {
+              this.setKeyVisualState(n, true, vel);
+              if (arpeggiator.enabled) {
+                arpeggiator.handleNoteOn(n, vel);
+              } else {
+                multiLayerEngine.noteOn(n, vel);
+              }
+            });
+          } else {
+            // Continuous Vertical Slide on held key (Expressive Aftertouch)
+            const relativeY = Math.max(0, Math.min(1.0, (t.clientY - key.rect.top) / key.rect.height));
+            multiLayerEngine.setNoteExpression(key.midi, relativeY);
+          }
+        }
+      }
+    };
+
+    track.addEventListener("touchmove", handleTouchMove, { passive: false });
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+
+    const handleTouchRelease = e => {
+      if (e.cancelable) e.preventDefault();
+
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i];
+        const prevTouch = this.activeTouches.get(t.identifier);
+        if (prevTouch && prevTouch.chordNotes) {
+          prevTouch.chordNotes.forEach(n => {
+            this.setKeyVisualState(n, false);
+            if (arpeggiator.enabled) {
+              arpeggiator.handleNoteOff(n);
+            } else {
+              multiLayerEngine.noteOff(n);
+            }
+          });
+          this.activeTouches.delete(t.identifier);
+        }
+      }
+
+      // Reconcile stuck touches if all fingers were lifted or system gesture cancelled touches
+      if (e.touches) {
+        if (e.touches.length === 0 && this.activeTouches.size > 0) {
+          this.activeTouches.forEach(prevTouch => {
+            if (prevTouch && prevTouch.chordNotes) {
+              prevTouch.chordNotes.forEach(n => {
+                this.setKeyVisualState(n, false);
+                if (arpeggiator.enabled) {
+                  arpeggiator.handleNoteOff(n);
+                } else {
+                  multiLayerEngine.noteOff(n);
+                }
+              });
+            }
+          });
+          this.activeTouches.clear();
+        } else {
+          // Check if any touch IDs in activeTouches no longer exist in e.touches
+          const currentIds = new Set();
+          for (let j = 0; j < e.touches.length; j++) {
+            currentIds.add(e.touches[j].identifier);
+          }
+          for (const [touchId, prevTouch] of this.activeTouches.entries()) {
+            if (!currentIds.has(touchId)) {
               if (prevTouch && prevTouch.chordNotes) {
                 prevTouch.chordNotes.forEach(n => {
                   this.setKeyVisualState(n, false);
@@ -471,65 +551,17 @@ export class VirtualKeyboardUI {
                   }
                 });
               }
-              const vel = calculateVelocity(t.clientY, key.rect);
-              const notes = qwertyKeyboard.generateSmartVoicing(snappedMidi, qwertyKeyboard.chordMode);
-              this.activeTouches.set(t.identifier, { midi: key.midi, snappedMidi, rect: key.rect, chordNotes: notes });
-
-              notes.forEach(n => {
-                this.setKeyVisualState(n, true, vel);
-                if (arpeggiator.enabled) {
-                  arpeggiator.handleNoteOn(n, vel);
-                } else {
-                  multiLayerEngine.noteOn(n, vel);
-                }
-              });
-            } else {
-              // Continuous Vertical Slide on held key (Expressive Aftertouch)
-              const relativeY = Math.max(0, Math.min(1.0, (t.clientY - key.rect.top) / key.rect.height));
-              multiLayerEngine.setNoteExpression(key.midi, relativeY);
+              this.activeTouches.delete(touchId);
             }
           }
         }
-      },
-      { passive: false }
-    );
-
-    track.addEventListener("touchend", e => {
-      if (e.cancelable) e.preventDefault();
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        const t = e.changedTouches[i];
-        const prevTouch = this.activeTouches.get(t.identifier);
-        if (prevTouch && prevTouch.chordNotes) {
-          prevTouch.chordNotes.forEach(n => {
-            this.setKeyVisualState(n, false);
-            if (arpeggiator.enabled) {
-              arpeggiator.handleNoteOff(n);
-            } else {
-              multiLayerEngine.noteOff(n);
-            }
-          });
-          this.activeTouches.delete(t.identifier);
-        }
       }
-    });
+    };
 
-    track.addEventListener("touchcancel", e => {
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        const t = e.changedTouches[i];
-        const prevTouch = this.activeTouches.get(t.identifier);
-        if (prevTouch && prevTouch.chordNotes) {
-          prevTouch.chordNotes.forEach(n => {
-            this.setKeyVisualState(n, false);
-            if (arpeggiator.enabled) {
-              arpeggiator.handleNoteOff(n);
-            } else {
-              multiLayerEngine.noteOff(n);
-            }
-          });
-          this.activeTouches.delete(t.identifier);
-        }
-      }
-    });
+    track.addEventListener("touchend", handleTouchRelease, { passive: false });
+    track.addEventListener("touchcancel", handleTouchRelease, { passive: false });
+    window.addEventListener("touchend", handleTouchRelease, { passive: false });
+    window.addEventListener("touchcancel", handleTouchRelease, { passive: false });
   }
 
   bindWheels() {
@@ -710,6 +742,19 @@ export class VirtualKeyboardUI {
       for (const el of this.keyElements.values()) {
         el.classList.remove("active");
       }
+    });
+
+    const tabletHelpBtn = document.getElementById("btn-tablet-multitouch-help");
+    tabletHelpBtn?.addEventListener("click", () => {
+      alert(
+        "📱 XIAOMI PAD / ANDROID MULTI-TOUCH TIP:\n\n" +
+        "If playing chords with 3 or more fingers triggers Xiaomi's screenshot snipping tool:\n\n" +
+        "1. Open your tablet's Settings app.\n" +
+        "2. Tap 'Additional settings' → 'Gesture shortcuts'.\n" +
+        "3. Tap 'Take a screenshot' and set to 'None' (or turn off 'Slide 3 fingers down').\n" +
+        "4. Tap 'Partial screenshot' and turn off 'Press and hold with 3 fingers'.\n\n" +
+        "Alternatively, open Xiaomi 'Game Turbo' and enable 'Turn off 3-finger screenshot'."
+      );
     });
 
     qwertyToggle?.addEventListener("change", () => {

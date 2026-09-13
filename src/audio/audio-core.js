@@ -144,7 +144,7 @@ export class AudioCore {
     }
   }
 
-  // Watchdog: browsers suspend audio on tab switch/bluetooth changes and it
+  // Watchdog: browsers suspend/interrupt audio on tab switch/bluetooth changes and it
   // never comes back on its own (total silence that feels like a crash)
   ensureRunning() {
     try {
@@ -152,8 +152,38 @@ export class AudioCore {
         this.init();
         return;
       }
-      if (this.ctx.state === "suspended") {
+      if (this.ctx.state === "suspended" || this.ctx.state === "interrupted") {
         this.ctx.resume().catch(() => {});
+      }
+    } catch (e) {}
+  }
+
+  recoverAudioGraph() {
+    try {
+      if (!this.ctx) {
+        this.init();
+        return;
+      }
+      const now = this.ctx.currentTime;
+      if (this.ctx.state === "suspended" || this.ctx.state === "interrupted") {
+        this.ctx.resume().catch(() => {});
+      }
+      // Reset filter states & cancel scheduled ramps that could be stuck in NaN
+      if (this.masterFilter) {
+        this.masterFilter.frequency.cancelScheduledValues(now);
+        this.masterFilter.frequency.setValueAtTime(18000, now);
+        this.masterFilter.Q.setValueAtTime(1.0, now);
+      }
+      if (this.dcBlocker) {
+        this.dcBlocker.frequency.cancelScheduledValues(now);
+        this.dcBlocker.frequency.setValueAtTime(20, now);
+      }
+      if (this.hardwareLimiter) {
+        // Reset compressor gain reduction if wedged
+        this.hardwareLimiter.threshold.setValueAtTime(-0.5, now);
+      }
+      if (this.fxRack?.talkbox?.reset) {
+        this.fxRack.talkbox.reset();
       }
     } catch (e) {}
   }

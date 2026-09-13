@@ -216,30 +216,49 @@ export class PolyphonicVoice {
   }
 
   release(sustainPedalActive, releaseTime = 0.25) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const gen = this._gen;
+
     if (sustainPedalActive) {
       this.isSustained = true;
+      // Natural Acoustic/Analog Damper Ceiling:
+      // Even with sustain pedal held, notes slowly decay across 4-6s (tau = 2.4s)
+      // so holding the pedal while playing rapid chords NEVER accumulates 30+ voices into infinite volume
+      try {
+        this.voiceGain.gain.cancelScheduledValues(now);
+        this.voiceGain.gain.setTargetAtTime(0.0, now, 2.4);
+      } catch (e) {}
+
+      // After 7 seconds of pedal sustain without key retrigger, cleanly mark voice idle
+      setTimeout(() => {
+        if (gen === this._gen && this.isSustained) {
+          this.isBusy = false;
+          this.isSustained = false;
+          this.activeMidiNote = null;
+        }
+      }, 7000);
       return;
     }
     this.isSustained = false;
 
-    const ctx = this.ctx;
-    const now = ctx.currentTime;
     const rel = Math.max(0.02, Math.min(0.8, releaseTime));
     const tau = Math.max(0.015, rel * 0.22);
-    const gen = this._gen;
 
     // Smooth exponential decay to silence
-    this.voiceGain.gain.cancelScheduledValues(now);
-    this.voiceGain.gain.setTargetAtTime(0.0, now, tau);
-    const fadeSec = Math.max(0.08, tau * 6);
-    this.voiceGain.gain.setValueAtTime(0.0, now + fadeSec);
+    try {
+      this.voiceGain.gain.cancelScheduledValues(now);
+      this.voiceGain.gain.setTargetAtTime(0.0, now, tau);
+      const fadeSec = Math.max(0.08, tau * 6);
+      this.voiceGain.gain.setValueAtTime(0.0, now + fadeSec);
 
-    setTimeout(() => {
-      if (gen === this._gen && !this.isSustained) {
-        this.isBusy = false;
-        this.activeMidiNote = null;
-      }
-    }, (fadeSec + 0.04) * 1000);
+      setTimeout(() => {
+        if (gen === this._gen && !this.isSustained) {
+          this.isBusy = false;
+          this.activeMidiNote = null;
+        }
+      }, (fadeSec + 0.04) * 1000);
+    } catch (e) {}
   }
 
   forceStop() {

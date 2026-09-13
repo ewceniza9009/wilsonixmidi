@@ -525,7 +525,11 @@
   border-radius: var(--radius-md);
   box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.8);
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x;
+  touch-action: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-drag: none !important;
   scroll-behavior: smooth;
   contain: layout paint;
   -ms-overflow-style: none !important;  /* IE and Edge */
@@ -548,9 +552,11 @@
   padding: 4px 8px 10px 8px;
   width: max-content;
   margin: 0 auto;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: none;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-drag: none !important;
+  touch-action: none !important;
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
   box-sizing: border-box;
@@ -644,6 +650,11 @@
   backface-visibility: hidden;
   transition: transform 0.02s cubic-bezier(0, 0, 0.2, 1);
   box-sizing: border-box;
+  touch-action: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-drag: none !important;
 }
 
 .white-key {

@@ -105,6 +105,7 @@ export class TritonVirtualAnalogEngine {
       sustainLevel: prog.sustain ?? 0.65,
       release: Math.max(0.06, prog.release ?? 0.35),
       isPercussive,
+      isLead,
       syncSlave: isSyncProgram,
       masterGain: 0.48,
     };
@@ -113,6 +114,22 @@ export class TritonVirtualAnalogEngine {
   noteOn(midiNote, velocity = 95) {
     if (!this.pool || !this.config) return;
     this.init();
+
+    // Voice polyphony ceiling: limits simultaneous voices to avoid DSP overflow under sustain
+    const maxActive = this.config.isLead ? 8 : 16;
+    const busyVoices = this.pool.voices.filter(v => v.isBusy);
+    if (busyVoices.length >= maxActive) {
+      // Steal oldest voice that is not currently held down by a finger
+      const unheld = busyVoices.filter(v => !this.heldNotes.has(v.activeMidiNote));
+      if (unheld.length > 0) {
+        unheld.sort((a, b) => a.startTime - b.startTime);
+        unheld[0].forceStop();
+      } else {
+        busyVoices.sort((a, b) => a.startTime - b.startTime);
+        busyVoices[0].forceStop();
+      }
+    }
+
     this.heldNotes.add(midiNote);
 
     const vel = Math.max(1, Math.min(127, velocity));
