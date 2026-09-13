@@ -8,6 +8,7 @@ import { synthEngine } from "../audio/synth-engine.js";
 import { multiLayerEngine, COMBI_PRESETS, HD_SOUNDBANKS } from "../audio/multi-layer-engine.js";
 import { audioCore } from "../audio/audio-core.js";
 import { getTritonProgramById } from "../triton/combi-timbres.js";
+import { licenseManager } from "../security/license-manager.js";
 
 export class RegistrationManager {
   constructor() {
@@ -165,6 +166,9 @@ export class RegistrationManager {
   }
 
   saveCurrentToSlot(bank, slotNumber, customName = null) {
+    if (!licenseManager.requirePro("Saving Custom Stage Rigs")) {
+      return null;
+    }
     const slotIdx = slotNumber - 1;
     if (!this.banks[bank] || slotIdx < 0 || slotIdx > 7) return;
 
