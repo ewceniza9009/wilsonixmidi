@@ -182,21 +182,38 @@ export class LicenseManager {
     // Check 30-day trial status
     const now = Date.now();
     const trial = this.trialData;
-    const remainingMs = trial ? trial.expiresAt - now : 30 * 24 * 60 * 60 * 1000;
-    const daysRemaining = Math.max(1, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)));
+    const remainingMs = trial ? trial.expiresAt - now : 0;
+    const daysRemaining = Math.max(0, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)));
 
+    if (remainingMs > 0 && trial?.signature !== "TAMPERED") {
+      return {
+        isLicensed: false,
+        isTrial: true,
+        isExpired: false,
+        canPlayFull: true,
+        badgeText: `⏱ ${daysRemaining}D TRIAL`,
+        badgeClass: "trial",
+        type: "30-Day Pro Trial",
+        licensee: "Trial User",
+        expires: new Date(trial.expiresAt).toLocaleDateString(),
+        daysRemaining: daysRemaining,
+        startedAt: new Date(trial.startedAt).toLocaleDateString(),
+      };
+    }
+
+    // Trial expired
     return {
-      isLicensed: true,
-      isTrial: true,
-      isExpired: false,
-      canPlayFull: true,
-      badgeText: "★ PRO",
-      badgeClass: "pro",
-      type: "Pro Musician",
-      licensee: "Stage Musician",
-      expires: "Lifetime",
-      daysRemaining: daysRemaining,
-      startedAt: new Date(trial?.startedAt || now).toLocaleDateString(),
+      isLicensed: false,
+      isTrial: false,
+      isExpired: true,
+      canPlayFull: false,
+      badgeText: "⚡ EXPIRED",
+      badgeClass: "expired",
+      type: "Trial Expired",
+      licensee: "Unlicensed",
+      expires: "Expired",
+      daysRemaining: 0,
+      reason: "Your 30-Day Free Trial has ended. Please enter an authorized license key to continue using Pro features.",
     };
   }
 
@@ -204,14 +221,27 @@ export class LicenseManager {
    * Checks whether the current user has active Pro access (Licensed or Trial)
    */
   hasProAccess() {
-    return true;
+    const status = this.getAccessStatus();
+    return status.isLicensed || status.isTrial;
   }
 
   /**
-   * Pro-feature guard: Returns true if unlocked
+   * Pro-feature guard: Returns true if unlocked, or prompts the activation modal with a friendly reason.
    */
   requirePro(featureName = "This Pro Feature") {
-    return true;
+    if (this.hasProAccess()) return true;
+
+    // Dispatch global event so LicenseModalUI opens and highlights the reason
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("wilsonix-open-license-modal", {
+          detail: {
+            reason: `${featureName} is a Pro feature. Enter an authorized key to unlock.`,
+          },
+        })
+      );
+    }
+    return false;
   }
 
   /**
