@@ -218,7 +218,7 @@ export class GigHudUI {
         <!-- 1. LEFT: Brand & Live Performance Readout + Stacks Selector -->
         <div class="hud-section hud-left-group">
           <div class="brand-logo">
-            <span class="logo-accent">WILSONIX</span> MIDIKEY
+            <span class="logo-accent">WILSONIX</span><span class="brand-sub"> MIDIKEY</span>
           </div>
 
           <!-- Live Active Sound Status Badge (Zero Lag, Single Clean Icon) -->
@@ -356,13 +356,24 @@ export class GigHudUI {
 
           <!-- Workspace Tabs -->
           <nav class="ws-tabs-bar" id="hud-workspace-tabs">
-            <button class="ws-tab-btn active" data-view="triton" title="Main Workstation Console">MAIN</button>
-            <button class="ws-tab-btn" data-view="combi" title="4-Timbre Combi Mixer">COMBI</button>
-            <button class="ws-tab-btn" data-view="split" title="Split Keyboard Console">SPLIT</button>
-            <button class="ws-tab-btn" data-view="fx" title="Master FX Rack">FX</button>
-            <button class="ws-tab-btn" data-view="chords" title="Chord Harmony Pads">CHORDS</button>
-            <button class="ws-tab-btn" data-view="grooves" title="Backing Grooves">GROOVES</button>
-            <button class="ws-tab-btn" data-view="player" title="Media Player">PLAYER</button>
+            <select class="ws-tabs-dropdown" id="hud-ws-tabs-select" title="Switch Workspace View">
+              <option value="triton">🎛️ MAIN</option>
+              <option value="combi">🎚️ COMBI</option>
+              <option value="split">🎹 SPLIT</option>
+              <option value="fx">⚡ FX RACK</option>
+              <option value="chords">🎼 CHORDS</option>
+              <option value="grooves">🥁 GROOVES</option>
+              <option value="player">🎵 PLAYER</option>
+            </select>
+            <div class="ws-tabs-buttons">
+              <button class="ws-tab-btn active" data-view="triton" title="Main Workstation Console">MAIN</button>
+              <button class="ws-tab-btn" data-view="combi" title="4-Timbre Combi Mixer">COMBI</button>
+              <button class="ws-tab-btn" data-view="split" title="Split Keyboard Console">SPLIT</button>
+              <button class="ws-tab-btn" data-view="fx" title="Master FX Rack">FX</button>
+              <button class="ws-tab-btn" data-view="chords" title="Chord Harmony Pads">CHORDS</button>
+              <button class="ws-tab-btn" data-view="grooves" title="Backing Grooves">GROOVES</button>
+              <button class="ws-tab-btn" data-view="player" title="Media Player">PLAYER</button>
+            </div>
             <button class="ws-tab-btn keys-toggle-btn active" id="btn-hud-toggle-keys" title="Toggle Piano Keyboard (F4)">🎹 KEYS</button>
             <button class="ws-tab-btn fullscreen-btn" id="btn-toggle-fullscreen" title="Toggle Fullscreen">⛶</button>
           </nav>

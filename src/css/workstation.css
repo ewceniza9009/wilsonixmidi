@@ -1009,6 +1009,33 @@ body.mobile-stage-keys .studio-keyboard-deck {
   flex-shrink: 0 !important;
 }
 
+.ws-tabs-buttons {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ws-tabs-dropdown {
+  display: none;
+  background: linear-gradient(180deg, #1e2535 0%, #111622 100%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-sm);
+  color: #ffedd5;
+  font-size: 0.58rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  cursor: pointer;
+  outline: none;
+  height: 22px;
+  box-sizing: border-box;
+}
+
+.ws-tabs-dropdown option {
+  background: #141824;
+  color: #fff;
+  font-weight: 700;
+}
+
 .ws-tab-btn {
   display: flex;
   align-items: center;
@@ -1116,174 +1143,132 @@ body.mobile-stage-keys .studio-keyboard-deck {
 }
 
 /* ==========================================================================
-   MULTI-DEVICE RESPONSIVE BREAKPOINTS (Desktop, Laptop, Tablet, Mobile)
+   MULTI-DEVICE RESPONSIVE BREAKPOINTS (Desktop, Tablet, Mobile)
+   Refined for high-density, uncluttered live performance across viewports.
    ========================================================================== */
 
-/* 1. Large Laptops / 1400x900 Tauri Window (max-width: 1440px) */
-@media (max-width: 1440px) {
-  .latency-hud-pill { display: none !important; }
-  .hud-live-badge { flex: 0 1 130px; }
-  .hud-perf-mode-group { flex: 0 1 125px; }
-  .hud-layer-box { flex: 0 1 115px; }
-  .ws-tab-btn { padding: 3px 4.5px; font-size: 0.56rem; }
-}
-
-/* 2. Standard Laptops / Tablets Landscape (max-width: 1300px) */
-@media (max-width: 1300px) {
-  .latency-hud-pill,
-  .midi-status-pill,
-  .hud-status-cluster { display: none !important; }
-  .hud-vol-readout { display: none !important; }
-  .hud-vol-slider { width: 34px !important; }
-  .brand-logo { font-size: 0.76rem; }
-  .hud-live-badge { flex: 0 1 100px; }
-  .hud-perf-mode-group { flex: 0 1 100px; }
-  .hud-layer-box { display: none !important; }
-  .hud-rig-widget {
-    padding: 1px 2px;
-    gap: 1px;
-  }
-  .rig-label { font-size: 0.50rem; }
-  .rig-bank-pill { padding: 1px 2px; font-size: 0.48rem; }
-  .rig-slot-pill { width: 12px; height: 15px; font-size: 0.48rem; }
-  .rig-save-btn { padding: 1px 3px; font-size: 0.46rem; }
-  .ws-tab-btn { padding: 3px 4px; font-size: 0.54rem; }
-}
-
-/* 3. Small Laptops / Tablets (max-width: 1080px) */
-@media (max-width: 1080px) {
-  .hud-layer-box { display: none !important; }
-  .hud-live-badge { display: none !important; }
-  .hud-perf-mode-group { flex: 0 1 110px; }
-  .hud-rig-widget {
-    padding: 1px 2px;
-    gap: 1px;
-  }
-  .rig-label { font-size: 0.48rem; }
-  .rig-bank-pill { padding: 1px 2px; font-size: 0.46rem; }
-  .rig-slot-pill { width: 11px; height: 14px; font-size: 0.46rem; }
-  .rig-save-btn { padding: 1px 2px; font-size: 0.44rem; }
-  .ws-tab-btn { padding: 3px 3.5px; font-size: 0.50rem; }
-}
-
-/* 4. Tablets & Mobile Phones (max-width: 960px, or short mobile landscape max-height: 560px) */
-@media (max-width: 960px), (max-height: 560px) {
+/* 1. Standard Tablets & Small Laptops (max-width: 1200px) */
+@media (max-width: 1200px) {
   .gig-hud-bar {
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    display: flex !important;
-    flex-direction: column !important;
-    padding: 3px 6px !important;
-    gap: 3px !important;
-    background: rgba(14, 17, 24, 0.98) !important;
-  }
-
-  /* Row 1: Top Controls Bar (Brand + Preset Selector + Transport) */
-  .hud-left-group {
-    width: 100% !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
+    padding: 2px 6px !important;
     gap: 4px !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
   }
 
-  .brand-logo {
-    font-size: 0.76rem !important;
-    font-weight: 900 !important;
-    white-space: nowrap !important;
-    flex-shrink: 0 !important;
+  /* Compact Brand: Keep Wilsonix accent, drop secondary suffix */
+  .brand-logo { font-size: 0.80rem !important; }
+  .brand-sub { display: none !important; }
+
+  /* Drop redundant live badge (hud-perf-select already shows active preset clearly) */
+  .hud-live-badge { display: none !important; }
+
+  /* Give performance preset select comfortable room without '...' cutoffs */
+  .hud-perf-mode-group {
+    flex: 0 1 155px !important;
+    min-width: 125px !important;
+    max-width: 175px !important;
   }
+
+  /* Keep Layer Box & Duck button visible, clean and uncrushed */
+  .hud-layer-box {
+    flex: 0 1 145px !important;
+    min-width: 85px !important;
+    max-width: 160px !important;
+  }
+
+  .duck-toggle-btn {
+    padding: 1px 5px !important;
+    height: 22px !important;
+  }
+
+  /* Rig Snapshot: Compact clean pills */
+  .hud-rig-widget {
+    padding: 1px 3px !important;
+    gap: 2px !important;
+  }
+  .rig-label { font-size: 0.48rem !important; }
+  .rig-bank-pill { padding: 1px 3px !important; font-size: 0.48rem !important; }
+  .rig-slot-pill { width: 14px !important; height: 16px !important; font-size: 0.48rem !important; }
+
+  /* Tempo & Arp: Solid nowrap so BPM is never cut off */
+  .tempo-control-box {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+    padding: 1px 4px !important;
+  }
+  .bpm-counter { font-size: 0.66rem !important; }
+
+  /* Compact volume */
+  .hud-vol-readout { display: none !important; }
+  .hud-vol-slider { width: 36px !important; }
+
+  /* Non-critical status icons hidden on tablet */
+  .latency-hud-pill { display: none !important; }
+  .sunlight-mode-btn { display: none !important; }
+
+  /* REFINED TABLET WORKSPACE SWITCHER: Swap the 7 text tabs for the sleek dropdown */
+  .ws-tabs-buttons {
+    display: none !important;
+  }
+  .ws-tabs-dropdown {
+    display: inline-block !important;
+  }
+}
+
+/* 2. Compact Tablets & Large Phones (max-width: 960px) */
+@media (max-width: 960px) {
+  .gig-hud-bar {
+    gap: 3px !important;
+    padding: 2px 4px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    max-height: 36px !important;
+  }
+
+  .brand-logo { font-size: 0.72rem !important; }
 
   .hud-perf-mode-group {
-    flex: 1 1 auto !important;
-    max-width: 180px !important;
-    min-width: 90px !important;
-    padding: 1px 3px !important;
+    flex: 0 1 125px !important;
+    min-width: 95px !important;
   }
 
-  .hud-perf-select {
-    font-size: 0.62rem !important;
+  .hud-layer-box {
+    flex: 0 1 115px !important;
+    min-width: 75px !important;
   }
 
-  .license-badge-btn {
-    font-size: 0.48rem !important;
-    padding: 1px 5px !important;
-    height: 18px !important;
-    flex-shrink: 0 !important;
-  }
-
-  /* Hide cluttered desktop pills on mobile/landscape */
-  .hud-live-badge,
-  .hud-layer-box,
-  .hud-rig-widget,
-  .hud-status-cluster,
-  .hud-vol-readout,
-  .hud-volume-unit {
+  /* Show first 4 rig slots on narrow tablet to keep bar uncrowded */
+  .rig-slot-pill[data-slot="5"],
+  .rig-slot-pill[data-slot="6"],
+  .rig-slot-pill[data-slot="7"],
+  .rig-slot-pill[data-slot="8"] {
     display: none !important;
   }
 
-  .hud-center-group {
-    display: flex !important;
-    align-items: center !important;
-    gap: 3px !important;
-    flex-shrink: 0 !important;
+  .hud-status-cluster {
+    display: none !important;
   }
 
-  .hud-rec-btn {
-    padding: 2px 5px !important;
-    font-size: 0.52rem !important;
-  }
+  .hud-vol-slider { width: 28px !important; }
+}
 
-  .tempo-control-box {
+/* 3. Small Mobile Phones (max-width: 650px) */
+@media (max-width: 650px) {
+  .gig-hud-bar {
+    height: 34px !important;
+    min-height: 34px !important;
+    max-height: 34px !important;
+    gap: 2px !important;
     padding: 1px 3px !important;
   }
 
-  .tempo-tap-btn {
-    font-size: 0.50rem !important;
-    padding: 2px 4px !important;
-  }
-
-  .bpm-counter {
-    font-size: 0.68rem !important;
-  }
-
-  /* Row 2: Full-Width Workspace Navigation Tab Bar */
-  .hud-right-group {
-    width: 100% !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  .ws-tabs-bar {
-    width: 100% !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    gap: 3px !important;
-    overflow-x: auto !important;
-    scrollbar-width: none !important;
-    -webkit-overflow-scrolling: touch !important;
-    background: rgba(0, 0, 0, 0.4) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: var(--radius-sm) !important;
-    padding: 2px 3px !important;
-    mask-image: linear-gradient(to right, black 92%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to right, black 92%, transparent 100%);
-  }
-  .ws-tabs-bar::-webkit-scrollbar { display: none !important; }
-
-  .ws-tab-btn {
-    flex: 0 0 auto !important;
-    padding: 3px 7px !important;
-    font-size: 0.56rem !important;
-    font-weight: 800 !important;
-    min-height: 24px !important;
-    border-radius: 3px !important;
-  }
+  .brand-logo { display: none !important; }
+  .hud-volume-unit { display: none !important; }
+  .hud-layer-box { display: none !important; }
+  .duck-toggle-btn { display: none !important; }
+  .hud-rig-widget { display: none !important; }
 }
 
 /* 5. Mobile & Tablet Landscape Low-Height Budgeting */

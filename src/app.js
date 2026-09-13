@@ -222,6 +222,11 @@ class MidiKeyEliteApp {
         btn.classList.add("active");
         const view = btn.getAttribute("data-view");
 
+        const wsSelect = document.getElementById("hud-ws-tabs-select");
+        if (wsSelect && wsSelect.value !== view) {
+          wsSelect.value = view;
+        }
+
         if (appRoot) {
           appRoot.classList.remove(
             "view-all",
@@ -254,6 +259,16 @@ class MidiKeyEliteApp {
           stageDeck.scrollIntoView({ behavior: "smooth" });
         }
       });
+    });
+
+    // Tablet & Mobile Workspace View Dropdown Listener
+    const wsTabsSelect = document.getElementById("hud-ws-tabs-select");
+    wsTabsSelect?.addEventListener("change", e => {
+      const view = e.target.value;
+      const targetBtn = document.querySelector(`.ws-tab-btn[data-view="${view}"]`);
+      if (targetBtn) {
+        targetBtn.click();
+      }
     });
 
 
