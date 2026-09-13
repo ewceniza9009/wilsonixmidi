@@ -67,9 +67,13 @@ src-tauri/WixTools
 
 # Private Admin Licensing Tools (NEVER push publicly)
 tools/license-generator*
+tools/license-private-key.json
+tools/setup-ecdsa-keys.js
 admin-tools/
 private/
 *.lic
+*.pem
+*.key
 
 # untracked
 untracked/

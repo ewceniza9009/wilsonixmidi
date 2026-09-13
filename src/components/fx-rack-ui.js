@@ -556,18 +556,20 @@ export class FxRackUI {
       let startVal = val;
 
       const onMouseDown = e => {
+        if (e.cancelable && e.type === "touchstart") e.preventDefault();
         isDragging = true;
-        startY = e.clientY || (e.touches && e.touches[0].clientY);
+        startY = e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0].clientY);
         startVal = val;
         window.addEventListener("mousemove", onMouseMove);
         window.addEventListener("mouseup", onMouseUp);
-        window.addEventListener("touchmove", onMouseMove);
+        window.addEventListener("touchmove", onMouseMove, { passive: false });
         window.addEventListener("touchend", onMouseUp);
       };
 
       const onMouseMove = e => {
         if (!isDragging) return;
-        const currentY = e.clientY || (e.touches && e.touches[0].clientY);
+        if (e.cancelable && e.type === "touchmove") e.preventDefault();
+        const currentY = e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0].clientY);
         const delta = startY - currentY; // Up is positive
         const sensitivity = 0.005;
         const range = max - min;
@@ -585,7 +587,7 @@ export class FxRackUI {
       };
 
       knob.addEventListener("mousedown", onMouseDown);
-      knob.addEventListener("touchstart", onMouseDown, { passive: true });
+      knob.addEventListener("touchstart", onMouseDown, { passive: false });
     });
   }
 
@@ -766,7 +768,13 @@ export class FxRackUI {
   bindToggles() {
     const powerBtns = this.container.querySelectorAll(".dev-power-btn");
     powerBtns.forEach(btn => {
-      btn.addEventListener("click", () => {
+      let lastHandled = 0;
+      const handleToggle = e => {
+        const now = performance.now();
+        if (now - lastHandled < 250) return;
+        lastHandled = now;
+        if (e.cancelable && e.type === "touchstart") e.preventDefault();
+
         const dev = btn.getAttribute("data-dev");
         const isActive = btn.classList.toggle("active");
         btn.innerText = isActive ? "ON" : "OFF";
@@ -792,26 +800,43 @@ export class FxRackUI {
         if (dev === "tremolo") fx.tremolo?.setBypass(bypassed);
         if (dev === "tape-sat") fx.tapeSat?.setBypass(bypassed);
         if (dev === "eq") fx.masterEq?.setBypass(bypassed);
-      });
+      };
+
+      btn.addEventListener("touchstart", handleToggle, { passive: false });
+      btn.addEventListener("click", handleToggle);
     });
 
     const lidBtn = document.getElementById("piano-lid-btn");
-    lidBtn?.addEventListener("click", () => {
+    let lastLid = 0;
+    const handleLid = e => {
+      const now = performance.now();
+      if (now - lastLid < 250) return;
+      lastLid = now;
+      if (e.cancelable && e.type === "touchstart") e.preventDefault();
       if (audioCore.fxRack && audioCore.fxRack.pianoAcoustics) {
         const cur = audioCore.fxRack.pianoAcoustics.lidPosition;
         const next = cur === "open" ? "half" : cur === "half" ? "closed" : "open";
         audioCore.fxRack.pianoAcoustics.setLidPosition(next);
         lidBtn.innerText = `LID: ${next.toUpperCase()}`;
       }
-    });
+    };
+    lidBtn?.addEventListener("touchstart", handleLid, { passive: false });
+    lidBtn?.addEventListener("click", handleLid);
 
     const rotaryBtn = document.getElementById("rotary-speed-btn");
-    rotaryBtn?.addEventListener("click", () => {
+    let lastRotary = 0;
+    const handleRotary = e => {
+      const now = performance.now();
+      if (now - lastRotary < 250) return;
+      lastRotary = now;
+      if (e.cancelable && e.type === "touchstart") e.preventDefault();
       if (audioCore.fxRack) {
         audioCore.fxRack.rotary.toggleSpeed();
         rotaryBtn.innerText = `SPEED: ${audioCore.fxRack.rotary.speedMode.toUpperCase()}`;
       }
-    });
+    };
+    rotaryBtn?.addEventListener("touchstart", handleRotary, { passive: false });
+    rotaryBtn?.addEventListener("click", handleRotary);
   }
 
   syncWithRack() {

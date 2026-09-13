@@ -13,8 +13,8 @@
 
 const POWER = {
   linear: 1.0,
-  punch: 0.62,
-  soft: 1.5,
+  punch: 0.50, // Early bite — gentle touches easily cut through with punchy attack
+  soft: 1.85,  // Late bloom — gentle touches stay soft, dark and acoustic; hard touches punch forte
 };
 
 let currentCurve = "linear";

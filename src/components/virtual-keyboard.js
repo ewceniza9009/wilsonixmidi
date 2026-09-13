@@ -329,8 +329,10 @@ export class VirtualKeyboardUI {
     };
 
     const calculateVelocity = (clientY, rect) => {
+      // Top of key (0.0) -> pianissimo (velocity ~25)
+      // Bottom edge of key (1.0) -> fortissimo (velocity ~127)
       const relativeY = Math.max(0, Math.min(1.0, (clientY - rect.top) / rect.height));
-      const raw = Math.round(35 + relativeY * 92); // 35 to 127 dynamic range
+      const raw = Math.round(25 + relativeY * 102); // 25 to 127 full dynamic span
       return shapeVelocity(raw);
     };
 
@@ -1082,13 +1084,22 @@ export class VirtualKeyboardUI {
 
     const btns = wrapper.querySelectorAll(".accent-mini-btn");
     btns.forEach(btn => {
-      btn.addEventListener("click", () => {
+      let lastHandled = 0;
+      const handleCurve = e => {
+        const now = performance.now();
+        if (now - lastHandled < 200) return;
+        lastHandled = now;
+        if (e.cancelable && e.type === "touchstart") e.preventDefault();
+
         btns.forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
         const val = btn.getAttribute("data-curve");
         setVelocityCurve(val);
         if (curveSelect) curveSelect.value = val;
-      });
+      };
+
+      btn.addEventListener("touchstart", handleCurve, { passive: false });
+      btn.addEventListener("click", handleCurve);
     });
   }
 

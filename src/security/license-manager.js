@@ -1,12 +1,31 @@
-/**
- * WILSONIX MIDIKEY Elite - Cryptographic License & 30-Day Trial Engine
- * Features:
- * - 30-Day Full Pro Trial with tamper-resistant cryptographic verification
- * - Offline HMAC-SHA256 license key verification & hardware fingerprinting
- * - Stage-ready access status telemetry
- */
+import { LICENSE_PUBLIC_KEY_SPKI, LICENSE_ALGORITHM } from "./license-public-key.js";
 
-const LICENSE_SECRET = "MK_ELITE_SECURE_SALT_2026_STAGE_PRO";
+function hexOrBase64ToUint8Array(str) {
+  const clean = str.trim();
+  if (/^[0-9A-Fa-f]{128}$/.test(clean)) {
+    const bytes = new Uint8Array(64);
+    for (let i = 0; i < 64; i++) {
+      bytes[i] = parseInt(clean.substr(i * 2, 2), 16);
+    }
+    return bytes;
+  }
+  let base64 = clean.replace(/-/g, "+").replace(/_/g, "/");
+  while (base64.length % 4 !== 0) base64 += "=";
+  const binaryString = (typeof window !== "undefined" && window.atob)
+    ? window.atob(base64)
+    : Buffer.from(base64, "base64").toString("binary");
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function base64ToUint8Array(b64) {
+  return hexOrBase64ToUint8Array(b64);
+}
+
 const TRIAL_SALT = "MK_ELITE_TRIAL_PROTECT_2026";
 
 export class LicenseManager {
@@ -14,8 +33,60 @@ export class LicenseManager {
     this.storageKey = "midikey_elite_license";
     this.trialStorageKey = "midikey_elite_trial_state";
     this.deviceFingerprint = this.generateDeviceFingerprint();
+    this.cryptoPublicKeyPromise = null;
     this.licenseData = this.loadLicense();
     this.trialData = this.initOrLoadTrial();
+  }
+
+  async getCryptoPublicKey() {
+    if (this.cryptoPublicKeyPromise) return this.cryptoPublicKeyPromise;
+    this.cryptoPublicKeyPromise = (async () => {
+      try {
+        const cryptoObj = (typeof crypto !== "undefined" && crypto.subtle)
+          ? crypto.subtle
+          : (typeof crypto !== "undefined" && crypto.webcrypto?.subtle ? crypto.webcrypto.subtle : null);
+        if (!cryptoObj) return null;
+
+        const pubKeyDer = base64ToUint8Array(LICENSE_PUBLIC_KEY_SPKI);
+        return await cryptoObj.importKey(
+          "spki",
+          pubKeyDer,
+          LICENSE_ALGORITHM,
+          false,
+          ["verify"]
+        );
+      } catch (e) {
+        console.warn("[LicenseManager] Public key import error:", e);
+        return null;
+      }
+    })();
+    return this.cryptoPublicKeyPromise;
+  }
+
+  async verifyEcdsaSignature(payload, signatureStr) {
+    try {
+      const cryptoKey = await this.getCryptoPublicKey();
+      const cryptoObj = (typeof crypto !== "undefined" && crypto.subtle)
+        ? crypto.subtle
+        : (typeof crypto !== "undefined" && crypto.webcrypto?.subtle ? crypto.webcrypto.subtle : null);
+
+      if (!cryptoKey || !cryptoObj) {
+        console.error("[LicenseManager] Web Crypto API not available for verification.");
+        return false;
+      }
+
+      const sigBytes = base64ToUint8Array(signatureStr);
+      const dataBytes = new TextEncoder().encode(payload);
+
+      return await cryptoObj.verify(
+        LICENSE_ALGORITHM,
+        cryptoKey,
+        sigBytes,
+        dataBytes
+      );
+    } catch (e) {
+      return false;
+    }
   }
 
   /**
@@ -41,51 +112,6 @@ export class LicenseManager {
     } catch (e) {
       return "DEV_STATION1";
     }
-  }
-
-  /**
-   * Synchronous SHA-256 HMAC digest in Hex format using Web Crypto or fallback
-   */
-  async computeSignature(payload, secret = LICENSE_SECRET) {
-    try {
-      if (typeof crypto !== "undefined" && crypto.subtle) {
-        const enc = new TextEncoder();
-        const key = await crypto.subtle.importKey(
-          "raw",
-          enc.encode(secret),
-          { name: "HMAC", hash: "SHA-256" },
-          false,
-          ["sign"]
-        );
-        const signature = await crypto.subtle.sign("HMAC", key, enc.encode(payload));
-        return Array.from(new Uint8Array(signature))
-          .map(b => b.toString(16).padStart(2, "0"))
-          .join("")
-          .substring(0, 8)
-          .toUpperCase();
-      }
-    } catch (e) {
-      // Fallback below
-    }
-
-    // High-performance offline DJB2/FNV-1a combination fallback
-    let hash = 0x811c9dc5;
-    const combined = payload + secret;
-    for (let i = 0; i < combined.length; i++) {
-      hash ^= combined.charCodeAt(i);
-      hash = (hash * 0x01000193) >>> 0;
-    }
-    return hash.toString(16).toUpperCase().padStart(8, "0");
-  }
-
-  computeSignatureSync(payload, secret = LICENSE_SECRET) {
-    let hash = 0x811c9dc5;
-    const combined = payload + secret;
-    for (let i = 0; i < combined.length; i++) {
-      hash ^= combined.charCodeAt(i);
-      hash = (hash * 0x01000193) >>> 0;
-    }
-    return hash.toString(16).toUpperCase().padStart(8, "0");
   }
 
   /**
@@ -248,22 +274,11 @@ export class LicenseManager {
    * Validates a license key format:
    * Standard: MKPRO-<NAME>-<EXPIRY>-<SIG>
    * Hardware-locked: MKPRO-<NAME>-<EXPIRY>-<DEVID>-<SIG>
-   * Master Keys: MKPRO-VIP-MASTER-ACCESS / MKPRO-STUDIO-DEMO-2026
    */
   async verifyKey(key) {
     if (!key || typeof key !== "string") return { valid: false, reason: "Invalid license key format" };
 
     const cleanKey = key.trim().toUpperCase();
-
-    // Built-in VIP Master Keys
-    if (cleanKey === "MKPRO-VIP-MASTER-ACCESS" || cleanKey === "MKPRO-STUDIO-DEMO-2026") {
-      return {
-        valid: true,
-        licensee: "Wilsonix Authorized Studio",
-        type: "Lifetime VIP Master Access",
-        expires: "Never (Lifetime)",
-      };
-    }
 
     const parts = cleanKey.split("-");
     if (parts[0] !== "MKPRO") {
@@ -287,10 +302,10 @@ export class LicenseManager {
       }
 
       const payload = `${prefix}:${licensee}:${expiryStr}`;
-      const expectedSig = await this.computeSignature(payload);
+      const isValid = await this.verifyEcdsaSignature(payload, providedSig);
 
-      if (providedSig !== expectedSig) {
-        return { valid: false, reason: "Cryptographic signature mismatch. Unauthorized license key." };
+      if (!isValid) {
+        return { valid: false, reason: "Cryptographic signature mismatch. Unauthorized or forged license key." };
       }
 
       return {
@@ -327,10 +342,10 @@ export class LicenseManager {
       }
 
       const payload = `${prefix}:${licensee}:${expiryStr}:${targetDevId}`;
-      const expectedSig = await this.computeSignature(payload);
+      const isValid = await this.verifyEcdsaSignature(payload, providedSig);
 
-      if (providedSig !== expectedSig) {
-        return { valid: false, reason: "Cryptographic signature mismatch on hardware key." };
+      if (!isValid) {
+        return { valid: false, reason: "Cryptographic signature mismatch on hardware key. Unauthorized or forged key." };
       }
 
       return {

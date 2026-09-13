@@ -245,11 +245,17 @@ export class ChordPadsUI {
 
   bindBankButtons() {
     this.container.querySelectorAll(".bank-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
+      let lastTap = 0;
+      const handleBank = () => {
+        const now = performance.now();
+        if (now - lastTap < 120) return;
+        lastTap = now;
         this.activeBank = btn.getAttribute("data-bank");
         this.render();
         this.bindEvents();
-      });
+      };
+      btn.addEventListener("pointerdown", handleBank);
+      btn.addEventListener("click", handleBank);
     });
   }
 

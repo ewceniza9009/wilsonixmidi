@@ -301,6 +301,15 @@ class MidiKeyEliteApp {
     });
 
     console.log("MidiKey Elite Ready. Zero-lag pipeline armed.");
+
+    // Dismiss startup stage boot loader smoothly
+    setTimeout(() => {
+      const loader = document.getElementById("app-startup-loader");
+      if (loader) {
+        loader.classList.add("fade-out");
+        setTimeout(() => loader.remove(), 500);
+      }
+    }, 200);
   }
 }
 

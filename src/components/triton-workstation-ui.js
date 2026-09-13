@@ -21,6 +21,83 @@ export class TritonWorkstationUI {
 
     this.render();
     this.applyTritonProgram(this.activeProg);
+
+    multiLayerEngine.addLayerChangeListener(() => {
+      this.syncActiveProgramFromEngine();
+    });
+  }
+
+  syncActiveProgramFromEngine() {
+    if (this.activeSubTab !== "BROWSER") return;
+
+    // 1. Combi Bank sync
+    if (multiLayerEngine.isCombiMode && multiLayerEngine.activeCombi) {
+      const combiId = multiLayerEngine.activeCombi.id;
+      if (this.activeBankId !== "COMBI") {
+        this.activeBankId = "COMBI";
+        this.render();
+      } else {
+        this.updateLcdAndGridHighlight(combiId, multiLayerEngine.activeCombi.name, "BANK: COMBI", `CATEGORY: ${(multiLayerEngine.activeCombi.category || "COMBI").toUpperCase()}`);
+      }
+      return;
+    }
+
+    // 2. Triton VA Program sync
+    if (multiLayerEngine.isTritonVaMode && multiLayerEngine.activeTritonVaProg) {
+      const prog = multiLayerEngine.activeTritonVaProg;
+      let targetBankId = this.activeBankId;
+      for (const [bankId, bank] of Object.entries(TRITON_BANKS)) {
+        if ((bank.programs || []).some(p => p.id === prog.id)) {
+          targetBankId = bankId;
+          break;
+        }
+      }
+      this.activeProg = prog;
+      if (this.activeBankId !== targetBankId) {
+        this.activeBankId = targetBankId;
+        this.render();
+      } else {
+        this.updateLcdAndGridHighlight(prog.id, prog.name, `BANK: ${this.activeBankId.replace("_", " ")} ${prog.num}`, `CATEGORY: ${(prog.category || "").toUpperCase()}`);
+      }
+      return;
+    }
+
+    // 3. Single instrument / PCM bank sync
+    if (multiLayerEngine.activeSingleInst) {
+      const instKey = multiLayerEngine.activeSingleInst;
+      for (const [bankId, bank] of Object.entries(TRITON_BANKS)) {
+        const p = (bank.programs || []).find(pr => pr.instId === instKey || (pr.id === "A036" && instKey === "acoustic_grand_piano"));
+        if (p) {
+          this.activeProg = p;
+          if (this.activeBankId !== bankId) {
+            this.activeBankId = bankId;
+            this.render();
+          } else {
+            this.updateLcdAndGridHighlight(p.id, p.name, `BANK: ${this.activeBankId.replace("_", " ")} ${p.num}`, `CATEGORY: ${(p.category || "").toUpperCase()}`);
+          }
+          return;
+        }
+      }
+    }
+  }
+
+  updateLcdAndGridHighlight(progId, title, bankStr, catStr) {
+    const lcdTitle = document.getElementById("triton-lcd-title");
+    const lcdBankCat = document.getElementById("triton-lcd-bank-cat");
+    const lcdCat = document.getElementById("triton-lcd-category");
+    if (lcdTitle && title) lcdTitle.innerText = title;
+    if (lcdBankCat && bankStr) lcdBankCat.innerText = bankStr.startsWith("BANK:") ? bankStr : `BANK: ${bankStr}`;
+    if (lcdCat && catStr) lcdCat.innerText = catStr.startsWith("CATEGORY:") ? catStr : `CATEGORY: ${catStr.toUpperCase()}`;
+
+    if (this.container) {
+      this.container.querySelectorAll(".triton-bank-card").forEach(b => {
+        b.classList.toggle("active", b.getAttribute("data-bank") === this.activeBankId);
+      });
+      this.container.querySelectorAll(".triton-prog-cell").forEach(c => {
+        const match = c.getAttribute("data-prog-id") === progId;
+        c.classList.toggle("active", match);
+      });
+    }
   }
 
   isCombiBank() {
@@ -62,7 +139,7 @@ export class TritonWorkstationUI {
         return false;
       }
     }
-    return this.activeProg.id === p.id;
+    return this.activeProg && this.activeProg.id === p.id;
   }
 
   render() {
@@ -487,39 +564,52 @@ export class TritonWorkstationUI {
 
   bindSubTabs() {
     this.container.querySelectorAll(".triton-subtab").forEach(btn => {
-      btn.addEventListener("click", () => {
+      let lastTap = 0;
+      const handleTab = () => {
+        const now = performance.now();
+        if (now - lastTap < 120) return;
+        lastTap = now;
         this.activeSubTab = btn.getAttribute("data-tab");
         this.render();
-      });
+      };
+      btn.addEventListener("pointerdown", handleTab);
+      btn.addEventListener("click", handleTab);
     });
   }
 
   bindBankButtons() {
     this.container.querySelectorAll(".triton-bank-card").forEach(btn => {
-      btn.addEventListener("click", () => {
-        this.activeBankId = btn.getAttribute("data-bank");
-        this.render();
-      });
+      let lastTap = 0;
+      const handleBank = () => {
+        const now = performance.now();
+        if (now - lastTap < 120) return;
+        lastTap = now;
+        const newBank = btn.getAttribute("data-bank");
+        if (this.activeBankId !== newBank) {
+          this.activeBankId = newBank;
+          this.render();
+        }
+      };
+      btn.addEventListener("pointerdown", handleBank);
+      btn.addEventListener("click", handleBank);
     });
   }
 
   bindProgramGrid() {
     this.container.querySelectorAll(".triton-prog-cell").forEach(cell => {
-      cell.addEventListener("click", () => {
+      let lastTap = 0;
+      const handleSelect = () => {
+        const now = performance.now();
+        if (now - lastTap < 120) return;
+        lastTap = now;
+
         const progId = cell.getAttribute("data-prog-id");
         // COMBI bank: trigger 4-timbre stack + update LCD
         if (this.isCombiBank()) {
           const cp = COMBI_PRESETS[progId];
           if (cp) {
             multiLayerEngine.setCombiPreset(progId);
-            const lcdTitle = document.getElementById("triton-lcd-title");
-            const lcdBankCat = document.getElementById("triton-lcd-bank-cat");
-            const lcdCat = document.getElementById("triton-lcd-category");
-            if (lcdTitle) lcdTitle.innerText = cp.name;
-            if (lcdBankCat) lcdBankCat.innerText = `BANK: COMBI`;
-            if (lcdCat) lcdCat.innerText = `CATEGORY: ${(cp.category || "").toUpperCase()}`;
-            this.container.querySelectorAll(".triton-prog-cell").forEach(c => c.classList.remove("active"));
-            cell.classList.add("active");
+            this.updateLcdAndGridHighlight(progId, cp.name, "BANK: COMBI", `CATEGORY: ${(cp.category || "COMBI").toUpperCase()}`);
           }
           return;
         }
@@ -528,19 +618,12 @@ export class TritonWorkstationUI {
         if (prog) {
           this.activeProg = prog;
           this.applyTritonProgram(prog, true);
-
-          // Update LCD
-          const lcdTitle = document.getElementById("triton-lcd-title");
-          const lcdBankCat = document.getElementById("triton-lcd-bank-cat");
-          const lcdCat = document.getElementById("triton-lcd-category");
-          if (lcdTitle) lcdTitle.innerText = prog.name;
-          if (lcdBankCat) lcdBankCat.innerText = `BANK: ${this.activeBankId.replace("_", " ")} ${prog.num}`;
-          if (lcdCat) lcdCat.innerText = `CATEGORY: ${prog.category.toUpperCase()}`;
-
-          this.container.querySelectorAll(".triton-prog-cell").forEach(c => c.classList.remove("active"));
-          cell.classList.add("active");
+          this.updateLcdAndGridHighlight(prog.id, prog.name, `BANK: ${this.activeBankId.replace("_", " ")} ${prog.num}`, `CATEGORY: ${(prog.category || "").toUpperCase()}`);
         }
-      });
+      };
+
+      cell.addEventListener("pointerdown", handleSelect);
+      cell.addEventListener("click", handleSelect);
     });
   }
 
@@ -553,12 +636,7 @@ export class TritonWorkstationUI {
         this.activeProg = prog;
         this.render();
         this.applyTritonProgram(prog, true);
-        const lcdTitle = document.getElementById("triton-lcd-title");
-        const lcdBankCat = document.getElementById("triton-lcd-bank-cat");
-        const lcdCat = document.getElementById("triton-lcd-category");
-        if (lcdTitle) lcdTitle.innerText = prog.name;
-        if (lcdBankCat) lcdBankCat.innerText = `BANK: ${this.activeBankId.replace("_", " ")} ${prog.num}`;
-        if (lcdCat) lcdCat.innerText = `CATEGORY: ${prog.category.toUpperCase()}`;
+        this.updateLcdAndGridHighlight(prog.id, prog.name, `BANK: ${this.activeBankId.replace("_", " ")} ${prog.num}`, `CATEGORY: ${(prog.category || "").toUpperCase()}`);
         return;
       }
     }

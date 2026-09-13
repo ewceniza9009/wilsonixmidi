@@ -108,15 +108,14 @@ export class LicenseModalUI {
               !access.isLicensed
                 ? `
               <div class="activation-form">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <div style="margin-bottom: 4px;">
                   <label style="margin: 0;">ENTER YOUR PRO LICENSE KEY:</label>
-                  <button type="button" id="btn-prefill-demo-key" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); font-size: 0.60rem; font-weight: 800; padding: 2px 7px; border-radius: 3px; cursor: pointer;">⚡ FILL DEMO KEY</button>
                 </div>
                 <div class="key-input-row">
                   <input type="text" id="license-key-input" placeholder="MKPRO-NAME-LIFETIME-XXXXXXXX" spellcheck="false" autocomplete="off" />
                   <button class="activate-submit-btn" id="activate-submit-btn">ACTIVATE</button>
                 </div>
-                <div class="key-help-hint">Format: MKPRO-NAME-EXPIRY-SIGNATURE or Built-in VIP Key: MKPRO-VIP-MASTER-ACCESS</div>
+                <div class="key-help-hint">Format: MKPRO-&lt;LICENSEE&gt;-&lt;EXPIRY&gt;-&lt;SIGNATURE&gt;</div>
                 <div class="activation-msg" id="activation-msg"></div>
               </div>
             `
@@ -140,14 +139,6 @@ export class LicenseModalUI {
     const keyInput = document.getElementById("license-key-input");
     const deactivateBtn = document.getElementById("deactivate-btn");
     const msgEl = document.getElementById("activation-msg");
-    const demoKeyBtn = document.getElementById("btn-prefill-demo-key");
-
-    demoKeyBtn?.addEventListener("click", () => {
-      if (keyInput) {
-        keyInput.value = "MKPRO-VIP-MASTER-ACCESS";
-        keyInput.focus();
-      }
-    });
 
     closeBtn?.addEventListener("click", () => this.close());
     backdrop?.addEventListener("click", e => {

@@ -616,6 +616,20 @@ export class GigHudUI {
           break;
         }
       }
+      if (!found) {
+        let customOpt = perfSelect.querySelector('option[data-dynamic-active="true"]');
+        if (!customOpt) {
+          customOpt = document.createElement("option");
+          customOpt.setAttribute("data-dynamic-active", "true");
+          perfSelect.appendChild(customOpt);
+        }
+        customOpt.value = activeId;
+        customOpt.innerText = `${this.getSoundIcon()} ${this.getActiveSoundName()}`;
+        customOpt.selected = true;
+      } else {
+        const customOpt = perfSelect.querySelector('option[data-dynamic-active="true"]');
+        if (customOpt) customOpt.remove();
+      }
     }
 
     // 3. Refresh rig slot pill titles and tooltips for current bank

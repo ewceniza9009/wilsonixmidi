@@ -1979,20 +1979,24 @@ export class NativePcmEngine {
     filter.connect(voiceGain);
     voiceGain.connect(dest);
 
-    const minCutoff = isSax ? 7500 : (isChoir ? 1200 : (isHashy ? 7000 : 10000));
-    const maxCutoff = isSax ? 16000 : (isChoir ? 8000 : (isHashy ? 14000 : 20000));
-    const dynamicCutoff = minCutoff + velNorm * (maxCutoff - minCutoff);
+    // Wide, expressive dynamic cutoff range:
+    // Soft touch (Pianissimo) is warm, mellow and dark.
+    // Hard touch (Fortissimo) opens full high frequencies with bright acoustic harmonics.
+    const minCutoff = isSax ? 4000 : (isChoir ? 1000 : (isHashy ? 3000 : 3500));
+    const maxCutoff = isSax ? 16000 : (isChoir ? 8500 : (isHashy ? 16000 : 20000));
+    const dynamicCutoff = minCutoff + Math.pow(velNorm, 1.35) * (maxCutoff - minCutoff);
 
     // Filter Key Tracking: cutoff scales with note frequency so higher keys ring full and bright
     const noteFreq = 440 * Math.pow(2, (midiNote - 69) / 12);
-    const keyTrackedCutoff = Math.max(dynamicCutoff, Math.min(20000, noteFreq * 3.5));
+    const keyTrackedCutoff = Math.max(dynamicCutoff, Math.min(20000, noteFreq * (2.0 + velNorm * 2.2)));
 
     filter.frequency.setValueAtTime(keyTrackedCutoff, now);
-    filter.Q.setValueAtTime(0.3, now);
+    filter.Q.setValueAtTime(0.35, now);
 
-    // 3. Time-Variant Amplifier (TVA): Maximum loudness, punchy studio presence.
+    // 3. Time-Variant Amplifier (TVA): Wide dynamic range (true pianissimo to fortissimo)
     const trim = INST_TRIM_GAINS[instId] || 1.0;
-    const peakGain = (0.24 + velNorm * 0.76) * customGain * trim;
+    const dynamicAmp = Math.pow(velNorm, 1.25);
+    const peakGain = (0.10 + dynamicAmp * 0.90) * customGain * trim;
 
     voiceGain.gain.setValueAtTime(0.0, now);
     if (isChoir) {

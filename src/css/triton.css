@@ -399,7 +399,14 @@
   border-radius: 2px;
   padding: 4px 6px;
   cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
   transition: all 0.1s ease;
+}
+
+.triton-prog-cell * {
+  pointer-events: none;
 }
 
 .triton-prog-cell:hover {
@@ -408,9 +415,9 @@
 }
 
 .triton-prog-cell.active {
-  background: #0284c7;
-  border-color: #7dd3fc;
-  box-shadow: 0 0 8px rgba(2, 132, 199, 0.5);
+  background: #0284c7 !important;
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.6), inset 0 0 6px rgba(255, 255, 255, 0.3) !important;
 }
 
 .prog-bank-code {
@@ -420,7 +427,7 @@
 }
 
 .triton-prog-cell.active .prog-bank-code {
-  color: #e0f2fe;
+  color: #e0f2fe !important;
 }
 
 .prog-num {
@@ -428,6 +435,10 @@
   font-size: 0.62rem;
   font-weight: 800;
   color: var(--accent-amber);
+}
+
+.triton-prog-cell.active .prog-num {
+  color: #fef08a !important;
 }
 
 .prog-name-label {
@@ -440,9 +451,19 @@
   flex: 1;
 }
 
+.triton-prog-cell.active .prog-name-label {
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
 .prog-star {
   font-size: 0.6rem;
   color: #f59e0b;
+}
+
+.triton-prog-cell.active .prog-star {
+  color: #fef08a !important;
 }
 
 /* ==========================================================================

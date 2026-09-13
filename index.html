@@ -43,6 +43,109 @@
       -webkit-tap-highlight-color: transparent !important;
     }
 
+    /* Professional Startup Stage Boot Loader */
+    .app-startup-loader {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at center, #151821 0%, #0c0e13 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+      transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.45s ease;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .app-startup-loader.fade-out {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .loader-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      width: 90%;
+      max-width: 380px;
+    }
+    .loader-logo-ring {
+      position: relative;
+      width: 84px;
+      height: 84px;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .loader-brand-icon {
+      filter: drop-shadow(0 0 16px rgba(255, 118, 77, 0.4));
+      animation: pulseGlow 2.2s infinite ease-in-out;
+    }
+    .loader-spinner {
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      border-top-color: #ff764d;
+      border-right-color: rgba(255, 118, 77, 0.3);
+      animation: spinRing 1.1s linear infinite;
+    }
+    @keyframes spinRing {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes pulseGlow {
+      0%, 100% { transform: scale(1.0); filter: drop-shadow(0 0 14px rgba(255, 118, 77, 0.35)); }
+      50% { transform: scale(1.05); filter: drop-shadow(0 0 24px rgba(255, 118, 77, 0.7)); }
+    }
+    .loader-brand-name {
+      font-size: 1.35rem;
+      font-weight: 900;
+      letter-spacing: 2px;
+      color: #f1f5f9;
+      margin-bottom: 4px;
+    }
+    .loader-brand-name span {
+      color: #ff764d;
+    }
+    .loader-subtitle {
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 3px;
+      color: #94a3b8;
+      margin-bottom: 22px;
+    }
+    .loader-progress-track {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 12px;
+      position: relative;
+    }
+    .loader-progress-bar {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #ea580c, #ff764d, #f59e0b);
+      border-radius: 999px;
+      animation: shimmerProgress 1.4s infinite ease-in-out;
+      transform-origin: left;
+    }
+    @keyframes shimmerProgress {
+      0% { transform: scaleX(0.15) translateX(-50%); }
+      50% { transform: scaleX(0.85) translateX(10%); }
+      100% { transform: scaleX(1.0) translateX(0%); }
+    }
+    .loader-status {
+      font-size: 0.68rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #64748b;
+    }
+
     /* Audio Unlock Splash Overlay */
     .audio-unlock-overlay {
       position: fixed;
@@ -104,6 +207,25 @@
   </style>
 </head>
 <body>
+  <!-- Stage Boot Loader Screen -->
+  <div id="app-startup-loader" class="app-startup-loader">
+    <div class="loader-content">
+      <div class="loader-logo-ring">
+        <svg class="loader-brand-icon" viewBox="0 0 100 100" width="56" height="56">
+          <rect width="100" height="100" rx="22" fill="#181b24" stroke="rgba(255,118,77,0.3)" stroke-width="2"/>
+          <path d="M22 32h11v36H22zm15 0h11v36H37zm15 0h11v36H52zm15 0h11v36H67z" fill="#ff764d"/>
+        </svg>
+        <div class="loader-spinner"></div>
+      </div>
+      <div class="loader-brand-name"><span>WILSONIX</span> MIDIKEY</div>
+      <div class="loader-subtitle">STAGE PERFORMANCE WORKSTATION</div>
+      <div class="loader-progress-track">
+        <div class="loader-progress-bar" id="loader-progress-bar"></div>
+      </div>
+      <div class="loader-status" id="loader-status-text">INITIALIZING ZERO-LATENCY DSP ENGINE...</div>
+    </div>
+  </div>
+
   <div id="app-root">
     <!-- Audio Unlock Splash (Auto-closed / transparent background unlock) -->
     <div class="audio-unlock-overlay hidden" id="audio-unlock-overlay" style="display: none;">
