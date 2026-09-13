@@ -601,6 +601,78 @@ body.mobile-stage-keys .studio-keyboard-deck {
   color: var(--text-muted);
 }
 
+/* Ambient Pad Sidechain Ducker Button */
+.duck-btn {
+  background: #1e2433;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+  font-size: 0.54rem;
+  font-weight: 800;
+  padding: 2px 5px;
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.duck-btn:hover {
+  background: #2b3348;
+  color: #fff;
+}
+
+.duck-btn.active {
+  background: rgba(245, 158, 11, 0.22);
+  color: #f59e0b;
+  border-color: #f59e0b;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.45);
+}
+
+/* Live Groove Arpeggiator Button */
+.arp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #1e2433;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+  font-size: 0.54rem;
+  font-weight: 800;
+  padding: 2px 5px;
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.arp-btn:hover {
+  background: #2b3348;
+  color: #fff;
+}
+
+.arp-btn.active {
+  background: rgba(16, 185, 129, 0.25);
+  color: #10b981;
+  border-color: #10b981;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+}
+
+.arp-led {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #475569;
+  display: inline-block;
+  transition: background 0.15s ease;
+}
+
+.arp-btn.active .arp-led {
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+  animation: pulse-glow 0.8s infinite alternate ease-in-out;
+}
+
 /* Master Volume Unit */
 .hud-volume-unit {
   display: flex;

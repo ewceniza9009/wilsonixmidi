@@ -101,8 +101,15 @@ export class AudioCore {
     this.busCompBypass.gain.value = 1.0;
     this.busCompEnabled = false;
 
-    // Master bus pipeline: FX Rack -> Master Gain -> BusPad(trim) -> DC Blocker -> Analyser -> HardwareLimiter -> Destination
-    this.fxRack.output.connect(this.masterGain);
+    // Dynamic Master Kaoss Filter (Lowpass filter modulated in real time by X/Y Pad)
+    this.masterFilter = this.ctx.createBiquadFilter();
+    this.masterFilter.type = "lowpass";
+    this.masterFilter.frequency.value = 18000;
+    this.masterFilter.Q.value = 1.0;
+
+    // Master bus pipeline: FX Rack -> Master Filter -> Master Gain -> BusPad(trim) -> DC Blocker -> Analyser -> HardwareLimiter -> Destination
+    this.fxRack.output.connect(this.masterFilter);
+    this.masterFilter.connect(this.masterGain);
     this.masterGain.connect(this.busPad);
     this.busPad.connect(this.dcBlocker);
     this.dcBlocker.connect(this.analyser);
@@ -503,6 +510,29 @@ export class AudioCore {
 
   get isDiagRecording() {
     return !!this.diagRecorder;
+  }
+
+  setMasterFilter(cutoffHz, resonance = 1.0) {
+    if (!this.masterFilter || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    const clampedCutoff = Math.max(150, Math.min(20000, cutoffHz));
+    const clampedQ = Math.max(0.1, Math.min(10.0, resonance));
+    this.masterFilter.frequency.setTargetAtTime(clampedCutoff, now, 0.015);
+    this.masterFilter.Q.setTargetAtTime(clampedQ, now, 0.015);
+  }
+
+  setSpaceSend(amount) {
+    if (!this.fxRack) return;
+    const norm = Math.max(0, Math.min(1, amount));
+    if (this.fxRack.reverb && typeof this.fxRack.reverb.setMix === "function") {
+      this.fxRack.reverb.setMix(norm * 0.85);
+    }
+    if (this.fxRack.shimmerReverb && typeof this.fxRack.shimmerReverb.setMix === "function") {
+      this.fxRack.shimmerReverb.setMix(norm * 0.70);
+    }
+    if (this.fxRack.delay && typeof this.fxRack.delay.setMix === "function") {
+      this.fxRack.delay.setMix(norm * 0.45);
+    }
   }
 }
 

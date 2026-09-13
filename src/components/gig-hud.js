@@ -13,6 +13,7 @@ import { masterRecorder } from "../audio/master-recorder.js";
 import { registrationManager } from "./registration-manager.js";
 import { TRITON_BANKS } from "../triton/triton-soundbanks.js";
 import { getTritonProgramById } from "../triton/combi-timbres.js";
+import { arpeggiator } from "../audio/arpeggiator.js";
 
 export class GigHudUI {
   constructor(containerId, onOpenLicenseModal) {
@@ -254,6 +255,9 @@ export class GigHudUI {
             <button class="layer-toggle-btn ${isLayerActive ? "active" : ""}" id="btn-toggle-layer" title="Toggle 2nd Sound Layer">
               ${isLayerActive ? "LAYER ON" : "LAYER"}
             </button>
+            <button class="hud-btn duck-btn ${multiLayerEngine.isPadDuckingEnabled ? "active" : ""}" id="btn-toggle-duck" title="Auto Ambient Pad Sidechain Ducker (Smoothly dips background pad/strings when piano strikes)">
+              ${multiLayerEngine.isPadDuckingEnabled ? "DUCK ON" : "DUCK"}
+            </button>
             <select class="hud-layer-select ${isLayerActive ? "active" : ""}" id="hud-layer-select" title="Choose 2nd Layer Instrument">
               ${soundbanksList
                 .map(
@@ -301,9 +305,13 @@ export class GigHudUI {
             <span class="rec-label" id="hud-rec-label">REC</span>
           </button>
 
-          <!-- Tempo -->
+          <!-- Tempo & Arpeggiator -->
           <div class="tempo-control-box">
-            <button class="tempo-tap-btn" id="btn-tap-tempo">TAP</button>
+            <button class="hud-btn arp-btn ${arpeggiator.enabled ? "active" : ""}" id="btn-toggle-arp" title="Live Groove Arpeggiator (Rhythmic Chord Rolls)">
+              <span class="arp-led"></span>
+              ARP
+            </button>
+            <button class="tempo-tap-btn" id="btn-tap-tempo" title="Tap Tempo">TAP</button>
             <span class="bpm-counter" id="bpm-val">${this.bpm}</span>
             <span class="bpm-label">BPM</span>
           </div>
@@ -609,6 +617,53 @@ export class GigHudUI {
       layerSelect.classList.add("active");
     });
 
+    // Ambient Pad Sidechain Ducking Toggle
+    const duckBtn = document.getElementById("btn-toggle-duck");
+    duckBtn?.addEventListener("click", () => {
+      multiLayerEngine.togglePadDucking();
+      const isActive = multiLayerEngine.isPadDuckingEnabled;
+      duckBtn.classList.toggle("active", isActive);
+      duckBtn.innerText = isActive ? "DUCK ON" : "DUCK";
+    });
+
+    // Arpeggiator Toggle
+    const arpBtn = document.getElementById("btn-toggle-arp");
+    arpBtn?.addEventListener("click", () => {
+      arpeggiator.setEnabled();
+      const isActive = arpeggiator.enabled;
+      arpBtn.classList.toggle("active", isActive);
+    });
+
+    // Sync Arpeggiator callback
+    arpeggiator.onStateChangeCallback = (enabled, bpm) => {
+      const b = document.getElementById("btn-toggle-arp");
+      if (b) b.classList.toggle("active", enabled);
+      const bpmEl = document.getElementById("bpm-val");
+      if (bpmEl && typeof bpm === "number") bpmEl.innerText = bpm;
+    };
+
+    // Tap Tempo Interaction
+    const tapBtn = document.getElementById("btn-tap-tempo");
+    const bpmVal = document.getElementById("bpm-val");
+    tapBtn?.addEventListener("click", () => {
+      const now = performance.now();
+      this.lastTapTimes.push(now);
+      if (this.lastTapTimes.length > 4) this.lastTapTimes.shift();
+
+      if (this.lastTapTimes.length >= 2) {
+        const intervals = [];
+        for (let i = 1; i < this.lastTapTimes.length; i++) {
+          intervals.push(this.lastTapTimes[i] - this.lastTapTimes[i - 1]);
+        }
+        const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+        if (avg > 150 && avg < 2000) {
+          this.bpm = Math.round(60000 / avg);
+          if (bpmVal) bpmVal.innerText = this.bpm;
+          arpeggiator.setBpm(this.bpm);
+        }
+      }
+    });
+
     // 4. GIG Mode Toggle
     const gigBtn = document.getElementById("hud-gig-btn");
     gigBtn?.addEventListener("click", () => {
@@ -645,25 +700,7 @@ export class GigHudUI {
 
     window.addEventListener("click", () => this._closeLatencyPopover());
 
-    // 6. Tap Tempo
-    document.getElementById("btn-tap-tempo")?.addEventListener("click", () => {
-      const now = performance.now();
-      this.lastTapTimes.push(now);
-      if (this.lastTapTimes.length > 4) this.lastTapTimes.shift();
 
-      if (this.lastTapTimes.length >= 2) {
-        let sum = 0;
-        for (let i = 1; i < this.lastTapTimes.length; i++) {
-          sum += this.lastTapTimes[i] - this.lastTapTimes[i - 1];
-        }
-        const avgDelta = sum / (this.lastTapTimes.length - 1);
-        if (avgDelta > 200 && avgDelta < 2000) {
-          this.bpm = Math.round(60000 / avgDelta);
-          const bpmVal = document.getElementById("bpm-val");
-          if (bpmVal) bpmVal.innerText = this.bpm;
-        }
-      }
-    });
 
     // 7. Sunlight Mode Toggle
     const sunBtn = document.getElementById("hud-sunlight-btn");

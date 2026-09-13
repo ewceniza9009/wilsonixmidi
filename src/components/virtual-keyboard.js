@@ -18,6 +18,9 @@ import { synthEngine } from "../audio/synth-engine.js";
 import { multiLayerEngine } from "../audio/multi-layer-engine.js";
 import { qwertyKeyboard } from "../midi/qwerty-keyboard.js";
 import { shapeVelocity, setVelocityCurve, getVelocityCurve } from "../midi/velocity-curve.js";
+import { scaleLock, ROOT_NAMES, SCALES } from "../midi/scale-lock.js";
+import { arpeggiator } from "../audio/arpeggiator.js";
+import { XyPadUI } from "./xy-pad-ui.js";
 
 const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const WHITE_NOTES = [0, 2, 4, 5, 7, 9, 11];
@@ -41,11 +44,13 @@ export class VirtualKeyboardUI {
     this.container = document.getElementById(containerId);
     this.startMidi = 21; // A0 (Standard 88-Key Grand Piano)
     this.endMidi = 108; // C8
-    this.activeTouches = new Map(); // TouchId -> { midi, rect, chordNotes }
+    this.activeTouches = new Map(); // TouchId -> { midi, snappedMidi, rect, chordNotes }
     this.keyElements = new Map(); // MidiNote -> DOMElement
     this.labelElements = new Map(); // MidiNote -> DOMElement
     this.keyStates = new Uint8Array(128); // Fast state deduplication cache
     this.activeMouseChord = null;
+    this.xyPad = null;
+    this.isXyVisible = false;
 
     const savedZoom = typeof localStorage !== "undefined" ? localStorage.getItem("midikey_zoom_mode") : null;
     const isTouchPlatform = detectTabletOrTouch();
@@ -55,6 +60,7 @@ export class VirtualKeyboardUI {
     this.bindMouseAndTouch();
     this.bindWheels();
     this.updateHudState();
+    this.updateScaleHighlights();
 
     // Auto-center / frame view on Middle C or C3-C5 on startup
     requestAnimationFrame(() => {
@@ -87,6 +93,16 @@ export class VirtualKeyboardUI {
     synthEngine.onNoteChangeCallback = (midiNote, isPressed, velocity) => {
       this.setKeyVisualState(midiNote, isPressed, velocity);
     };
+
+    // Arpeggiator note trigger callback -> illuminate piano keys
+    arpeggiator.onNoteTriggerCallback = (midiNote, isPressed, velocity = 95) => {
+      this.setKeyVisualState(midiNote, isPressed, velocity);
+    };
+
+    // Scale Lock changes -> update key visual highlights
+    scaleLock.addListener(() => {
+      this.updateScaleHighlights();
+    });
 
     qwertyKeyboard.onStateChangeCallback = () => {
       this.updateHudState();
@@ -132,6 +148,25 @@ export class VirtualKeyboardUI {
             <div class="octave-readout" id="oct-display">C${qwertyKeyboard.baseOctave}</div>
             <button class="hud-btn" id="oct-up-btn" title="Octave Up (Plus)">+ OCT</button>
             <button class="hud-btn range-btn" id="hud-c3-c5-btn" title="Jump & Frame 2.5 Octaves (C3 - C5)">C3-C5</button>
+          </div>
+
+          <!-- Kaoss-Style Touch X/Y Pad Toggle -->
+          <div class="xy-toggle-unit">
+            <button class="hud-btn xy-btn ${this.isXyVisible ? "active" : ""}" id="hud-xy-btn" title="Toggle Kaoss Multi-Touch X/Y Expression Pad (Cutoff & Space)">
+              <span class="xy-led"></span>
+              X/Y PAD
+            </button>
+          </div>
+
+          <!-- Smart Scale Lock (Zero Wrong Notes) -->
+          <div class="scale-hud-unit" title="Zero Wrong Notes Scale Lock (Locks touch keys & highlights in-scale notes)">
+            <span class="scale-label">KEY:</span>
+            <select class="hud-select hud-root-select" id="hud-scale-root" title="Root Note">
+              ${ROOT_NAMES.map((r, i) => `<option value="${i}" ${scaleLock.rootNote === i ? "selected" : ""}>${r}</option>`).join("")}
+            </select>
+            <select class="hud-select hud-scale-select" id="hud-scale-type" title="Scale Mode">
+              ${Object.values(SCALES).map(s => `<option value="${s.id}" ${scaleLock.scaleId === s.id ? "selected" : ""}>${s.short}</option>`).join("")}
+            </select>
           </div>
 
           <!-- Smart Chord Voicing Button -->
@@ -218,10 +253,14 @@ export class VirtualKeyboardUI {
           </div>
         </div>
 
-        <!-- Interactive Piano Bed (88 Keys) -->
-        <div class="piano-roll-container zoom-${this.currentZoomMode}" id="piano-roll-container">
-          <div class="piano-bed" id="piano-keys-track">
-            ${this.buildKeysHtml()}
+        <!-- Main Keybed Container with Optional Docked Kaoss X/Y Pad -->
+        <div class="virtual-keyboard-body">
+          <div class="xy-pad-bay" id="xy-pad-mount" style="${this.isXyVisible ? "display:flex;" : "display:none;"}"></div>
+          <!-- Interactive Piano Bed (88 Keys) -->
+          <div class="piano-roll-container zoom-${this.currentZoomMode}" id="piano-roll-container">
+            <div class="piano-bed" id="piano-keys-track">
+              ${this.buildKeysHtml()}
+            </div>
           </div>
         </div>
       </div>
@@ -294,12 +333,18 @@ export class VirtualKeyboardUI {
       const key = getKeyFromPoint(e.clientX, e.clientY);
       if (key) {
         const vel = calculateVelocity(e.clientY, key.rect);
-        const notes = qwertyKeyboard.generateSmartVoicing(key.midi, qwertyKeyboard.chordMode);
+        const snappedMidi = scaleLock.isLocked ? scaleLock.snapToScale(key.midi) : key.midi;
+        if (snappedMidi === null) return;
+        const notes = qwertyKeyboard.generateSmartVoicing(snappedMidi, qwertyKeyboard.chordMode);
         this.activeMouseChord = notes;
 
         notes.forEach(n => {
           this.setKeyVisualState(n, true, vel);
-          multiLayerEngine.noteOn(n, vel);
+          if (arpeggiator.enabled) {
+            arpeggiator.handleNoteOn(n, vel);
+          } else {
+            multiLayerEngine.noteOn(n, vel);
+          }
         });
       }
     });
@@ -309,22 +354,31 @@ export class VirtualKeyboardUI {
       if (performance.now() - lastTouchTime < 800) return;
       const key = getKeyFromPoint(e.clientX, e.clientY);
       if (key) {
+        const snappedMidi = scaleLock.isLocked ? scaleLock.snapToScale(key.midi) : key.midi;
         const primaryNote = this.activeMouseChord ? this.activeMouseChord[0] : null;
-        if (key.midi !== primaryNote) {
+        if (snappedMidi !== null && snappedMidi !== primaryNote) {
           // Horizontal Glissando / Legato Slide to adjacent note
           if (this.activeMouseChord) {
             this.activeMouseChord.forEach(n => {
               this.setKeyVisualState(n, false);
-              multiLayerEngine.noteOff(n);
+              if (arpeggiator.enabled) {
+                arpeggiator.handleNoteOff(n);
+              } else {
+                multiLayerEngine.noteOff(n);
+              }
             });
           }
           const vel = calculateVelocity(e.clientY, key.rect);
-          const notes = qwertyKeyboard.generateSmartVoicing(key.midi, qwertyKeyboard.chordMode);
+          const notes = qwertyKeyboard.generateSmartVoicing(snappedMidi, qwertyKeyboard.chordMode);
           this.activeMouseChord = notes;
 
           notes.forEach(n => {
             this.setKeyVisualState(n, true, vel);
-            multiLayerEngine.noteOn(n, vel);
+            if (arpeggiator.enabled) {
+              arpeggiator.handleNoteOn(n, vel);
+            } else {
+              multiLayerEngine.noteOn(n, vel);
+            }
           });
         } else {
           // Vertical Key Slide Expression (Y-Axis Timbre Modulation & Filter Swell)
@@ -339,7 +393,11 @@ export class VirtualKeyboardUI {
       if (isMouseDown && this.activeMouseChord) {
         this.activeMouseChord.forEach(n => {
           this.setKeyVisualState(n, false);
-          multiLayerEngine.noteOff(n);
+          if (arpeggiator.enabled) {
+            arpeggiator.handleNoteOff(n);
+          } else {
+            multiLayerEngine.noteOff(n);
+          }
         });
         this.activeMouseChord = null;
       }
@@ -356,13 +414,19 @@ export class VirtualKeyboardUI {
           const t = e.changedTouches[i];
           const key = getKeyFromPoint(t.clientX, t.clientY);
           if (key) {
+            const snappedMidi = scaleLock.isLocked ? scaleLock.snapToScale(key.midi) : key.midi;
+            if (snappedMidi === null) continue;
             const vel = calculateVelocity(t.clientY, key.rect);
-            const notes = qwertyKeyboard.generateSmartVoicing(key.midi, qwertyKeyboard.chordMode);
-            this.activeTouches.set(t.identifier, { midi: key.midi, rect: key.rect, chordNotes: notes });
+            const notes = qwertyKeyboard.generateSmartVoicing(snappedMidi, qwertyKeyboard.chordMode);
+            this.activeTouches.set(t.identifier, { midi: key.midi, snappedMidi, rect: key.rect, chordNotes: notes });
 
             notes.forEach(n => {
               this.setKeyVisualState(n, true, vel);
-              multiLayerEngine.noteOn(n, vel);
+              if (arpeggiator.enabled) {
+                arpeggiator.handleNoteOn(n, vel);
+              } else {
+                multiLayerEngine.noteOn(n, vel);
+              }
             });
           }
         }
@@ -380,21 +444,32 @@ export class VirtualKeyboardUI {
           const key = getKeyFromPoint(t.clientX, t.clientY);
 
           if (key) {
-            if (!prevTouch || key.midi !== prevTouch.midi) {
+            const snappedMidi = scaleLock.isLocked ? scaleLock.snapToScale(key.midi) : key.midi;
+            if (snappedMidi === null) continue;
+
+            if (!prevTouch || snappedMidi !== prevTouch.snappedMidi) {
               // Glissando / slide to new key
               if (prevTouch && prevTouch.chordNotes) {
                 prevTouch.chordNotes.forEach(n => {
                   this.setKeyVisualState(n, false);
-                  multiLayerEngine.noteOff(n);
+                  if (arpeggiator.enabled) {
+                    arpeggiator.handleNoteOff(n);
+                  } else {
+                    multiLayerEngine.noteOff(n);
+                  }
                 });
               }
               const vel = calculateVelocity(t.clientY, key.rect);
-              const notes = qwertyKeyboard.generateSmartVoicing(key.midi, qwertyKeyboard.chordMode);
-              this.activeTouches.set(t.identifier, { midi: key.midi, rect: key.rect, chordNotes: notes });
+              const notes = qwertyKeyboard.generateSmartVoicing(snappedMidi, qwertyKeyboard.chordMode);
+              this.activeTouches.set(t.identifier, { midi: key.midi, snappedMidi, rect: key.rect, chordNotes: notes });
 
               notes.forEach(n => {
                 this.setKeyVisualState(n, true, vel);
-                multiLayerEngine.noteOn(n, vel);
+                if (arpeggiator.enabled) {
+                  arpeggiator.handleNoteOn(n, vel);
+                } else {
+                  multiLayerEngine.noteOn(n, vel);
+                }
               });
             } else {
               // Continuous Vertical Slide on held key (Expressive Aftertouch)
@@ -415,7 +490,11 @@ export class VirtualKeyboardUI {
         if (prevTouch && prevTouch.chordNotes) {
           prevTouch.chordNotes.forEach(n => {
             this.setKeyVisualState(n, false);
-            multiLayerEngine.noteOff(n);
+            if (arpeggiator.enabled) {
+              arpeggiator.handleNoteOff(n);
+            } else {
+              multiLayerEngine.noteOff(n);
+            }
           });
           this.activeTouches.delete(t.identifier);
         }
@@ -429,7 +508,11 @@ export class VirtualKeyboardUI {
         if (prevTouch && prevTouch.chordNotes) {
           prevTouch.chordNotes.forEach(n => {
             this.setKeyVisualState(n, false);
-            multiLayerEngine.noteOff(n);
+            if (arpeggiator.enabled) {
+              arpeggiator.handleNoteOff(n);
+            } else {
+              multiLayerEngine.noteOff(n);
+            }
           });
           this.activeTouches.delete(t.identifier);
         }
@@ -565,6 +648,21 @@ export class VirtualKeyboardUI {
     const qwertyToggle = document.getElementById("show-qwerty-labels");
     const chordBtn = document.getElementById("hud-chord-btn");
     const layoutBtn = document.getElementById("hud-layout-btn");
+    const xyBtn = document.getElementById("hud-xy-btn");
+    const scaleRoot = document.getElementById("hud-scale-root");
+    const scaleType = document.getElementById("hud-scale-type");
+
+    xyBtn?.addEventListener("click", () => {
+      this.toggleXyPad();
+    });
+
+    scaleRoot?.addEventListener("change", e => {
+      scaleLock.setRootNote(parseInt(e.target.value));
+    });
+
+    scaleType?.addEventListener("change", e => {
+      scaleLock.setScale(e.target.value);
+    });
 
     octDown?.addEventListener("click", () => {
       qwertyKeyboard.shiftOctave(-1);
@@ -593,6 +691,7 @@ export class VirtualKeyboardUI {
     });
 
     panicBtn?.addEventListener("click", () => {
+      arpeggiator.stop();
       multiLayerEngine.panic();
       synthEngine.panic();
       this.keyStates.fill(0);
@@ -874,5 +973,49 @@ export class VirtualKeyboardUI {
         setVelocityCurve(btn.getAttribute("data-curve"));
       });
     });
+  }
+
+  toggleXyPad(forceState = null) {
+    const mount = document.getElementById("xy-pad-mount");
+    const xyBtn = document.getElementById("hud-xy-btn");
+    if (!mount) return;
+
+    this.isXyVisible = forceState !== null ? forceState : !this.isXyVisible;
+    mount.style.display = this.isXyVisible ? "flex" : "none";
+    xyBtn?.classList.toggle("active", this.isXyVisible);
+
+    if (this.isXyVisible && !this.xyPad) {
+      this.xyPad = new XyPadUI("xy-pad-mount");
+    }
+  }
+
+  updateScaleHighlights() {
+    const isLocked = scaleLock.isLocked;
+    const rootSelect = document.getElementById("hud-scale-root");
+    const typeSelect = document.getElementById("hud-scale-type");
+    if (rootSelect && document.activeElement !== rootSelect) {
+      rootSelect.value = scaleLock.rootNote;
+    }
+    if (typeSelect && document.activeElement !== typeSelect) {
+      typeSelect.value = scaleLock.scaleId;
+    }
+
+    for (let m = this.startMidi; m <= this.endMidi; m++) {
+      const el = this.keyElements?.get(m);
+      if (!el) continue;
+
+      if (!isLocked) {
+        el.classList.remove("scale-note", "out-of-scale");
+      } else {
+        const inScale = scaleLock.isNoteInScale(m);
+        if (inScale) {
+          el.classList.add("scale-note");
+          el.classList.remove("out-of-scale");
+        } else {
+          el.classList.remove("scale-note");
+          el.classList.add("out-of-scale");
+        }
+      }
+    }
   }
 }

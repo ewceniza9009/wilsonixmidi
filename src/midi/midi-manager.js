@@ -11,6 +11,8 @@ import { shapeVelocity } from "./velocity-curve.js";
 import { audioCore } from "../audio/audio-core.js";
 import { midiLearnManager } from "./midi-learn.js";
 import { registrationManager } from "../components/registration-manager.js";
+import { scaleLock } from "./scale-lock.js";
+import { arpeggiator } from "../audio/arpeggiator.js";
 
 export class MidiManager {
   constructor() {
@@ -85,15 +87,36 @@ export class MidiManager {
       case 0x9: // Note On
         if (velocity > 0) {
           const shaped = shapeVelocity(velocity);
-          multiLayerEngine.noteOn(note, shaped);
+          const snapped = scaleLock.isLocked ? scaleLock.snapToScale(note) : note;
+          if (snapped !== null) {
+            if (arpeggiator.enabled) {
+              arpeggiator.handleNoteOn(snapped, shaped);
+            } else {
+              multiLayerEngine.noteOn(snapped, shaped);
+            }
+          }
         } else {
           // Note On with velocity 0 is standard MIDI Note Off
-          multiLayerEngine.noteOff(note);
+          const snapped = scaleLock.isLocked ? scaleLock.snapToScale(note) : note;
+          if (snapped !== null) {
+            if (arpeggiator.enabled) {
+              arpeggiator.handleNoteOff(snapped);
+            } else {
+              multiLayerEngine.noteOff(snapped);
+            }
+          }
         }
         break;
 
       case 0x8: // Note Off
-        multiLayerEngine.noteOff(note);
+        const snappedOff = scaleLock.isLocked ? scaleLock.snapToScale(note) : note;
+        if (snappedOff !== null) {
+          if (arpeggiator.enabled) {
+            arpeggiator.handleNoteOff(snappedOff);
+          } else {
+            multiLayerEngine.noteOff(snappedOff);
+          }
+        }
         break;
 
       case 0xb: // Control Change (CC)

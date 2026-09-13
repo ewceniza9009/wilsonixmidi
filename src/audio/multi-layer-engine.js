@@ -761,6 +761,56 @@ export class MultiLayerEngine {
     this.onLayerChangeCallback = null;
     this.layerChangeListeners = new Set();
     this._vaEngines = new Map(); // VA oscillator engine per combi layer program
+
+    // Ambient Pad Sidechain Ducking: smoothly dips Layer 1 (pad/strings) when Layer 0 (piano/lead) plays
+    this.isPadDuckingEnabled = false;
+    try {
+      if (typeof localStorage !== "undefined") {
+        this.isPadDuckingEnabled = localStorage.getItem("wilsonix_pad_ducking") === "1";
+      }
+    } catch (e) {}
+    this.activeLeadNotes = 0;
+    this.padDuckingListeners = new Set();
+  }
+
+  togglePadDucking(enabled) {
+    this.isPadDuckingEnabled = enabled !== undefined ? !!enabled : !this.isPadDuckingEnabled;
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem("wilsonix_pad_ducking", this.isPadDuckingEnabled ? "1" : "0");
+      }
+    } catch (e) {}
+
+    // If disabled while notes are sustained, restore layer 1 gain immediately
+    if (!this.isPadDuckingEnabled && this.pcmEngine && this.pcmEngine.layerInserts && this.pcmEngine.layerInserts[1]) {
+      const ctx = audioCore.ctx;
+      if (ctx) {
+        this.pcmEngine.layerInserts[1].input.gain.setTargetAtTime(1.0, ctx.currentTime, 0.05);
+      }
+    }
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("wilsonix-pad-ducking-changed", { detail: { enabled: this.isPadDuckingEnabled } }));
+    }
+    for (const cb of this.padDuckingListeners) {
+      try { cb(this.isPadDuckingEnabled); } catch (e) {}
+    }
+  }
+
+  addPadDuckingListener(cb) {
+    if (typeof cb === "function") this.padDuckingListeners.add(cb);
+  }
+
+  removePadDuckingListener(cb) {
+    this.padDuckingListeners.delete(cb);
+  }
+
+  setMasterFilter(cutoffHz, resonance = 1.0) {
+    audioCore.setMasterFilter(cutoffHz, resonance);
+  }
+
+  setSpaceSend(amount) {
+    audioCore.setSpaceSend(amount);
   }
 
   getVaEngineFor(prog, gain = 1, slotIdx = 0) {
@@ -1327,6 +1377,17 @@ export class MultiLayerEngine {
 
     // ALL MODES use PCM samples — never raw oscillator voices
     if (this.isCombiMode) {
+      // Pad sidechain ducking: when Layer 0 strikes, duck Layer 1 down by -6dB so lead melody is clean
+      if (this.isPadDuckingEnabled && this.layers[0]?.enabled) {
+        this.activeLeadNotes++;
+        if (this.activeLeadNotes === 1 && this.pcmEngine && this.pcmEngine.layerInserts && this.pcmEngine.layerInserts[1]) {
+          const ctx = audioCore.ctx;
+          if (ctx) {
+            this.pcmEngine.layerInserts[1].input.gain.setTargetAtTime(0.35, ctx.currentTime, 0.025);
+          }
+        }
+      }
+
       // COMBI MODE: Synchronous sample-0 trigger on all enabled PCM layers
       for (let i = 0; i < this.layers.length; i++) {
         const layer = this.layers[i];
@@ -1350,6 +1411,17 @@ export class MultiLayerEngine {
 
   noteOff(midiNote) {
     audioCore.ensureRunning();
+
+    // Pad sidechain ducking release: restore Layer 1 volume when all lead keys are released
+    if (this.isPadDuckingEnabled && this.isCombiMode && this.layers[0]?.enabled) {
+      this.activeLeadNotes = Math.max(0, this.activeLeadNotes - 1);
+      if (this.activeLeadNotes === 0 && this.pcmEngine && this.pcmEngine.layerInserts && this.pcmEngine.layerInserts[1]) {
+        const ctx = audioCore.ctx;
+        if (ctx) {
+          this.pcmEngine.layerInserts[1].input.gain.setTargetAtTime(1.0, ctx.currentTime, 0.28);
+        }
+      }
+    }
 
     // Split zone release mirrors the noteOn routing (zone bus + VA/PCM)
     if (this.isSplitMode) {

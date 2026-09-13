@@ -9,6 +9,8 @@
 
 import { synthEngine } from "../audio/synth-engine.js";
 import { multiLayerEngine } from "../audio/multi-layer-engine.js";
+import { scaleLock } from "./scale-lock.js";
+import { arpeggiator } from "../audio/arpeggiator.js";
 
 // Layout 1: Continuous Two-Tier Melody Layout (Natural scale along letter rows - easy song playback!)
 const MELODY_KEYMAP = {
@@ -239,6 +241,7 @@ export class QwertyKeyboard {
     // Panic Kill Switch: Escape
     if (e.code === "Escape") {
       e.preventDefault();
+      arpeggiator.stop();
       synthEngine.panic();
       multiLayerEngine.panic();
       this.activeChordMap.clear();
@@ -249,16 +252,22 @@ export class QwertyKeyboard {
       let hitVel = this.velocity;
       if (e.shiftKey) hitVel = 122;
 
-      const rootMidi = (this.baseOctave + 1 + mapping.octOffset) * 12 + mapping.noteOffset;
+      const rawMidi = (this.baseOctave + 1 + mapping.octOffset) * 12 + mapping.noteOffset;
+      const rootMidi = scaleLock.isLocked ? scaleLock.snapToScale(rawMidi) : rawMidi;
+      if (rootMidi === null) return;
       const chordNotes = this.generateSmartVoicing(rootMidi, this.chordMode);
 
       this.activeChordMap.set(e.code, chordNotes);
 
-      // Trigger multi-layer PCM engine
+      // Trigger multi-layer PCM engine or arpeggiator
       chordNotes.forEach((note, idx) => {
         // Balance voicing velocities: root bass is warm, top melody is clear
         const v = idx === 0 ? Math.min(127, hitVel + 5) : hitVel;
-        multiLayerEngine.noteOn(note, v);
+        if (arpeggiator.enabled) {
+          arpeggiator.handleNoteOn(note, v);
+        } else {
+          multiLayerEngine.noteOn(note, v);
+        }
       });
 
       // Visual key feedback
@@ -290,7 +299,11 @@ export class QwertyKeyboard {
       this.activeChordMap.delete(e.code);
 
       chordNotes.forEach(note => {
-        multiLayerEngine.noteOff(note);
+        if (arpeggiator.enabled) {
+          arpeggiator.handleNoteOff(note);
+        } else {
+          multiLayerEngine.noteOff(note);
+        }
       });
 
       if (this.onChordVisualCallback) {
