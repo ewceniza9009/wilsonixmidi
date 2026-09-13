@@ -1151,9 +1151,9 @@ export class NativePcmEngine {
     this.pitchBendSemitones = 0;
     this.modWheelAmount = 0;
 
-    // Global polyphony cap: ample headroom for fast multi-layer chords
+    // Global polyphony cap: ample headroom for fast 4-layer Combi arpeggios
     this.voiceQueue = [];
-    this.MAX_VOICES = 32;
+    this.MAX_VOICES = 64;
     this.heldNotes = new Set();
 
     // Reusable voice spines (filter->gain per destination). AudioBufferSourceNode
@@ -2227,22 +2227,22 @@ export class NativePcmEngine {
             }
           } catch (e) {}
         } else {
-          // 100% Click-free, pop-free acoustic damper release with exponential decay
+          // 100% Click-free acoustic damper release: fast natural decay (60ms for keys/guitars, 220ms for strings/pads)
+          // so fast 4-layer Combi playing cleanly recycles voices without audio queue buildup
           try {
             const isChoir = v.instId === "choir_aahs" || v.instId === "m1_choir" || v.instId === "m1_ooh_ahh" || v.instId?.includes("choir");
             const isString = v.instId === "string_ensemble_1" || v.instId?.includes("string") || v.instId?.includes("pad");
             const isSax = v.instId === "alto_sax" || v.instId?.includes("sax") || v.instId?.includes("reed") || v.instId?.includes("flute");
-            const isSynth = v.instId?.includes("synth") || v.instId?.includes("supersaw") || v.instId?.includes("trance") || v.instId?.includes("m1_") || v.instId?.includes("electric_piano") || v.instId?.includes("rhodes") || v.instId?.includes("drawbar");
-            const tau = isChoir ? 0.30 : (isString ? 0.16 : (isSynth ? 0.08 : (isSax ? 0.035 : 0.025)));
+            const tau = isChoir ? 0.08 : (isString ? 0.06 : (isSax ? 0.03 : 0.015));
             v.voiceGain.gain.cancelScheduledValues(now);
             v.voiceGain.gain.setTargetAtTime(0, now, tau);
-            const stopTime = isChoir ? 1.5 : (isString ? 0.8 : (isSynth ? 0.4 : (isSax ? 0.14 : 0.10)));
+            const stopTime = isChoir ? 0.28 : (isString ? 0.22 : (isSax ? 0.10 : 0.06));
             v.src.stop(now + stopTime);
             if (v.vibLfo) {
-              try { v.vibLfo.stop(now + stopTime + 0.05); } catch (e) {}
+              try { v.vibLfo.stop(now + stopTime + 0.02); } catch (e) {}
             }
             if (v.growlLfo) {
-              try { v.growlLfo.stop(now + stopTime + 0.05); } catch (e) {}
+              try { v.growlLfo.stop(now + stopTime + 0.02); } catch (e) {}
             }
           } catch (e) {}
         }
