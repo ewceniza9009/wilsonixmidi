@@ -1779,45 +1779,7 @@ export class NativePcmEngine {
     return t;
   }
 
-  // Acquire a pooled filter->gain voice spine for a destination. Creates a new
-  // spine only if the pool is exhausted (transient overload). Any automation the
-  // PREVIOUS voice left on the pool is wiped before reuse, so recycled spines
-  // sound bit-identical to freshly-created ones.
-  _acquireSpine(dest) {
-    let pool = this._spinePools.get(dest);
-    if (!pool) {
-      pool = { free: [] };
-      this._spinePools.set(dest, pool);
-    }
-    let spine = pool.free.pop();
-    if (!spine) {
-      const filter = this.ctx.createBiquadFilter();
-      filter.type = "lowpass";
-      const voiceGain = this.ctx.createGain();
-      voiceGain.channelCount = 2;
-      voiceGain.channelCountMode = "explicit";
-      voiceGain.channelInterpretation = "speakers";
-      filter.connect(voiceGain);
-      voiceGain.connect(dest);
-      spine = { filter, voiceGain };
-    }
-    // Strip leftovers from the recycled voice's murder at +32s / release tails.
-    const now = this.ctx.currentTime;
-    try { spine.filter.frequency.cancelScheduledValues(now); } catch (e) {}
-    try { spine.filter.Q.cancelScheduledValues(now); } catch (e) {}
-    try { spine.voiceGain.gain.cancelScheduledValues(now); } catch (e) {}
-    return spine;
-  }
 
-  _releaseSpine(dest, spine) {
-    if (!spine || !this._spinePools) return;
-    let pool = this._spinePools.get(dest);
-    if (!pool) {
-      pool = { free: [] };
-      this._spinePools.set(dest, pool);
-    }
-    pool.free.push(spine);
-  }
 
   _acquireHammer(dest) {
     let pool = this._hammerPools.get(dest);
@@ -1933,8 +1895,6 @@ export class NativePcmEngine {
     const bentPlaybackRate = basePlaybackRate * Math.pow(2, this.pitchBendSemitones / 12);
 
     // 0. Rapid re-trigger voice stealing for the SAME layer or instrument on this note:
-    // If there is already an active voice on this exact note for this layer/instrument, fade it out smoothly
-    // to completely prevent voice stacking, phase-comb cancellation, static, and clipping!
     if (this.activeVoices.has(midiNote)) {
       const oldList = this.activeVoices.get(midiNote);
       if (oldList && oldList.length > 0) {
@@ -1948,13 +1908,9 @@ export class NativePcmEngine {
               oldV.voiceGain.gain.cancelScheduledValues(now);
               oldV.voiceGain.gain.setValueAtTime(oldV.voiceGain.gain.value || 0.001, now);
               oldV.voiceGain.gain.linearRampToValueAtTime(0.0001, now + 0.004);
-              if (oldV.src) oldV.src.stop(now + 0.006);
-              const qi = this.voiceQueue.indexOf(oldV);
-              if (qi !== -1) this.voiceQueue.splice(qi, 1);
-              setTimeout(() => { this.removeVoice(midiNote, oldV); }, 8);
-            } catch (e) {
-              this.removeVoice(midiNote, oldV);
-            }
+              if (oldV.src) oldV.src.stop(now + 0.005);
+            } catch (e) {}
+            this.removeVoice(midiNote, oldV);
           } else {
             remaining.push(oldV);
           }
@@ -1981,13 +1937,9 @@ export class NativePcmEngine {
               oldV.voiceGain.gain.cancelScheduledValues(now);
               oldV.voiceGain.gain.setValueAtTime(oldV.voiceGain.gain.value || 0.001, now);
               oldV.voiceGain.gain.linearRampToValueAtTime(0.0001, now + 0.004);
-              if (oldV.src) oldV.src.stop(now + 0.006);
-              const qi = this.voiceQueue.indexOf(oldV);
-              if (qi !== -1) this.voiceQueue.splice(qi, 1);
-              setTimeout(() => { this.removeVoice(midiNote, oldV); }, 8);
-            } catch (e) {
-              this.removeVoice(midiNote, oldV);
-            }
+              if (oldV.src) oldV.src.stop(now + 0.005);
+            } catch (e) {}
+            this.removeVoice(midiNote, oldV);
           } else {
             keep.push(oldV);
           }
@@ -2019,8 +1971,15 @@ export class NativePcmEngine {
 
     // 2. Dynamic Time-Variant Filter (TVF): Pure transparent lowpass with warm acoustic presence
     const [isSax, isChoir, isHashy] = this._instTimbre(instId);
-    const spine = this._acquireSpine(dest);
-    const { filter, voiceGain } = spine;
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    const voiceGain = ctx.createGain();
+    voiceGain.channelCount = 2;
+    voiceGain.channelCountMode = "explicit";
+    voiceGain.channelInterpretation = "speakers";
+    filter.connect(voiceGain);
+    voiceGain.connect(dest);
+
     const minCutoff = isSax ? 7500 : (isChoir ? 1200 : (isHashy ? 7000 : 10000));
     const maxCutoff = isSax ? 16000 : (isChoir ? 8000 : (isHashy ? 14000 : 20000));
     const dynamicCutoff = minCutoff + velNorm * (maxCutoff - minCutoff);
@@ -2029,7 +1988,6 @@ export class NativePcmEngine {
     const noteFreq = 440 * Math.pow(2, (midiNote - 69) / 12);
     const keyTrackedCutoff = Math.max(dynamicCutoff, Math.min(20000, noteFreq * 3.5));
 
-    filter.type = "lowpass";
     filter.frequency.setValueAtTime(keyTrackedCutoff, now);
     filter.Q.setValueAtTime(0.3, now);
 
@@ -2060,7 +2018,6 @@ export class NativePcmEngine {
       src,
       filter,
       voiceGain,
-      spine,
       dest,
       instId,
       midiNote,
@@ -2070,6 +2027,7 @@ export class NativePcmEngine {
       baseCutoff: keyTrackedCutoff,
       velNorm,
       startTime: now,
+      _isRemoved: false,
     };
 
     // Global polyphony cap: steal oldest released voice when queue is full
@@ -2088,32 +2046,14 @@ export class NativePcmEngine {
       }
       if (!oldest) break;
       const target = oldest;
-      const qi = this.voiceQueue.indexOf(target);
-      if (qi !== -1) this.voiceQueue.splice(qi, 1);
-      const list = this.activeVoices.get(target.midiNote);
-      if (list) {
-        const idx = list.indexOf(target);
-        if (idx !== -1) list.splice(idx, 1);
-        if (list.length === 0) this.activeVoices.delete(target.midiNote);
-      }
-      const susList = this.sustainedVoices.get(target.midiNote);
-      if (susList) {
-        const idx = susList.indexOf(target);
-        if (idx !== -1) susList.splice(idx, 1);
-        if (susList.length === 0) this.sustainedVoices.delete(target.midiNote);
-      }
       try {
         if (target.src) target.src.onended = null;
         target.voiceGain.gain.cancelScheduledValues(now);
         target.voiceGain.gain.setValueAtTime(target.voiceGain.gain.value || 0.001, now);
         target.voiceGain.gain.linearRampToValueAtTime(0.0001, now + 0.004);
-        if (target.src) target.src.stop(now + 0.006);
-        setTimeout(() => {
-          this.removeVoice(target.midiNote, target);
-        }, 8);
-      } catch (e) {
-        this.removeVoice(target.midiNote, target);
-      }
+        if (target.src) target.src.stop(now + 0.005);
+      } catch (e) {}
+      this.removeVoice(target.midiNote, target);
     }
 
     if (!this.activeVoices.has(midiNote)) {
@@ -2131,8 +2071,10 @@ export class NativePcmEngine {
   }
 
   removeVoice(midiNote, voiceRecord) {
-    if (voiceRecord && voiceRecord.spine) {
-      this._releaseSpine(voiceRecord.dest, voiceRecord.spine);
+    if (!voiceRecord || voiceRecord._isRemoved) return;
+    voiceRecord._isRemoved = true;
+    if (voiceRecord.src) {
+      try { voiceRecord.src.onended = null; } catch (e) {}
     }
     const qi = this.voiceQueue.indexOf(voiceRecord);
     if (qi !== -1) this.voiceQueue.splice(qi, 1);
