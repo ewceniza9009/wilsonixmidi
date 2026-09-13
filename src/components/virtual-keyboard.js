@@ -499,7 +499,10 @@ export class VirtualKeyboardUI {
     window.addEventListener("touchmove", handleTouchMove, { passive: false });
 
     const handleTouchRelease = e => {
-      if (e.cancelable) e.preventDefault();
+      const isPianoTouch = e.target && (e.target.closest("#piano-keys-track") || e.target.closest(".piano-key"));
+      if (isPianoTouch && e.cancelable) {
+        e.preventDefault();
+      }
 
       for (let i = 0; i < e.changedTouches.length; i++) {
         const t = e.changedTouches[i];

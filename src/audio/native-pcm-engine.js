@@ -227,15 +227,15 @@ const INST_TRIM_GAINS = {
   m1_universe: 1.0,
   m1_choir: 1.15,
   choir_aahs: 1.15,
-  acoustic_guitar_nylon: 1.0,
-  electric_guitar_clean: 1.0,
+  acoustic_guitar_nylon: 1.25,
+  electric_guitar_clean: 1.30,
   alto_sax: 1.05,
   brass_section: 1.0,
   drawbar_organ: 1.0,
   synth_bass_1: 1.05,
   m1_slap_bass: 1.05,
-  distortion_guitar: 1.0,
-  overdriven_guitar: 1.0,
+  distortion_guitar: 1.35,
+  overdriven_guitar: 1.35,
   trumpet: 1.05,
   trombone: 1.05,
   tenor_sax: 1.05,
@@ -249,7 +249,7 @@ const INST_TRIM_GAINS = {
   acoustic_bass: 1.05,
   soprano_sax: 1.05,
   muted_trumpet: 1.0,
-  acoustic_guitar_steel: 1.0,
+  acoustic_guitar_steel: 1.25,
   slap_bass_1: 1.05,
   rock_organ: 1.0,
   harpsichord: 1.0,
@@ -1153,7 +1153,7 @@ export class NativePcmEngine {
 
     // Global polyphony cap: ample headroom for fast multi-layer chords
     this.voiceQueue = [];
-    this.MAX_VOICES = 64;
+    this.MAX_VOICES = 32;
     this.heldNotes = new Set();
 
     // Reusable voice spines (filter->gain per destination). AudioBufferSourceNode
@@ -1437,6 +1437,13 @@ export class NativePcmEngine {
     // All other soundfonts load on-demand when selected, avoiding main-thread freezes
     const idlePreload = () => {
       this.loadSoundfont("electric_piano_2");
+      this.loadSoundfont("distortion_guitar");
+      this.loadSoundfont("overdriven_guitar");
+      this.loadSoundfont("electric_guitar_clean");
+      this.loadSoundfont("acoustic_guitar_nylon");
+      this.loadSoundfont("acoustic_guitar_steel");
+      this.loadSoundfont("drawbar_organ");
+      this.loadSoundfont("synth_bass_1");
       this.loadSoundfont("soprano_sax");
       this.loadSoundfont("breath_noise");
       this.loadSoundfont("string_ensemble_1");
@@ -1937,13 +1944,17 @@ export class NativePcmEngine {
           const isSameInst = (oldV.instId === instId);
           if (isSameLayer || (layerIndex === null && isSameInst)) {
             try {
+              if (oldV.src) oldV.src.onended = null;
               oldV.voiceGain.gain.cancelScheduledValues(now);
               oldV.voiceGain.gain.setValueAtTime(oldV.voiceGain.gain.value || 0.001, now);
-              oldV.voiceGain.gain.linearRampToValueAtTime(0.0001, now + 0.006);
-              oldV.src.stop(now + 0.015);
+              oldV.voiceGain.gain.linearRampToValueAtTime(0.0001, now + 0.004);
+              if (oldV.src) oldV.src.stop(now + 0.006);
               const qi = this.voiceQueue.indexOf(oldV);
               if (qi !== -1) this.voiceQueue.splice(qi, 1);
-            } catch (e) {}
+              setTimeout(() => { this.removeVoice(midiNote, oldV); }, 8);
+            } catch (e) {
+              this.removeVoice(midiNote, oldV);
+            }
           } else {
             remaining.push(oldV);
           }
@@ -1956,8 +1967,7 @@ export class NativePcmEngine {
       }
     }
 
-    // 0b. Same-note re-trigger must also steal still-ringing SUSTAINED copies,
-    // otherwise sustain + re-press stacks identical pitches -> beating/static dirt
+    // 0b. Same-note re-trigger must also steal still-ringing SUSTAINED copies
     if (this.sustainedVoices.has(midiNote)) {
       const susList = this.sustainedVoices.get(midiNote);
       if (susList && susList.length > 0) {
@@ -1967,13 +1977,17 @@ export class NativePcmEngine {
           const isSameInst = (oldV.instId === instId);
           if (isSameLayer || (layerIndex === null && isSameInst)) {
             try {
+              if (oldV.src) oldV.src.onended = null;
               oldV.voiceGain.gain.cancelScheduledValues(now);
               oldV.voiceGain.gain.setValueAtTime(oldV.voiceGain.gain.value || 0.001, now);
-              oldV.voiceGain.gain.linearRampToValueAtTime(0.0001, now + 0.006);
-              oldV.src.stop(now + 0.015);
+              oldV.voiceGain.gain.linearRampToValueAtTime(0.0001, now + 0.004);
+              if (oldV.src) oldV.src.stop(now + 0.006);
               const qi = this.voiceQueue.indexOf(oldV);
               if (qi !== -1) this.voiceQueue.splice(qi, 1);
-            } catch (e) {}
+              setTimeout(() => { this.removeVoice(midiNote, oldV); }, 8);
+            } catch (e) {
+              this.removeVoice(midiNote, oldV);
+            }
           } else {
             keep.push(oldV);
           }
@@ -2007,81 +2021,99 @@ export class NativePcmEngine {
     const [isSax, isChoir, isHashy] = this._instTimbre(instId);
     const spine = this._acquireSpine(dest);
     const { filter, voiceGain } = spine;
-    const minCutoff = isSax ? 7500 : (isChoir ? 800 : (isHashy ? 7000 : 10000));
-    const maxCutoff = isSax ? 16000 : (isChoir ? 5000 : (isHashy ? 12000 : 20000));
+    const minCutoff = isSax ? 7500 : (isChoir ? 1200 : (isHashy ? 7000 : 10000));
+    const maxCutoff = isSax ? 16000 : (isChoir ? 8000 : (isHashy ? 14000 : 20000));
     const dynamicCutoff = minCutoff + velNorm * (maxCutoff - minCutoff);
 
+    // Filter Key Tracking: cutoff scales with note frequency so higher keys ring full and bright
+    const noteFreq = 440 * Math.pow(2, (midiNote - 69) / 12);
+    const keyTrackedCutoff = Math.max(dynamicCutoff, Math.min(20000, noteFreq * 3.5));
+
     filter.type = "lowpass";
-    filter.frequency.setValueAtTime(dynamicCutoff, now);
+    filter.frequency.setValueAtTime(keyTrackedCutoff, now);
     filter.Q.setValueAtTime(0.3, now);
 
     // 3. Time-Variant Amplifier (TVA): Maximum loudness, punchy studio presence.
     const trim = INST_TRIM_GAINS[instId] || 1.0;
-    const combiScale = (layerIndex !== null && layerIndex !== undefined) ? 0.42 : 1.0;
-    const densityScale = 1 / Math.sqrt(1 + this.voiceQueue.length / 20);
-    const peakGain = (0.24 + velNorm * 0.76) * customGain * trim * combiScale * densityScale;
+    const peakGain = (0.24 + velNorm * 0.76) * customGain * trim;
 
     voiceGain.gain.setValueAtTime(0.0, now);
     if (isChoir) {
-      voiceGain.gain.setTargetAtTime(peakGain, now, 0.05);
+      voiceGain.gain.setTargetAtTime(peakGain, now, 0.04);
     } else {
       voiceGain.gain.linearRampToValueAtTime(peakGain, now + 0.0035);
     }
 
     voiceGain.gain.setTargetAtTime(0.0001, now + 32.0, 3.5);
+    const maxLife = (anchorData.buffer && anchorData.buffer._isLoopable)
+      ? 60.0
+      : Math.min(8.0, (anchorData.buffer?.duration || 4.0) + 0.1);
     try {
-      src.stop(now + 40);
+      src.stop(now + maxLife);
     } catch (e) {}
 
     src.connect(filter);
-    src.onended = () => { this._releaseSpine(dest, spine); };
     src.start(0);
-
-    // Pure studio acoustic sample playback (zero synthetic noise burst overlays)
 
     // Voice record
     const voiceRecord = {
       src,
       filter,
       voiceGain,
+      spine,
       dest,
       instId,
       midiNote,
       layerIndex,
       basePlaybackRate,
       baseGain: peakGain,
-      baseCutoff: dynamicCutoff,
+      baseCutoff: keyTrackedCutoff,
       velNorm,
       startTime: now,
     };
 
-    // Global polyphony cap: when the pool is full, steal the oldest voice that is
-    // NOT currently held. Notes you're still holding are NEVER chopped mid-sustain;
-    // only ringing tails / released notes get stolen.
+    // Global polyphony cap: steal oldest released voice when queue is full
     while (this.voiceQueue.length >= this.MAX_VOICES) {
       const stealable = this.voiceQueue.filter(v => v && !this.heldNotes.has(v.midiNote));
       let oldest = stealable[0];
       for (let i = 1; i < stealable.length; i++) {
-        if (stealable[i].voiceGain.gain.value === undefined) continue;
         if (!oldest) { oldest = stealable[i]; continue; }
         if ((stealable[i].startTime || 0) < (oldest.startTime || 0)) oldest = stealable[i];
       }
-      // Only steal a note the player is holding when literally every voice is held.
       if (!oldest) {
         oldest = this.voiceQueue[0];
         for (let i = 1; i < this.voiceQueue.length; i++) {
           if (this.voiceQueue[i].startTime < oldest.startTime) oldest = this.voiceQueue[i];
         }
       }
-      const qi = this.voiceQueue.indexOf(oldest);
+      if (!oldest) break;
+      const target = oldest;
+      const qi = this.voiceQueue.indexOf(target);
       if (qi !== -1) this.voiceQueue.splice(qi, 1);
+      const list = this.activeVoices.get(target.midiNote);
+      if (list) {
+        const idx = list.indexOf(target);
+        if (idx !== -1) list.splice(idx, 1);
+        if (list.length === 0) this.activeVoices.delete(target.midiNote);
+      }
+      const susList = this.sustainedVoices.get(target.midiNote);
+      if (susList) {
+        const idx = susList.indexOf(target);
+        if (idx !== -1) susList.splice(idx, 1);
+        if (susList.length === 0) this.sustainedVoices.delete(target.midiNote);
+      }
       try {
-        oldest.voiceGain.gain.cancelScheduledValues(now);
-        oldest.voiceGain.gain.setValueAtTime(oldest.voiceGain.gain.value || 0.001, now);
-        oldest.voiceGain.gain.linearRampToValueAtTime(0.0001, now + 0.015);
-        oldest.src.stop(now + 0.03);
-      } catch (e) {}
-      this.removeVoice(oldest.midiNote, oldest);
+        if (target.src) target.src.onended = null;
+        target.voiceGain.gain.cancelScheduledValues(now);
+        target.voiceGain.gain.setValueAtTime(target.voiceGain.gain.value || 0.001, now);
+        target.voiceGain.gain.linearRampToValueAtTime(0.0001, now + 0.004);
+        if (target.src) target.src.stop(now + 0.006);
+        setTimeout(() => {
+          this.removeVoice(target.midiNote, target);
+        }, 8);
+      } catch (e) {
+        this.removeVoice(target.midiNote, target);
+      }
     }
 
     if (!this.activeVoices.has(midiNote)) {
@@ -2099,6 +2131,9 @@ export class NativePcmEngine {
   }
 
   removeVoice(midiNote, voiceRecord) {
+    if (voiceRecord && voiceRecord.spine) {
+      this._releaseSpine(voiceRecord.dest, voiceRecord.spine);
+    }
     const qi = this.voiceQueue.indexOf(voiceRecord);
     if (qi !== -1) this.voiceQueue.splice(qi, 1);
     const list = this.activeVoices.get(midiNote);

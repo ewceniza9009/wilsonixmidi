@@ -579,96 +579,64 @@ export class TritonWorkstationUI {
     const isGuitar = cat.includes("guitar") || name.includes("guitar");
     const isBass = cat.includes("bass") || name.includes("bass");
 
-    // VA TIMBRE: any Triton program whose sound is defined by its own oscillators
-    // (and is NOT a dedicated genuine PCM sample) renders through the Triton VA
-    // engine so every program has its OWN unique voice instead of collapsing onto
-    // a shared sample. Pianos/keyboards/guitars/woodwinds/brass keep real samples.
-    const hasOsc = !!prog.osc1 || !!prog.osc2;
-    const isSynthTimbre =
-      !prog.instId &&
-      hasOsc &&
-      (cat.includes("lead") ||
-        cat.includes("fast synth") ||
-        cat.includes("synthesizer") ||
-        cat.includes("motion") ||
-        cat.includes("synth pad") ||
-        cat.includes("hit") ||
-        cat.includes("stab") ||
-        cat.includes("bells & pad") ||
-        cat.includes("bells") ||
-        cat.includes("electric piano") ||
-        cat.includes("organ") ||
-        cat.includes("strings") ||
-        cat.includes("bass & sub") ||
-        name.includes("trance") ||
-        name.includes("lead") ||
-        name.includes("saw") ||
-        name.includes("scream") ||
-        name.includes("sweeper") ||
-        name.includes("vox") ||
-        name.includes("throats") ||
-        name.includes("techno") ||
-        name.includes("hypersaw") ||
-        name.includes("synth") ||
-        name.includes("tine") ||
-        name.includes("rhodes") ||
-        name.includes("r&b") ||
-        name.includes("fm piano"));
-
-    if (isSynthTimbre) {
-      // EVERY synth-timbre program plays its own genuine oscillator voice.
-      multiLayerEngine.setTritonVaProgram(prog);
-      this.applyIfxMfx(prog);
-      return;
-    }
-
     let instKey = "acoustic_grand_piano";
     const ifx = (prog.ifx || "").toLowerCase();
     const mfx = (prog.mfx || "").toLowerCase();
 
     if (prog.instId) {
       instKey = prog.instId;
-    } else if (prog.id === "A006") {
-      // SG Hybrid Piano = HYBRID grand: acoustic attack + electric bell shimmer.
-      // Routes to the Rhodes-style EP sample so it sounds clearly DIFFERENT from
-      // the other pianos instead of collapsing onto the same acoustic grand.
-      instKey = "electric_piano_1";
-    } else if (prog.id === "A036") {
-      // Velo Piano ST = real velocity-layered acoustic grand piano
-      instKey = "acoustic_grand_piano";
-    } else if (name.includes("distortion") || name.includes("*dist") || prog.id === "A042") {
+    } else if (name.includes("distortion") || name.includes("*dist") || prog.id === "A042" || prog.id === "M014") {
       instKey = "distortion_guitar";
     } else if (name.includes("feedback") || name.includes("overdrive") || prog.id === "A037") {
       instKey = "overdriven_guitar";
     } else if (name.includes("nylon") || (isGuitar && cat.includes("acoustic")) || prog.id === "B007") {
       instKey = "acoustic_guitar_nylon";
-    } else if (isGuitar) {
+    } else if (name.includes("12-string") || name.includes("guitar") || isGuitar) {
       instKey = "electric_guitar_clean";
-    } else if (isBass || cat.includes("bass")) {
-      instKey = "synth_bass_1";
+    } else if (prog.id === "A006") {
+      instKey = "electric_piano_1";
+    } else if (prog.id === "A036" || prog.id === "M001") {
+      instKey = "acoustic_grand_piano";
+    } else if (name.includes("fm piano") || name.includes("dx7") || prog.id === "A043") {
+      instKey = "abletunes_fm_piano";
+    } else if (cat.includes("electric piano") || cat.includes("ep") || name.includes("ep") || name.includes("tine") || name.includes("r&b") || name.includes("wurly") || name.includes("rhodes")) {
+      instKey = "electric_piano_2";
     } else if (cat.includes("organ") || name.includes("organ") || ifx.includes("rotary")) {
       instKey = "drawbar_organ";
-    } else if (cat.includes("electric piano") || cat.includes("ep") || name.includes("ep") || name.includes("tine") || name.includes("r&b") || name.includes("fm piano")) {
-      instKey = "electric_piano_1";
-    } else if (name.includes("kalimba") || cat.includes("kalimba") || name.includes("mbira")) {
-      instKey = "kalimba";
+    } else if (isBass || cat.includes("bass")) {
+      instKey = "synth_bass_1";
+    } else if (cat.includes("choir") || cat.includes("vocal") || name.includes("choir") || name.includes("voice") || name.includes("vox") || name.includes("ooh") || name.includes("ahh")) {
+      instKey = "choir_aahs";
+    } else if (cat.includes("strings") || cat.includes("pad") || cat.includes("orchestra") || name.includes("universe")) {
+      instKey = "string_ensemble_1";
+    } else if (name.includes("trumpet") || prog.id === "M012") {
+      instKey = "trumpet";
+    } else if (name.includes("trombone") || prog.id === "A030") {
+      instKey = "trombone";
+    } else if (cat.includes("brass") || name.includes("brass")) {
+      instKey = "brass_section";
     } else if (name.includes("flute") || cat.includes("flute")) {
       instKey = "flute";
     } else if (name.includes("clarinet") || cat.includes("clarinet")) {
       instKey = "clarinet";
     } else if (cat.includes("woodwind") || name.includes("sax") || name.includes("harmonica")) {
       instKey = "alto_sax";
-    } else if (cat.includes("brass") || name.includes("brass") || name.includes("trombone")) {
+    } else if (name.includes("kalimba") || cat.includes("kalimba")) {
+      instKey = "kalimba";
+    } else if (name.includes("vibes") || name.includes("bell") || cat.includes("mallet") || cat.includes("bell")) {
+      instKey = "vibraphone";
+    } else if (prog.id === "A045" || name.includes("talkbox") || ifx === "talkbox") {
       instKey = "brass_section";
-    } else if (cat.includes("lead") || cat.includes("fast synth") || cat.includes("synthesizer") || cat.includes("hit") || name.includes("lead") || name.includes("trance") || name.includes("saw")) {
+    } else if (cat.includes("lead") || cat.includes("fast synth") || cat.includes("motion") || cat.includes("hit") || cat.includes("stab") || cat.includes("synthesizer")) {
+      // For pure electronic synth leads, check if user specifically wants the VA oscillator voice
+      const isPureVaLead = !prog.instId && (prog.osc1 === "sawtooth" || prog.osc1 === "square") && (name.includes("trance") || name.includes("sync") || name.includes("scream") || name.includes("hypersaw"));
+      if (isPureVaLead) {
+        multiLayerEngine.setTritonVaProgram(prog);
+        this.applyIfxMfx(prog);
+        return;
+      }
       instKey = "brass_section";
-    } else if (cat.includes("choir") || cat.includes("vocal") || name.includes("choir") || name.includes("voice") || name.includes("vox") || name.includes("ooh") || name.includes("ahh")) {
-      instKey = "choir_aahs";
-    } else if (cat.includes("strings") || cat.includes("pad")) {
-      instKey = "string_ensemble_1";
-    } else if (cat.includes("percussion") || cat.includes("drum")) {
-      instKey = "tr808_kit";
-    } else if (cat.includes("piano") || cat.includes("keyboard")) {
+    } else {
       instKey = "acoustic_grand_piano";
     }
 

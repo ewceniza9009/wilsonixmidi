@@ -172,23 +172,17 @@ export class TalkboxFormantFilter {
     const now = this.ctx.currentTime;
     const velNorm = Math.max(0.2, Math.min(1.0, velocity / 127));
 
-    const peakF1 = 600 + velNorm * 180;
-    const peakF2 = 1450 + velNorm * 300;
-    const restF1 = 540;
-    const restF2 = 1450;
+    const peakF1 = 580 + velNorm * 160;
+    const peakF2 = 1400 + velNorm * 250;
 
     try {
       const { f1Filter, f2Filter } = this._wetNodes;
       f1Filter.frequency.cancelScheduledValues(now);
       f2Filter.frequency.cancelScheduledValues(now);
 
-      // Fast vowel bloom into peak (25 ms)
-      f1Filter.frequency.setTargetAtTime(peakF1, now, 0.025);
-      f2Filter.frequency.setTargetAtTime(peakF2, now, 0.025);
-
-      // Settle smoothly into warm singing vowel body
-      f1Filter.frequency.setTargetAtTime(restF1, now + 0.05, 0.18);
-      f2Filter.frequency.setTargetAtTime(restF2, now + 0.05, 0.20);
+      // Clean, single monotonic exponential target approach — zero schedule collisions during fast 16th/32nd note runs
+      f1Filter.frequency.setTargetAtTime(peakF1, now, 0.035);
+      f2Filter.frequency.setTargetAtTime(peakF2, now, 0.035);
     } catch (e) {}
   }
 
