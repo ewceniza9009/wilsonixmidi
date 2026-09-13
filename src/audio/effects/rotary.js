@@ -100,8 +100,51 @@ export class RotarySpeaker {
     this.wetGain.gain.value = 0.0; // Bypassed by default
     this.wetGain.connect(this.output);
 
+    this.hornLfo = null;
+    this.drumLfo = null;
+    this._lfoRunning = false;
+  }
+
+  _startLfo() {
+    if (this._lfoRunning) return;
+    this._lfoRunning = true;
+    const ctx = this.ctx;
+
+    this.hornLfo = ctx.createOscillator();
+    this.hornLfo.type = "sine";
+    this.drumLfo = ctx.createOscillator();
+    this.drumLfo.type = "sine";
+
+    const hornRate = this.speedMode === "fast" ? 6.8 : (this.speedMode === "brake" ? 0.001 : 0.85);
+    const drumRate = this.speedMode === "fast" ? 5.9 : (this.speedMode === "brake" ? 0.001 : 0.72);
+    this.hornLfo.frequency.value = hornRate;
+    this.drumLfo.frequency.value = drumRate;
+
+    this.hornLfo.connect(this.hornLfoGain);
+    if (this.hornPannerLfoGain) this.hornLfo.connect(this.hornPannerLfoGain);
+    this.drumLfo.connect(this.drumLfoGain);
+
     this.hornLfo.start();
     this.drumLfo.start();
+  }
+
+  _stopLfo() {
+    if (!this._lfoRunning) return;
+    this._lfoRunning = false;
+    if (this.hornLfo) {
+      try {
+        this.hornLfo.stop();
+        this.hornLfo.disconnect();
+      } catch (e) {}
+      this.hornLfo = null;
+    }
+    if (this.drumLfo) {
+      try {
+        this.drumLfo.stop();
+        this.drumLfo.disconnect();
+      } catch (e) {}
+      this.drumLfo = null;
+    }
   }
 
   toggleSpeed() {
@@ -123,8 +166,8 @@ export class RotarySpeaker {
     }
 
     // Realistic mechanical rotor inertia
-    this.hornLfo.frequency.setTargetAtTime(targetHorn, now, 0.45);
-    this.drumLfo.frequency.setTargetAtTime(targetDrum, now, 0.95);
+    if (this.hornLfo) this.hornLfo.frequency.setTargetAtTime(targetHorn, now, 0.45);
+    if (this.drumLfo) this.drumLfo.frequency.setTargetAtTime(targetDrum, now, 0.95);
   }
 
   setMix(val) {
@@ -142,9 +185,11 @@ export class RotarySpeaker {
     this.enabled = !bypassed;
     const now = this.ctx ? this.ctx.currentTime : 0;
     if (bypassed) {
+      this._stopLfo();
       this.wetGain.gain.setValueAtTime(0.0, now);
       this.dryGain.gain.setValueAtTime(1.0, now);
     } else {
+      this._startLfo();
       const wetFrac = Math.sin(this.mix * Math.PI * 0.5);
       const dryFrac = Math.cos(this.mix * Math.PI * 0.5);
       this.wetGain.gain.setValueAtTime(wetFrac, now);

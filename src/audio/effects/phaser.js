@@ -89,12 +89,42 @@ export class StereoPhaser {
     this.wetGain.gain.value = 0.0; // Bypassed by default
     this.wetGain.connect(this.output);
 
+    this.lfo = null;
+    this._lfoRunning = false;
+  }
+
+  _startLfo() {
+    if (this._lfoRunning) return;
+    this._lfoRunning = true;
+    const ctx = this.ctx;
+    this.lfo = ctx.createOscillator();
+    this.lfo.type = "sine";
+    this.lfo.frequency.value = this.rate;
+
+    for (let i = 0; i < this.lfoGainsL.length; i++) {
+      this.lfo.connect(this.lfoGainsL[i]);
+      this.lfo.connect(this.lfoGainsR[i]);
+    }
     this.lfo.start();
+  }
+
+  _stopLfo() {
+    if (!this._lfoRunning) return;
+    this._lfoRunning = false;
+    if (this.lfo) {
+      try {
+        this.lfo.stop();
+        this.lfo.disconnect();
+      } catch (e) {}
+      this.lfo = null;
+    }
   }
 
   setRate(hz) {
     this.rate = Math.max(0.05, Math.min(8.0, hz));
-    this.lfo.frequency.setTargetAtTime(this.rate, this.ctx.currentTime, 0.02);
+    if (this.lfo && this.ctx) {
+      this.lfo.frequency.setTargetAtTime(this.rate, this.ctx.currentTime, 0.02);
+    }
   }
 
   setFeedback(val) {}
@@ -115,10 +145,12 @@ export class StereoPhaser {
     this.enabled = !bypassed;
     const now = this.ctx ? this.ctx.currentTime : 0;
     if (bypassed) {
+      this._stopLfo();
       this.wetGain.gain.setValueAtTime(0.0, now);
       this.dryGain.gain.setValueAtTime(1.0, now);
     } else {
-      const m = this.mix !== undefined ? this.mix : 0.85;
+      this._startLfo();
+      const m = this.mix > 0 ? this.mix : 0.5;
       const makeup = 1.0 + m * 0.10;
       const dryFrac = Math.cos(m * Math.PI * 0.5);
       const wetFrac = Math.sin(m * Math.PI * 0.5) * 0.70 * makeup;

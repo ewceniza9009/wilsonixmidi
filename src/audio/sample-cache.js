@@ -62,7 +62,6 @@ export class SampleCache {
 
         req.onsuccess = () => {
           if (req.result && req.result.buffer) {
-            this.memoryCache.set(key, req.result.buffer);
             resolve(req.result.buffer);
           } else {
             resolve(null);
@@ -77,7 +76,6 @@ export class SampleCache {
 
   async setSample(key, arrayBuffer, metadata = {}) {
     if (!arrayBuffer) return;
-    this.memoryCache.set(key, arrayBuffer);
 
     const db = await this.openDb();
     if (!db) return;
@@ -92,12 +90,24 @@ export class SampleCache {
           metadata,
           timestamp: Date.now(),
         });
-        tx.oncomplete = () => resolve(true);
+        tx.oncomplete = () => {
+          // Immediately evict raw binary from RAM memoryCache since it's safely on disk in IndexedDB
+          this.memoryCache.delete(key);
+          resolve(true);
+        };
         tx.onerror = () => resolve(false);
       } catch (e) {
         resolve(false);
       }
     });
+  }
+
+  evictMemoryBuffer(key) {
+    this.memoryCache.delete(key);
+  }
+
+  purgeMemoryCache() {
+    this.memoryCache.clear();
   }
 
   async hasSample(key) {

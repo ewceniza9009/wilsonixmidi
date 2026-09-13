@@ -47,12 +47,36 @@ export class TremoloPulse {
     this.wetGain.gain.value = 0.0; // Bypassed by default
     this.wetGain.connect(this.output);
 
+    this.lfo = null;
+    this._lfoRunning = false;
+  }
+
+  _startLfo() {
+    if (this._lfoRunning) return;
+    this._lfoRunning = true;
+    const ctx = this.ctx;
+    this.lfo = ctx.createOscillator();
+    this.lfo.type = "sine";
+    this.lfo.frequency.value = this.rate;
+    this.lfo.connect(this.lfoGain);
     this.lfo.start();
+  }
+
+  _stopLfo() {
+    if (!this._lfoRunning) return;
+    this._lfoRunning = false;
+    if (this.lfo) {
+      try {
+        this.lfo.stop();
+        this.lfo.disconnect();
+      } catch (e) {}
+      this.lfo = null;
+    }
   }
 
   setRate(hz) {
     this.rate = Math.max(0.2, Math.min(12.0, hz));
-    if (this.lfo) {
+    if (this.lfo && this.ctx) {
       this.lfo.frequency.setTargetAtTime(this.rate, this.ctx.currentTime, 0.02);
     }
   }
@@ -83,9 +107,11 @@ export class TremoloPulse {
     this.enabled = !bypassed;
     const now = this.ctx ? this.ctx.currentTime : 0;
     if (bypassed) {
+      this._stopLfo();
       this.wetGain.gain.setValueAtTime(0.0, now);
       this.dryGain.gain.setValueAtTime(1.0, now);
     } else {
+      this._startLfo();
       const wetFrac = Math.sin(this.mix * Math.PI * 0.5);
       const dryFrac = Math.cos(this.mix * Math.PI * 0.5);
       this.wetGain.gain.setValueAtTime(wetFrac, now);

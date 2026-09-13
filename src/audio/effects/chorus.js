@@ -47,39 +47,37 @@ export class KorgStereoChorus {
     this.delayR = ctx.createDelay(0.1);
     this.delayR.delayTime.value = 0.0175;
 
-    // Smooth subtle LFO
+    this.lfo = null;
+    this._lfoRunning = false;
+  }
+
+  _startLfo() {
+    if (this._lfoRunning) return;
+    this._lfoRunning = true;
+    const ctx = this.ctx;
     this.lfo = ctx.createOscillator();
     this.lfo.type = "sine";
     this.lfo.frequency.value = this.rate;
-
-    this.lfoGainL = ctx.createGain();
-    this.lfoGainL.gain.value = this.depth;
     this.lfo.connect(this.lfoGainL);
-    this.lfoGainL.connect(this.delayL.delayTime);
-
-    this.lfoGainR = ctx.createGain();
-    this.lfoGainR.gain.value = this.depth * 0.75;
     this.lfo.connect(this.lfoGainR);
-    this.lfoGainR.connect(this.delayR.delayTime);
-
-    this.wetLp.connect(this.delayL);
-    this.wetLp.connect(this.delayR);
-
-    // Stereo Merger
-    const merger = ctx.createChannelMerger(2);
-    this.delayL.connect(merger, 0, 0);
-    this.delayR.connect(merger, 0, 1);
-
-    merger.connect(this.wetGain);
-    this.wetGain.gain.value = 0.0; // Bypassed by default
-    this.wetGain.connect(this.output);
-
     this.lfo.start();
+  }
+
+  _stopLfo() {
+    if (!this._lfoRunning) return;
+    this._lfoRunning = false;
+    if (this.lfo) {
+      try {
+        this.lfo.stop();
+        this.lfo.disconnect();
+      } catch (e) {}
+      this.lfo = null;
+    }
   }
 
   setRate(hz) {
     this.rate = Math.max(0.1, Math.min(4.0, hz));
-    if (this.lfo) {
+    if (this.lfo && this.ctx) {
       this.lfo.frequency.setTargetAtTime(this.rate, this.ctx.currentTime, 0.02);
     }
   }
@@ -109,9 +107,11 @@ export class KorgStereoChorus {
     this.enabled = !bypassed;
     const now = this.ctx ? this.ctx.currentTime : 0;
     if (bypassed) {
+      this._stopLfo();
       this.wetGain.gain.setValueAtTime(0, now);
       this.dryGain.gain.setValueAtTime(1.0, now);
     } else {
+      this._startLfo();
       const m = this.mix > 0 ? this.mix : 0.25;
       const dryFrac = Math.cos(m * Math.PI * 0.5);
       const wetFrac = Math.sin(m * Math.PI * 0.5);

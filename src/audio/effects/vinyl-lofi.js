@@ -39,21 +39,16 @@ export class VinylLoFiTape {
     this.wowOsc.frequency.value = this.wowSpeed;
     this.wowGain = ctx.createGain();
     this.wowGain.gain.value = this.wowDepth;
-    this.wowOsc.connect(this.wowGain);
     this.wowGain.connect(this.delayNode.delayTime);
 
     // LFO 2: Flutter (Fast jitter)
-    this.flutterOsc = ctx.createOscillator();
-    this.flutterOsc.frequency.value = this.flutterSpeed;
     this.flutterGain = ctx.createGain();
     this.flutterGain.gain.value = this.flutterDepth;
-    this.flutterOsc.connect(this.flutterGain);
     this.flutterGain.connect(this.delayNode.delayTime);
 
-    try {
-      this.wowOsc.start();
-      this.flutterOsc.start();
-    } catch (e) {}
+    this.wowOsc = null;
+    this.flutterOsc = null;
+    this._lfoRunning = false;
 
     // Analog Tone Shaping Filter (Tape Warmth)
     this.tapeFilter = ctx.createBiquadFilter();
@@ -74,6 +69,44 @@ export class VinylLoFiTape {
     this.wetGain.connect(this.output);
   }
 
+  _startLfo() {
+    if (this._lfoRunning) return;
+    this._lfoRunning = true;
+    const ctx = this.ctx;
+
+    this.wowOsc = ctx.createOscillator();
+    this.wowOsc.frequency.value = this.wowSpeed;
+    this.wowOsc.connect(this.wowGain);
+
+    this.flutterOsc = ctx.createOscillator();
+    this.flutterOsc.frequency.value = this.flutterSpeed;
+    this.flutterOsc.connect(this.flutterGain);
+
+    try {
+      this.wowOsc.start();
+      this.flutterOsc.start();
+    } catch (e) {}
+  }
+
+  _stopLfo() {
+    if (!this._lfoRunning) return;
+    this._lfoRunning = false;
+    if (this.wowOsc) {
+      try {
+        this.wowOsc.stop();
+        this.wowOsc.disconnect();
+      } catch (e) {}
+      this.wowOsc = null;
+    }
+    if (this.flutterOsc) {
+      try {
+        this.flutterOsc.stop();
+        this.flutterOsc.disconnect();
+      } catch (e) {}
+      this.flutterOsc = null;
+    }
+  }
+
   makeWarmCurve() {
     const n = 512;
     const curve = new Float32Array(n);
@@ -88,9 +121,11 @@ export class VinylLoFiTape {
     this.enabled = !bypassed;
     const now = this.ctx.currentTime;
     if (bypassed) {
+      this._stopLfo();
       this.wetGain.gain.setTargetAtTime(0.0, now, 0.03);
       this.dryGain.gain.setTargetAtTime(1.0, now, 0.03);
     } else {
+      this._startLfo();
       this.wetGain.gain.setTargetAtTime(this.mix, now, 0.03);
       this.dryGain.gain.setTargetAtTime(1.0 - this.mix * 0.5, now, 0.03);
     }

@@ -1447,54 +1447,39 @@ export class NativePcmEngine {
     this.loadAbletunesInstrument("upright_piano");
 
     // 3. Preload essential starting soundfonts non-blockingly (on idle)
-    // All other soundfonts load on-demand when selected, avoiding main-thread freezes
-    const idlePreload = () => {
-      this.loadSoundfont("electric_piano_2");
-      this.loadSoundfont("distortion_guitar");
-      this.loadSoundfont("overdriven_guitar");
-      this.loadSoundfont("electric_guitar_clean");
-      this.loadSoundfont("acoustic_guitar_nylon");
-      this.loadSoundfont("acoustic_guitar_steel");
-      this.loadSoundfont("drawbar_organ");
-      this.loadSoundfont("synth_bass_1");
-      this.loadSoundfont("soprano_sax");
-      this.loadSoundfont("breath_noise");
-      this.loadSoundfont("string_ensemble_1");
-      this.loadSoundfont("brass_section");
-      this.loadSoundfont("flute");
-      this.loadSoundfont("thunder_clap");
-      this.loadSoundfont("lightning_bolt");
-      this.loadSoundfont("thunder_storm");
-      this.loadSoundfont("vox_hey_r");
-      this.loadSoundfont("vox_yeah_r");
-      this.loadSoundfont("vox_sigh_r");
-      this.loadSoundfont("drum_kick_r");
-      this.loadSoundfont("drum_snare_r");
-      this.loadSoundfont("drum_hhclosed_r");
-      this.loadSoundfont("drum_hhopen_r");
-      this.loadSoundfont("drum_crash_r");
-      this.loadSoundfont("drum_ride_r");
-      this.loadSoundfont("dj_siren_r");
-      this.loadSoundfont("dj_whistle_r");
-      this.loadSoundfont("dj_cheer_r");
-      this.loadSoundfont("dj_scratch_r");
-      this.loadSoundfont("fx_boom_r");
-      this.loadSoundfont("dj_partyhorn_r");
-      this.loadSoundfont("fx_heartbeat_r");
-      this.loadSoundfont("fx_sonar_r");
-      this.loadSoundfont("fx_ufo_r");
-      this.loadSoundfont("fx_static_r");
-      this.loadSoundfont("fx_ghost_r");
-      this.loadSoundfont("fx_robot_r");
-      this.loadSoundfont("fx_laser_r");
-      this.loadSoundfont("fx_zombie_r");
-      this.loadSoundfont("fx_mystic_r");
+    // 3. Preload core essential live soundfonts non-blockingly with CPU-friendly staggering
+    // Specialized SFX load on-demand when triggered, avoiding CPU/battery strain on tablets
+    const idlePreload = async () => {
+      const coreInstruments = [
+        "electric_piano_2",
+        "electric_guitar_clean",
+        "acoustic_guitar_nylon",
+        "acoustic_guitar_steel",
+        "drawbar_organ",
+        "synth_bass_1",
+        "soprano_sax",
+        "string_ensemble_1",
+        "brass_section",
+        "flute",
+        "distortion_guitar",
+        "overdriven_guitar",
+        "drum_kick_r",
+        "drum_snare_r",
+        "drum_hhclosed_r",
+        "drum_hhopen_r",
+        "drum_crash_r",
+      ];
+      for (const inst of coreInstruments) {
+        await this.loadSoundfont(inst);
+        // Stagger decode batches to keep mobile CPU usage near zero
+        await new Promise(r => setTimeout(r, 120));
+      }
     };
 
     if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-      window.requestIdleCallback(idlePreload);
+      window.requestIdleCallback(() => idlePreload());
     } else {
-      setTimeout(idlePreload, 1200);
+      setTimeout(idlePreload, 1500);
     }
   }
 
@@ -1752,6 +1737,7 @@ export class NativePcmEngine {
       if (diff < minDiff) {
         minDiff = diff;
         closestMidi = anchorMidi;
+        if (diff <= 1) break; // Maximum achievable precision for nearest-anchor
       }
     }
 

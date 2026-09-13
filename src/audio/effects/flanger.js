@@ -88,12 +88,37 @@ export class StereoFlanger {
     this.wetGain.gain.value = 0.0; // Bypassed by default
     this.wetGain.connect(this.output);
 
+    this.lfo = null;
+    this._lfoRunning = false;
+  }
+
+  _startLfo() {
+    if (this._lfoRunning) return;
+    this._lfoRunning = true;
+    const ctx = this.ctx;
+    this.lfo = ctx.createOscillator();
+    this.lfo.type = "sine";
+    this.lfo.frequency.value = this.rate;
+    this.lfo.connect(this.lfoGainL);
+    this.lfo.connect(this.lfoGainR);
     this.lfo.start();
+  }
+
+  _stopLfo() {
+    if (!this._lfoRunning) return;
+    this._lfoRunning = false;
+    if (this.lfo) {
+      try {
+        this.lfo.stop();
+        this.lfo.disconnect();
+      } catch (e) {}
+      this.lfo = null;
+    }
   }
 
   setRate(hz) {
     this.rate = Math.max(0.1, Math.min(5.0, hz));
-    if (this.lfo) {
+    if (this.lfo && this.ctx) {
       this.lfo.frequency.setTargetAtTime(this.rate, this.ctx.currentTime, 0.02);
     }
   }
@@ -118,12 +143,11 @@ export class StereoFlanger {
   }
 
   setMix(val) {
-    this.mix = Math.max(0, Math.min(1.0, val));
+    this.mix = Math.max(0, Math.min(1, val));
     const now = this.ctx.currentTime;
     if (this.enabled) {
-      const fdbkComp = 1.0 / (1.0 + this.feedback * 0.35);
-      const wetFrac = Math.sin(this.mix * Math.PI * 0.5) * 0.85 * fdbkComp;
       const dryFrac = Math.cos(this.mix * Math.PI * 0.5);
+      const wetFrac = Math.sin(this.mix * Math.PI * 0.5);
       this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
       this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
     }
@@ -133,13 +157,14 @@ export class StereoFlanger {
     this.enabled = !bypassed;
     const now = this.ctx ? this.ctx.currentTime : 0;
     if (bypassed) {
-      this.wetGain.gain.setValueAtTime(0.0, now);
+      this._stopLfo();
+      this.wetGain.gain.setValueAtTime(0, now);
       this.dryGain.gain.setValueAtTime(1.0, now);
     } else {
-      const m = this.mix > 0 ? this.mix : 0.45;
-      const fdbkComp = 1.0 / (1.0 + this.feedback * 0.35);
-      const wetFrac = Math.sin(m * Math.PI * 0.5) * 0.85 * fdbkComp;
+      this._startLfo();
+      const m = this.mix > 0 ? this.mix : 0.25;
       const dryFrac = Math.cos(m * Math.PI * 0.5);
+      const wetFrac = Math.sin(m * Math.PI * 0.5);
       this.wetGain.gain.setValueAtTime(wetFrac, now);
       this.dryGain.gain.setValueAtTime(dryFrac, now);
     }
