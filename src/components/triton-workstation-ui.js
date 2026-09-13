@@ -29,6 +29,7 @@ export class TritonWorkstationUI {
 
   syncActiveProgramFromEngine() {
     if (this.activeSubTab !== "BROWSER") return;
+    if (this._suppressAutoBankSwitch) return;
 
     // 1. Combi Bank sync
     if (multiLayerEngine.isCombiMode && multiLayerEngine.activeCombi) {
@@ -45,13 +46,19 @@ export class TritonWorkstationUI {
     // 2. Triton VA Program sync
     if (multiLayerEngine.isTritonVaMode && multiLayerEngine.activeTritonVaProg) {
       const prog = multiLayerEngine.activeTritonVaProg;
+      const currentBank = TRITON_BANKS[this.activeBankId];
+      const isAlreadyInCurrentBank = currentBank && (currentBank.programs || []).some(p => p.id === prog.id);
+
       let targetBankId = this.activeBankId;
-      for (const [bankId, bank] of Object.entries(TRITON_BANKS)) {
-        if ((bank.programs || []).some(p => p.id === prog.id)) {
-          targetBankId = bankId;
-          break;
+      if (!isAlreadyInCurrentBank) {
+        for (const [bankId, bank] of Object.entries(TRITON_BANKS)) {
+          if ((bank.programs || []).some(p => p.id === prog.id)) {
+            targetBankId = bankId;
+            break;
+          }
         }
       }
+
       this.activeProg = prog;
       if (this.activeBankId !== targetBankId) {
         this.activeBankId = targetBankId;
@@ -65,6 +72,23 @@ export class TritonWorkstationUI {
     // 3. Single instrument / PCM bank sync
     if (multiLayerEngine.activeSingleInst) {
       const instKey = multiLayerEngine.activeSingleInst;
+      const currentBank = TRITON_BANKS[this.activeBankId];
+      
+      // If the currently active program in the currently viewed bank already corresponds to this instrument, DO NOT switch banks!
+      if (this.activeProg && currentBank && (currentBank.programs || []).some(p => p.id === this.activeProg.id)) {
+        this.updateLcdAndGridHighlight(this.activeProg.id, this.activeProg.name, `BANK: ${this.activeBankId.replace("_", " ")} ${this.activeProg.num || ""}`, `CATEGORY: ${(this.activeProg.category || "").toUpperCase()}`);
+        return;
+      }
+
+      // Check if current bank has any program matching this instrument
+      const matchInCurrentBank = currentBank && (currentBank.programs || []).find(pr => pr.instId === instKey);
+      if (matchInCurrentBank) {
+        this.activeProg = matchInCurrentBank;
+        this.updateLcdAndGridHighlight(matchInCurrentBank.id, matchInCurrentBank.name, `BANK: ${this.activeBankId.replace("_", " ")} ${matchInCurrentBank.num || ""}`, `CATEGORY: ${(matchInCurrentBank.category || "").toUpperCase()}`);
+        return;
+      }
+
+      // Fallback search only when triggered externally
       for (const [bankId, bank] of Object.entries(TRITON_BANKS)) {
         const p = (bank.programs || []).find(pr => pr.instId === instKey || (pr.id === "A036" && instKey === "acoustic_grand_piano"));
         if (p) {
@@ -598,7 +622,10 @@ export class TritonWorkstationUI {
   bindProgramGrid() {
     this.container.querySelectorAll(".triton-prog-cell").forEach(cell => {
       let lastTap = 0;
-      const handleSelect = () => {
+      const handleSelect = (e) => {
+        if (e) {
+          e.stopPropagation();
+        }
         const now = performance.now();
         if (now - lastTap < 120) return;
         lastTap = now;
@@ -608,8 +635,13 @@ export class TritonWorkstationUI {
         if (this.isCombiBank()) {
           const cp = COMBI_PRESETS[progId];
           if (cp) {
-            multiLayerEngine.setCombiPreset(progId);
-            this.updateLcdAndGridHighlight(progId, cp.name, "BANK: COMBI", `CATEGORY: ${(cp.category || "COMBI").toUpperCase()}`);
+            this._suppressAutoBankSwitch = true;
+            try {
+              multiLayerEngine.setCombiPreset(progId);
+              this.updateLcdAndGridHighlight(progId, cp.name, "BANK: COMBI", `CATEGORY: ${(cp.category || "COMBI").toUpperCase()}`);
+            } finally {
+              this._suppressAutoBankSwitch = false;
+            }
           }
           return;
         }
@@ -617,8 +649,13 @@ export class TritonWorkstationUI {
         const prog = bank.programs.find(p => p.id === progId);
         if (prog) {
           this.activeProg = prog;
-          this.applyTritonProgram(prog, true);
-          this.updateLcdAndGridHighlight(prog.id, prog.name, `BANK: ${this.activeBankId.replace("_", " ")} ${prog.num}`, `CATEGORY: ${(prog.category || "").toUpperCase()}`);
+          this._suppressAutoBankSwitch = true;
+          try {
+            this.applyTritonProgram(prog, true);
+            this.updateLcdAndGridHighlight(prog.id, prog.name, `BANK: ${this.activeBankId.replace("_", " ")} ${prog.num}`, `CATEGORY: ${(prog.category || "").toUpperCase()}`);
+          } finally {
+            this._suppressAutoBankSwitch = false;
+          }
         }
       };
 
