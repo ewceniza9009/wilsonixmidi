@@ -737,15 +737,30 @@ export class VirtualKeyboardUI {
       this.updateHudState();
     });
 
-    panicBtn?.addEventListener("click", () => {
+    const triggerPanic = (e) => {
+      if (e && e.cancelable) e.preventDefault();
+      if (e) e.stopPropagation();
+
       arpeggiator.stop();
+      multiLayerEngine.setSustainPedal(false);
       multiLayerEngine.panic();
       synthEngine.panic();
+
+      // Reset keyboard touch & mouse memory
+      this.activeTouches.clear();
+      this.activeMouseChord = null;
       this.keyStates.fill(0);
       for (const el of this.keyElements.values()) {
         el.classList.remove("active");
       }
-    });
+
+      // Reset on-screen sustain button visual and latch state
+      qwertyKeyboard.sustainLatched = false;
+      this.updateHudState();
+    };
+
+    panicBtn?.addEventListener("click", triggerPanic);
+    panicBtn?.addEventListener("touchstart", triggerPanic, { passive: false });
 
     const tabletHelpBtn = document.getElementById("btn-tablet-multitouch-help");
     tabletHelpBtn?.addEventListener("click", () => {

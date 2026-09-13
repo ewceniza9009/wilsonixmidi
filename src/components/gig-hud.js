@@ -844,29 +844,31 @@ export class GigHudUI {
     const latencyVal = document.getElementById("hud-latency-val");
     const latencyPill = document.getElementById("hud-latency-pill");
 
-    let lastMeasure = 0;
     const updateFrame = () => {
       if (!this._vuRunning) return;
 
-      const now = performance.now();
-      if (now - lastMeasure > 100) {
-        lastMeasure = now;
-        const l = audioCore.measureLatency();
-        const shown = l.measuredMs || l.reportedMs;
-        if (shown) {
-          this._latencySmoothed = this._latencySmoothed === null ? shown : this._latencySmoothed * 0.6 + shown * 0.4;
-          if (latencyVal) {
-            latencyVal.innerText = `${this._latencySmoothed.toFixed(1)}ms`;
-            latencyPill?.classList.toggle("latency-warm", this._latencySmoothed > 20);
-            latencyPill?.classList.toggle("latency-hot", this._latencySmoothed > 50);
-          }
+      const l = audioCore.measureLatency();
+      const shown = l.measuredMs || l.reportedMs;
+      if (shown) {
+        this._latencySmoothed = this._latencySmoothed === null ? shown : this._latencySmoothed * 0.6 + shown * 0.4;
+        if (latencyVal) {
+          latencyVal.innerText = `${this._latencySmoothed.toFixed(1)}ms`;
+          latencyPill?.classList.toggle("latency-warm", this._latencySmoothed > 20);
+          latencyPill?.classList.toggle("latency-hot", this._latencySmoothed > 50);
         }
       }
-
-      this.vuAnimationId = requestAnimationFrame(updateFrame);
     };
 
     updateFrame();
+    this.vuIntervalId = setInterval(updateFrame, 100);
+  }
+
+  stopVuMonitor() {
+    this._vuRunning = false;
+    if (this.vuIntervalId) {
+      clearInterval(this.vuIntervalId);
+      this.vuIntervalId = null;
+    }
   }
 
   _renderLatencyPopover(l, smoothed) {

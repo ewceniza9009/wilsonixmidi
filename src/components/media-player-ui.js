@@ -472,6 +472,16 @@ export class MediaPlayerUI {
   }
 
   _tick() {
+    const now = performance.now();
+    const isPlaying = mediaPlayer && mediaPlayer.isPlaying;
+    const interval = isPlaying ? 33.0 : 200.0;
+
+    if (now - (this._lastTick || 0) < interval) {
+      this._raf = requestAnimationFrame(() => this._tick());
+      return;
+    }
+    this._lastTick = now;
+
     // Seek position + time readouts + meters
     const track = mediaPlayer.current;
     const timeCur = this.container.querySelector("#media-time-cur");
@@ -481,12 +491,12 @@ export class MediaPlayerUI {
 
     if (track && mediaPlayer.audioEl && Number.isFinite(track.duration)) {
       const ct = mediaPlayer.getCurrentTime();
-      timeCur.textContent = fmtTime(ct);
-      timeTotal.textContent = fmtTime(track.duration);
-      if (track.duration > 0) {
+      if (timeCur) timeCur.textContent = fmtTime(ct);
+      if (timeTotal) timeTotal.textContent = fmtTime(track.duration);
+      if (track.duration > 0 && seek) {
         seek.value = String(Math.min(1000, Math.round((ct / track.duration) * 1000)));
       }
-      if (playBtn && mediaPlayer.isPlaying) {
+      if (playBtn && isPlaying) {
         playBtn.textContent = "❚❚";
         playBtn.classList.add("media-tbtn-playing");
       } else if (playBtn) {
@@ -497,22 +507,27 @@ export class MediaPlayerUI {
       if (timeCur) timeCur.textContent = "0:00";
       if (timeTotal) timeTotal.textContent = "0:00";
       if (playBtn) {
-        playBtn.textContent = mediaPlayer.isPlaying ? "❚❚" : "▶";
+        playBtn.textContent = isPlaying ? "❚❚" : "▶";
       }
     }
 
-    // Meter fills
-    const freq = mediaPlayer.getFrequencyData();
-    if (freq) {
-      const avg = (arr, from, to) => {
-        let s = 0;
-        const n = Math.max(1, arr.length / 10);
-        for (let i = from; i < to && i < arr.length; i++) s += arr[i];
-        return s / n;
-      };
-      const lvl = Math.min(100, avg(freq, 0, freq.length / 2) / 255 * 100);
-      this.meterL.style.height = `${lvl}%`;
-      this.meterR.style.height = `${lvl}%`;
+    // Meter fills only when active
+    if (isPlaying) {
+      const freq = mediaPlayer.getFrequencyData();
+      if (freq && this.meterL && this.meterR) {
+        const avg = (arr, from, to) => {
+          let s = 0;
+          const n = Math.max(1, arr.length / 10);
+          for (let i = from; i < to && i < arr.length; i++) s += arr[i];
+          return s / n;
+        };
+        const lvl = Math.min(100, avg(freq, 0, freq.length / 2) / 255 * 100);
+        this.meterL.style.height = `${lvl}%`;
+        this.meterR.style.height = `${lvl}%`;
+      }
+    } else if (this.meterL && this.meterR && this.meterL.style.height !== "0%") {
+      this.meterL.style.height = "0%";
+      this.meterR.style.height = "0%";
     }
 
     this._raf = requestAnimationFrame(() => this._tick());

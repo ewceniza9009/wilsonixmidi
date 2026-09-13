@@ -31,7 +31,7 @@ export class TritonVirtualAnalogEngine {
     if (!ctx) return;
     // Route through the master FX Rack so program IFX/MFX still apply on top.
     const dest = audioCore.fxRack?.input || ctx.destination;
-    this.pool = new VoicePoolManager(ctx, 32, dest, this.heldNotes);
+    this.pool = new VoicePoolManager(ctx, 16, dest, this.heldNotes);
   }
 
   setProgram(prog) {

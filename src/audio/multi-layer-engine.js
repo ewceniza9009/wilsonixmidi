@@ -1560,13 +1560,24 @@ export class MultiLayerEngine {
   }
 
   panic() {
-    if (this.pcmEngine) this.pcmEngine.allNotesOff();
+    this.activeLeadNotes = 0;
+    this.setSustainPedal(false);
+
+    if (this.pcmEngine) {
+      this.pcmEngine.allNotesOff();
+    }
     tritonVaEngine.allNotesOff();
     this.vaAllNotesOff();
+
     if (audioCore.fxRack) {
       try {
         if (audioCore.fxRack.delay) audioCore.fxRack.delay.setBypass(true);
         if (audioCore.fxRack.dubEcho) audioCore.fxRack.dubEcho.setBypass(true);
+        if (audioCore.fxRack.slapback) audioCore.fxRack.slapback.setBypass(true);
+        if (audioCore.fxRack.springReverb) audioCore.fxRack.springReverb.setBypass(true);
+        if (audioCore.fxRack.reverb) audioCore.fxRack.reverb.setBypass(true);
+        if (audioCore.fxRack.shimmerReverb) audioCore.fxRack.shimmerReverb.setBypass(true);
+        if (audioCore.fxRack.gatedReverb) audioCore.fxRack.gatedReverb.setBypass(true);
         if (audioCore.fxRack.talkbox) audioCore.fxRack.talkbox.setBypass(true);
       } catch (e) {}
     }

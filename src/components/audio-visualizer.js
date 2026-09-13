@@ -43,12 +43,24 @@ export class AudioVisualizer {
   start() {
     if (this.isRunning) return;
     this.isRunning = true;
+    this._lastDraw = 0;
+    this._silentFrames = 0;
+    this._isSleeping = false;
     this.drawLoop = this.draw.bind(this);
     this.animationId = requestAnimationFrame(this.drawLoop);
   }
 
+  wake() {
+    this._silentFrames = 0;
+    if (this._isSleeping && this.isRunning) {
+      this._isSleeping = false;
+      this.animationId = requestAnimationFrame(this.drawLoop);
+    }
+  }
+
   stop() {
     this.isRunning = false;
+    this._isSleeping = false;
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
       this.animationId = null;
@@ -57,6 +69,14 @@ export class AudioVisualizer {
 
   draw() {
     if (!this.isRunning) return;
+
+    // Battery & CPU Saver: throttle frame rate to 30 FPS (33ms) instead of unconstrained 120Hz
+    const now = performance.now();
+    if (now - this._lastDraw < 33.0) {
+      this.animationId = requestAnimationFrame(this.drawLoop);
+      return;
+    }
+    this._lastDraw = now;
 
     const analyser = audioCore.analyser;
     const ctx = this.ctx2d;
@@ -68,12 +88,23 @@ export class AudioVisualizer {
       return;
     }
 
-    // Clear background
-    ctx.fillStyle = "rgba(10, 12, 16, 0.4)";
-    ctx.fillRect(0, 0, width, height);
+    // Check for silence to auto-sleep rendering loop and save tablet battery
+    let hasSignal = false;
 
     if (this.mode === "oscilloscope") {
       analyser.getByteTimeDomainData(this.timeDomainBuffer);
+
+      // Check if time domain is deviated from baseline center (128)
+      for (let i = 0; i < this.timeDomainBuffer.length; i += 8) {
+        if (Math.abs(this.timeDomainBuffer[i] - 128) > 2) {
+          hasSignal = true;
+          break;
+        }
+      }
+
+      // Clear background
+      ctx.fillStyle = "rgba(10, 12, 16, 0.4)";
+      ctx.fillRect(0, 0, width, height);
 
       ctx.lineWidth = 2;
       ctx.strokeStyle = "#ff8c00";
@@ -102,6 +133,17 @@ export class AudioVisualizer {
     } else if (this.mode === "spectrum") {
       analyser.getByteFrequencyData(this.freqBuffer);
 
+      for (let i = 0; i < this.freqBuffer.length; i += 4) {
+        if (this.freqBuffer[i] > 3) {
+          hasSignal = true;
+          break;
+        }
+      }
+
+      // Clear background
+      ctx.fillStyle = "rgba(10, 12, 16, 0.4)";
+      ctx.fillRect(0, 0, width, height);
+
       const barCount = 32;
       const barWidth = width / barCount - 1.5;
 
@@ -118,6 +160,18 @@ export class AudioVisualizer {
         ctx.fillStyle = grad;
         ctx.fillRect(i * (barWidth + 1.5), height - barHeight, barWidth, barHeight);
       }
+    }
+
+    if (!hasSignal) {
+      this._silentFrames++;
+      // After 45 silent frames (~1.5s of no audio), enter sleep state to free GPU/CPU
+      if (this._silentFrames > 45) {
+        this._isSleeping = true;
+        this.animationId = null;
+        return;
+      }
+    } else {
+      this._silentFrames = 0;
     }
 
     this.animationId = requestAnimationFrame(this.drawLoop);

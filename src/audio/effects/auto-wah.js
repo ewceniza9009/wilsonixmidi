@@ -49,34 +49,55 @@ export class DynamicAutoWah {
     this.wetGain.connect(this.output);
 
     this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
-    this.startEnvelopeTracker();
+    this.animId = null;
+    this._lastUpdate = 0;
   }
 
   startEnvelopeTracker() {
+    if (this.animId) return;
+
     const update = () => {
-      if (this.enabled && this.ctx && this.ctx.state === "running") {
+      if (!this.enabled || !this.ctx || this.ctx.state !== "running") {
+        this.animId = null;
+        return;
+      }
+
+      const now = performance.now();
+      if (now - this._lastUpdate >= 33.0) {
+        this._lastUpdate = now;
         this.analyser.getByteTimeDomainData(this.dataArray);
         let sum = 0;
-        for (let i = 0; i < this.dataArray.length; i++) {
+        for (let i = 0; i < this.dataArray.length; i += 4) {
           const v = (this.dataArray[i] - 128) / 128;
           sum += v * v;
         }
-        const rms = Math.sqrt(sum / this.dataArray.length);
+        const rms = Math.sqrt(sum / (this.dataArray.length / 4));
         const targetFreq = Math.min(3200, this.baseFreq + rms * this.sweepRange * this.sensitivity * 2.0);
         this.wahFilter.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 0.04);
       }
+
       this.animId = requestAnimationFrame(update);
     };
+
     this.animId = requestAnimationFrame(update);
+  }
+
+  stopEnvelopeTracker() {
+    if (this.animId) {
+      cancelAnimationFrame(this.animId);
+      this.animId = null;
+    }
   }
 
   setBypass(bypassed) {
     this.enabled = !bypassed;
     const now = this.ctx.currentTime;
     if (bypassed) {
+      this.stopEnvelopeTracker();
       this.wetGain.gain.setTargetAtTime(0.0, now, 0.03);
       this.dryGain.gain.setTargetAtTime(1.0, now, 0.03);
     } else {
+      this.startEnvelopeTracker();
       this.wetGain.gain.setTargetAtTime(this.mix, now, 0.03);
       this.dryGain.gain.setTargetAtTime(1.0 - this.mix * 0.3, now, 0.03);
     }

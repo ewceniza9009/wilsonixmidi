@@ -354,6 +354,19 @@ export class LayerInsertProcessor {
     this.setEffect("clean");
   }
 
+  flush() {
+    try {
+      this.activeFxNodes.forEach(node => {
+        try {
+          if (node.gain && node.gain.cancelScheduledValues) {
+            node.gain.cancelScheduledValues(this.ctx.currentTime);
+            node.gain.setValueAtTime(0, this.ctx.currentTime);
+          }
+        } catch (e) {}
+      });
+    } catch (e) {}
+  }
+
   setEffect(fxType) {
     this.currentFx = fxType || "clean";
     const ctx = this.ctx;
@@ -2322,26 +2335,48 @@ export class NativePcmEngine {
   }
 
   allNotesOff() {
+    this.sustainPedal = false;
     const now = this.ctx.currentTime;
-    const silence = (voices) => {
-      voices.forEach(v => {
-        try {
+
+    const killVoice = (v) => {
+      if (!v) return;
+      try {
+        if (v.src) v.src.onended = null;
+        if (v.voiceGain) {
           v.voiceGain.gain.cancelScheduledValues(now);
-          v.voiceGain.gain.setValueAtTime(v.voiceGain.gain.value, now);
-          v.voiceGain.gain.linearRampToValueAtTime(0, now + 0.008);
-          v.src.stop(now + 0.015);
-          if (v.vibLfo) { try { v.vibLfo.stop(now + 0.02); } catch (e) {} }
-          if (v.growlLfo) { try { v.growlLfo.stop(now + 0.02); } catch (e) {} }
-        } catch (e) {}
-      });
+          v.voiceGain.gain.setValueAtTime(v.voiceGain.gain.value || 0.001, now);
+          v.voiceGain.gain.linearRampToValueAtTime(0.00001, now + 0.003);
+        }
+        if (v.src) v.src.stop(now + 0.004);
+        if (v.vibLfo) { try { v.vibLfo.stop(now + 0.005); } catch (e) {} }
+        if (v.growlLfo) { try { v.growlLfo.stop(now + 0.005); } catch (e) {} }
+
+        setTimeout(() => {
+          try {
+            if (v.voiceGain) v.voiceGain.disconnect();
+            if (v.filter) v.filter.disconnect();
+            if (v.src) v.src.disconnect();
+          } catch (e) {}
+        }, 10);
+      } catch (e) {}
     };
 
-    this.activeVoices.forEach(silence);
-    this.sustainedVoices.forEach(silence);
+    this.activeVoices.forEach(list => list.forEach(killVoice));
+    this.sustainedVoices.forEach(list => list.forEach(killVoice));
+    this.voiceQueue.forEach(killVoice);
+
     this.activeVoices.clear();
     this.sustainedVoices.clear();
     this.heldNotes.clear();
     this.voiceQueue.length = 0;
+
+    // Flush layer insert effect buffers (delay feedback loops & reverb tails)
+    if (this.layerInserts) {
+      this.layerInserts.forEach(ins => { try { ins.flush(); } catch (e) {} });
+    }
+    if (this.splitZoneInserts) {
+      Object.values(this.splitZoneInserts).forEach(ins => { try { ins.flush(); } catch (e) {} });
+    }
   }
 }
 

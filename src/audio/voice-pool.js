@@ -297,7 +297,7 @@ export class PolyphonicVoice {
 }
 
 export class VoicePoolManager {
-  constructor(ctx, poolSize = 32, destinationNode = null, heldNotes = null) {
+  constructor(ctx, poolSize = 16, destinationNode = null, heldNotes = null) {
     this.ctx = ctx;
     this.poolSize = poolSize;
     this.destination = destinationNode || ctx.destination;
