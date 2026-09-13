@@ -2090,6 +2090,19 @@ export class NativePcmEngine {
       if (idx !== -1) susList.splice(idx, 1);
       if (susList.length === 0) this.sustainedVoices.delete(midiNote);
     }
+
+    // Clean disconnect to prevent Web Audio render-thread node accumulation on mobile/tablets
+    try {
+      if (voiceRecord.voiceGain) {
+        voiceRecord.voiceGain.disconnect();
+      }
+      if (voiceRecord.filter) {
+        voiceRecord.filter.disconnect();
+      }
+      if (voiceRecord.src) {
+        voiceRecord.src.disconnect();
+      }
+    } catch (e) {}
   }
 
   // Real-time Key Slide Articulation / Polyphonic Expression (relativeY: 0.0 top to 1.0 bottom)

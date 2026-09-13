@@ -1412,17 +1412,23 @@ export class MultiLayerEngine {
         }
       }
 
+      // Pro Combi Mixer Auto-Headroom: scale each layer by equal-power (1 / sqrt(N))
+      // so 4-layer stacked chords sum cleanly to 0dBFS studio nominal without smashing the master limiter
+      const enabledLayers = this.layers.filter(l => l.enabled);
+      const combiScale = enabledLayers.length > 1 ? (1.0 / Math.sqrt(enabledLayers.length)) : 1.0;
+
       // COMBI MODE: Synchronous sample-0 trigger on all enabled PCM layers
       for (let i = 0; i < this.layers.length; i++) {
         const layer = this.layers[i];
         if (!layer.enabled) continue;
         if (velocity < layer.minVel || velocity > layer.maxVel) continue;
 
+        const effectiveGain = (layer.gain ?? 1.0) * combiScale;
         const transposedMidi = Math.max(21, Math.min(108, midiNote + layer.oct * 12));
         if (layer.vaProg) {
-          this.getVaEngineFor(layer.vaProg, layer.gain, i).noteOn(transposedMidi, velocity);
+          this.getVaEngineFor(layer.vaProg, effectiveGain, i).noteOn(transposedMidi, velocity);
         } else if (this.pcmEngine) {
-          this.pcmEngine.playNote(layer.inst, transposedMidi, velocity, layer.gain, i);
+          this.pcmEngine.playNote(layer.inst, transposedMidi, velocity, effectiveGain, i);
         }
       }
     } else {

@@ -61,11 +61,11 @@ export class AudioCore {
 
     // Transparent Hardware Output Safety Limiter (Prevents DAC clipping with zero waveform modulation & zero squashing)
     this.hardwareLimiter = this.ctx.createDynamicsCompressor();
-    this.hardwareLimiter.threshold.value = -0.5;  // True brickwall safety ceiling
-    this.hardwareLimiter.knee.value = 6.0;        // Smooth soft-knee transition (eliminates hard corner chatter/buzzing)
-    this.hardwareLimiter.ratio.value = 8.0;       // Controlled peak clamp
-    this.hardwareLimiter.attack.value = 0.030;    // 30ms - prevents audio-frequency envelope modulation buzzing on pure tones
-    this.hardwareLimiter.release.value = 0.200;   // 200ms smooth recovery
+    this.hardwareLimiter.threshold.value = -1.0;  // True brickwall safety ceiling
+    this.hardwareLimiter.knee.value = 12.0;       // Smooth soft-knee transition (eliminates hard corner chatter/buzzing)
+    this.hardwareLimiter.ratio.value = 4.0;       // Controlled peak clamp (smooth & musical, no pumping)
+    this.hardwareLimiter.attack.value = 0.003;    // 3ms - fast transparent peak catching without pumping
+    this.hardwareLimiter.release.value = 0.060;   // 60ms smooth instant recovery (no laggy ducking)
 
     // Initialize FX Rack
     this.fxRack = new FxRackManager(this.ctx);
