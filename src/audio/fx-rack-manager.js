@@ -201,15 +201,92 @@ export class FxRackManager {
     if (this.dubEcho) this.dubEcho.triggerDubThrow(durationSec);
   }
 
-  setPresetTrim(val) {
+  setPresetTrim(val, instant = false) {
     if (!this.presetTrimNode) return;
     const g = Math.max(0.2, Math.min(1.5, val));
-    this.presetTrimNode.gain.setTargetAtTime(g, this.ctx.currentTime, 0.02);
+    if (instant) {
+      this.presetTrimNode.gain.cancelScheduledValues(this.ctx.currentTime);
+      this.presetTrimNode.gain.setValueAtTime(g, this.ctx.currentTime);
+    } else {
+      this.presetTrimNode.gain.setTargetAtTime(g, this.ctx.currentTime, 0.02);
+    }
+  }
+
+  // Hard-cut output during preset switch to prevent old FX tails bleeding through
+  muteOutput() {
+    if (this.masterEq?.output) {
+      this.masterEq.output.gain?.setValueAtTime(0, this.ctx.currentTime);
+    }
+  }
+
+  unmuteOutput() {
+    if (this.masterEq?.output) {
+      this.masterEq.output.gain?.setTargetAtTime(1.0, this.ctx.currentTime, 0.015);
+    }
+  }
+
+  // Reset all effect parameters to safe defaults — prevents old preset bleed
+  resetAllEffects() {
+    this.presetTrimNode?.gain?.setValueAtTime(1.0, this.ctx.currentTime);
+
+    // Reset EQ to flat
+    this.masterEq?.setLowGain(0);
+    this.masterEq?.setHighGain(0);
+    this.masterEq?.setMidGain(0);
+
+    // Reset compressor
+    this.compressor?.setThreshold(-20);
+    this.compressor?.setRatio(4);
+    this.compressor?.setAttack(0.003);
+    this.compressor?.setRelease(0.1);
+
+    // Reset drive / saturation
+    this.tube?.setDrive(0);
+    this.tapeSat?.setDrive(0);
+    this.bitcrusher?.setBits(16);
+
+    // Reset modulation — zero all wet/dry and rate
+    this.chorus?.setMix(0);
+    this.phaser?.setMix(0);
+    this.flanger?.setMix(0);
+    this.rotary?.setSpeed("brake");
+    this.tremolo?.setDepth(0);
+    this.autopan?.setMix(0);
+    this.autoWah?.setMix(0);
+
+    // Reset delays — flush feedback buffers instantly
+    this.delay?.flush();
+    this.delay?.setMix(0);
+    this.slapback?.setMix(0);  // slapback has no feedback param (zero-feedback by design)
+    this.dubEcho?.setFeedback(0);
+    this.dubEcho?.setMix(0);
+
+    // Reset reverbs — zero wet gains to kill tails instantly
+    this.reverb?.setMix(0);
+    this.springReverb?.setMix(0);
+    this.shimmerReverb?.setShimmer(0);
+    this.shimmerReverb?.setMix(0);
+    this.gatedReverb?.setMix(0);
+
+    // Reset special FX
+    this.talkbox?.setMix(0);
+    this.vinylLoFi?.setMix(0);
+    this.stereoWidener?.setMix(0);
+
+    // Reset piano acoustics
+    this.pianoAcoustics?.setSympatheticResonance(0);
+    this.pianoAcoustics?.setSoundboardBloom(0);
   }
 
   applyPreset(presetName) {
+    // Hard-cut output to prevent old FX tails bleeding into new preset
+    this.muteOutput();
+
     this._bootstrapping = true;
     try {
+      // Reset all effect parameters to safe defaults before enabling new ones
+      this.resetAllEffects();
+
       // Reset all modulation/time-based units
       this.compressor.setBypass(true);
       this.autoWah.setBypass(true);
@@ -528,6 +605,8 @@ export class FxRackManager {
     } finally {
       this._bootstrapping = false;
       this._updateChainRouting();
+      // Unmute after chain is rebuilt — old tails are gone, new preset is clean
+      this.unmuteOutput();
     }
 
     if (this.onPresetChangeCallback) {

@@ -1095,6 +1095,7 @@ export class MultiLayerEngine {
   }
 
   setSingleInstrument(instKey) {
+    this.setSustainPedal(false);
     if (this.pcmEngine) this.pcmEngine.allNotesOff();
     tritonVaEngine.allNotesOff();
     this.vaAllNotesOff();
@@ -1188,6 +1189,7 @@ export class MultiLayerEngine {
   }
 
   setSynthProgram(patchConfig) {
+    this.setSustainPedal(false);
     if (this.pcmEngine) this.pcmEngine.allNotesOff();
     tritonVaEngine.allNotesOff();
     this.vaAllNotesOff();
@@ -1205,6 +1207,7 @@ export class MultiLayerEngine {
   }
 
   setTritonVaProgram(prog) {
+    this.setSustainPedal(false);
     if (this.pcmEngine) this.pcmEngine.allNotesOff();
     tritonVaEngine.allNotesOff();
     this.vaAllNotesOff();
@@ -1233,6 +1236,7 @@ export class MultiLayerEngine {
       this.isSynthMode = false;
       this.isTritonVaMode = false;
       this.activeTritonVaProg = null;
+      this.setSustainPedal(false);
       if (this.pcmEngine) this.pcmEngine.allNotesOff();
       tritonVaEngine.allNotesOff();
       this.vaAllNotesOff();
@@ -1255,6 +1259,8 @@ export class MultiLayerEngine {
 
   setCombiPreset(presetId) {
     if (COMBI_PRESETS[presetId]) {
+      // Force-clear sustain pedal first — prevents sustained voices bleeding into new preset
+      this.setSustainPedal(false);
       if (this.pcmEngine) this.pcmEngine.allNotesOff();
       tritonVaEngine.allNotesOff();
       this.vaAllNotesOff();
@@ -1645,7 +1651,7 @@ export class MultiLayerEngine {
   setSustainPedal(isDown, when = 0) {
     if (!this.pcmEngine) this.init();
     audioCore.ensureRunning();
-    // Also notify worklet for live VA sustain handling
+    // Notify worklet for live VA sustain handling
     if (this._workletReady && this._workletNode) {
       this._workletNode.setSustainPedal(isDown);
     }
@@ -1655,13 +1661,15 @@ export class MultiLayerEngine {
       } else {
         tritonVaEngine.setSustainPedal(isDown, when);
       }
-      return;
-    }
-    if (this.pcmEngine) {
+    } else if (this.pcmEngine) {
       this.pcmEngine.setSustainPedal(isDown, when);
       if (this.isCombiMode) {
         this._vaEngines.forEach(eng => { try { eng.setSustainPedal(isDown, when); } catch (err) {} });
       }
+    }
+    // Notify UI when sustain is force-cleared (e.g. during preset switch)
+    if (!isDown && this.onSustainForceOffCallback) {
+      try { this.onSustainForceOffCallback(); } catch (e) {}
     }
   }
 

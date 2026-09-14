@@ -8,15 +8,15 @@
 [![Audio: Web Audio API](https://img.shields.io/badge/Audio-Direct%20PCM%20%2B%20VA%20Engine-FF6F00?style=for-the-badge&logo=audio)](https://github.com/ewceniza9009/wilsonixmidi)
 [![Framework: Tauri v2 + Vite](https://img.shields.io/badge/Framework-Tauri%20v2%20%7C%20Rust-673AB7?style=for-the-badge)](https://tauri.app/)
 [![License: Proprietary](https://img.shields.io/badge/License-WILSONIX%20Commercial-red?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi)
-[![Version: v1.1.2](https://img.shields.io/badge/Version-v1.1.2%20Build%2013%20Production-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
+[![Version: v1.1.3](https://img.shields.io/badge/Version-v1.1.3%20Build%2014%20Production-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
 
 ---
 
-## 🚀 Official Production Downloads (v1.1.2 Build 13 Latest Release)
+## 🚀 Official Production Downloads (v1.1.3 Build 14 Latest Release)
 
 | Package / Distribution | Target Operating System | Architecture | Direct Download Link |
 |:---|:---|:---:|:---:|
-| **Windows Desktop Installer** | Windows 10 / 11 | x64 | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX.MIDIKEY_1.1.2_x64-setup.exe) |
+| **Windows Desktop Installer** | Windows 10 / 11 | x64 | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX.MIDIKEY_1.1.3_x64-setup.exe) |
 | **Android Package (APK)** | Android 8.0+ (Oreo to Android 15) | ARM64 / x86_64 | [⬇️ Download Android APK (`.apk`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/wilsonix-midikey.apk) |
 
 *Official binaries and checksums are verified and hosted on the [GitHub Releases page](https://github.com/ewceniza9009/wilsonixmidi/releases).*
@@ -41,7 +41,20 @@
 
 ---
 
-## 📑 Granular Changelog & Release Notes (v1.1.2 • Build 13)
+## 📑 Granular Changelog & Release Notes (v1.1.3 • Build 14)
+
+### 1. 🔇 Zero-Bleed Preset Switching & Buffer Flush
+- **Master Output Muting During Rebuild**: Mutes output briefly during `applyPreset()` transitions to prevent residual reverbs, delays, or modulation tails from bleeding across preset changes.
+- **Comprehensive FX State Reset**: Added `resetAllEffects()` to zero all modulation parameters, flush delay feedback buffers, zero reverb wet gains, and reset EQ/compressor to safe defaults before building new preset signal chains.
+- **Instant Trim Gain Configuration**: Added instant gain value setting (`setPresetTrim(val, instant)`) during engine bootstrap to eliminate ramp-up latency.
+
+### 2. 🎹 Preset Switch Sustain Auto-Clear & HUD Sync
+- **Damper Pedal Auto-Release**: Force-clears active sustain pedal states when switching single instruments, synth programs, Triton VA patches, or Combi multi-layer setups.
+- **Real-Time HUD State Synchronization**: Subscribes to `onSustainForceOffCallback` to immediately update `sustainPedal`, unlatch `sustainLatched`, and visually update the virtual keyboard HUD sustain button.
+
+---
+
+## 📑 Prior Release Notes (v1.1.2 • Build 13)
 
 ### 1. 🎧 Integrated Binaural Stage Monitor in Gig HUD
 - **Real-Time Environment Switching**: Added in-ear stage monitor selector directly inside the Gig HUD Latency & Audio popover.

@@ -109,6 +109,13 @@ export class VirtualKeyboardUI {
       this.updateQwertyLabels();
     };
 
+    // When engine force-clears sustain (preset switch), sync the UI button
+    multiLayerEngine.onSustainForceOffCallback = () => {
+      qwertyKeyboard.sustainPedal = false;
+      qwertyKeyboard.sustainLatched = false;
+      this.updateHudState();
+    };
+
     qwertyKeyboard.onChordVisualCallback = (notes, isPressed, velocity = 95) => {
       notes.forEach(m => this.setKeyVisualState(m, isPressed, velocity));
     };
