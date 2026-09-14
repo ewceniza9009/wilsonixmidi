@@ -820,6 +820,70 @@ export class MultiLayerEngine {
     } catch (e) {}
     this.activeLeadNotes = 0;
     this.padDuckingListeners = new Set();
+
+    // User settings (persisted to localStorage)
+    this.settings = {
+      // Sustain
+      sustainHoldSec: 7,      // auto-release timeout (3–30s)
+      sustainDecayTau: 2.4,   // decay rate while pedal held (0.5–8s)
+      // Audio
+      polyphonyCap: 64,       // max simultaneous voices (16–128)
+      masterVolumePct: 50,    // default master volume on load (0–100)
+      // Keyboard
+      defaultOctave: 4,       // starting octave (1–7)
+      defaultVelocity: 95,    // default note velocity (1–127)
+      // UI
+      theme: "dark",          // "dark" or "light"
+      tabRestore: true,       // remember last active tab on reload
+      lastTab: "keys",        // last active tab
+    };
+    try {
+      if (typeof localStorage !== "undefined") {
+        const raw = JSON.parse(localStorage.getItem("wilsonix_settings"));
+        if (raw && typeof raw === "object") {
+          const s = this.settings;
+          if (typeof raw.sustainHoldSec === "number") s.sustainHoldSec = Math.max(3, Math.min(30, raw.sustainHoldSec));
+          if (typeof raw.sustainDecayTau === "number") s.sustainDecayTau = Math.max(0.5, Math.min(8, raw.sustainDecayTau));
+          if (typeof raw.polyphonyCap === "number") s.polyphonyCap = Math.max(16, Math.min(128, raw.polyphonyCap));
+          if (typeof raw.masterVolumePct === "number") s.masterVolumePct = Math.max(0, Math.min(100, raw.masterVolumePct));
+          if (typeof raw.defaultOctave === "number") s.defaultOctave = Math.max(1, Math.min(7, raw.defaultOctave));
+          if (typeof raw.defaultVelocity === "number") s.defaultVelocity = Math.max(1, Math.min(127, raw.defaultVelocity));
+          if (raw.theme === "dark" || raw.theme === "light") s.theme = raw.theme;
+          if (typeof raw.tabRestore === "boolean") s.tabRestore = raw.tabRestore;
+          if (typeof raw.lastTab === "string") s.lastTab = raw.lastTab;
+        }
+      }
+    } catch (e) {}
+  }
+
+  updateSetting(key, value) {
+    const s = this.settings;
+    switch (key) {
+      case "sustainHoldSec": s.sustainHoldSec = Math.max(3, Math.min(30, Number(value) || 7)); break;
+      case "sustainDecayTau": s.sustainDecayTau = Math.max(0.5, Math.min(8, Number(value) || 2.4)); break;
+      case "polyphonyCap": s.polyphonyCap = Math.max(16, Math.min(128, Number(value) || 64)); break;
+      case "masterVolumePct": s.masterVolumePct = Math.max(0, Math.min(100, Number(value) || 50)); break;
+      case "defaultOctave": s.defaultOctave = Math.max(1, Math.min(7, Number(value) || 4)); break;
+      case "defaultVelocity": s.defaultVelocity = Math.max(1, Math.min(127, Number(value) || 95)); break;
+      case "theme": s.theme = value === "light" ? "light" : "dark"; break;
+      case "tabRestore": s.tabRestore = !!value; break;
+      case "lastTab": s.lastTab = String(value || "keys"); break;
+    }
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem("wilsonix_settings", JSON.stringify(s));
+      }
+    } catch (e) {}
+    // Apply immediately where needed
+    if (key === "masterVolumePct" && audioCore) {
+      try { audioCore.setMasterVolume(s.masterVolumePct / 100); } catch (e) {}
+    }
+    if (key === "polyphonyCap" && this.pcmEngine) {
+      this.pcmEngine.MAX_VOICES = s.polyphonyCap;
+    }
+    if (key === "theme") {
+      document.documentElement.setAttribute("data-theme", s.theme);
+    }
   }
 
   togglePadDucking(enabled) {
@@ -867,6 +931,7 @@ export class MultiLayerEngine {
     let eng = this._vaEngines.get(key);
     if (!eng) {
       eng = new TritonVirtualAnalogEngine();
+      eng._sustainSettings = this.settings;
       this.init();
       eng.init();
       this._vaEngines.set(key, eng);
@@ -993,9 +1058,13 @@ export class MultiLayerEngine {
       }
     }
     if (this.pcmEngine) {
+      this.pcmEngine.MAX_VOICES = this.settings.polyphonyCap;
       this.syncLayerFx();
       this.syncSplitFx();
     }
+    // Thread sustain settings to VA engines
+    tritonVaEngine._sustainSettings = this.settings;
+    this._vaEngines.forEach(eng => { eng._sustainSettings = this.settings; });
   }
 
   async _initWorklet() {
@@ -1130,6 +1199,7 @@ export class MultiLayerEngine {
   }
 
   setDualLayerEnabled(enabled) {
+    this.setSustainPedal(false);
     if (this.pcmEngine) this.pcmEngine.allNotesOff();
     tritonVaEngine.allNotesOff();
     this.vaAllNotesOff();
@@ -1265,6 +1335,7 @@ export class MultiLayerEngine {
       tritonVaEngine.allNotesOff();
       this.vaAllNotesOff();
       synthEngine.panic();
+      if (this._workletReady && this._workletNode) this._workletNode.allNotesOff();
 
       this.activeCombi = COMBI_PRESETS[presetId];
       this.isCombiMode = true;
@@ -1282,8 +1353,12 @@ export class MultiLayerEngine {
       });
       this.init();
       this.syncLayerFx();
-      if (this.activeCombi.fxPreset && audioCore.fxRack) {
-        audioCore.fxRack.applyPreset(this.activeCombi.fxPreset);
+      if (audioCore.fxRack) {
+        if (this.activeCombi.fxPreset) {
+          audioCore.fxRack.applyPreset(this.activeCombi.fxPreset);
+        } else {
+          audioCore.fxRack.applyPreset(null);
+        }
       }
       if (INSTRUMENT_PATCHES[presetId]) {
         synthEngine.activePatch = INSTRUMENT_PATCHES[presetId];

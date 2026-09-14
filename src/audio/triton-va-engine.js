@@ -23,6 +23,7 @@ export class TritonVirtualAnalogEngine {
     this.sustainPedal = false;
     this.heldNotes = new Set();
     this._monoIndex = 0;
+    this._sustainSettings = null;
   }
 
   init() {
@@ -145,7 +146,7 @@ export class TritonVirtualAnalogEngine {
     this.heldNotes.delete(midiNote);
     const rel = Math.max(0.02, Math.min(1.2, this.config?.release || 0.35));
     const voices = this.pool.getActiveVoicesByNote(midiNote);
-    voices.forEach(v => v.release(this.sustainPedal, rel, when));
+    voices.forEach(v => v.release(this.sustainPedal, rel, when, this._sustainSettings));
   }
 
   setSustainPedal(down, when = 0) {
@@ -153,7 +154,7 @@ export class TritonVirtualAnalogEngine {
     if (!this.sustainPedal && this.pool) {
       this.pool.voices.forEach(v => {
         if (v.isSustained && !this.heldNotes.has(v.activeMidiNote)) {
-          v.release(false, this.config?.release || 0.35, when);
+          v.release(false, this.config?.release || 0.35, when, this._sustainSettings);
         }
       });
     }

@@ -58,6 +58,25 @@
   --touch-target-min: 44px;
 }
 
+/* Light theme override */
+[data-theme="light"] {
+  color-scheme: light;
+  --bg-deep: #e8eaed;
+  --bg-surface: #f1f3f5;
+  --bg-surface-elevated: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f0f0f0;
+  --text-primary: #1a1a2e;
+  --text-secondary: #555570;
+  --text-muted: #8888a0;
+  --text-inverse: #f3f4f6;
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-medium: rgba(0, 0, 0, 0.15);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.18);
+}
+
 /* Base reset & box-sizing */
 *, *::before, *::after {
   box-sizing: border-box;

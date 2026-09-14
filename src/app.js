@@ -108,9 +108,65 @@ class MidiKeyEliteApp {
         syncFloatingLicense();
       });
       syncFloatingLicense();
-      document.getElementById("floating-license-btn")?.addEventListener("click", () => {
-        this.licenseModal?.open();
-      });
+
+      // Draggable license pill — restore saved position, distinguish drag vs click
+      const pill = document.getElementById("floating-license-btn");
+      if (pill) {
+        const STORAGE_KEY = "wilsonix_license_pill_pos";
+        try {
+          const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+          if (saved && typeof saved.top === "number" && typeof saved.right === "number") {
+            pill.style.top = saved.top + "px";
+            pill.style.right = saved.right + "px";
+          }
+        } catch (e) {}
+
+        let dragStartX = 0, dragStartY = 0, startTop = 0, startRight = 0;
+        let didDrag = false;
+
+        const onPointerDown = (e) => {
+          if (e.button && e.button !== 0) return;
+          dragStartX = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
+          dragStartY = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
+          startTop = parseInt(pill.style.top || "38", 10);
+          startRight = parseInt(pill.style.right || "14", 10);
+          didDrag = false;
+          pill.classList.add("dragging");
+          document.addEventListener("pointermove", onPointerMove);
+          document.addEventListener("pointerup", onPointerUp);
+        };
+
+        const onPointerMove = (e) => {
+          const x = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
+          const y = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
+          const dx = x - dragStartX;
+          const dy = y - dragStartY;
+          if (Math.abs(dx) > 3 || Math.abs(dy) > 3) didDrag = true;
+          const maxTop = window.innerHeight - pill.offsetHeight - 4;
+          const maxRight = window.innerWidth - pill.offsetWidth - 4;
+          pill.style.top = Math.max(0, Math.min(maxTop, startTop + dy)) + "px";
+          pill.style.right = Math.max(0, Math.min(maxRight, startRight - dx)) + "px";
+        };
+
+        const onPointerUp = () => {
+          pill.classList.remove("dragging");
+          document.removeEventListener("pointermove", onPointerMove);
+          document.removeEventListener("pointerup", onPointerUp);
+          if (didDrag) {
+            try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                top: parseInt(pill.style.top, 10),
+                right: parseInt(pill.style.right, 10),
+              }));
+            } catch (e) {}
+          }
+        };
+
+        pill.addEventListener("pointerdown", onPointerDown);
+        pill.addEventListener("click", (e) => {
+          if (!didDrag) this.licenseModal?.open();
+        });
+      }
     } catch (e) {
       console.warn("LicenseModalUI init:", e);
     }
@@ -128,7 +184,7 @@ class MidiKeyEliteApp {
     try {
       const pct = restoredSession && typeof restoredSession.masterPct === "number"
         ? restoredSession.masterPct
-        : 50;
+        : multiLayerEngine.settings.masterVolumePct;
       multiLayerEngine.setMasterVolumePct(pct);
       const volSlider = document.getElementById("hud-master-vol");
       const volReadout = document.getElementById("hud-master-vol-val");
@@ -208,7 +264,10 @@ class MidiKeyEliteApp {
     // 9. Non-blocking Web MIDI API Background Connect
     midiManager.init().catch(err => console.warn("MIDI init:", err));
 
-    // 10. Default View Mode: Triton VST Console
+    // 10. Apply saved theme
+    document.documentElement.setAttribute("data-theme", multiLayerEngine.settings.theme);
+
+    // 10b. Default View Mode: Triton VST Console
     const appRoot = document.getElementById("app-root");
     if (appRoot) {
       appRoot.classList.add("view-triton");
@@ -258,8 +317,18 @@ class MidiKeyEliteApp {
         if (stageDeck && window.scrollY > 50) {
           stageDeck.scrollIntoView({ behavior: "smooth" });
         }
+
+        // Remember last tab for restore
+        multiLayerEngine.updateSetting("lastTab", view);
       });
     });
+
+    // Restore last tab if enabled
+    if (multiLayerEngine.settings.tabRestore) {
+      const lastTab = multiLayerEngine.settings.lastTab;
+      const restoreBtn = document.querySelector(`.ws-tab-btn[data-view="${lastTab}"]`);
+      if (restoreBtn) restoreBtn.click();
+    }
 
     // Tablet & Mobile Workspace View Dropdown Listener
     const wsTabsSelect = document.getElementById("hud-ws-tabs-select");

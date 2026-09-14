@@ -356,6 +356,9 @@ export class LayerInsertProcessor {
 
   flush() {
     try {
+      // Kill wet path immediately
+      this.wetGain.gain.cancelScheduledValues(this.ctx.currentTime);
+      this.wetGain.gain.setValueAtTime(0, this.ctx.currentTime);
       this.activeFxNodes.forEach(node => {
         try {
           if (node.gain && node.gain.cancelScheduledValues) {
@@ -370,6 +373,10 @@ export class LayerInsertProcessor {
   setEffect(fxType) {
     this.currentFx = fxType || "clean";
     const ctx = this.ctx;
+
+    // IMMEDIATELY silence the wet path to kill any lingering reverb/delay tails
+    this.wetGain.gain.cancelScheduledValues(ctx.currentTime);
+    this.wetGain.gain.setValueAtTime(0, ctx.currentTime);
 
     // Disconnect old FX nodes
     try {
@@ -1884,8 +1891,8 @@ export class NativePcmEngine {
               if (oldV.src) oldV.src.onended = null;
               oldV.voiceGain.gain.cancelScheduledValues(now);
               oldV.voiceGain.gain.setValueAtTime(oldV.voiceGain.gain.value || 0.001, now);
-              oldV.voiceGain.gain.linearRampToValueAtTime(0.0001, now + 0.004);
-              if (oldV.src) oldV.src.stop(now + 0.005);
+              oldV.voiceGain.gain.linearRampToValueAtTime(0.0001, now + 0.025);
+              if (oldV.src) oldV.src.stop(now + 0.030);
             } catch (e) {}
             this.removeVoice(midiNote, oldV);
           } else {
@@ -1900,32 +1907,23 @@ export class NativePcmEngine {
       }
     }
 
-    // 0b. Same-note re-trigger must also steal still-ringing SUSTAINED copies
+    // 0b. Same-note re-trigger: kill ALL still-ringing SUSTAINED copies across all layers
+    // When re-triggering the same MIDI note, old sustained instances on ANY layer must
+    // stop — otherwise they accumulate during rapid chord switching (e.g. chord pads).
     if (this.sustainedVoices.has(midiNote)) {
       const susList = this.sustainedVoices.get(midiNote);
       if (susList && susList.length > 0) {
-        const keep = [];
         susList.forEach(oldV => {
-          const isSameLayer = (layerIndex !== null && layerIndex !== undefined && oldV.layerIndex === layerIndex);
-          const isSameInst = (oldV.instId === instId);
-          if (isSameLayer || (layerIndex === null && isSameInst)) {
-            try {
-              if (oldV.src) oldV.src.onended = null;
-              oldV.voiceGain.gain.cancelScheduledValues(now);
-              oldV.voiceGain.gain.setValueAtTime(oldV.voiceGain.gain.value || 0.001, now);
-              oldV.voiceGain.gain.linearRampToValueAtTime(0.0001, now + 0.004);
-              if (oldV.src) oldV.src.stop(now + 0.005);
-            } catch (e) {}
-            this.removeVoice(midiNote, oldV);
-          } else {
-            keep.push(oldV);
-          }
+          try {
+            if (oldV.src) oldV.src.onended = null;
+            oldV.voiceGain.gain.cancelScheduledValues(now);
+            oldV.voiceGain.gain.setValueAtTime(oldV.voiceGain.gain.value || 0.001, now);
+            oldV.voiceGain.gain.linearRampToValueAtTime(0.0001, now + 0.025);
+            if (oldV.src) oldV.src.stop(now + 0.030);
+          } catch (e) {}
+          this.removeVoice(midiNote, oldV);
         });
-        if (keep.length > 0) {
-          this.sustainedVoices.set(midiNote, keep);
-        } else {
-          this.sustainedVoices.delete(midiNote);
-        }
+        this.sustainedVoices.delete(midiNote);
       }
     }
 
@@ -2031,8 +2029,8 @@ export class NativePcmEngine {
         if (target.src) target.src.onended = null;
         target.voiceGain.gain.cancelScheduledValues(now);
         target.voiceGain.gain.setValueAtTime(target.voiceGain.gain.value || 0.001, now);
-        target.voiceGain.gain.linearRampToValueAtTime(0.0001, now + 0.004);
-        if (target.src) target.src.stop(now + 0.005);
+        target.voiceGain.gain.linearRampToValueAtTime(0.0001, now + 0.025);
+        if (target.src) target.src.stop(now + 0.030);
       } catch (e) {}
       this.removeVoice(target.midiNote, target);
     }

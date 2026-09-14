@@ -930,65 +930,114 @@ export class GigHudUI {
         <span>ROUND-TRIP LATENCY & BUFFER CONTROL</span>
         <button class="latency-pop-close" id="hud-latency-close">✕</button>
       </div>
-      <div class="latency-profile-section">
-        <div class="latency-profile-title">BUFFER / LATENCY PROFILE</div>
-        <div class="latency-profile-pills">
-          <button class="latency-prof-btn ${currentProf === 'ultra-low' ? 'active' : ''}" data-profile="ultra-low" title="64–128 frames / Fastest response for dedicated audio interfaces">
-            <span class="prof-title">STAGE ULTRA-LOW</span>
-            <span class="prof-sub">≤128 frames target</span>
-          </button>
-          <button class="latency-prof-btn ${currentProf === 'balanced' ? 'active' : ''}" data-profile="balanced" title="256 frames / Stable performance for general laptop audio">
-            <span class="prof-title">BALANCED STUDIO</span>
-            <span class="prof-sub">256 frames target</span>
-          </button>
-          <button class="latency-prof-btn ${currentProf === 'safe' ? 'active' : ''}" data-profile="safe" title="512 frames / Maximum glitch-free headroom for heavy polyphony">
-            <span class="prof-title">SAFE STAGE</span>
-            <span class="prof-sub">512 frames target</span>
-          </button>
+      <div class="latency-pop-columns">
+        <div class="latency-pop-col">
+          <div class="latency-profile-section">
+            <div class="latency-profile-title">BUFFER / LATENCY PROFILE</div>
+            <div class="latency-profile-pills">
+              <button class="latency-prof-btn ${currentProf === 'ultra-low' ? 'active' : ''}" data-profile="ultra-low" title="64–128 frames / Fastest response for dedicated audio interfaces">
+                <span class="prof-title">STAGE ULTRA-LOW</span>
+                <span class="prof-sub">≤128 frames</span>
+              </button>
+              <button class="latency-prof-btn ${currentProf === 'balanced' ? 'active' : ''}" data-profile="balanced" title="256 frames / Stable performance for general laptop audio">
+                <span class="prof-title">BALANCED STUDIO</span>
+                <span class="prof-sub">256 frames</span>
+              </button>
+              <button class="latency-prof-btn ${currentProf === 'safe' ? 'active' : ''}" data-profile="safe" title="512 frames / Maximum glitch-free headroom for heavy polyphony">
+                <span class="prof-title">SAFE STAGE</span>
+                <span class="prof-sub">512 frames</span>
+              </button>
+            </div>
+          </div>
+          <div class="latency-device-section" id="latency-device-section">
+            <div class="latency-profile-title">OUTPUT DEVICE</div>
+            <select class="latency-device-select" id="latency-device-select">
+              <option value="">Default</option>
+            </select>
+            <div class="latency-pop-reco">
+              🔌 Select USB audio interface or wired output.
+              ⚠️ Never use Bluetooth for live keyboards.
+            </div>
+          </div>
+          <div class="latency-device-section" id="latency-spatial-section">
+            <div class="latency-profile-title">🎧 BINAURAL MONITOR</div>
+            <select class="latency-device-select" id="latency-spatial-select">
+              <option value="off" selected>OFF (Dry Signal)</option>
+            </select>
+            <div class="latency-pop-reco">
+              🎧 HRTF 3D spatial for headphones. Best with wired IEMs.
+            </div>
+          </div>
+          <div class="latency-pop-body">${rows}</div>
+          ${
+            recom
+              ? `<div class="latency-pop-reco ${recom.isActive ? "reco-active" : ""}">
+                  ${recom.isActive
+                    ? "✔ Negotiated buffer matches this profile."
+                    : `💡 Device negotiated ${measuredFrames} frames — closest: <b>${recom.label}</b>.`}
+                </div>`
+              : ""
+          }
+          <div class="latency-pop-tip">
+            <span>${
+              stalled
+                ? "⚠️ Audio clock stalled — play a note to re-lock."
+                : "🔹 Real latency = base buffer + OS output buffer."
+            }</span>
+          </div>
         </div>
-      </div>
-      <div class="latency-device-section" id="latency-device-section">
-        <div class="latency-profile-title">OUTPUT DEVICE</div>
-        <select class="latency-device-select" id="latency-device-select">
-          <option value="">Default</option>
-        </select>
-        <div class="latency-pop-reco">
-          🔌 Select USB audio interface, DAC, or wired output for live gigs.
-          ⚠️ Never use Bluetooth for live keyboards — adds 150–300ms delay.
+        <div class="latency-pop-col">
+          <div class="latency-device-section" id="latency-settings-section">
+            <div class="latency-profile-title">⚙️ PERFORMANCE SETTINGS</div>
+            <div class="settings-grid">
+              <label class="settings-row">
+                <span class="settings-label">Sustain Hold</span>
+                <input type="range" class="settings-slider" id="settings-sustain-hold" min="3" max="30" step="1" value="${multiLayerEngine.settings.sustainHoldSec}">
+                <span class="settings-val" id="settings-sustain-hold-val">${multiLayerEngine.settings.sustainHoldSec}s</span>
+              </label>
+              <label class="settings-row">
+                <span class="settings-label">Sustain Tone</span>
+                <input type="range" class="settings-slider" id="settings-sustain-decay" min="0.5" max="8" step="0.1" value="${multiLayerEngine.settings.sustainDecayTau}">
+                <span class="settings-val" id="settings-sustain-decay-val">${multiLayerEngine.settings.sustainDecayTau.toFixed(1)}</span>
+              </label>
+              <label class="settings-row">
+                <span class="settings-label">Polyphony Cap</span>
+                <input type="range" class="settings-slider" id="settings-polyphony" min="16" max="128" step="16" value="${multiLayerEngine.settings.polyphonyCap}">
+                <span class="settings-val" id="settings-polyphony-val">${multiLayerEngine.settings.polyphonyCap}</span>
+              </label>
+              <label class="settings-row">
+                <span class="settings-label">Velocity</span>
+                <input type="range" class="settings-slider" id="settings-velocity" min="1" max="127" step="1" value="${multiLayerEngine.settings.defaultVelocity}">
+                <span class="settings-val" id="settings-velocity-val">${multiLayerEngine.settings.defaultVelocity}</span>
+              </label>
+              <label class="settings-row">
+                <span class="settings-label">Octave</span>
+                <input type="range" class="settings-slider" id="settings-octave" min="1" max="7" step="1" value="${multiLayerEngine.settings.defaultOctave}">
+                <span class="settings-val" id="settings-octave-val">C${multiLayerEngine.settings.defaultOctave}</span>
+              </label>
+              <label class="settings-row">
+                <span class="settings-label">Theme</span>
+                <select class="latency-device-select settings-select" id="settings-theme">
+                  <option value="dark" ${multiLayerEngine.settings.theme === "dark" ? "selected" : ""}>Dark</option>
+                  <option value="light" ${multiLayerEngine.settings.theme === "light" ? "selected" : ""}>Light</option>
+                </select>
+              </label>
+              <label class="settings-row">
+                <span class="settings-label">Restore Tab</span>
+                <input type="checkbox" class="settings-check" id="settings-tab-restore" ${multiLayerEngine.settings.tabRestore ? "checked" : ""}>
+              </label>
+            </div>
+            <div class="latency-pop-reco">
+              💾 Settings save instantly and persist across sessions.
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="latency-device-section" id="latency-spatial-section">
-        <div class="latency-profile-title">🎧 BINAURAL STAGE MONITOR</div>
-        <select class="latency-device-select" id="latency-spatial-select">
-          <option value="off" selected>OFF (Dry Signal)</option>
-        </select>
-        <div class="latency-pop-reco">
-          🎧 HRTF 3D spatial audio for headphones. Simulates concert hall, studio, and more.
-          Best with wired in-ear monitors — not for speakers.
-        </div>
-      </div>
-      <div class="latency-pop-body">${rows}</div>
-      ${
-        recom
-          ? `<div class="latency-pop-reco ${recom.isActive ? "reco-active" : ""}">
-              ${recom.isActive
-                ? "✔ Negotiated buffer matches this profile."
-                : `💡 Device actually negotiated ${measuredFrames} frames — closest profile: <b>${recom.label}</b>.`}
-            </div>`
-          : ""
-      }
-      <div class="latency-pop-tip">
-        <span>${
-          stalled
-            ? "⚠️ Audio clock is stalled — play a note to re-lock it."
-            : "🔹 Real latency = base buffer + OS output buffer. Bluetooth output adds 100–200ms on top — use wired listening."
-        }</span>
       </div>
     `;
 
     pop.style.position = "fixed";
     pop.style.top = `${rect.bottom + 6}px`;
-    pop.style.left = `${Math.max(8, rect.left - 120)}px`;
+    pop.style.left = `${Math.max(8, Math.min(window.innerWidth - 868, (window.innerWidth - 860) / 2))}px`;
     pop.style.zIndex = "10000";
 
     pop.addEventListener("click", e => e.stopPropagation());
@@ -1040,6 +1089,41 @@ export class GigHudUI {
       spatialSelect.addEventListener("change", e => {
         e.stopPropagation();
         audioCore.setSpatialEnvironment(spatialSelect.value);
+      });
+    }
+
+    // Settings sliders
+    const bindSlider = (id, valId, key, fmt) => {
+      const slider = pop.querySelector(`#${id}`);
+      const valEl = pop.querySelector(`#${valId}`);
+      if (!slider) return;
+      slider.addEventListener("input", e => {
+        const v = parseFloat(e.target.value);
+        multiLayerEngine.updateSetting(key, v);
+        if (valEl) valEl.textContent = fmt(v);
+      });
+    };
+    bindSlider("settings-sustain-hold", "settings-sustain-hold-val", "sustainHoldSec", v => `${v}s`);
+    bindSlider("settings-sustain-decay", "settings-sustain-decay-val", "sustainDecayTau", v => v.toFixed(1));
+    bindSlider("settings-polyphony", "settings-polyphony-val", "polyphonyCap", v => `${v}`);
+    bindSlider("settings-velocity", "settings-velocity-val", "defaultVelocity", v => `${v}`);
+    bindSlider("settings-octave", "settings-octave-val", "defaultOctave", v => `C${v}`);
+
+    // Theme select
+    const themeSelect = pop.querySelector("#settings-theme");
+    if (themeSelect) {
+      themeSelect.addEventListener("change", e => {
+        e.stopPropagation();
+        multiLayerEngine.updateSetting("theme", e.target.value);
+      });
+    }
+
+    // Tab restore checkbox
+    const tabRestoreCheck = pop.querySelector("#settings-tab-restore");
+    if (tabRestoreCheck) {
+      tabRestoreCheck.addEventListener("change", e => {
+        e.stopPropagation();
+        multiLayerEngine.updateSetting("tabRestore", e.target.checked);
       });
     }
   }

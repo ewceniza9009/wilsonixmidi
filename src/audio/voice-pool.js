@@ -215,29 +215,27 @@ export class PolyphonicVoice {
     }
   }
 
-  release(sustainPedalActive, releaseTime = 0.25, when = 0) {
+  release(sustainPedalActive, releaseTime = 0.25, when = 0, sustainSettings = null) {
     const ctx = this.ctx;
     const now = when > 0 ? Math.max(when, ctx.currentTime) : ctx.currentTime;
     const gen = this._gen;
 
     if (sustainPedalActive) {
       this.isSustained = true;
-      // Natural Acoustic/Analog Damper Ceiling:
-      // Even with sustain pedal held, notes slowly decay across 4-6s (tau = 2.4s)
-      // so holding the pedal while playing rapid chords NEVER accumulates 30+ voices into infinite volume
+      const decayTau = sustainSettings?.sustainDecayTau ?? 2.4;
+      const holdMs = (sustainSettings?.sustainHoldSec ?? 7) * 1000;
       try {
         this.voiceGain.gain.cancelScheduledValues(now);
-        this.voiceGain.gain.setTargetAtTime(0.0, now, 2.4);
+        this.voiceGain.gain.setTargetAtTime(0.0, now, decayTau);
       } catch (e) {}
 
-      // After 7 seconds of pedal sustain without key retrigger, cleanly mark voice idle
       setTimeout(() => {
         if (gen === this._gen && this.isSustained) {
           this.isBusy = false;
           this.isSustained = false;
           this.activeMidiNote = null;
         }
-      }, 7000);
+      }, holdMs);
       return;
     }
     this.isSustained = false;

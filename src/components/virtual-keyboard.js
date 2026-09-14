@@ -109,6 +109,12 @@ export class VirtualKeyboardUI {
       this.updateQwertyLabels();
     };
 
+    // Apply saved keyboard defaults from settings
+    try {
+      qwertyKeyboard.baseOctave = multiLayerEngine.settings.defaultOctave;
+      qwertyKeyboard.velocity = multiLayerEngine.settings.defaultVelocity;
+    } catch (e) {}
+
     // When engine force-clears sustain (preset switch), sync the UI button
     multiLayerEngine.onSustainForceOffCallback = () => {
       qwertyKeyboard.sustainPedal = false;

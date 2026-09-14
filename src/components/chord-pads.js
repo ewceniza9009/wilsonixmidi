@@ -7,6 +7,7 @@
  */
 
 import { multiLayerEngine } from "../audio/multi-layer-engine.js";
+import { audioCore } from "../audio/audio-core.js";
 
 export const CHORD_GENRES = [
   { id: "basic_chords", name: "BASIC CHORDS (LEARN)", icon: "🌱" },
@@ -197,6 +198,7 @@ export class ChordPadsUI {
     this.container = document.getElementById(containerId);
     this.activeBank = "basic_chords";
     this.activeNotesMap = new Map(); // PadIndex -> Array of active midi notes
+    this.genresExpanded = false;
 
     this.render();
     this.bindEvents();
@@ -214,7 +216,7 @@ export class ChordPadsUI {
           <span class="genre-tag">${CHORD_GENRES.find(g => g.id === this.activeBank)?.name || "GENRE"}</span>
         </div>
         <div class="bank-selector-scroll">
-          <div class="bank-selector">
+          <div class="bank-selector ${this.genresExpanded ? "expanded" : ""}">
             ${CHORD_GENRES.map(
               g => `
               <button class="bank-btn ${this.activeBank === g.id ? "active" : ""}" data-bank="${g.id}">
@@ -223,6 +225,9 @@ export class ChordPadsUI {
             `
             ).join("")}
           </div>
+          <button class="genre-toggle-btn desktop-only" id="genre-toggle-btn">
+            ${this.genresExpanded ? "Less" : "More"}
+          </button>
         </div>
       </div>
       <div class="chord-pads-grid">
@@ -241,6 +246,7 @@ export class ChordPadsUI {
     `;
 
     this.bindBankButtons();
+    this.bindGenreToggle();
   }
 
   bindBankButtons() {
@@ -256,6 +262,16 @@ export class ChordPadsUI {
       };
       btn.addEventListener("pointerdown", handleBank);
       btn.addEventListener("click", handleBank);
+    });
+  }
+
+  bindGenreToggle() {
+    const toggleBtn = this.container?.querySelector("#genre-toggle-btn");
+    if (!toggleBtn) return;
+    toggleBtn.addEventListener("click", () => {
+      this.genresExpanded = !this.genresExpanded;
+      this.render();
+      this.bindEvents();
     });
   }
 
@@ -323,21 +339,54 @@ export class ChordPadsUI {
     const chord = chords[index];
     if (!chord) return;
 
-    // Smoothly release any previously active chord pads so chords don't pile up or choke
-    this.releaseAllChords();
+    // Force-kill any sustained voices from previous chord (bypass sustain pedal)
+    // so old chord doesn't bleed into new chord during fast switching
+    this.releaseAllChords(true);
 
     const activeNotes = [...chord.notes];
     this.activeNotesMap.set(index, activeNotes);
 
-    activeNotes.forEach(m => {
-      multiLayerEngine.noteOn(m, 105);
-    });
+    // Micro-timing spread: stagger noteOns by 2ms to avoid all voices hitting
+    // the audio thread at the exact same sample (causes transient spike / graininess)
+    try {
+      const baseTime = audioCore.ctx ? audioCore.ctx.currentTime + 0.002 : 0;
+      activeNotes.forEach((m, i) => {
+        multiLayerEngine.noteOn(m, 105, baseTime > 0 ? baseTime + i * 0.002 : 0);
+      });
+    } catch (e) {
+      activeNotes.forEach(m => {
+        multiLayerEngine.noteOn(m, 105);
+      });
+    }
     this.emitKeyVisual(activeNotes, true, 105);
   }
 
-  releaseAllChords() {
+  releaseAllChords(forceKill = false) {
     this.activeNotesMap.forEach((notes, idx) => {
-      notes.forEach(m => multiLayerEngine.noteOff(m));
+      if (forceKill && multiLayerEngine) {
+        // Temporarily disable sustain on all engines so old chord voices release
+        // immediately instead of accumulating in sustained pools during fast switching
+        const saved = { pcm: null, va: [] };
+        try {
+          if (multiLayerEngine.pcmEngine) {
+            saved.pcm = multiLayerEngine.pcmEngine.sustainPedal;
+            multiLayerEngine.pcmEngine.sustainPedal = false;
+          }
+          if (multiLayerEngine._vaEngines) {
+            multiLayerEngine._vaEngines.forEach(eng => {
+              saved.va.push({ eng, was: eng.sustainPedal });
+              eng.sustainPedal = false;
+            });
+          }
+        } catch (e) {}
+        notes.forEach(m => multiLayerEngine.noteOff(m));
+        try {
+          if (saved.pcm !== null) multiLayerEngine.pcmEngine.sustainPedal = saved.pcm;
+          saved.va.forEach(({ eng, was }) => { eng.sustainPedal = was; });
+        } catch (e) {}
+      } else {
+        notes.forEach(m => multiLayerEngine.noteOff(m));
+      }
       const pad = this.container?.querySelector(`#chord-pad-${idx}`);
       if (pad) {
         pad.classList.remove("active");
