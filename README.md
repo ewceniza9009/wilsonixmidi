@@ -27,10 +27,10 @@
 
 - 🎹 **Hybrid Dual-Core Sound Engine** — Direct multi-layer PCM Rompler, dual-oscillator Virtual Analog subtractive synth (TVA/TVF, hard-sync leads), and physical-modeling brass, reeds, drums & percussion, engineered for zero-latency live performance.
 - 🎚️ **4-Timbre Combi Stacking** — Stack up to four layers with per-layer volume, pan, octave, semitone and velocity control, plus a dual-zone split console with dynamic split point selection.
-- 🎛️ **102-Algorithm Hardware Master FX Rack** — Compressor, Dimension-D chorus, tube drive, vintage phaser, Leslie 122 rotary, tape flanger, optical tremolo, bitcrusher/decimator, formant talkbox, Haas stereo widener, ping-pong tape delay, concert reverb, 3-band EQ, Kaoss filter, and a calibrated hardware look-ahead limiter.
+- 🎛️ **23-Device Hardware Master FX Rack** — Optical compressor, auto-wah, talkbox formant filter, tube drive, bitcrusher, vinyl lo-fi tape, Haas stereo widener, auto-pan, 6-stage phaser, flanger, Dimension-D chorus, Leslie rotary, tremolo, slapback, dub echo, ping-pong delay, spring/shimmer/gated/algorithmic reverb, tape saturation, and a master EQ-limiter — plus 22 Triton IFX/MFX algorithms and 35 per-layer insert FX for 80+ named algorithm choices.
 - 🥁 **Physical-Modeling Drums & Percussion** — Acoustic kick, wood-shell snare, bronze hi-hats, and chromatically tuned Latin percussion (cowbell, cascara timbales, congas) with true zero-latency strike response.
 - 💾 **Stage Registration Memory (32 Rigs)** — 4 Banks × 8 Slots with `F1`–`F8` instant recall, full live-state snapshots, and schema-validated JSON setlist import/export.
-- 🎹 **16-Pad MPC Chord Matrix & Scale Engine** — One-touch Jazz, Gospel, Neo-Soul and Pop voicings with a quantizing scale/key lock engine.
+- 🎹 **12-Pad MPC Chord Matrix & Scale Engine** — One-touch Jazz, Gospel, Neo-Soul and Pop voicings (24-chord learn bank, 11 genre banks) with a quantizing scale/key lock engine.
 - 🔁 **Clock-Anchored Arpeggiator & Multi-Track Looper** — Web Audio look-ahead scheduling keeps tempo rock-solid under heavy stage load.
 - 🎙️ **Lossless WAV Master Recorder + Media Player** — Pre-DAC waveform capture with a zero-gain monitor sink; MP3/WAV/FLAC/OGG/M4A/AAC backing-track deck with playlist support.
 - 📊 **Hardware HUD & Diagnostics** — 60 FPS VU metering, real-time latency/CPU profiling, panic reset, and an 8-second pre-DAC waveform diagnostic tap.
@@ -77,30 +77,33 @@
 ### 🎚️ 2. 4-Timbre Multi-Layer Combinations (Combi)
 - **4-Layer Stacking Architecture**: Stack up to four simultaneous timbres across PCM Rompler banks, Virtual Analog presets, and Soundfont instruments.
 - **Per-Layer Controls**: Individual volume fader, stereo pan, octave transposition (-2 to +2), semitone fine-tune, velocity curve response, solo, and mute switches.
-- **Instant Search & Categorized Preset Library**: 13+ production combi combinations with fast category filtering and single-click recall.
+- **Instant Search & Categorized Preset Library**: 53 production combi combinations (13 starred signature stacks) with fast category filtering and single-click recall.
 
 ### ✂️ 3. Split Keyboard Performance Console
 - **Dual Performance Zones**: Divide the 88-key keybed into independent Lower Zone (bass/accompaniment) and Upper Zone (lead/piano/brass).
 - **Dynamic Split Point Selection**: Select split points via direct visual keyboard clicking or quick numeric MIDI key selection.
 - **Independent Zone Sound Selection**: Assign any Rompler instrument, Triton VA program, or custom stack to either zone with distinct octave transpositions.
 
-### 🎛️ 4. 102 Algorithm Hardware Master FX Rack
-- **IFX 0 (Studio Dynamics Compressor)**: Optical-style peak leveling, threshold, ratio, attack, release, and makeup gain for drum punch and piano sustain.
-- **IFX 1 (Rhodes Stereo Auto-Pan)**: Dynamic stereo ping-pong panning with speed and depth modulation.
-- **IFX 2 (Dimension D Stereo Chorus)**: Multi-voice Roland/Dimension-D style analog chorus widening.
-- **IFX 3 (Valve Force Tube Drive)**: Hyperbolic tangent soft-clipping tube saturation with tone control.
-- **IFX 4 (6-Stage Vintage Phaser)**: Sweeping phase notch filters with feedback resonance for funk and clavinet.
-- **IFX 5 (Leslie 122 Rotary Speaker Cabinet)**: Authentic dual-rotor Doppler acceleration with Chorale (slow) and Tremolo (fast) brake switching.
-- **IFX 6 (Stereo Tape Flanger)**: Resonant comb-filter jet flanging with polarity inversion.
-- **IFX 7 (Vintage Optical Tremolo)**: Photocell amplitude pulsing for surf guitars and vintage keys.
-- **IFX 8 (Retro Bitcrusher / Decimator)**: 2-bit to 16-bit word length reduction and downsampling (1kHz to 20kHz) for vintage sampler grit.
-- **IFX 9 (Heil Formant Talk Box)**: Triple formant vocal cavity filter (F1 650Hz, F2 1550Hz, F3 2850Hz) with dynamic vowel morphing (Roger Troutman style).
-- **IFX 10 (Haas Stereo Spatial Widener)**: Psychoacoustic psycho-stereo delay widening without mono phase cancellation.
-- **MFX 1 (Ping-Pong Tape Delay)**: Tempo-synchronized cross-feedback stereo delay lines.
-- **MFX 2 (Concert Hall & Plate Reverb)**: Lush diffusion reverberation with customizable decay, pre-delay, and high-frequency damping.
-- **Master 3-Band Parametric EQ**: Low shelf (80Hz), sweepable mid peaking (1.4kHz), and high shelf (10kHz).
+### 🎛️ 4. 23-Device Hardware Master FX Rack
+- **Chain & Per-Layer Insert FX (80+ Algorithm Choices)**: A dynamically rebuilt serial FX chain with zero-latency fast-path bypass, plus 22 Triton IFX/MFX algorithms and 35 per-layer insert FX for a total of 80+ named DSP algorithms.
+- **IFX Opto-Compressor (Studio Dynamics)**: Optical-style peak leveling, threshold, ratio, attack, release, and makeup gain for drum punch and piano sustain.
+- **IFX Rhodes Auto-Pan**: Dynamic stereo ping-pong panning with speed and depth modulation.
+- **IFX Dimension D Stereo Chorus**: Multi-voice Roland/Dimension-D style analog chorus widening.
+- **IFX Valve Force Tube Drive**: Hyperbolic tangent soft-clipping tube saturation with tone control.
+- **IFX 6-Stage Vintage Phaser**: Sweeping phase notch filters with feedback resonance for funk and clavinet.
+- **IFX Leslie 122 Rotary Speaker Cabinet**: Authentic dual-rotor Doppler acceleration with Chorale (slow) and Tremolo (fast) brake switching.
+- **IFX Stereo Tape Flanger**: Resonant comb-filter jet flanging with polarity inversion.
+- **IFX Vintage Optical Tremolo**: Photocell amplitude pulsing for surf guitars and vintage keys.
+- **IFX Retro Bitcrusher / Decimator**: 2-bit to 16-bit word length reduction and downsampling (1kHz to 20kHz) for vintage sampler grit.
+- **IFX Heil Formant Talk Box**: Triple formant vocal cavity filter (F1 650Hz, F2 1550Hz, F3 2850Hz) with dynamic vowel morphing (Roger Troutman style).
+- **IFX Haas Stereo Spatial Widener**: Psychoacoustic psycho-stereo delay widening without mono phase cancellation.
+- **MFX Ping-Pong Tape Delay**: Tempo-synchronized cross-feedback stereo delay lines.
+- **MFX Concert Hall & Plate Reverb**: Lush diffusion reverberation with customizable decay, pre-delay, and high-frequency damping.
+- **Spring, Shimmer & Gated Reverbs**: Retro spring tank, celestial octave shimmer, and 80s gated-snare cannon algorithms.
+- **Vinyl Lo-Fi Tape & Master Tape Saturation**: Wow/flutter pitch wobble with warm HF rolloff, and a master glue tape curve with output trimming.
+- **Dynamic Auto-Wah**: Envelope-follower filter sweep from clean to funky nasal tone.
+- **Master 3-Band Parametric EQ & Limiter**: Low shelf (80–90Hz), sweepable mid peaking (1.4kHz), high shelf (8.5–10kHz), and a brickwall lookahead limiter calibrated to -1.0 dB.
 - **Master Kaoss Dynamic Filter**: Real-time lowpass filter frequency and resonance modulation via touch/mouse X/Y pad.
-- **Hardware Lookahead Limiter**: Brickwall peak containment calibrated to -1.0 dB to eliminate DAC digital clipping.
 
 ### 🥁 5. Real Acoustic Drum Kit & Physical Modeling Percussion
 - **Zero-Latency Physical Synthesis**: Instant strike response with 0.00ms latency.
@@ -116,10 +119,10 @@
 - **Hardware Keyboard Hotkeys**: Direct slot recalls via `F1`–`F8` keys, bank cycling, and `Ctrl+F4` piano collapse.
 - **JSON Setlist Import & Export**: Export entire performance setlists to JSON files and import on any stage device with pure schema verification.
 
-### 🎛️ 7. 16-Pad MPC Chord Trigger Matrix & Scale Engine
-- **16 Velocity-Sensitive Chord Pads**: Trigger rich multi-note jazz, gospel, neo-soul, and pop chord progressions with a single touch.
+### 🎛️ 7. 12-Pad MPC Chord Trigger Matrix & Scale Engine
+- **12 Velocity-Sensitive Chord Pads per Bank**: 11 banks — Basic Chords (all 24 major/minor triads), Worship & Ballad, Neo-Soul, Gospel Praise, 90s R&B, Jazz Fusion, Pop Anthems, City Pop, Lo-Fi Chill, Latin Bossa, and 80s Synthwave — each triggering rich multi-note voicings with a single touch.
 - **Custom Voicings & Strumming**: Realistic humanized strum offsets, adjustable velocity curves, and chord editing.
-- **Scale & Key Lock Engine**: Quantize all incoming keyboard and pad notes to Major, Minor, Pentatonic, Dorian, Blues, Mixolydian, and Harmonic Minor scales.
+- **Scale & Key Lock Engine**: Quantize all incoming keyboard and pad notes to Chromatic (off), Major, Natural Minor, Harmonic Minor, Pentatonic Major, Pentatonic Minor, Gospel Blues, or Dorian scales.
 
 ### 🔁 8. Live Groove Arpeggiator & Performance Looper
 - **High-Precision Clock Look-Ahead**: Web Audio clock anchoring eliminates tempo drift under heavy system load.
@@ -127,13 +130,13 @@
 - **Multi-Track Live Looper**: Overdub live performance layers, synchronize with master BPM, and clear or bounce loops on the fly.
 
 ### 🎙️ 9. Lossless Master WAV Recorder & Media Player
-- **Pre-DAC True Waveform Tap**: Direct capture of the master audio stream into uncompressed 16-bit 44.1kHz stereo WAV.
+- **Pre-DAC True Waveform Tap**: Direct capture of the master audio stream into uncompressed 16-bit stereo WAV at the live engine sample rate.
 - **Zero-Gain Monitor Sink**: Audio recorder runs completely silently without double-monitoring or altering stage mix levels.
 - **Backing Track Media Player**: Built-in audio deck supporting MP3, WAV, FLAC, OGG, M4A, and AAC with playlist queues, pitch/speed shifts, and background playback.
 
 ### 📊 10. Hardware HUD & Real-Time Diagnostics
 - **60 FPS VU Meter**: Dual-channel stereo peak and RMS level indicators.
-- **Latency & CPU Engine Profiler**: Live monitoring of Web Audio base latency, output latency, and buffer stability with 3 switchable latency profiles (Ultra-Low, Balanced, Conservative).
+- **Latency & CPU Engine Profiler**: Live monitoring of Web Audio base latency, output latency, and buffer stability with 3 switchable latency profiles (Stage Ultra-Low ~2.9ms, Balanced Studio ~5.8ms, Safe Stage ~11.6ms).
 - **Master Kaoss X/Y Pad**: Multi-touch and mouse gesture control for real-time filter sweeps and effects modulation.
 - **Panic Engine Reset**: Instant one-click kill switch for stuck MIDI notes and DSP node recovery.
 - **8-Second WAV Waveform Diagnostic Tap**: Instant capture and download of real-time audio output for signal diagnosis.
@@ -141,7 +144,7 @@
 ### 🔌 11. MIDI Hardware Connectivity & MIDI Learn
 - **Web MIDI API**: Plug-and-play USB/Bluetooth MIDI keyboard controller support.
 - **MIDI Learn & CC Mapping**: Map any hardware knob, fader, or modulation wheel to filter cutoff, volume, pan, or FX dry/wet.
-- **Velocity Curve Shaping**: 5 selectable velocity response profiles (Linear, Soft, Hard, Compressed, Wide Dynamic).
+- **Velocity Curve Shaping**: 3 selectable velocity response profiles (Linear, Punch, Soft).
 
 ### 🔒 12. Enterprise-Grade Security & Licensing Architecture
 - **ECDSA P-256 SPKI Cryptographic Verification**: Offline cryptographic license signature verification using public key cryptography.

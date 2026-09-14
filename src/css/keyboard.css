@@ -502,8 +502,8 @@
   color-scheme: dark;
 }
 
-/* On medium/narrow screens (< 1200px), swap wide velocity/curve button lists for sleek dropdowns */
-@media (max-width: 1200px) {
+/* On mobile & tablet touch screens (< 1024px or pointer: coarse), swap wide velocity/curve button lists for sleek dropdowns */
+@media (max-width: 1024px), (pointer: coarse) {
   .accent-preset-btns {
     display: none !important;
   }
@@ -512,6 +512,80 @@
   }
   #hud-velocity-readout {
     display: none !important;
+  }
+}
+
+/* Desktop-Only Zero-Scroll Toolbar Architecture (pointer: fine & >= 1024px) */
+@media (min-width: 1024px) and (pointer: fine) {
+  .keyboard-controls-bar {
+    flex-wrap: wrap !important;
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+    height: auto !important;
+    min-height: 30px !important;
+    max-height: none !important;
+    gap: 3px 5px !important;
+    padding: 2px 4px !important;
+  }
+
+  /* Desktop hides mobile/tablet-specific helpers so every desktop control is 100% accessible */
+  .stage-toggle-unit,
+  #btn-tablet-multitouch-help {
+    display: none !important;
+  }
+
+  /* Keep desktop velocity & curve buttons visible and compact */
+  .accent-preset-btns,
+  #hud-curve-btns {
+    display: inline-flex !important;
+  }
+  .hud-dropdown-select {
+    display: none !important;
+  }
+  #hud-velocity-readout {
+    display: inline-block !important;
+  }
+
+  .hud-btn {
+    height: 26px !important;
+    padding: 0 6px !important;
+    font-size: 0.60rem !important;
+  }
+
+  .octave-hud-unit,
+  .velocity-accent-unit,
+  .key-zoom-unit,
+  .qwerty-toggle-unit,
+  .toggle-pill,
+  .collapse-keys-btn,
+  .scale-hud-unit,
+  .chord-hud-unit,
+  .layout-hud-unit,
+  .sustain-latch-unit,
+  .panic-unit {
+    height: 26px !important;
+  }
+
+  .octave-hud-unit .hud-btn {
+    height: 20px !important;
+    padding: 0 5px !important;
+  }
+
+  .accent-mini-btn,
+  .zoom-btn {
+    height: 18px !important;
+    padding: 0 5px !important;
+    font-size: 0.52rem !important;
+  }
+
+  .wheel-bay,
+  .wheel-unit {
+    height: 26px !important;
+  }
+
+  .wheel-track {
+    width: 14px !important;
+    height: 26px !important;
   }
 }
 
