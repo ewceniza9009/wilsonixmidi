@@ -8,15 +8,15 @@
 [![Audio: Web Audio API](https://img.shields.io/badge/Audio-Direct%20PCM%20%2B%20VA%20Engine-FF6F00?style=for-the-badge&logo=audio)](https://github.com/ewceniza9009/wilsonixmidi)
 [![Framework: Tauri v2 + Vite](https://img.shields.io/badge/Framework-Tauri%20v2%20%7C%20Rust-673AB7?style=for-the-badge)](https://tauri.app/)
 [![License: Proprietary](https://img.shields.io/badge/License-WILSONIX%20Commercial-red?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi)
-[![Version: v1.1.1](https://img.shields.io/badge/Version-v1.1.1%20Build%2012%20Production-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
+[![Version: v1.1.2](https://img.shields.io/badge/Version-v1.1.2%20Build%2013%20Production-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
 
 ---
 
-## 🚀 Official Production Downloads (v1.1.1 Build 12 Latest Release)
+## 🚀 Official Production Downloads (v1.1.2 Build 13 Latest Release)
 
 | Package / Distribution | Target Operating System | Architecture | Direct Download Link |
 |:---|:---|:---:|:---:|
-| **Windows Desktop Installer** | Windows 10 / 11 | x64 | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX.MIDIKEY_1.1.1_x64-setup.exe) |
+| **Windows Desktop Installer** | Windows 10 / 11 | x64 | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX.MIDIKEY_1.1.2_x64-setup.exe) |
 | **Android Package (APK)** | Android 8.0+ (Oreo to Android 15) | ARM64 / x86_64 | [⬇️ Download Android APK (`.apk`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/wilsonix-midikey.apk) |
 
 *Official binaries and checksums are verified and hosted on the [GitHub Releases page](https://github.com/ewceniza9009/wilsonixmidi/releases).*
@@ -41,7 +41,16 @@
 
 ---
 
-## 📑 Granular Changelog & Release Notes (v1.1.1 • Build 12)
+## 📑 Granular Changelog & Release Notes (v1.1.2 • Build 13)
+
+### 1. 🎧 Integrated Binaural Stage Monitor in Gig HUD
+- **Real-Time Environment Switching**: Added in-ear stage monitor selector directly inside the Gig HUD Latency & Audio popover.
+- **Persistent Spatial State**: Preserves and restores active spatial acoustic settings across latency profile toggles and Web Audio engine resets.
+- **AudioWorklet Hardware Limiter Routing**: Cleanly routed all AudioWorklet synthesizer audio streams through the master hardware brickwall limiter.
+
+---
+
+## 📑 Prior Release Notes (v1.1.1 • Build 12)
 
 ### 0. 🎧 Binaural Stage Monitor — 3D Spatial Audio Engine
 - **HRTF Spatialization**: Web Audio `PannerNode` with Head-Related Transfer Function places sound in true 3D space over headphones.

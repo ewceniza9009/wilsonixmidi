@@ -957,6 +957,16 @@ export class GigHudUI {
           ⚠️ Never use Bluetooth for live keyboards — adds 150–300ms delay.
         </div>
       </div>
+      <div class="latency-device-section" id="latency-spatial-section">
+        <div class="latency-profile-title">🎧 BINAURAL STAGE MONITOR</div>
+        <select class="latency-device-select" id="latency-spatial-select">
+          <option value="off" selected>OFF (Dry Signal)</option>
+        </select>
+        <div class="latency-pop-reco">
+          🎧 HRTF 3D spatial audio for headphones. Simulates concert hall, studio, and more.
+          Best with wired in-ear monitors — not for speakers.
+        </div>
+      </div>
       <div class="latency-pop-body">${rows}</div>
       ${
         recom
@@ -1014,6 +1024,22 @@ export class GigHudUI {
       deviceSelect.addEventListener("change", e => {
         e.stopPropagation();
         audioCore.setSinkId(deviceSelect.value);
+      });
+    }
+
+    // Populate spatial environment list
+    const spatialSelect = pop.querySelector("#latency-spatial-select");
+    if (spatialSelect && audioCore.getSpatialEnvironments) {
+      const envs = audioCore.getSpatialEnvironments();
+      const currentEnv = audioCore.getCurrentSpatialEnv();
+      if (envs.length) {
+        spatialSelect.innerHTML = envs.map(env =>
+          `<option value="${env.id}" ${env.id === currentEnv ? "selected" : ""}>${env.name}</option>`
+        ).join("");
+      }
+      spatialSelect.addEventListener("change", e => {
+        e.stopPropagation();
+        audioCore.setSpatialEnvironment(spatialSelect.value);
       });
     }
   }

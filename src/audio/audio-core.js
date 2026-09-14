@@ -4,6 +4,7 @@
  */
 
 import { FxRackManager } from "./fx-rack-manager.js";
+import { SpatialEngine } from "./spatial-engine.js";
 
 export const LATENCY_PROFILES = {
   "ultra-low": { id: "ultra-low", latencyHint: "interactive", label: "Stage Ultra-Low", targetMs: 2.9, frames: 128, description: "64–128 frames / Fastest response for dedicated audio interfaces" },
@@ -98,7 +99,10 @@ export class AudioCore {
     this.busPad.connect(this.dcBlocker);
     this.dcBlocker.connect(this.analyser);
     this.analyser.connect(this.hardwareLimiter);
-    this.hardwareLimiter.connect(this.ctx.destination);
+    // Binaural spatial engine: inserted between limiter and destination.
+    // OFF by default — when disabled, dry signal passes through unchanged.
+    this.spatialEngine = null; // Lazy init — created on first use to avoid blocking init()
+    this._connectSpatial();
 
     // Diagnostic tap: identical signal to the DAC (analyser is pass-through).
     try {
@@ -187,6 +191,7 @@ export class AudioCore {
   setLatencyProfile(profileId) {
     if (!LATENCY_PROFILES[profileId]) return false;
     this.currentLatencyProfile = profileId;
+    const prevSpatialEnv = this.spatialEngine?.currentEnv || "off";
     try {
       localStorage.setItem("midikey_latency_profile", profileId);
     } catch (e) {}
@@ -197,9 +202,15 @@ export class AudioCore {
         this.ctx.close();
       } catch (e) {}
       this.ctx = null;
+      this.spatialEngine = null;
       this.init();
       if (this.masterGain) this.masterGain.gain.value = oldMasterGain;
       this.unlock();
+    }
+
+    // Restore spatial environment after context recreation
+    if (prevSpatialEnv !== "off") {
+      this.setSpatialEnvironment(prevSpatialEnv);
     }
 
     this.profileListeners.forEach(cb => {
@@ -234,6 +245,37 @@ export class AudioCore {
 
   get currentSinkId() {
     return this.ctx?.sinkId || "";
+  }
+
+  // --- Binaural Stage Monitor: HRTF spatial audio for headphones ---
+
+  _connectSpatial() {
+    if (!this.ctx) return;
+    // Disconnect old direct connection
+    try { this.hardwareLimiter.disconnect(this.ctx.destination); } catch (e) {}
+
+    // Lazy-init spatial engine on first call
+    if (!this.spatialEngine) {
+      this.spatialEngine = new SpatialEngine(this.ctx, this.hardwareLimiter, this.ctx.destination);
+      this.spatialEngine.connect();
+    }
+  }
+
+  async setSpatialEnvironment(envId) {
+    if (!this.ctx) return false;
+    if (!this.spatialEngine) this._connectSpatial();
+    await this.spatialEngine.setEnvironment(envId);
+    return true;
+  }
+
+  getSpatialEnvironments() {
+    if (!this.spatialEngine) return [];
+    return this.spatialEngine.getEnvironments();
+  }
+
+  getCurrentSpatialEnv() {
+    if (!this.spatialEngine) return "off";
+    return this.spatialEngine.currentEnv;
   }
 
   // --- Diagnostics: capture exactly what the app sends to the DAC ---

@@ -1003,7 +1003,7 @@ export class MultiLayerEngine {
     const ctx = audioCore.ctx;
     if (!ctx) return null;
     try {
-      const dest = audioCore.masterLimiter || ctx.destination;
+      const dest = audioCore.hardwareLimiter || ctx.destination;
       this._workletNode = new SynthWorkletNode(ctx, dest);
       // Bridge worklet visual callbacks → synthEngine.onNoteChangeCallback → virtual keyboard highlighting
       this._workletNode.onVisualCallback = (midi, isPressed, vel) => {
