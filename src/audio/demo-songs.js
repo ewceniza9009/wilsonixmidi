@@ -198,4 +198,131 @@ id: "sergio_never_let_go",
       { time: 29600, type: "pedal", down: false },
     ],
   },
+  {
+    id: "brunomars_24k_magic",
+    title: "24K Magic",
+    subtitle: "Bruno Mars - funky pop anthem (Bbm groove, synth brass + slap bass)",
+    combi: "stadium_synth",
+    fxPreset: null,
+    durationMs: 30000,
+    embeddedInsts: ["brass_section", "electric_piano_1", "synth_bass_1"],
+    events: [
+      { time: 0, type: "pedal", down: true },
+      // ========== INTRO HOOK: talkbox-style synth melody ==========
+      // Bbm chord
+      ...rolledChord(100, [46, 58, 61, 66], { durMs: 2000, vel: 78, rollMs: 50 }),
+      { time: 400, note: 70, vel: 92, dur: 280 },
+      { time: 750, note: 68, vel: 88, dur: 220 },
+      { time: 1050, note: 66, vel: 86, dur: 320 },
+      { time: 1450, note: 68, vel: 88, dur: 200 },
+      // Gb chord
+      ...rolledChord(1800, [43, 55, 58, 63], { durMs: 2000, vel: 76, rollMs: 50 }),
+      { time: 2200, note: 66, vel: 90, dur: 280 },
+      { time: 2550, note: 63, vel: 86, dur: 220 },
+      { time: 2850, note: 61, vel: 84, dur: 320 },
+      { time: 3250, note: 63, vel: 86, dur: 200 },
+      // Db chord
+      ...rolledChord(3600, [38, 50, 54, 57], { durMs: 2000, vel: 76, rollMs: 50 }),
+      { time: 4000, note: 66, vel: 90, dur: 280 },
+      { time: 4350, note: 63, vel: 86, dur: 220 },
+      { time: 4650, note: 61, vel: 84, dur: 320 },
+      // Ab chord
+      ...rolledChord(5400, [44, 56, 60, 63], { durMs: 2000, vel: 76, rollMs: 50 }),
+      { time: 5800, note: 66, vel: 88, dur: 280 },
+      { time: 6150, note: 63, vel: 86, dur: 220 },
+      { time: 6450, note: 61, vel: 84, dur: 320 },
+      // ========== VERSE GROOVE: staccato funk chord stabs ==========
+      // Bbm stabs
+      { time: 7200, note: 58, vel: 82, dur: 120 },
+      { time: 7400, note: 61, vel: 80, dur: 120 },
+      { time: 7600, note: 66, vel: 84, dur: 120 },
+      { time: 7800, note: 58, vel: 78, dur: 120 },
+      { time: 8000, note: 61, vel: 80, dur: 120 },
+      { time: 8200, note: 66, vel: 82, dur: 120 },
+      // melody over Bbm
+      { time: 7500, note: 70, vel: 90, dur: 200 },
+      { time: 7900, note: 73, vel: 88, dur: 180 },
+      { time: 8300, note: 70, vel: 86, dur: 280 },
+      // Gb stabs
+      { time: 9000, note: 55, vel: 80, dur: 120 },
+      { time: 9200, note: 58, vel: 78, dur: 120 },
+      { time: 9400, note: 63, vel: 82, dur: 120 },
+      { time: 9600, note: 55, vel: 76, dur: 120 },
+      { time: 9800, note: 58, vel: 78, dur: 120 },
+      { time: 10000, note: 63, vel: 80, dur: 120 },
+      // melody over Gb
+      { time: 9300, note: 68, vel: 88, dur: 200 },
+      { time: 9700, note: 71, vel: 86, dur: 180 },
+      { time: 10100, note: 68, vel: 84, dur: 280 },
+      // Db stabs
+      { time: 10800, note: 50, vel: 80, dur: 120 },
+      { time: 11000, note: 54, vel: 78, dur: 120 },
+      { time: 11200, note: 57, vel: 82, dur: 120 },
+      { time: 11400, note: 50, vel: 76, dur: 120 },
+      { time: 11600, note: 54, vel: 78, dur: 120 },
+      { time: 11800, note: 57, vel: 80, dur: 120 },
+      // melody over Db
+      { time: 11100, note: 66, vel: 88, dur: 200 },
+      { time: 11500, note: 68, vel: 86, dur: 180 },
+      { time: 11900, note: 66, vel: 84, dur: 280 },
+      // Ab stabs
+      { time: 12600, note: 56, vel: 80, dur: 120 },
+      { time: 12800, note: 60, vel: 78, dur: 120 },
+      { time: 13000, note: 63, vel: 82, dur: 120 },
+      { time: 13200, note: 56, vel: 76, dur: 120 },
+      { time: 13400, note: 60, vel: 78, dur: 120 },
+      { time: 13600, note: 63, vel: 80, dur: 120 },
+      // melody over Ab
+      { time: 12900, note: 68, vel: 88, dur: 200 },
+      { time: 13300, note: 70, vel: 86, dur: 180 },
+      { time: 13700, note: 68, vel: 84, dur: 280 },
+      // ========== PRE-CHORUS BUILD: rising brass hits ==========
+      { time: 14400, type: "pedal", down: false },
+      { time: 14420, type: "pedal", down: true },
+      // Bbm rise
+      ...rolledChord(14400, [46, 58, 61, 66, 70], { durMs: 1600, vel: 82, rollMs: 40 }),
+      { time: 14800, note: 73, vel: 92, dur: 250 },
+      { time: 15200, note: 75, vel: 90, dur: 250 },
+      { time: 15600, note: 78, vel: 94, dur: 200 },
+      // Gb rise
+      ...rolledChord(16200, [43, 55, 58, 63, 66], { durMs: 1600, vel: 80, rollMs: 40 }),
+      { time: 16600, note: 71, vel: 90, dur: 250 },
+      { time: 17000, note: 73, vel: 88, dur: 250 },
+      { time: 17400, note: 75, vel: 92, dur: 200 },
+      // ========== CHORUS: full brass & bass groove ==========
+      // Bbm chorus
+      ...rolledChord(18000, [46, 58, 61, 66], { durMs: 1800, vel: 88, rollMs: 40 }),
+      { time: 18400, note: 78, vel: 96, dur: 300 },
+      { time: 18800, note: 75, vel: 92, dur: 250 },
+      { time: 19200, note: 73, vel: 90, dur: 200 },
+      { time: 19600, note: 70, vel: 88, dur: 350 },
+      // Gb chorus
+      ...rolledChord(20000, [43, 55, 58, 63], { durMs: 1800, vel: 86, rollMs: 40 }),
+      { time: 20400, note: 75, vel: 94, dur: 300 },
+      { time: 20800, note: 71, vel: 90, dur: 250 },
+      { time: 21200, note: 68, vel: 88, dur: 200 },
+      { time: 21600, note: 66, vel: 86, dur: 350 },
+      // Db chorus
+      ...rolledChord(22000, [38, 50, 54, 57], { durMs: 1800, vel: 86, rollMs: 40 }),
+      { time: 22400, note: 73, vel: 94, dur: 300 },
+      { time: 22800, note: 70, vel: 90, dur: 250 },
+      { time: 23200, note: 68, vel: 88, dur: 200 },
+      { time: 23600, note: 66, vel: 86, dur: 350 },
+      // Ab chorus
+      ...rolledChord(24000, [44, 56, 60, 63], { durMs: 1800, vel: 86, rollMs: 40 }),
+      { time: 24400, note: 71, vel: 94, dur: 300 },
+      { time: 24800, note: 68, vel: 90, dur: 250 },
+      { time: 25200, note: 66, vel: 88, dur: 200 },
+      { time: 25600, note: 63, vel: 86, dur: 350 },
+      // ========== OUTRO TAG ==========
+      ...rolledChord(26400, [46, 58, 61, 66], { durMs: 2000, vel: 84, rollMs: 50 }),
+      { time: 27000, note: 78, vel: 96, dur: 280 },
+      { time: 27400, note: 75, vel: 92, dur: 220 },
+      { time: 27800, note: 73, vel: 90, dur: 280 },
+      { time: 28200, note: 70, vel: 88, dur: 400 },
+      ...rolledChord(28600, [38, 50, 54, 57, 66], { durMs: 2000, vel: 82, rollMs: 50 }),
+      { time: 29200, note: 73, vel: 90, dur: 350 },
+      { time: 29600, type: "pedal", down: false },
+    ],
+  },
 ];

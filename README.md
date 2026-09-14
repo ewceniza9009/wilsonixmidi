@@ -8,15 +8,15 @@
 [![Audio: Web Audio API](https://img.shields.io/badge/Audio-Direct%20PCM%20%2B%20VA%20Engine-FF6F00?style=for-the-badge&logo=audio)](https://github.com/ewceniza9009/wilsonixmidi)
 [![Framework: Tauri v2 + Vite](https://img.shields.io/badge/Framework-Tauri%20v2%20%7C%20Rust-673AB7?style=for-the-badge)](https://tauri.app/)
 [![License: Proprietary](https://img.shields.io/badge/License-WILSONIX%20Commercial-red?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi)
-[![Version: v1.1.4](https://img.shields.io/badge/Version-v1.1.4%20Build%2015%20Production-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
+[![Version: v1.1.5](https://img.shields.io/badge/Version-v1.1.5%20Build%2016%20Production-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
 
 ---
 
-## 🚀 Official Production Downloads (v1.1.4 Build 15 Latest Release)
+## 🚀 Official Production Downloads (v1.1.5 Build 16 Latest Release)
 
 | Package / Distribution | Target Operating System | Architecture | Direct Download Link |
 |:---|:---|:---:|:---:|
-| **Windows Desktop Installer** | Windows 10 / 11 | x64 | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX.MIDIKEY_1.1.4_x64-setup.exe) |
+| **Windows Desktop Installer** | Windows 10 / 11 | x64 | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX.MIDIKEY_1.1.5_x64-setup.exe) |
 | **Android Package (APK)** | Android 8.0+ (Oreo to Android 15) | ARM64 / x86_64 | [⬇️ Download Android APK (`.apk`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/wilsonix-midikey.apk) |
 
 *Official binaries and checksums are verified and hosted on the [GitHub Releases page](https://github.com/ewceniza9009/wilsonixmidi/releases).*
@@ -41,7 +41,19 @@
 
 ---
 
-## 📑 Granular Changelog & Release Notes (v1.1.4 • Build 15)
+## 📑 Granular Changelog & Release Notes (v1.1.5 • Build 16)
+
+### 1. 🛡️ Robust Setlist Schema & Null-Safety Validation
+- **Deep Null-Safety Handling**: Updated `isValidSlot` in `setlist-validation.js` to use loose null checks (`!= null`), safely tolerating explicitly serialized `null` properties in external setlists without rejecting valid configuration snapshots.
+- **Enhanced JSON Compatibility**: Allows seamless interoperability with third-party DAW bank exports and diverse cloud backup representations.
+
+### 2. 🎶 Extended Multi-Genre Demo Song Bank & Live Arrangements
+- **High-Energy Funk & Pop Arrangements**: Expanded the interactive Demo Station catalog with rich multi-section songs (including rolled chords, funk stabs, rising brass hits, and dynamic velocity profiling).
+- **Zero-Latency Sequenced Preview**: Demonstrates acoustic Rompler polyphony, physical-modeled brass, and real-time DSP layering under realistic live performance conditions.
+
+---
+
+## 📑 Prior Release Notes (v1.1.4 • Build 15)
 
 ### 1. ⚙️ Real-Time Performance Settings & Damper Envelope Customization
 - **Custom Sustain Damper Envelope**: Added configurable `sustainDecayTau` (0.5s–8.0s) and `sustainHoldSec` (3s–30s) controls to the Gig HUD Settings panel, giving performers custom acoustic damping response for both rapid chordal comps and soaring atmospheric pads.

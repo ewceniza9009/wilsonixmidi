@@ -12,24 +12,24 @@ export function isPlainObject(v) {
 
 export function isValidSlot(slot) {
   if (!isPlainObject(slot)) return false;
-  if (slot.slot !== undefined && (typeof slot.slot !== "number" || !Number.isInteger(slot.slot) || slot.slot < 1)) return false;
-  if (slot.type !== undefined && (typeof slot.type !== "string" || !BANK_SLOT_TYPES.has(slot.type))) return false;
-  if (slot.name !== undefined && (typeof slot.name !== "string" || slot.name.length > 200)) return false;
-  if (slot.savedAt !== undefined && typeof slot.savedAt !== "string") return false;
+  if (slot.slot != null && (typeof slot.slot !== "number" || !Number.isInteger(slot.slot) || slot.slot < 1)) return false;
+  if (slot.type != null && (typeof slot.type !== "string" || !BANK_SLOT_TYPES.has(slot.type))) return false;
+  if (slot.name != null && (typeof slot.name !== "string" || slot.name.length > 200)) return false;
+  if (slot.savedAt != null && typeof slot.savedAt !== "string") return false;
   for (const k of ["splitPointMidi", "masterOctave"]) {
-    if (slot[k] !== undefined && (typeof slot[k] !== "number" || !Number.isFinite(slot[k]))) return false;
+    if (slot[k] != null && (typeof slot[k] !== "number" || !Number.isFinite(slot[k]))) return false;
   }
   for (const k of ["isCombiMode", "isSplitMode", "isTritonVaMode"]) {
-    if (slot[k] !== undefined && typeof slot[k] !== "boolean") return false;
+    if (slot[k] != null && typeof slot[k] !== "boolean") return false;
   }
   for (const k of ["activeCombiId", "activeSingleInst", "synthPatchId", "instId", "synth", "tritonProgId"]) {
-    if (slot[k] !== undefined && typeof slot[k] !== "string") return false;
+    if (slot[k] != null && typeof slot[k] !== "string") return false;
   }
-  if (slot.layers !== undefined && (
+  if (slot.layers != null && (
     !Array.isArray(slot.layers) || slot.layers.length > 32 || !slot.layers.every(l => isPlainObject(l))
   )) return false;
-  if (slot.splitZones !== undefined && !isPlainObject(slot.splitZones)) return false;
-  if (slot.tritonProg !== undefined && !isPlainObject(slot.tritonProg)) return false;
+  if (slot.splitZones != null && !isPlainObject(slot.splitZones)) return false;
+  if (slot.tritonProg != null && !isPlainObject(slot.tritonProg)) return false;
   return true;
 }
 
