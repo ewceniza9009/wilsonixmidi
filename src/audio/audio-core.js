@@ -6,9 +6,9 @@
 import { FxRackManager } from "./fx-rack-manager.js";
 
 export const LATENCY_PROFILES = {
-  "ultra-low": { id: "ultra-low", latencyHint: "interactive", label: "Stage Ultra-Low", targetMs: 2.9, description: "64–128 frames / Fastest response for dedicated audio interfaces" },
-  "balanced": { id: "balanced", latencyHint: "balanced", label: "Balanced Studio", targetMs: 5.8, description: "256 frames / Stable performance for general laptop audio" },
-  "safe": { id: "safe", latencyHint: "playback", label: "Safe Stage", targetMs: 11.6, description: "512 frames / Maximum glitch-free headroom for heavy polyphony" },
+  "ultra-low": { id: "ultra-low", latencyHint: "interactive", label: "Stage Ultra-Low", targetMs: 2.9, frames: 128, description: "64–128 frames / Fastest response for dedicated audio interfaces" },
+  "balanced": { id: "balanced", latencyHint: "balanced", label: "Balanced Studio", targetMs: 5.8, frames: 256, description: "256 frames / Stable performance for general laptop audio" },
+  "safe": { id: "safe", latencyHint: "playback", label: "Safe Stage", targetMs: 11.6, frames: 512, description: "512 frames / Maximum glitch-free headroom for heavy polyphony" },
 };
 
 export class AudioCore {
@@ -212,6 +212,30 @@ export class AudioCore {
     if (typeof cb === "function") this.profileListeners.push(cb);
   }
 
+  async enumerateOutputDevices() {
+    if (!navigator.mediaDevices?.enumerateDevices) return [];
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      return devices.filter(d => d.kind === "audiooutput");
+    } catch (e) {
+      return [];
+    }
+  }
+
+  async setSinkId(deviceId) {
+    if (!this.ctx?.setSinkId) return false;
+    try {
+      await this.ctx.setSinkId(deviceId || "");
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  get currentSinkId() {
+    return this.ctx?.sinkId || "";
+  }
+
   // --- Diagnostics: capture exactly what the app sends to the DAC ---
   // 8s MediaRecorder on the pre-DAC tap, auto-downloads a WAV.
   // Trigger: a floating "DIAG 8s" pill button (bottom-left) OR Ctrl+Alt+R.
@@ -371,6 +395,7 @@ export class AudioCore {
   // clocks are locked, surface that lock as a live "drift" meter, and always
   // report the bounded buffer latency as the primary measured value.
   measureLatency() {
+    const currentProfile = LATENCY_PROFILES[this.currentLatencyProfile] || LATENCY_PROFILES["balanced"];
     const out = {
       reportedMs: this.getLatencyMs(),
       baseMs: 0,
@@ -379,6 +404,11 @@ export class AudioCore {
       lockMs: null,
       sampleRate: this.ctx ? this.ctx.sampleRate : 0,
       state: this.ctx ? this.ctx.state : "uninitialized",
+      profile: currentProfile.id,
+      profileLabel: currentProfile.label,
+      profileFrames: currentProfile.frames || 0,
+      measuredFrames: 0,
+      recommendedProfile: null,
     };
     if (!this.ctx) return out;
 
@@ -388,6 +418,34 @@ export class AudioCore {
       out.baseMs = Math.round(base * 10) / 10;
       out.outputMs = Math.round(output * 10) / 10;
       out.measuredMs = Math.round((base + output) * 10) / 10;
+
+      // Measured base buffer in frames — the real negotiated render quantum.
+      if (out.sampleRate > 0 && out.baseMs > 0) {
+        out.measuredFrames = Math.max(0, Math.round((out.baseMs / 1000) * out.sampleRate));
+      }
+
+      // Recommend the profile whose claimed buffer frames are closest to the
+      // ACTUAL negotiated buffer. This is the "truth" the old popover hid:
+      // the selected profile's label says nothing about what the OS gave us.
+      if (out.measuredFrames > 0) {
+        let bestId = null;
+        let bestDiff = Infinity;
+        for (const pid of Object.keys(LATENCY_PROFILES)) {
+          const p = LATENCY_PROFILES[pid];
+          const diff = Math.abs((p.frames || 0) - out.measuredFrames);
+          if (diff < bestDiff) {
+            bestDiff = diff;
+            bestId = pid;
+          }
+        }
+        if (bestId) {
+          out.recommendedProfile = {
+            id: bestId,
+            label: LATENCY_PROFILES[bestId].label,
+            isActive: bestId === currentProfile.id,
+          };
+        }
+      }
 
       if (typeof this.ctx.getOutputTimestamp === "function") {
         const ts = this.ctx.getOutputTimestamp();

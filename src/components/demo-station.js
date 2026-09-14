@@ -7,6 +7,7 @@
 import { DEMO_SONGS } from "../audio/demo-songs.js";
 import { multiLayerEngine } from "../audio/multi-layer-engine.js";
 import { audioCore } from "../audio/audio-core.js";
+import { noteScheduler } from "../audio/lookahead-scheduler.js";
 
 export class DemoStationUI {
   constructor(containerId) {
@@ -110,40 +111,47 @@ export class DemoStationUI {
 
     this.currentSong = song.id;
     this.isPlaying = true;
-    this.startTime = performance.now();
+    const ctx = audioCore.ctx;
+    const songStart = (ctx ? ctx.currentTime : 0) + 0.08;
+    this.startTime = ctx ? ctx.currentTime : performance.now() / 1000;
     this.activeMidiNotes.clear();
     this.clearTimers();
     this.updateButtons();
 
     song.events.forEach(ev => {
       if (ev.type === "pedal") {
-        const t = setTimeout(() => {
-          if (!this.isPlaying || this.currentSong !== song.id) return;
-          multiLayerEngine.setSustainPedal(ev.down);
-        }, ev.time);
-        this.timers.push(t);
+        const at = songStart + ev.time / 1000;
+        noteScheduler.pedal(ev.down, at, "demo-" + song.id);
       } else if (ev.note) {
-        const tOn = setTimeout(() => {
-          if (!this.isPlaying || this.currentSong !== song.id) return;
-          this.activeMidiNotes.add(ev.note);
-          multiLayerEngine.noteOn(ev.note, ev.vel);
-          this.emitKeyVisual([ev.note], true, ev.vel);
-        }, ev.time);
-        this.timers.push(tOn);
+        const at = songStart + ev.time / 1000;
+        noteScheduler.noteOn(ev.note, ev.vel, at, "demo-" + song.id);
+        this.activeMidiNotes.add(ev.note);
+        const offAt = songStart + (ev.time + (ev.dur || 600)) / 1000;
+        noteScheduler.noteOff(ev.note, offAt, "demo-" + song.id);
 
-        const tOff = setTimeout(() => {
+        // Visual key lighting aligned to the audible moment (wall clock approx)
+        const onDelay = Math.max(0, (at - ctx.currentTime) * 1000);
+        const visTimer = setTimeout(() => {
+          if (!this.isPlaying || this.currentSong !== song.id) return;
+          this.emitKeyVisual([ev.note], true, ev.vel);
+        }, Math.max(0, onDelay - 12));
+        this.timers.push(visTimer);
+
+        const offDelay = Math.max(0, (offAt - ctx.currentTime) * 1000);
+        const visOffTimer = setTimeout(() => {
           if (!this.isPlaying || this.currentSong !== song.id) return;
           this.activeMidiNotes.delete(ev.note);
-          multiLayerEngine.noteOff(ev.note);
           this.emitKeyVisual([ev.note], false, 0);
-        }, ev.time + (ev.dur || 600));
-        this.timers.push(tOff);
+        }, Math.max(0, offDelay - 12));
+        this.timers.push(visOffTimer);
       }
     });
 
+    noteScheduler.start();
+
     this.progressInterval = setInterval(() => {
       if (!this.isPlaying) return;
-      const elapsed = performance.now() - this.startTime;
+      const elapsed = ((ctx ? ctx.currentTime : 0) - this.startTime) * 1000;
       if (elapsed >= song.durationMs) {
         this.stop();
         return;
@@ -157,6 +165,9 @@ export class DemoStationUI {
   stop() {
     this.isPlaying = false;
     this.clearTimers();
+    if (this.currentSong) {
+      noteScheduler.discard("demo-" + this.currentSong);
+    }
     if (this.progressInterval) {
       clearInterval(this.progressInterval);
       this.progressInterval = null;

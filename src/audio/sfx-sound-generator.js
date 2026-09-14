@@ -2743,7 +2743,20 @@ export class SfxSoundGenerator {
     return false;
   }
 
-  playSfxNote(instId, midiNote = 60, velocity = 95, customGain = 1.0, destNode = null) {
+  playSfxNote(instId, midiNote = 60, velocity = 95, customGain = 1.0, destNode = null, when = 0) {
+    // SFX voices are procedural oscillator patches that schedule on
+    // ctx.currentTime at 60+ sites, so they can't be cleanly placed far in the
+    // future. For lookahead dispatches, align the synthesis to the wall clock
+    // corresponding to `when` (best-effort) instead of firing early.
+    if (when > 0) {
+      const ctx = audioCore.ctx;
+      const aheadMs = ctx ? (when - ctx.currentTime) * 1000 : 0;
+      if (aheadMs > 6) {
+        setTimeout(() => this.playSfxNote(instId, midiNote, velocity, customGain, destNode, 0), aheadMs);
+        return null;
+      }
+    }
+
     if (instId && instId.startsWith("sy_")) {
       return synthesizerYouEngine.trigger(instId, velocity, customGain, destNode, midiNote);
     }

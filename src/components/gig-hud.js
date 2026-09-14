@@ -290,6 +290,7 @@ export class GigHudUI {
                 <option value="fx">⚡ FX RACK</option>
                 <option value="chords">🎼 CHORDS</option>
                 <option value="grooves">🥁 GROOVES</option>
+                <option value="demo">🎬 DEMO</option>
                 <option value="player">🎵 PLAYER</option>
               </select>
               <div class="ws-tabs-buttons">
@@ -299,6 +300,7 @@ export class GigHudUI {
                 <button class="ws-tab-btn" data-view="fx" title="Master FX Rack">FX</button>
                 <button class="ws-tab-btn" data-view="chords" title="Chord Harmony Pads">CHORDS</button>
                 <button class="ws-tab-btn" data-view="grooves" title="Backing Grooves">GROOVES</button>
+                <button class="ws-tab-btn" data-view="demo" title="30s Interactive Song Clips">DEMO</button>
                 <button class="ws-tab-btn" data-view="player" title="Media Player">PLAYER</button>
               </div>
               <button class="ws-tab-btn keys-toggle-btn active" id="btn-hud-toggle-keys" title="Toggle Piano Keyboard (F4)">🎹 KEYS</button>
@@ -900,13 +902,17 @@ export class GigHudUI {
     const primary = smoothed !== null ? `${smoothed.toFixed(1)}ms` : `${(shown ?? 0).toFixed(1)}ms`;
     const bufferMs = l.baseMs;
     const bufferSamples = l.sampleRate ? Math.round((bufferMs / 1000) * l.sampleRate) : 0;
+    const measuredFrames = l.measuredFrames || bufferSamples;
     const stalled = l.lockMs !== null && Math.abs(l.lockMs) > 50;
+    const currentProf = l.profile || "balanced";
+    const recom = l.recommendedProfile;
 
     const rows = [
       ["BUFFER PROFILE", l.profileLabel || "Balanced Studio"],
       ["ROUND-TRIP (Buffer+Output)", `${(l.measuredMs ?? 7.6).toFixed(1)} ms`],
       ["SMOOTHED (10Hz avg)", primary],
       ["Base buffer (input side)", `${(l.baseMs ?? 2.6).toFixed(1)} ms (${bufferSamples} samples @ ${((l.sampleRate || 48000) / 1000).toFixed(1)} kHz)`],
+      ["Negotiated buffer", measuredFrames > 0 ? `${measuredFrames} frames` : "—"],
       ["Audio clock lock (drift)", l.lockMs === null ? "—" : `${l.lockMs.toFixed(1)} ms`],
       ["Engine state", l.state || "running"],
     ]
@@ -919,8 +925,6 @@ export class GigHudUI {
       )
       .join("");
 
-    const currentProf = l.profile || "balanced";
-
     pop.innerHTML = `
       <div class="latency-pop-head">
         <span>ROUND-TRIP LATENCY & BUFFER CONTROL</span>
@@ -931,19 +935,38 @@ export class GigHudUI {
         <div class="latency-profile-pills">
           <button class="latency-prof-btn ${currentProf === 'ultra-low' ? 'active' : ''}" data-profile="ultra-low" title="64–128 frames / Fastest response for dedicated audio interfaces">
             <span class="prof-title">STAGE ULTRA-LOW</span>
-            <span class="prof-sub">~2.9ms</span>
+            <span class="prof-sub">≤128 frames target</span>
           </button>
           <button class="latency-prof-btn ${currentProf === 'balanced' ? 'active' : ''}" data-profile="balanced" title="256 frames / Stable performance for general laptop audio">
             <span class="prof-title">BALANCED STUDIO</span>
-            <span class="prof-sub">~5.8ms</span>
+            <span class="prof-sub">256 frames target</span>
           </button>
           <button class="latency-prof-btn ${currentProf === 'safe' ? 'active' : ''}" data-profile="safe" title="512 frames / Maximum glitch-free headroom for heavy polyphony">
             <span class="prof-title">SAFE STAGE</span>
-            <span class="prof-sub">~11.6ms</span>
+            <span class="prof-sub">512 frames target</span>
           </button>
         </div>
       </div>
+      <div class="latency-device-section" id="latency-device-section">
+        <div class="latency-profile-title">OUTPUT DEVICE</div>
+        <select class="latency-device-select" id="latency-device-select">
+          <option value="">Default</option>
+        </select>
+        <div class="latency-pop-reco">
+          🔌 Select USB audio interface, DAC, or wired output for live gigs.
+          ⚠️ Never use Bluetooth for live keyboards — adds 150–300ms delay.
+        </div>
+      </div>
       <div class="latency-pop-body">${rows}</div>
+      ${
+        recom
+          ? `<div class="latency-pop-reco ${recom.isActive ? "reco-active" : ""}">
+              ${recom.isActive
+                ? "✔ Negotiated buffer matches this profile."
+                : `💡 Device actually negotiated ${measuredFrames} frames — closest profile: <b>${recom.label}</b>.`}
+            </div>`
+          : ""
+      }
       <div class="latency-pop-tip">
         <span>${
           stalled
@@ -978,6 +1001,21 @@ export class GigHudUI {
       e.stopPropagation();
       this._closeLatencyPopover();
     });
+
+    // Populate output device list
+    const deviceSelect = pop.querySelector("#latency-device-select");
+    if (deviceSelect && audioCore.enumerateOutputDevices) {
+      const currentSink = audioCore.currentSinkId;
+      audioCore.enumerateOutputDevices().then(devices => {
+        if (!devices.length || !deviceSelect.isConnected) return;
+        deviceSelect.innerHTML = `<option value="">Default</option>` +
+          devices.map(d => `<option value="${d.deviceId}" ${d.deviceId === currentSink ? "selected" : ""}>${d.label || "Speaker " + d.deviceId.slice(0, 6)}</option>`).join("");
+      });
+      deviceSelect.addEventListener("change", e => {
+        e.stopPropagation();
+        audioCore.setSinkId(deviceSelect.value);
+      });
+    }
   }
 
   _closeLatencyPopover() {

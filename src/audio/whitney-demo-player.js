@@ -1,5 +1,6 @@
 import { multiLayerEngine } from "./multi-layer-engine.js";
 import { audioCore } from "./audio-core.js";
+import { noteScheduler } from "./lookahead-scheduler.js";
 
 export const WHITNEY_30S_EVENTS = [
   { time: 0, type: "pedal", down: true },
@@ -221,43 +222,49 @@ export class WhitneyDemoPlayer {
     }
 
     this.isPlaying = true;
-    this.startTime = performance.now();
+    const ctx = audioCore.ctx;
+    const songStart = (ctx ? ctx.currentTime : 0) + 0.08;
+    this.startTime = ctx ? ctx.currentTime : 0;
     this.activeMidiNotes.clear();
     this.clearTimers();
 
     WHITNEY_30S_EVENTS.forEach(ev => {
       if (ev.type === "pedal") {
-        const t = setTimeout(() => {
-          if (!this.isPlaying) return;
-          multiLayerEngine.setSustainPedal(ev.down);
-        }, ev.time);
-        this.timers.push(t);
+        noteScheduler.pedal(ev.down, songStart + ev.time / 1000, "whitney");
       } else if (ev.note) {
-        const tOn = setTimeout(() => {
+        const at = songStart + ev.time / 1000;
+        const offAt = songStart + (ev.time + (ev.dur || 600)) / 1000;
+        noteScheduler.noteOn(ev.note, ev.vel, at, "whitney");
+        noteScheduler.noteOff(ev.note, offAt, "whitney");
+        this.activeMidiNotes.add(ev.note);
+
+        // Key visual / UI bridge aligned to the audible moment
+        const onDelay = Math.max(0, (at - ctx.currentTime) * 1000);
+        const visOn = setTimeout(() => {
           if (!this.isPlaying) return;
-          this.activeMidiNotes.add(ev.note);
-          multiLayerEngine.noteOn(ev.note, ev.vel);
           if (this.onNoteTriggerCallback) {
             this.onNoteTriggerCallback(ev.note, true, ev.vel);
           }
-        }, ev.time);
-        this.timers.push(tOn);
+        }, Math.max(0, onDelay - 12));
+        this.timers.push(visOn);
 
-        const tOff = setTimeout(() => {
+        const offDelay = Math.max(0, (offAt - ctx.currentTime) * 1000);
+        const visOff = setTimeout(() => {
           if (!this.isPlaying) return;
           this.activeMidiNotes.delete(ev.note);
-          multiLayerEngine.noteOff(ev.note);
           if (this.onNoteTriggerCallback) {
             this.onNoteTriggerCallback(ev.note, false, 0);
           }
-        }, ev.time + (ev.dur || 600));
-        this.timers.push(tOff);
+        }, Math.max(0, offDelay - 12));
+        this.timers.push(visOff);
       }
     });
 
+    noteScheduler.start();
+
     this.progressInterval = setInterval(() => {
       if (!this.isPlaying) return;
-      const elapsed = performance.now() - this.startTime;
+      const elapsed = ((ctx ? ctx.currentTime : 0) - this.startTime) * 1000;
       if (elapsed >= this.totalDurationMs) {
         this.stop();
         return;
@@ -275,6 +282,7 @@ export class WhitneyDemoPlayer {
   stop() {
     this.isPlaying = false;
     this.clearTimers();
+    noteScheduler.discard("whitney");
     if (this.progressInterval) {
       clearInterval(this.progressInterval);
       this.progressInterval = null;

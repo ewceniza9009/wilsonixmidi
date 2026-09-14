@@ -8,15 +8,15 @@
 [![Audio: Web Audio API](https://img.shields.io/badge/Audio-Direct%20PCM%20%2B%20VA%20Engine-FF6F00?style=for-the-badge&logo=audio)](https://github.com/ewceniza9009/wilsonixmidi)
 [![Framework: Tauri v2 + Vite](https://img.shields.io/badge/Framework-Tauri%20v2%20%7C%20Rust-673AB7?style=for-the-badge)](https://tauri.app/)
 [![License: Proprietary](https://img.shields.io/badge/License-WILSONIX%20Commercial-red?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi)
-[![Version: v1.1.0](https://img.shields.io/badge/Version-v1.1.0%20Build%2011%20Production-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
+[![Version: v1.1.1](https://img.shields.io/badge/Version-v1.1.1%20Build%2012%20Production-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
 
 ---
 
-## 🚀 Official Production Downloads (v1.1.0 Build 11 Latest Release)
+## 🚀 Official Production Downloads (v1.1.1 Build 12 Latest Release)
 
 | Package / Distribution | Target Operating System | Architecture | Direct Download Link |
 |:---|:---|:---:|:---:|
-| **Windows Desktop Installer** | Windows 10 / 11 | x64 | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX.MIDIKEY_1.1.0_x64-setup.exe) |
+| **Windows Desktop Installer** | Windows 10 / 11 | x64 | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX.MIDIKEY_1.1.1_x64-setup.exe) |
 | **Android Package (APK)** | Android 8.0+ (Oreo to Android 15) | ARM64 / x86_64 | [⬇️ Download Android APK (`.apk`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/wilsonix-midikey.apk) |
 
 *Official binaries and checksums are verified and hosted on the [GitHub Releases page](https://github.com/ewceniza9009/wilsonixmidi/releases).*
@@ -28,6 +28,7 @@
 - 🎹 **Hybrid Dual-Core Sound Engine** — Direct multi-layer PCM Rompler, dual-oscillator Virtual Analog subtractive synth (TVA/TVF, hard-sync leads), and physical-modeling brass, reeds, drums & percussion, engineered for zero-latency live performance.
 - 🎚️ **4-Timbre Combi Stacking** — Stack up to four layers with per-layer volume, pan, octave, semitone and velocity control, plus a dual-zone split console with dynamic split point selection.
 - 🎛️ **23-Device Hardware Master FX Rack** — Optical compressor, auto-wah, talkbox formant filter, tube drive, bitcrusher, vinyl lo-fi tape, Haas stereo widener, auto-pan, 6-stage phaser, flanger, Dimension-D chorus, Leslie rotary, tremolo, slapback, dub echo, ping-pong delay, spring/shimmer/gated/algorithmic reverb, tape saturation, and a master EQ-limiter — plus 22 Triton IFX/MFX algorithms and 35 per-layer insert FX for 80+ named algorithm choices.
+- 🎧 **Binaural Stage Monitor — 3D Spatial Audio** — HRTF-based 3D spatialization for in-ear headphones. Simulates concert hall, studio, stadium, intimate club, and cathedral environments using synthetic room impulse responses. Zero-latency head tracking with real-time source positioning.
 - 🥁 **Physical-Modeling Drums & Percussion** — Acoustic kick, wood-shell snare, bronze hi-hats, and chromatically tuned Latin percussion (cowbell, cascara timbales, congas) with true zero-latency strike response.
 - 💾 **Stage Registration Memory (32 Rigs)** — 4 Banks × 8 Slots with `F1`–`F8` instant recall, full live-state snapshots, and schema-validated JSON setlist import/export.
 - 🎹 **12-Pad MPC Chord Matrix & Scale Engine** — One-touch Jazz, Gospel, Neo-Soul and Pop voicings (24-chord learn bank, 11 genre banks) with a quantizing scale/key lock engine.
@@ -40,7 +41,28 @@
 
 ---
 
-## 📑 Granular Changelog & Release Notes (v1.1.0 • Build 11)
+## 📑 Granular Changelog & Release Notes (v1.1.1 • Build 12)
+
+### 0. 🎧 Binaural Stage Monitor — 3D Spatial Audio Engine
+- **HRTF Spatialization**: Web Audio `PannerNode` with Head-Related Transfer Function places sound in true 3D space over headphones.
+- **Synthetic Room Impulse Responses**: 5 procedural environments (Concert Hall, Studio, Stadium, Intimate, Cathedral) generated in real-time from acoustic parameters — no external IR files needed.
+- **Dry/Wet Mix**: Room-size-dependent wet/dry blending with smooth crossfade between environments.
+- **Real-Time Source Positioning**: `positionSource(x, y, z)` API for per-voice spatialization across the stereo field.
+- **Zero-Latency Pipeline**: In-line Web Audio graph processing — no additional latency added to the signal chain.
+
+### 1. 🎹 Same-Note Rapid Re-Trigger Voice Stealing & De-Click Micro-Fade
+- **Zero Phase Flanging / Comb Filtering**: Rapid note repetitions (fast 16th notes, trills, repeated piano stabs) steal existing same-layer voices smoothly instead of piling up identical out-of-phase sample buffers.
+- **4ms Anti-Click Micro-Fade**: Applies a sub-audible 4ms linear gain ramp-down (`linearRampToValueAtTime(0.0001, now + 0.004)`) before voice termination, eliminating audio pops and DC offset thumps.
+- **Strict Multi-Layer Isolation**: Preserves independent voices on other layers during 4-timbre Combi stacking.
+- **Sustained Voice Ringing Protection**: Prevents voice runaway when playing fast repetitive passages with the damper sustain pedal engaged.
+
+### 2. 🖥️ Desktop Zero-Scroll Keyboard Toolbar Architecture
+- **Adaptive Auto-Wrapping DAW Ribbon**: Toolbar responds dynamically to desktop viewports with a compact 26px height layout, ensuring all 13 performance modules are visible without horizontal scrolling.
+- **Tablet Touch Workflow Intact**: Touch and tablet media queries (`pointer: coarse`) remain completely untouched and preserved.
+
+---
+
+## 📑 Prior Release Notes (v1.1.0 • Build 11)
 
 ### 1. 🎚️ Master Recorder Audio Tap Isolation & Zero-Gain Monitor Sink
 - **Zero-Gain Sink Routing**: ScriptProcessor capture node now feeds an isolated zero-gain sink (`tapMute.gain = 0.0`) to keep audio buffer rendering active without double-monitoring or bypassing the master hardware limiter.
@@ -146,7 +168,21 @@
 - **MIDI Learn & CC Mapping**: Map any hardware knob, fader, or modulation wheel to filter cutoff, volume, pan, or FX dry/wet.
 - **Velocity Curve Shaping**: 3 selectable velocity response profiles (Linear, Punch, Soft).
 
-### 🔒 12. Enterprise-Grade Security & Licensing Architecture
+### 🎧 12. Binaural Stage Monitor — 3D Spatial Audio Engine
+- **HRTF Head-Related Transfer Function**: Web Audio `PannerNode` with HRTF spatialization places sound sources in true 3D space over headphones.
+- **Synthetic Room Impulse Responses**: Procedurally generated stereo convolution reverbs — no external IR files required. Each environment is computed in real-time from acoustic parameters (room size, decay time, early reflections, damping, pre-delay).
+- **5 Studio-Grade Environments**:
+  - **Concert Hall** — Large symphony hall with wide stereo image and 2.2s reverb tail.
+  - **Studio** — Treated recording room with tight 0.6s decay and controlled early reflections.
+  - **Stadium** — Massive arena with 3.5s decay and long pre-delay slapback.
+  - **Intimate** — Small jazz club with warm 0.4s decay and close mic feel.
+  - **Cathedral** — Infinite 5.0s reverb with shimmering high-frequency diffusion.
+- **Dry/Wet Mix Control**: Blends spatialized wet signal with dry source based on room size — smaller rooms = more dry, larger rooms = more wet.
+- **Real-Time Source Positioning**: `positionSource(x, y, z)` API for per-voice spatialization — pan sounds across the stereo field with HRTF precision.
+- **Zero-Latency Processing**: Entirely in-line on the Web Audio graph — no additional latency added to the signal chain.
+- **Headphone-Optimized**: Designed specifically for in-ear monitors and closed-back headphones. Not for speaker playback (HRTF requires binaural rendering).
+
+### 🔒 13. Enterprise-Grade Security & Licensing Architecture
 - **ECDSA P-256 SPKI Cryptographic Verification**: Offline cryptographic license signature verification using public key cryptography.
 - **Boot-Time License Re-Validation**: Stored licenses are cryptographically re-verified against the embedded public key on every launch, auto-reverting forged or tampered records.
 - **Hardware Machine Fingerprinting**: Secure, non-invasive device ID generation for authorized workstation deployments.
@@ -221,6 +257,13 @@
 |  | Direct Multi-Layer PCM Rompler      |  | Dual-Oscillator Virtual Analog (VA)     | |
 |  | (16-bit 44.1kHz High-Density Banks) |  | Subtractive Synthesizer with TVA & TVF  | |
 |  +-------------------------------------+  +-----------------------------------------+ |
++---------------------------------------------------------------------------------------+
+|                                  MASTER OUTPUT CHAIN                                  |
+|  +-----------------------------------+  +-------------------------------------------+ |
+|  | 23-Device Master FX Rack          |  | Binaural Stage Monitor                    | |
+|  | (Compressor → Drive → Chorus →    |  | (HRTF PannerNode → ConvolverNode →       | |
+|  |  Delay → Reverb → EQ → Limiter)   |  |  Synthetic IR → Dry/Wet Mix)             | |
+|  +-----------------------------------+  +-------------------------------------------+ |
 +---------------------------------------------------------------------------------------+
 |                                  HARDWARE PLATFORMS                                   |
 |       Windows Desktop (Tauri v2 / Rust)       |        Android Mobile & Tablet        |

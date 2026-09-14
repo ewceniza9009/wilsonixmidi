@@ -10,6 +10,7 @@ import { audioCore } from "./audio-core.js";
 import { synthEngine, INSTRUMENT_PATCHES } from "./synth-engine.js";
 import { tritonVaEngine, TritonVirtualAnalogEngine } from "./triton-va-engine.js";
 import { getTritonProgramById, getTritonBankName, getTritonPcmEntries, getTritonVaPrograms } from "../triton/combi-timbres.js";
+import { SynthWorkletNode } from "./worklet/synth-worklet-node.js";
 
 export const HD_SOUNDBANKS = {
   acoustic_grand_piano: { id: "acoustic_grand_piano", name: "Velo Piano Concert Grand", category: "Acoustic Piano" },
@@ -806,6 +807,10 @@ export class MultiLayerEngine {
     this.layerChangeListeners = new Set();
     this._vaEngines = new Map(); // VA oscillator engine per combi layer program
 
+    // AudioWorklet bridge: live VA notes route here for zero-jank playback
+    this._workletNode = null;
+    this._workletReady = false;
+
     // Ambient Pad Sidechain Ducking: smoothly dips Layer 1 (pad/strings) when Layer 0 (piano/lead) plays
     this.isPadDuckingEnabled = false;
     try {
@@ -867,6 +872,7 @@ export class MultiLayerEngine {
       this._vaEngines.set(key, eng);
     }
     eng.setProgram(prog);
+    this._syncWorkletParams(prog);
     if (typeof gain === "number" && gain > 0 && eng.config) {
       eng.config.masterGain = 0.48 * Math.min(1.15, Math.max(0.5, gain));
     }
@@ -990,6 +996,47 @@ export class MultiLayerEngine {
       this.syncLayerFx();
       this.syncSplitFx();
     }
+  }
+
+  async _initWorklet() {
+    if (this._workletReady || this._workletNode) return this._workletNode;
+    const ctx = audioCore.ctx;
+    if (!ctx) return null;
+    try {
+      const dest = audioCore.masterLimiter || ctx.destination;
+      this._workletNode = new SynthWorkletNode(ctx, dest);
+      // Bridge worklet visual callbacks → synthEngine.onNoteChangeCallback → virtual keyboard highlighting
+      this._workletNode.onVisualCallback = (midi, isPressed, vel) => {
+        if (synthEngine.onNoteChangeCallback) {
+          try { synthEngine.onNoteChangeCallback(midi, isPressed, vel); } catch (e) {}
+        }
+      };
+      const ok = await this._workletNode.init();
+      if (ok) {
+        this._workletReady = true;
+      } else {
+        this._workletNode = null;
+      }
+    } catch (e) {
+      console.warn("[MLE] Worklet init failed:", e);
+      this._workletNode = null;
+    }
+    return this._workletNode;
+  }
+
+  _syncWorkletParams(prog) {
+    if (!this._workletReady || !this._workletNode || !prog) return;
+    const WAVE_MAP = { sawtooth: 0, square: 1, triangle: 2, sine: 3 };
+    const wave1 = WAVE_MAP[prog.osc1] ?? 0;
+    const wave2 = WAVE_MAP[prog.osc2] ?? 1;
+    this._workletNode.setParam("wave1", wave1);
+    this._workletNode.setParam("wave2", wave2);
+    if (prog.cutoff != null) this._workletNode.setParam("cutoff", Math.min(9500, prog.cutoff));
+    if (prog.Q != null) this._workletNode.setParam("resonance", Math.min(5.0, prog.Q * 2.5));
+    if (prog.attack != null) this._workletNode.setParam("attack", Math.max(0.005, prog.attack));
+    if (prog.decay != null) this._workletNode.setParam("decay", prog.decay);
+    if (prog.sustain != null) this._workletNode.setParam("sustain", prog.sustain);
+    if (prog.release != null) this._workletNode.setParam("release", Math.max(0.06, prog.release));
   }
 
   resolveBankKey(instKey) {
@@ -1170,6 +1217,7 @@ export class MultiLayerEngine {
     this.activeTritonVaProg = prog;
     const ctx = audioCore.init();
     tritonVaEngine.setProgram(prog);
+    this._syncWorkletParams(prog);
     if ((prog.id === "A045" || prog.ifx === "Talkbox") && audioCore.fxRack) {
       audioCore.fxRack.applyPreset("talkbox_vocal");
     }
@@ -1402,9 +1450,11 @@ export class MultiLayerEngine {
     }
   }
 
-  noteOn(midiNote, velocity = 95) {
+  noteOn(midiNote, velocity = 95, when = 0) {
     if (!this.pcmEngine) this.init();
     audioCore.ensureRunning();
+
+    const now = when > 0 ? when : (audioCore.ctx ? audioCore.ctx.currentTime : 0);
 
     if (audioCore.fxRack?.talkbox && audioCore.fxRack.talkbox.enabled) {
       audioCore.fxRack.talkbox.triggerVocalAttack(velocity);
@@ -1419,12 +1469,17 @@ export class MultiLayerEngine {
       if (zone && zone.inst !== null && zone.inst !== undefined && zone.inst !== "current_stack") {
         const transposedMidi = Math.max(21, Math.min(108, midiNote + (zone.oct || 0) * 12));
         if (zone.vaProg) {
-          this.getVaEngineFor(zone.vaProg, zone.gain, isLower ? 4 : 5).noteOn(transposedMidi, velocity);
+          // Live note → worklet (zero-jank), scheduled → main-thread VA
+          if (when === 0 && this._workletReady && this._workletNode) {
+            this._workletNode.noteOn(transposedMidi, velocity);
+          } else {
+            this.getVaEngineFor(zone.vaProg, zone.gain, isLower ? 4 : 5).noteOn(transposedMidi, velocity, when);
+          }
         } else if (this.pcmEngine) {
           const dest = (this.pcmEngine.splitZoneInserts && this.pcmEngine.splitZoneInserts[isLower ? "lower" : "upper"])
             ? this.pcmEngine.splitZoneInserts[isLower ? "lower" : "upper"].input
             : null;
-          this.pcmEngine.playNote(zone.inst, transposedMidi, velocity, zone.gain, null, dest);
+          this.pcmEngine.playNote(zone.inst, transposedMidi, velocity, zone.gain, null, dest, when);
         }
         return;
       }
@@ -1433,7 +1488,12 @@ export class MultiLayerEngine {
 
     // Triton VA mode: real oscillator engine plays the program's own waveforms
     if (this.isTritonVaMode && this.activeTritonVaProg) {
-      tritonVaEngine.noteOn(midiNote, velocity);
+      // Live note → worklet (zero-jank), scheduled → main-thread VA
+      if (when === 0 && this._workletReady && this._workletNode) {
+        this._workletNode.noteOn(midiNote, velocity);
+      } else {
+        tritonVaEngine.noteOn(midiNote, velocity, when);
+      }
       return;
     }
 
@@ -1445,7 +1505,7 @@ export class MultiLayerEngine {
         if (this.activeLeadNotes === 1 && this.pcmEngine && this.pcmEngine.layerInserts && this.pcmEngine.layerInserts[1]) {
           const ctx = audioCore.ctx;
           if (ctx) {
-            this.pcmEngine.layerInserts[1].input.gain.setTargetAtTime(0.35, ctx.currentTime, 0.025);
+            this.pcmEngine.layerInserts[1].input.gain.setTargetAtTime(0.35, now, 0.025);
           }
         }
       }
@@ -1464,21 +1524,28 @@ export class MultiLayerEngine {
         const effectiveGain = (layer.gain ?? 1.0) * combiScale;
         const transposedMidi = Math.max(21, Math.min(108, midiNote + layer.oct * 12));
         if (layer.vaProg) {
-          this.getVaEngineFor(layer.vaProg, effectiveGain, i).noteOn(transposedMidi, velocity);
+          // Live note → worklet (zero-jank), scheduled → main-thread VA
+          if (when === 0 && this._workletReady && this._workletNode) {
+            this._workletNode.noteOn(transposedMidi, velocity);
+          } else {
+            this.getVaEngineFor(layer.vaProg, effectiveGain, i).noteOn(transposedMidi, velocity, when);
+          }
         } else if (this.pcmEngine) {
-          this.pcmEngine.playNote(layer.inst, transposedMidi, velocity, effectiveGain, i);
+          this.pcmEngine.playNote(layer.inst, transposedMidi, velocity, effectiveGain, i, null, when);
         }
       }
     } else {
       // SINGLE PROGRAM MODE: Instant sample-0 playback of authentic PCM sound
       if (this.pcmEngine) {
-        this.pcmEngine.playNote(this.activeSingleInst, midiNote, velocity, 1.0, null);
+        this.pcmEngine.playNote(this.activeSingleInst, midiNote, velocity, 1.0, null, null, when);
       }
     }
   }
 
-  noteOff(midiNote) {
+  noteOff(midiNote, when = 0) {
     audioCore.ensureRunning();
+
+    const now = when > 0 ? when : (audioCore.ctx ? audioCore.ctx.currentTime : 0);
 
     // Pad sidechain ducking release: restore Layer 1 volume when all lead keys are released
     if (this.isPadDuckingEnabled && this.isCombiMode && this.layers[0]?.enabled) {
@@ -1486,7 +1553,7 @@ export class MultiLayerEngine {
       if (this.activeLeadNotes === 0 && this.pcmEngine && this.pcmEngine.layerInserts && this.pcmEngine.layerInserts[1]) {
         const ctx = audioCore.ctx;
         if (ctx) {
-          this.pcmEngine.layerInserts[1].input.gain.setTargetAtTime(1.0, ctx.currentTime, 0.28);
+          this.pcmEngine.layerInserts[1].input.gain.setTargetAtTime(1.0, now, 0.28);
         }
       }
     }
@@ -1499,9 +1566,13 @@ export class MultiLayerEngine {
       if (zone && zone.inst !== null && zone.inst !== undefined && zone.inst !== "current_stack") {
         const transposedMidi = Math.max(21, Math.min(108, midiNote + (zone.oct || 0) * 12));
         if (zone.vaProg) {
-          this.getVaEngineFor(zone.vaProg, zone.gain, isLower ? 4 : 5).noteOff(transposedMidi);
+          if (when === 0 && this._workletReady && this._workletNode) {
+            this._workletNode.noteOff(transposedMidi);
+          } else {
+            this.getVaEngineFor(zone.vaProg, zone.gain, isLower ? 4 : 5).noteOff(transposedMidi, when);
+          }
         } else if (this.pcmEngine) {
-          this.pcmEngine.stopNote(zone.inst, transposedMidi);
+          this.pcmEngine.stopNote(zone.inst, transposedMidi, when);
         }
         return;
       }
@@ -1509,7 +1580,11 @@ export class MultiLayerEngine {
     }
 
     if (this.isTritonVaMode && this.activeTritonVaProg) {
-      tritonVaEngine.noteOff(midiNote);
+      if (when === 0 && this._workletReady && this._workletNode) {
+        this._workletNode.noteOff(midiNote);
+      } else {
+        tritonVaEngine.noteOff(midiNote, when);
+      }
       return;
     }
     if (this.isSynthMode) {
@@ -1525,13 +1600,17 @@ export class MultiLayerEngine {
           const layer = this.layers[i];
           const transposedMidi = Math.max(21, Math.min(108, midiNote + layer.oct * 12));
           if (layer.vaProg) {
-            this.getVaEngineFor(layer.vaProg, layer.gain, i).noteOff(transposedMidi);
+            if (when === 0 && this._workletReady && this._workletNode) {
+              this._workletNode.noteOff(transposedMidi);
+            } else {
+              this.getVaEngineFor(layer.vaProg, layer.gain, i).noteOff(transposedMidi, when);
+            }
           } else {
-            this.pcmEngine.stopNote(layer.inst, transposedMidi);
+            this.pcmEngine.stopNote(layer.inst, transposedMidi, when);
           }
         }
       } else {
-        this.pcmEngine.stopNote(this.activeSingleInst, midiNote);
+        this.pcmEngine.stopNote(this.activeSingleInst, midiNote, when);
       }
     }
   }
@@ -1563,17 +1642,25 @@ export class MultiLayerEngine {
     }
   }
 
-  setSustainPedal(isDown) {
+  setSustainPedal(isDown, when = 0) {
     if (!this.pcmEngine) this.init();
     audioCore.ensureRunning();
+    // Also notify worklet for live VA sustain handling
+    if (this._workletReady && this._workletNode) {
+      this._workletNode.setSustainPedal(isDown);
+    }
     if (this.isTritonVaMode && this.activeTritonVaProg) {
-      tritonVaEngine.setSustainPedal(isDown);
+      if (when === 0 && this._workletReady && this._workletNode) {
+        // Worklet handles sustain internally; main-thread VA skips
+      } else {
+        tritonVaEngine.setSustainPedal(isDown, when);
+      }
       return;
     }
     if (this.pcmEngine) {
-      this.pcmEngine.setSustainPedal(isDown);
+      this.pcmEngine.setSustainPedal(isDown, when);
       if (this.isCombiMode) {
-        this._vaEngines.forEach(eng => { try { eng.setSustainPedal(isDown); } catch (err) {} });
+        this._vaEngines.forEach(eng => { try { eng.setSustainPedal(isDown, when); } catch (err) {} });
       }
     }
   }
@@ -1606,6 +1693,7 @@ export class MultiLayerEngine {
     }
     tritonVaEngine.allNotesOff();
     this.vaAllNotesOff();
+    if (this._workletReady && this._workletNode) this._workletNode.allNotesOff();
 
     if (audioCore.fxRack) {
       try {

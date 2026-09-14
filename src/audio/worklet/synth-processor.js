@@ -135,6 +135,15 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
       else if (data.name === "subLevel") this.subLevel = data.value;
       else if (data.name === "wave1") this.waveType1 = data.value;
       else if (data.name === "wave2") this.waveType2 = data.value;
+    } else if (data.type === "sustain") {
+      // Sustain pedal: when released, force-release all held voices
+      if (!data.down) {
+        for (let i = 0; i < MAX_VOICES; i++) {
+          if (this.voices[i].active && this.voices[i].envStage === 3) {
+            this.voices[i].envStage = 4; // Release
+          }
+        }
+      }
     } else if (data.type === "allNotesOff") {
       for (let i = 0; i < MAX_VOICES; i++) {
         this.voices[i].forceStop();
@@ -166,6 +175,7 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
         }
       }
       voice.noteOn(note, velocity, this.currentTime);
+      this.port.postMessage({ type: "visual", note, on: true, vel: velocity });
     } else if (cmd === 0x80 || (cmd === 0x90 && velocity === 0)) {
       // Note Off
       for (let i = 0; i < MAX_VOICES; i++) {
@@ -173,6 +183,7 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
           this.voices[i].noteOff();
         }
       }
+      this.port.postMessage({ type: "visual", note, on: false, vel: 0 });
     } else if (cmd === 0xb0 && note === 123) {
       // All Notes Off
       for (let i = 0; i < MAX_VOICES; i++) {

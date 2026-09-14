@@ -17,6 +17,7 @@ export class SynthWorkletNode {
     this.writer = null;
     this.isReady = false;
     this.sharedBuffer = null;
+    this.onVisualCallback = null; // (midi, isPressed, vel) => {}
   }
 
   async init() {
@@ -49,6 +50,15 @@ export class SynthWorkletNode {
       });
 
       this.writer.setPort(this.node.port);
+
+      // Receive visual callbacks from the worklet processor
+      this.node.port.onmessage = e => {
+        const msg = e.data;
+        if (msg && msg.type === "visual" && this.onVisualCallback) {
+          try { this.onVisualCallback(msg.note, msg.on, msg.vel); } catch (err) {}
+        }
+      };
+
       this.node.connect(this.destination);
       this.isReady = true;
       return true;
@@ -77,6 +87,11 @@ export class SynthWorkletNode {
     if (this.node) {
       this.node.port.postMessage({ type: "allNotesOff" });
     }
+  }
+
+  setSustainPedal(down) {
+    if (!this.isReady || !this.node) return;
+    this.node.port.postMessage({ type: "sustain", down });
   }
 
   setParam(name, value) {

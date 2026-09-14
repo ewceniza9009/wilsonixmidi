@@ -111,7 +111,7 @@ export class TritonVirtualAnalogEngine {
     };
   }
 
-  noteOn(midiNote, velocity = 95) {
+  noteOn(midiNote, velocity = 95, when = 0) {
     if (!this.pool || !this.config) return;
     this.init();
 
@@ -137,23 +137,23 @@ export class TritonVirtualAnalogEngine {
     const sameNote = this.pool.voices.some(v => v.isBusy && v.activeMidiNote === midiNote);
     const voice = this.pool.acquireVoice(midiNote);
     const ratio = Math.pow(2, this.pitchBendSemitones / 12);
-    voice.trigger(midiNote, vel, this.config, ratio, sameNote);
+    voice.trigger(midiNote, vel, this.config, ratio, sameNote, when);
   }
 
-  noteOff(midiNote) {
+  noteOff(midiNote, when = 0) {
     if (!this.pool) return;
     this.heldNotes.delete(midiNote);
     const rel = Math.max(0.02, Math.min(1.2, this.config?.release || 0.35));
     const voices = this.pool.getActiveVoicesByNote(midiNote);
-    voices.forEach(v => v.release(this.sustainPedal, rel));
+    voices.forEach(v => v.release(this.sustainPedal, rel, when));
   }
 
-  setSustainPedal(down) {
+  setSustainPedal(down, when = 0) {
     this.sustainPedal = !!down;
     if (!this.sustainPedal && this.pool) {
       this.pool.voices.forEach(v => {
         if (v.isSustained && !this.heldNotes.has(v.activeMidiNote)) {
-          v.release(false, this.config?.release || 0.35);
+          v.release(false, this.config?.release || 0.35, when);
         }
       });
     }

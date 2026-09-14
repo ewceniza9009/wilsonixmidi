@@ -128,7 +128,7 @@ export class PolyphonicVoice {
     this.osc3.start();
   }
 
-  trigger(midiNote, velocity, instrumentConfig, pitchBendRatio = 1.0, sameNote = false) {
+  trigger(midiNote, velocity, instrumentConfig, pitchBendRatio = 1.0, sameNote = false, when = 0) {
     this.activeMidiNote = midiNote;
     this._gen++;
     const wasBusy = this.isBusy;
@@ -136,8 +136,8 @@ export class PolyphonicVoice {
     this.isSustained = false;
 
     const ctx = this.ctx;
-    const now = ctx.currentTime;
-    this.startTime = now;
+    const now = when > 0 ? Math.max(when, ctx.currentTime) : ctx.currentTime;
+    this.startTime = when > 0 ? when : now;
 
     const baseFreq = 440 * Math.pow(2, (midiNote - 69) / 12);
     const freq = baseFreq * pitchBendRatio;
@@ -215,9 +215,9 @@ export class PolyphonicVoice {
     }
   }
 
-  release(sustainPedalActive, releaseTime = 0.25) {
+  release(sustainPedalActive, releaseTime = 0.25, when = 0) {
     const ctx = this.ctx;
-    const now = ctx.currentTime;
+    const now = when > 0 ? Math.max(when, ctx.currentTime) : ctx.currentTime;
     const gen = this._gen;
 
     if (sustainPedalActive) {

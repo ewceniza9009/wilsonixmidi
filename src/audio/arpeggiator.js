@@ -11,6 +11,7 @@
 
 import { audioCore } from "./audio-core.js";
 import { multiLayerEngine } from "./multi-layer-engine.js";
+import { noteScheduler } from "./lookahead-scheduler.js";
 
 export const ARP_PATTERNS = {
   UP: "up",
@@ -46,10 +47,12 @@ export class Arpeggiator {
 
     this.timerId = null;
     this.nextNoteTime = 0;
-    this.activeArpNotes = new Map(); // midiNote -> noteOffTimeout
+    this.activeArpNotes = new Map(); // midiNote -> release audio time
 
     this.onNoteTriggerCallback = null; // (midi, isPressed, vel) => {}
     this.onStateChangeCallback = null; // (enabled, bpm, rate, pattern) => {}
+    this._refill = null;
+    this._visualTimers = [];
   }
 
   setEnabled(enabled) {
@@ -106,7 +109,7 @@ export class Arpeggiator {
     this.heldNotes.add({ midi: midiNote, vel: velocity });
     this.rebuildSequence();
 
-    if (this.enabled && !this.timerId) {
+    if (this.enabled && !this._refill) {
       this.start();
     }
   }
@@ -184,19 +187,26 @@ export class Arpeggiator {
     const ctx = audioCore.init();
     if (!ctx) return;
 
-    this.nextNoteTime = ctx.currentTime;
-    this.tick();
+    this.nextNoteTime = Math.max(ctx.currentTime + 0.03, this.nextNoteTime || ctx.currentTime);
+    if (!this._refill) {
+      this._refill = () => this.scheduleAhead();
+    }
+    noteScheduler.addRefill(this._refill);
+    noteScheduler.start();
   }
 
   stop() {
-    if (this.timerId) {
-      clearTimeout(this.timerId);
-      this.timerId = null;
+    if (this._refill) {
+      noteScheduler.removeRefill(this._refill);
+      this._refill = null;
     }
+    noteScheduler.discard("arp");
+    this._visualTimers.forEach(t => clearTimeout(t));
+    this._visualTimers = [];
+    this.nextNoteTime = 0;
 
     // Silence any lingering arpeggiator notes
-    for (const [midi, timeoutId] of this.activeArpNotes.entries()) {
-      clearTimeout(timeoutId);
+    for (const [midi] of this.activeArpNotes.entries()) {
       multiLayerEngine.noteOff(midi);
       if (this.onNoteTriggerCallback) {
         try { this.onNoteTriggerCallback(midi, false, 0); } catch (e) {}
@@ -206,68 +216,67 @@ export class Arpeggiator {
     this.seqIndex = 0;
   }
 
-  tick() {
+  /**
+   * Re-fill the lookahead queue with upcoming arp steps. Called once by start()
+   * and then once per scheduler tick, so steps are placed up to
+   * scheduleAheadSec away on the Web Audio clock rather than fired "now" —
+   * main-thread jank can no longer shift the audible time of each step.
+   */
+  scheduleAhead() {
     if (!this.enabled || this.currentSequence.length === 0) {
-      this.stop();
       return;
     }
 
     const ctx = audioCore.ctx;
     if (!ctx) return;
 
+    const horizon = ctx.currentTime + noteScheduler.scheduleAheadSec;
     const secondsPerBeat = 60.0 / this.bpm;
-    let stepDuration = secondsPerBeat * (ARP_RATES[this.rate] || 0.5);
+    let safety = 0;
 
-    // Apply Gospel Swing rhythm on alternate eighth/sixteenth beats
-    const isSwingBeat = this.seqIndex % 2 === 1;
-    if (this.rate === "gospel_swing" || isSwingBeat) {
-      stepDuration += (isSwingBeat ? 1 : -1) * (stepDuration * this.swing * 0.4);
-    }
+    while (this.nextNoteTime < horizon && safety < 32) {
+      let stepDuration = secondsPerBeat * (ARP_RATES[this.rate] || 0.5);
 
-    // Pick target note from sequence
-    let target;
-    if (this.pattern === ARP_PATTERNS.RANDOM) {
-      const randIdx = Math.floor(Math.random() * this.currentSequence.length);
-      target = this.currentSequence[randIdx];
-    } else {
-      target = this.currentSequence[this.seqIndex % this.currentSequence.length];
-      this.seqIndex = (this.seqIndex + 1) % this.currentSequence.length;
-    }
-
-    if (target) {
-      const midi = target.midi;
-      const vel = target.vel || 95;
-      const noteDuration = Math.max(0.06, stepDuration * this.gate);
-
-      // Trigger sound in multiLayerEngine
-      multiLayerEngine.noteOn(midi, vel);
-      if (this.onNoteTriggerCallback) {
-        try { this.onNoteTriggerCallback(midi, true, vel); } catch (e) {}
+      // Apply Gospel Swing rhythm on alternate eighth/sixteenth beats
+      const isSwingBeat = this.seqIndex % 2 === 1;
+      if (this.rate === "gospel_swing" || isSwingBeat) {
+        stepDuration += (isSwingBeat ? 1 : -1) * (stepDuration * this.swing * 0.4);
       }
 
-      // Schedule note release
-      const releaseTimeout = setTimeout(() => {
-        multiLayerEngine.noteOff(midi);
-        if (this.onNoteTriggerCallback) {
-          try { this.onNoteTriggerCallback(midi, false, 0); } catch (e) {}
-        }
-        this.activeArpNotes.delete(midi);
-      }, noteDuration * 1000);
+      // Pick target note from sequence
+      let target;
+      if (this.pattern === ARP_PATTERNS.RANDOM) {
+        const randIdx = Math.floor(Math.random() * this.currentSequence.length);
+        target = this.currentSequence[randIdx];
+      } else {
+        target = this.currentSequence[this.seqIndex % this.currentSequence.length];
+        this.seqIndex = (this.seqIndex + 1) % this.currentSequence.length;
+      }
 
-      this.activeArpNotes.set(midi, releaseTimeout);
-    }
+      if (target) {
+        const midi = target.midi;
+        const vel = target.vel || 95;
+        const noteDuration = Math.max(0.06, stepDuration * this.gate);
+        const when = this.nextNoteTime;
 
-    // Audio-clock look-ahead: schedule the next step on the WebAudio timeline
-    // instead of a naive relative timeout, so main-thread jank never
-    // accumulates into tempo drift. If a step runs late, the next interval
-    // shrinks to catch back up to the clock grid instead of pushing every
-    // following note later.
-    if (!this.nextNoteTime || this.nextNoteTime <= ctx.currentTime) {
-      this.nextNoteTime = ctx.currentTime;
+        // Trigger sound in multiLayerEngine at the exact audio-clock time
+        noteScheduler.noteOn(midi, vel, when, "arp");
+        noteScheduler.noteOff(midi, when + noteDuration, "arp");
+        this.activeArpNotes.set(midi, when + noteDuration);
+
+        // Visual callback aligned to the moment the note audibly lands
+        const delayMs = Math.max(0, (when - ctx.currentTime) * 1000);
+        const visTimer = setTimeout(() => {
+          if (this.enabled && this.onNoteTriggerCallback) {
+            try { this.onNoteTriggerCallback(midi, true, vel); } catch (e) {}
+          }
+        }, delayMs);
+        this._visualTimers.push(visTimer);
+      }
+
+      this.nextNoteTime += stepDuration;
+      safety++;
     }
-    const delayMs = Math.max(25, (this.nextNoteTime + stepDuration - ctx.currentTime) * 1000);
-    this.nextNoteTime += stepDuration;
-    this.timerId = setTimeout(() => this.tick(), delayMs);
   }
 }
 

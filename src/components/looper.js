@@ -3,8 +3,10 @@
  * Records MIDI event streams, quantizes loop seams, and supports real-time multi-track overdubbing.
  */
 
+import { audioCore } from "../audio/audio-core.js";
 import { synthEngine } from "../audio/synth-engine.js";
 import { multiLayerEngine } from "../audio/multi-layer-engine.js";
+import { noteScheduler } from "../audio/lookahead-scheduler.js";
 
 export class ClipLooper {
   constructor(containerId) {
@@ -13,10 +15,10 @@ export class ClipLooper {
     this.bars = 4; // 4-bar loop standard
 
     this.tracks = [
-      { id: 0, state: "empty", events: [], timer: null, activeNotes: new Set() },
-      { id: 1, state: "empty", events: [], timer: null, activeNotes: new Set() },
-      { id: 2, state: "empty", events: [], timer: null, activeNotes: new Set() },
-      { id: 3, state: "empty", events: [], timer: null, activeNotes: new Set() },
+      { id: 0, state: "empty", events: [], activeNotes: new Set(), refill: null, nextIterStart: 0 },
+      { id: 1, state: "empty", events: [], activeNotes: new Set(), refill: null, nextIterStart: 0 },
+      { id: 2, state: "empty", events: [], activeNotes: new Set(), refill: null, nextIterStart: 0 },
+      { id: 3, state: "empty", events: [], activeNotes: new Set(), refill: null, nextIterStart: 0 },
     ];
 
     this.recordingTrackId = null;
@@ -71,6 +73,10 @@ export class ClipLooper {
     return (60 / this.bpm) * 4 * this.bars * 1000;
   }
 
+  getLoopDurationSec() {
+    return this.getLoopDurationMs() / 1000;
+  }
+
   hookSynthEngine() {
     const originalNoteOn = synthEngine.noteOn.bind(synthEngine);
     const originalNoteOff = synthEngine.noteOff.bind(synthEngine);
@@ -81,7 +87,8 @@ export class ClipLooper {
       // Route through multiLayerEngine for actual PCM sample playback
       multiLayerEngine.noteOn(midiNote, velocity);
       if (this.recordingTrackId !== null) {
-        const offset = performance.now() - this.recordStartTime;
+        const ctx = audioCore.ctx;
+        const offset = ctx ? ctx.currentTime - this.recordStartTime : 0;
         this.tracks[this.recordingTrackId].events.push({
           type: "on",
           note: midiNote,
@@ -95,7 +102,8 @@ export class ClipLooper {
       originalNoteOff(midiNote);
       multiLayerEngine.noteOff(midiNote);
       if (this.recordingTrackId !== null) {
-        const offset = performance.now() - this.recordStartTime;
+        const ctx = audioCore.ctx;
+        const offset = ctx ? ctx.currentTime - this.recordStartTime : 0;
         this.tracks[this.recordingTrackId].events.push({
           type: "off",
           note: midiNote,
@@ -130,7 +138,8 @@ export class ClipLooper {
         this.finishRecording(this.recordingTrackId);
       }
       this.recordingTrackId = trackId;
-      this.recordStartTime = performance.now();
+      const ctx = audioCore.ctx;
+      this.recordStartTime = ctx ? ctx.currentTime : 0;
       track.state = "recording";
       this.updateTrackUi(trackId);
 
@@ -171,36 +180,56 @@ export class ClipLooper {
     const track = this.tracks[trackId];
     this.stopPlayback(trackId);
 
-    const loopLen = this.getLoopDurationMs();
+    if (!audioCore.ctx) return;
+    const loopLen = this.getLoopDurationSec();
 
-    const runLoopIteration = () => {
-      track.events.forEach(e => {
-        const timer = setTimeout(() => {
-          if (track.state !== "playing") return;
+    // First audible iteration starts slightly ahead so the scheduler already
+    // has events placed on the audio clock before they are audible.
+    track.nextIterStart = audioCore.ctx.currentTime + 0.08;
+
+    const scheduleIter = () => {
+      if (track.state !== "playing") return;
+      const ctx = audioCore.ctx;
+      if (!ctx) return;
+      const sec = loopLen;
+
+      // Place the events of every iteration that falls inside the lookahead
+      // horizon. Because events carry an absolute audio time, one main-thread
+      // jank spike between iterations cannot stretch the loop seam.
+      while (track.nextIterStart < ctx.currentTime + noteScheduler.scheduleAheadSec) {
+        track.events.forEach(e => {
+          const at = track.nextIterStart + e.time;
           if (e.type === "on") {
-            multiLayerEngine.noteOn(e.note, e.vel);
+            noteScheduler.noteOn(e.note, e.vel, at, "looper-" + trackId);
             track.activeNotes.add(e.note);
           } else {
-            multiLayerEngine.noteOff(e.note);
+            noteScheduler.noteOff(e.note, at, "looper-" + trackId);
             track.activeNotes.delete(e.note);
           }
-        }, e.time);
-      });
-
-      track.timer = setTimeout(runLoopIteration, loopLen);
+        });
+        track.nextIterStart += sec;
+      }
     };
 
-    runLoopIteration();
+    track.refill = scheduleIter;
+    noteScheduler.addRefill(track.refill);
+    scheduleIter();
+    noteScheduler.start();
   }
 
   stopPlayback(trackId) {
     const track = this.tracks[trackId];
-    if (track.timer) {
-      clearTimeout(track.timer);
-      track.timer = null;
+    if (track.refill) {
+      noteScheduler.removeRefill(track.refill);
+      track.refill = null;
     }
+    noteScheduler.discard("looper-" + trackId);
+    // Close every note that was open at the moment of stopping. Scheduled
+    // events were already discarded; the engine still rings any that started.
     track.activeNotes.forEach(n => multiLayerEngine.noteOff(n));
     track.activeNotes.clear();
+    const evNotes = new Set(track.events.filter(e => e.type === "on").map(e => e.note));
+    evNotes.forEach(n => multiLayerEngine.noteOff(n));
   }
 
   clearTrack(trackId) {

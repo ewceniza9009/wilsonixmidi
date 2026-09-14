@@ -973,6 +973,33 @@ body.mobile-stage-keys .studio-keyboard-deck {
   gap: 6px;
 }
 
+.latency-device-section {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.latency-device-select {
+  width: 100%;
+  background: #1e2433;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  color: #e2e8f0;
+  font-size: 0.7rem;
+  padding: 5px 8px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.latency-device-select:focus {
+  outline: none;
+  border-color: rgba(0, 210, 255, 0.5);
+}
+
 .latency-profile-title {
   font-size: 0.60rem;
   font-weight: 800;
@@ -1063,6 +1090,23 @@ body.mobile-stage-keys .studio-keyboard-deck {
   line-height: 1.3;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   padding-top: 6px;
+}
+
+.latency-pop-reco {
+  margin-top: 6px;
+  font-size: 0.64rem;
+  color: #fbbf24;
+  line-height: 1.35;
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  background: rgba(251, 191, 36, 0.06);
+  border-radius: 5px;
+  padding: 5px 8px;
+}
+
+.latency-pop-reco.reco-active {
+  color: #86efac;
+  border-color: rgba(134, 239, 172, 0.3);
+  background: rgba(134, 239, 172, 0.06);
 }
 
 .latency-hud-pill.latency-warm {
@@ -2508,6 +2552,10 @@ body.mobile-stage-keys .studio-keyboard-deck {
 #app-root.view-grooves #middle-grid-section,
 #app-root.view-grooves #media-player-mount {
   display: none !important;
+}
+
+#app-root.view-grooves #demo-station-mount {
+  display: flex !important;
 }
 
 /* 4c. Demo Station View Mode: 30s Interactive Song Clips */

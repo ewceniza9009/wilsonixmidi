@@ -1842,7 +1842,7 @@ export class NativePcmEngine {
     pool.free.push(c);
   }
 
-  playNote(instId, midiNote, velocity = 95, customGain = 1.0, layerIndex = null, destOverride = null) {
+  playNote(instId, midiNote, velocity = 95, customGain = 1.0, layerIndex = null, destOverride = null, when = 0) {
     const dest = destOverride
       ? destOverride
       : (layerIndex !== null && layerIndex !== undefined && this.layerInserts && this.layerInserts[layerIndex]
@@ -1850,7 +1850,7 @@ export class NativePcmEngine {
         : this.destination);
 
     if (this.sfxGenerator && this.sfxGenerator.isSfxInstrument(instId)) {
-      return this.sfxGenerator.playSfxNote(instId, midiNote, velocity, customGain, dest);
+      return this.sfxGenerator.playSfxNote(instId, midiNote, velocity, customGain, dest, when);
     }
 
     const anchorData = this.findNearestAnchor(instId, midiNote, velocity);
@@ -1859,7 +1859,10 @@ export class NativePcmEngine {
     }
 
     const ctx = this.ctx;
-    const now = ctx.currentTime;
+    // `when > 0` = scheduled (lookahead) playback at an absolute audio time;
+    // `when` is clamped to now in the engine so a slightly-early dispatch still
+    // lands exactly at the scheduler's target instead of jank-shifting it.
+    const now = when > 0 ? Math.max(when, ctx.currentTime) : ctx.currentTime;
     const velNorm = Math.max(0.08, Math.min(1.0, velocity / 127));
     this.heldNotes.add(midiNote);
 
@@ -1989,7 +1992,7 @@ export class NativePcmEngine {
     } catch (e) {}
 
     src.connect(filter);
-    src.start(0);
+    src.start(now);
 
     // Voice record
     const voiceRecord = {
@@ -2138,10 +2141,11 @@ export class NativePcmEngine {
     });
   }
 
-  setSustainPedal(isDown) {
+  setSustainPedal(isDown, when = 0) {
     const wasDown = this.sustainPedal;
     this.sustainPedal = !!isDown;
-    const now = this.ctx.currentTime;
+    const ctx = this.ctx;
+    const now = when > 0 ? Math.max(when, ctx.currentTime) : ctx.currentTime;
 
     if (wasDown !== this.sustainPedal) {
       try {
@@ -2177,12 +2181,13 @@ export class NativePcmEngine {
     }
   }
 
-  stopNote(instId, midiNote) {
+  stopNote(instId, midiNote, when = 0) {
     this.heldNotes.delete(midiNote);
     const voices = this.activeVoices.get(midiNote);
     if (!voices || voices.length === 0) return;
 
-    const now = this.ctx.currentTime;
+    const ctx = this.ctx;
+    const now = when > 0 ? Math.max(when, ctx.currentTime) : ctx.currentTime;
     const remaining = [];
 
     voices.forEach(v => {
