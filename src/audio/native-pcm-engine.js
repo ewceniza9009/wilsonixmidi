@@ -817,7 +817,7 @@ export class LayerInsertProcessor {
         const low = ctx.createBiquadFilter();
         low.type = "lowshelf";
         low.frequency.value = 180;
-        low.gain.value = 2.8;
+        low.gain.value = 1.0;  // Further reduced from 1.5 to eliminate noise floor boost
         const high = ctx.createBiquadFilter();
         high.type = "lowpass";
         high.frequency.value = 7500;
@@ -985,8 +985,8 @@ export class LayerInsertProcessor {
         const drip = ctx.createBiquadFilter();
         drip.type = "peaking";
         drip.frequency.value = 3400;
-        drip.Q.value = 4.2;
-        drip.gain.value = 8.5;
+        drip.Q.value = 2.5;  // Reduced from 4.2 to eliminate resonant peak
+        drip.gain.value = 5.0;  // Reduced from 8.5 to reduce harshness
 
         const d1 = ctx.createDelay(0.2);
         d1.delayTime.value = 0.038;
@@ -1118,9 +1118,9 @@ export class LayerInsertProcessor {
         const gainNode = ctx.createGain();
         const lfo = ctx.createOscillator();
         lfo.type = "sine";
-        lfo.frequency.value = 8.6; // 16th note pulse
+        lfo.frequency.value = 5.5;  // Reduced from 8.6 Hz for smoother modulation
         const lfoGain = ctx.createGain();
-        lfoGain.gain.value = 0.40;
+        lfoGain.gain.value = 0.25;  // Reduced from 0.40 for shallower depth
         lfo.connect(lfoGain);
         lfoGain.connect(gainNode.gain);
         lfo.start();
@@ -1890,8 +1890,8 @@ export class NativePcmEngine {
             try {
               if (oldV.src) oldV.src.onended = null;
               oldV.voiceGain.gain.cancelScheduledValues(now);
-              oldV.voiceGain.gain.setValueAtTime(oldV.voiceGain.gain.value || 0.001, now);
-              oldV.voiceGain.gain.linearRampToValueAtTime(0.0001, now + 0.025);
+              oldV.voiceGain.gain.setValueAtTime(oldV.voiceGain.gain.value || 0.0, now);
+              oldV.voiceGain.gain.linearRampToValueAtTime(0.0, now + 0.025);
               if (oldV.src) oldV.src.stop(now + 0.030);
             } catch (e) {}
             this.removeVoice(midiNote, oldV);
@@ -1917,8 +1917,8 @@ export class NativePcmEngine {
           try {
             if (oldV.src) oldV.src.onended = null;
             oldV.voiceGain.gain.cancelScheduledValues(now);
-            oldV.voiceGain.gain.setValueAtTime(oldV.voiceGain.gain.value || 0.001, now);
-            oldV.voiceGain.gain.linearRampToValueAtTime(0.0001, now + 0.025);
+            oldV.voiceGain.gain.setValueAtTime(oldV.voiceGain.gain.value || 0.0, now);
+            oldV.voiceGain.gain.linearRampToValueAtTime(0.0, now + 0.025);
             if (oldV.src) oldV.src.stop(now + 0.030);
           } catch (e) {}
           this.removeVoice(midiNote, oldV);
@@ -1981,7 +1981,7 @@ export class NativePcmEngine {
       voiceGain.gain.linearRampToValueAtTime(peakGain, now + 0.0035);
     }
 
-    voiceGain.gain.setTargetAtTime(0.0001, now + 32.0, 3.5);
+    voiceGain.gain.setTargetAtTime(0.0, now + 32.0, 3.5);
     const maxLife = (anchorData.buffer && anchorData.buffer._isLoopable)
       ? 60.0
       : Math.min(8.0, (anchorData.buffer?.duration || 4.0) + 0.1);
@@ -2028,8 +2028,8 @@ export class NativePcmEngine {
       try {
         if (target.src) target.src.onended = null;
         target.voiceGain.gain.cancelScheduledValues(now);
-        target.voiceGain.gain.setValueAtTime(target.voiceGain.gain.value || 0.001, now);
-        target.voiceGain.gain.linearRampToValueAtTime(0.0001, now + 0.025);
+        target.voiceGain.gain.setValueAtTime(target.voiceGain.gain.value || 0.0, now);
+        target.voiceGain.gain.linearRampToValueAtTime(0.0, now + 0.025);
         if (target.src) target.src.stop(now + 0.030);
       } catch (e) {}
       this.removeVoice(target.midiNote, target);
@@ -2312,8 +2312,8 @@ export class NativePcmEngine {
         if (v.src) v.src.onended = null;
         if (v.voiceGain) {
           v.voiceGain.gain.cancelScheduledValues(now);
-          v.voiceGain.gain.setValueAtTime(v.voiceGain.gain.value || 0.001, now);
-          v.voiceGain.gain.linearRampToValueAtTime(0.00001, now + 0.003);
+          v.voiceGain.gain.setValueAtTime(v.voiceGain.gain.value || 0.0, now);
+          v.voiceGain.gain.linearRampToValueAtTime(0.0, now + 0.003);
         }
         if (v.src) v.src.stop(now + 0.004);
         if (v.vibLfo) { try { v.vibLfo.stop(now + 0.005); } catch (e) {} }

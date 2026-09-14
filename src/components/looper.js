@@ -121,7 +121,14 @@ export class ClipLooper {
 
         if (action === "rec") this.toggleRecord(trackId);
         else if (action === "play") this.togglePlay(trackId);
-        else if (action === "clear") this.clearTrack(trackId);
+        else if (action === "clear") {
+          // If track is in recording state, stop recording early
+          if (this.tracks[trackId].state === "recording") {
+            this.stopRecording(trackId);
+          } else {
+            this.clearTrack(trackId);
+          }
+        }
       });
     });
   }
@@ -153,6 +160,18 @@ export class ClipLooper {
   }
 
   finishRecording(trackId) {
+    const track = this.tracks[trackId];
+    this.recordingTrackId = null;
+    if (track.events.length > 0) {
+      track.state = "playing";
+      this.startPlayback(trackId);
+    } else {
+      track.state = "empty";
+    }
+    this.updateTrackUi(trackId);
+  }
+
+  stopRecording(trackId) {
     const track = this.tracks[trackId];
     this.recordingTrackId = null;
     if (track.events.length > 0) {

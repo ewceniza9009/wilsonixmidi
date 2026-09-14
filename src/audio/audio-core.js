@@ -116,6 +116,25 @@ export class AudioCore {
     this.updateLatencyMetrics();
     this.installCaptureHotkey();
 
+    // Auto-resume AudioContext when the page regains visibility.
+    // Xiaomi/HyperOS 3-finger screenshot gesture suspends the context;
+    // this catches it and resumes within 50ms of the gesture ending.
+    if (!this._visibilityHandlerAdded) {
+      this._visibilityHandlerAdded = true;
+      const resumeAudio = () => {
+        if (this.ctx && this.ctx.state === "suspended") {
+          this.ctx.resume().catch(() => {});
+        }
+      };
+      document.addEventListener("visibilitychange", resumeAudio);
+      window.addEventListener("focus", resumeAudio);
+      window.addEventListener("pageshow", resumeAudio);
+      // Xiaomi gesture overlay fires a brief blur; catch the恢复
+      document.addEventListener("touchend", () => {
+        setTimeout(resumeAudio, 50);
+      }, { passive: true });
+    }
+
     return this.ctx;
   }
 

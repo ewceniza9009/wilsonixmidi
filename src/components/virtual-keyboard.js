@@ -342,10 +342,10 @@ export class VirtualKeyboardUI {
     };
 
     const calculateVelocity = (clientY, rect) => {
-      // Top of key (0.0) -> pianissimo (velocity ~25)
-      // Bottom edge of key (1.0) -> fortissimo (velocity ~127)
+      // Top of key (0.0) -> pianissimo (velocity 5)
+      // Bottom edge of key (1.0) -> fortissimo (velocity 127)
       const relativeY = Math.max(0, Math.min(1.0, (clientY - rect.top) / rect.height));
-      const raw = Math.round(25 + relativeY * 102); // 25 to 127 full dynamic span
+      const raw = Math.round(5 + relativeY * 122); // 5 to 127 full dynamic span
       return shapeVelocity(raw);
     };
 
@@ -433,6 +433,12 @@ export class VirtualKeyboardUI {
     });
 
     // Robust Multi-Touch Engine for Mobile, Tablets & Android Touchscreens
+    // Xiaomi/HyperOS firmware drops touch IDs mid-press (touchcancel without
+    // finger lift). Deferred release: cancelled touches get 200ms grace period
+    // before noteOff fires. If the same finger reappears within that window
+    // the deferred release is cancelled and the note stays held.
+    this._cancelledTouchTimers = new Map();
+
     track.addEventListener(
       "touchstart",
       e => {
@@ -442,6 +448,15 @@ export class VirtualKeyboardUI {
 
         for (let i = 0; i < e.changedTouches.length; i++) {
           const t = e.changedTouches[i];
+
+          // Cancel any deferred release for a touch that reappeared
+          const pendingTimer = this._cancelledTouchTimers.get(t.identifier);
+          if (pendingTimer) {
+            clearTimeout(pendingTimer);
+            this._cancelledTouchTimers.delete(t.identifier);
+            continue; // touch already held in activeTouches — don't re-trigger
+          }
+
           const key = getKeyFromPoint(t.clientX, t.clientY);
           if (key) {
             const snappedMidi = scaleLock.isLocked ? scaleLock.snapToScale(key.midi) : key.midi;
@@ -519,10 +534,34 @@ export class VirtualKeyboardUI {
         e.preventDefault();
       }
 
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        const t = e.changedTouches[i];
-        const prevTouch = this.activeTouches.get(t.identifier);
-        if (prevTouch && prevTouch.chordNotes) {
+      const isCancel = e.type === "touchcancel";
+
+      const releaseTouch = (touchId, prevTouch) => {
+        if (!prevTouch || !prevTouch.chordNotes) {
+          this.activeTouches.delete(touchId);
+          return;
+        }
+
+        if (isCancel) {
+          // Defer release — Xiaomi firmware may re-emit this touch within 200ms
+          const timer = setTimeout(() => {
+            this._cancelledTouchTimers.delete(touchId);
+            if (this.activeTouches.has(touchId)) {
+              prevTouch.chordNotes.forEach(n => {
+                this.setKeyVisualState(n, false);
+                if (arpeggiator.enabled) {
+                  arpeggiator.handleNoteOff(n);
+                } else {
+                  multiLayerEngine.noteOff(n);
+                }
+              });
+              this.activeTouches.delete(touchId);
+            }
+          }, 200);
+          this._cancelledTouchTimers.set(touchId, timer);
+        } else {
+          // Real finger lift — release immediately
+          this._cancelledTouchTimers.delete(touchId);
           prevTouch.chordNotes.forEach(n => {
             this.setKeyVisualState(n, false);
             if (arpeggiator.enabled) {
@@ -531,13 +570,24 @@ export class VirtualKeyboardUI {
               multiLayerEngine.noteOff(n);
             }
           });
-          this.activeTouches.delete(t.identifier);
+          this.activeTouches.delete(touchId);
         }
+      };
+
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i];
+        const prevTouch = this.activeTouches.get(t.identifier);
+        releaseTouch(t.identifier, prevTouch);
       }
 
       // Reconcile stuck touches if all fingers were lifted or system gesture cancelled touches
       if (e.touches) {
         if (e.touches.length === 0 && this.activeTouches.size > 0) {
+          // Cancel all pending deferred releases — user lifted everything
+          for (const [timerId] of this._cancelledTouchTimers) {
+            clearTimeout(this._cancelledTouchTimers.get(timerId));
+          }
+          this._cancelledTouchTimers.clear();
           this.activeTouches.forEach(prevTouch => {
             if (prevTouch && prevTouch.chordNotes) {
               prevTouch.chordNotes.forEach(n => {
@@ -559,6 +609,8 @@ export class VirtualKeyboardUI {
           }
           for (const [touchId, prevTouch] of this.activeTouches.entries()) {
             if (!currentIds.has(touchId)) {
+              // Skip touches with a pending deferred release (Xiaomi touchcancel)
+              if (this._cancelledTouchTimers.has(touchId)) continue;
               if (prevTouch && prevTouch.chordNotes) {
                 prevTouch.chordNotes.forEach(n => {
                   this.setKeyVisualState(n, false);

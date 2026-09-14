@@ -52,10 +52,16 @@ export class ShimmerReverb {
       damp.type = "lowpass";
       damp.frequency.value = 3500;
 
-      // Input -> Delay -> Damp -> Feedback -> Delay
+      // DC blocker in feedback loop: kills DC/infra buildup that causes hiss/denormals
+      const dcBlock = ctx.createBiquadFilter();
+      dcBlock.type = "highpass";
+      dcBlock.frequency.value = 30;
+
+      // Input -> Delay -> Damp -> DC Block -> Feedback -> Delay
       this.preFilter.connect(delay);
       delay.connect(damp);
-      damp.connect(fb);
+      damp.connect(dcBlock);
+      dcBlock.connect(fb);
       fb.connect(delay);
 
       damp.connect(combSum);

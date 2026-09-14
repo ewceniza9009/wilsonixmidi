@@ -193,7 +193,7 @@ export const COMBI_PRESETS = {
     name: "✨ Synthesizer You - Lush Juno & Vocal Echo Stack",
     category: "Synthesizer You Signature",
     layers: [
-      { id: 0, name: "Juno Analog Poly Synth", inst: "m1_universe", fx: "analog_juno_chorus", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 0, name: "Juno Analog Poly Synth", inst: "m1_universe", fx: "analog_juno_chorus", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 1, name: "Slapback Vocal Shout", inst: "vox_yeah", fx: "slapback_vocal", gain: 0.75, pan: 0.05, oct: 0, minVel: 40, maxVel: 127, enabled: true },
       { id: 2, name: "Optical Tremolo Synth Pulse", inst: "synth_bass_1", fx: "opto_tremolo_16th", gain: 0.70, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 3, name: "Korg M1 Fresh Air Shimmer", inst: "m1_fresh_air", fx: "spring_surf", gain: 0.50, pan: 0, oct: 1, minVel: 60, maxVel: 127, enabled: true },
@@ -204,7 +204,7 @@ export const COMBI_PRESETS = {
     name: "💥 Synthesizer You - 80s Gated Snare & Beat Stack",
     category: "Synthesizer You Signature",
     layers: [
-      { id: 0, name: "80s Gated Snare Cannon", inst: "sy_gated_snare_1", fx: "gated_cannon", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 0, name: "80s Gated Snare Cannon", inst: "sy_gated_snare_1", fx: "gated_cannon", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 1, name: "Punchy 80s Tape Kick", inst: "sy_kick_punch", fx: "tape_sat_master", gain: 0.95, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 2, name: "Analog Synth Bassline", inst: "sy_bass_riff", fx: "tape_sat_master", gain: 0.80, pan: -0.05, oct: -1, minVel: 1, maxVel: 127, enabled: true },
       { id: 3, name: "Surf Pluck Lead", inst: "sy_surf_pluck_c4", fx: "spring_surf", gain: 0.85, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
@@ -215,7 +215,7 @@ export const COMBI_PRESETS = {
     name: "🎤 Synthesizer You - Slapback Vocal & Tape Sat Stack",
     category: "Synthesizer You Signature",
     layers: [
-      { id: 0, name: "Slapback Lead Vocal Phrase", inst: "sy_vox_slap_3", fx: "slapback_vocal", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 0, name: "Slapback Lead Vocal Phrase", inst: "sy_vox_slap_3", fx: "slapback_vocal", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 1, name: "Juno Stereo Chorus Swell", inst: "sy_chorus_swell", fx: "analog_juno_chorus", gain: 0.70, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 2, name: "Optical Tremolo Pulse", inst: "synth_bass_1", fx: "opto_tremolo_16th", gain: 0.75, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 3, name: "Surf Lead Spring Echo", inst: "sy_surf_spring", fx: "spring_surf", gain: 0.60, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
@@ -290,13 +290,13 @@ export const COMBI_PRESETS = {
   },
   neo_soul_chill: {
     id: "neo_soul_chill",
-    name: "★ Neo-Soul Chill (DX7 FM + EP + Sax + Sub)",
+    name: "★ Neo-Soul Chill (Studio Rhodes + Universe Pad + Nylon + Sub)",
     category: "R&B / Neo-Soul",
     layers: [
-      { id: 0, name: "Abletunes FM Piano", inst: "abletunes_fm_piano", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Suit & Stage EP", inst: "electric_piano_1", fx: "clean", gain: 0.75, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Breathy Alto Sax", inst: "alto_sax", fx: "reverb_room", gain: 0.80, pan: 0, oct: 0, minVel: 40, maxVel: 127, enabled: true },
-      { id: 3, name: "Analog Sub Bass", inst: "synth_bass_1", fx: "warm_eq", gain: 0.70, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 0, name: "Studio DX7 FM / Stage Rhodes", inst: "abletunes_fm_piano", fx: "autopan_wide", gain: 0.70, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Celestial Universe Pad", inst: "m1_universe", fx: "reverb_hall", gain: 0.45, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Warm Nylon Comping Chords", inst: "acoustic_guitar_nylon", fx: "clean", gain: 0.70, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Moog Analog Sub Bass", inst: "synth_bass_1", fx: "clean", gain: 0.75, pan: -0.05, oct: -1, minVel: 1, maxVel: 127, maxNote: 59, enabled: true },
     ],
   },
   reggae_bubble: {
@@ -305,10 +305,10 @@ export const COMBI_PRESETS = {
     category: "Reggae & Dub",
     fxPreset: "reggae_dub",
     layers: [
-      { id: 0, name: "Percussive B3 Bubble Organ", inst: "drawbar_organ", fx: "rotary_fast", gain: 1.0, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Staccato Grand Chop", inst: "acoustic_grand_piano", fx: "clean", gain: 0.85, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 0, name: "Percussive B3 Bubble Organ", inst: "drawbar_organ", fx: "rotary_fast", gain: 0.95, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Staccato Grand Chop", inst: "acoustic_grand_piano", fx: "clean", gain: 0.90, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 2, name: "Muted Clean Guitar Skank", inst: "electric_guitar_clean", fx: "punch_comp", gain: 0.70, pan: 0.1, oct: 0, minVel: 20, maxVel: 127, enabled: true },
-      { id: 3, name: "Dub Sub Bass", inst: "synth_bass_1", fx: "warm_eq", gain: 0.80, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Dub Sub Bass", inst: "synth_bass_1", fx: "warm_eq", gain: 0.70, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
     ],
   },
   shimmer_worship_celestial: {
@@ -337,14 +337,13 @@ export const COMBI_PRESETS = {
   },
   lofi_vinyl_ep: {
     id: "lofi_vinyl_ep",
-    name: "★ Lo-Fi Vintage Tape Rhodes (Wow & Flutter)",
-    category: "Neo-Soul / Lo-Fi",
-    fxPreset: "lofi_vinyl_tape",
+    name: "★ Lo-Fi Vintage Tape Rhodes (Vintage EP + Kalimba + Wow & Flutter)",
+    category: "Lo-Fi & Vintage",
     layers: [
-      { id: 0, name: "Mark I Suitcase Rhodes", inst: "electric_piano_1", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Warm Atmosphere Strings", inst: "string_ensemble_1", fx: "reverb_room", gain: 0.45, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Sub Sine Bass", inst: "synth_bass_1", fx: "warm_eq", gain: 0.70, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Korg M1 Universe", inst: "string_ensemble_1", fx: "clean", gain: 0.35, pan: 0.05, oct: 1, minVel: 50, maxVel: 127, enabled: false },
+      { id: 0, name: "Vintage Stage Rhodes", inst: "rhodes_stage_mp3", fx: "lofi_vinyl", gain: 0.90, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Organic Kalimba Bell", inst: "kalimba", fx: "reverb_room", gain: 0.55, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Mellow Upright Bass", inst: "acoustic_bass", fx: "warm_eq", gain: 0.70, pan: -0.05, oct: -1, minVel: 1, maxVel: 127, maxNote: 59, enabled: true },
+      { id: 3, name: "Vinyl String Pad", inst: "string_ensemble_1", fx: "clean", gain: 0.25, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
     ],
   },
   gospel_praise: {
@@ -547,13 +546,13 @@ export const COMBI_PRESETS = {
   },
   bossa_nova_sunset: {
     id: "bossa_nova_sunset",
-    name: "Bossa Nova Sunset (Nylon + FM Bell + Soft Bass)",
-    category: "Jazz / Latin",
+    name: "★ Bossa Nova Sunset (Nylon Guitar + Grand + Vibraphone)",
+    category: "Latin / Bossa Nova",
     layers: [
-      { id: 0, name: "Fantom Nylon Bossa", inst: "acoustic_guitar_nylon", fx: "reverb_hall", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "FM Bell Comp", inst: "electric_piano_1", fx: "clean", gain: 0.65, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Soft Bossa Bass", inst: "synth_bass_1", fx: "warm_eq", gain: 0.70, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Airy String Pad", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.45, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 0, name: "Nylon Fingerstyle Lead", inst: "acoustic_guitar_nylon", fx: "reverb_room", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Warm Acoustic Piano", inst: "abletunes_upright", fx: "clean", gain: 0.70, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Vibraphone Chime", inst: "vibraphone", fx: "chorus_vintage", gain: 0.45, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, minNote: 60, enabled: true },
+      { id: 3, name: "Upright Acoustic Bass", inst: "acoustic_bass", fx: "warm_eq", gain: 0.80, pan: 0, oct: -1, minVel: 1, maxVel: 127, maxNote: 59, enabled: true },
     ],
   },
   sun_rai_street: {
@@ -561,32 +560,32 @@ export const COMBI_PRESETS = {
     name: "San Francisco Street (Sun Rai Rhodes Bed)",
     category: "Soul-Pop / R&B",
     layers: [
-      { id: 0, name: "Suitcase Rhodes 73", inst: "rhodes_stage_mp3", fx: "autopan_wide", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 0, name: "Suitcase Rhodes 73", inst: "rhodes_stage_mp3", fx: "autopan_wide", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
       { id: 1, name: "Rhodes Shimmer Chorus", inst: "rhodes_stage_mp3", fx: "chorus_lush", gain: 0.25, pan: 0, oct: 1, minVel: 1, maxVel: 127, enabled: true },
       { id: 2, name: "Pocket Bass Guitar", inst: "synth_bass_1", fx: "warm_eq", gain: 0.75, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Night Air Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.25, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Night Air Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.20, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
     ],
   },
   acid_jazz_afterhours: {
     id: "acid_jazz_afterhours",
-    name: "Acid Jazz Afterhours (Dark Tine + Deep Bass + Smoky Sax)",
+    name: "★ Acid Jazz Groove (Rhodes + B3 Rotary + Slap Bass)",
     category: "Jazz / Acid Jazz",
     layers: [
-      { id: 0, name: "Dark FM Tine", inst: "electric_piano_1", fx: "delay_tape", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Deep Pocket Bass", inst: "synth_bass_1", fx: "warm_eq", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Smoky Alto Sax", inst: "alto_sax", fx: "reverb_plate", gain: 0.80, pan: 0, oct: 0, minVel: 35, maxVel: 127, enabled: true },
-      { id: 3, name: "Midnight B3 Bed", inst: "drawbar_organ", fx: "rotary_slow", gain: 0.55, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 0, name: "Vintage Stage Rhodes", inst: "rhodes_stage_mp3", fx: "delay_tape", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Korg M1 Slap Bass", inst: "m1_slap_bass", fx: "punch_comp", gain: 0.85, pan: -0.05, oct: -1, minVel: 1, maxVel: 127, maxNote: 59, enabled: true },
+      { id: 2, name: "Midnight B3 Bed", inst: "drawbar_organ", fx: "rotary_slow", gain: 0.55, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Sensual Alto Sax", inst: "alto_sax", fx: "reverb_plate", gain: 0.80, pan: 0.05, oct: 0, minVel: 85, maxVel: 127, minNote: 60, enabled: true },
     ],
   },
   bebop_quartet: {
     id: "bebop_quartet",
-    name: "Bebop Quartet (Upright + Nylon + Walking Bass + Brass Hits)",
-    category: "Jazz / Bebop",
+    name: "★ Blue Note Trio (Upright + Nylon + Upright Bass)",
+    category: "Jazz / Blue Note",
     layers: [
-      { id: 0, name: "Bebop Upright Piano", inst: "abletunes_upright", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Nylon Rhythm Comp", inst: "acoustic_guitar_nylon", fx: "clean", gain: 0.65, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Walking Bass Line", inst: "synth_bass_1", fx: "punch_comp", gain: 0.80, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Brass Section Hits", inst: "brass_section", fx: "clean", gain: 0.70, pan: 0, oct: 0, minVel: 85, maxVel: 127, enabled: true },
+      { id: 0, name: "Abletunes Studio Upright", inst: "abletunes_upright", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Celestial Universe Pad", inst: "m1_universe", fx: "reverb_hall", gain: 0.35, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Warm Upright Bass", inst: "acoustic_bass", fx: "warm_eq", gain: 0.80, pan: -0.05, oct: -1, minVel: 1, maxVel: 127, maxNote: 59, enabled: true },
+      { id: 3, name: "Warm Nylon Comping", inst: "acoustic_guitar_nylon", fx: "clean", gain: 0.35, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
     ],
   },
   smooth_jazz_radio: {
@@ -635,13 +634,13 @@ export const COMBI_PRESETS = {
   },
   lofi_study_beats: {
     id: "lofi_study_beats",
-    name: "Lo-Fi Study Beats (Dusty EP + Mellow Bass + Vinyl Pad)",
+    name: "★ Lo-Fi Study Beats (Felt Upright Piano + Vibraphone + Upright Bass)",
     category: "Lo-Fi / Chill",
     layers: [
-      { id: 0, name: "Dusty FM EP", inst: "abletunes_fm_piano", fx: "lofi_vinyl", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Mellow Lo-Fi Bass", inst: "synth_bass_1", fx: "warm_eq", gain: 0.75, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Vinyl String Pad", inst: "string_ensemble_1", fx: "clean", gain: 0.50, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Rainy Night Sax", inst: "alto_sax", fx: "reverb_room", gain: 0.60, pan: 0, oct: 0, minVel: 55, maxVel: 127, enabled: false },
+      { id: 0, name: "Abletunes Felt Upright Piano", inst: "abletunes_upright", fx: "clean", gain: 0.90, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Cool Jazzy Vibraphone", inst: "vibraphone", fx: "reverb_room", gain: 0.55, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, minNote: 60, enabled: true },
+      { id: 2, name: "Mellow Upright Bass", inst: "acoustic_bass", fx: "warm_eq", gain: 0.65, pan: -0.05, oct: -1, minVel: 1, maxVel: 127, maxNote: 59, enabled: true },
+      { id: 3, name: "Korg M1 Universe Air", inst: "m1_universe", fx: "clean", gain: 0.50, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
     ],
   },
   gospel_shout: {
@@ -724,13 +723,32 @@ export const COMBI_PRESETS = {
 
   synthesizer_you: {
     id: "synthesizer_you",
-    name: "Synthesizer You (Neo-Soul Tape EP)",
+    name: "★ Synthesizer You (Neo-Soul Rhodes Bed)",
     category: "Neo-Soul / Chill",
     layers: [
-      { id: 0, name: "Dark Tape Rhodes", inst: "rhodes_stage_mp3", fx: "tape_lowpass", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Rhodes Stereo Width", inst: "rhodes_stage_mp3", fx: "autopan_wide", gain: 0.30, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Warm Tape Bass", inst: "synth_bass_1", fx: "warm_eq", gain: 0.70, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Tape Compress Pad", inst: "string_ensemble_1", fx: "punch_comp", gain: 0.10, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: false },
+      { id: 0, name: "Studio DX7 FM / Stage EP", inst: "abletunes_fm_piano", fx: "autopan_wide", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Celestial Universe Pad", inst: "m1_universe", fx: "reverb_hall", gain: 0.35, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 2, name: "Analog Sub Bass", inst: "synth_bass_1", fx: "clean", gain: 0.70, pan: -0.05, oct: -1, minVel: 1, maxVel: 127, maxNote: 59, enabled: true },
+      { id: 3, name: "Silky Ambient Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.30, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: false },
+    ],
+  },
+
+  final_countdown: {
+    id: "final_countdown",
+    name: "🎸 The Final Countdown (Europe - Synth Lead & Pad)",
+    category: "Synthesizer / Retro",
+    layers: [
+      { id: 0, name: "Final Countdown Lead", inst: "supersaw_lead", fx: "synth_lead", gain: 0.75, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Final Countdown Pad", inst: "m1_universe", fx: "reverb_hall", gain: 0.60, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+    ],
+  },
+
+  europe_ambient: {
+    id: "europe_ambient",
+    name: "🪐 Europe Ambient (Choir Shimmer Pad)",
+    category: "Synthesizer / Ambient",
+    layers: [
+      { id: 0, name: "Final Countdown Pad", inst: "m1_universe", fx: "reverb_hall", gain: 0.65, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
     ],
   },
 

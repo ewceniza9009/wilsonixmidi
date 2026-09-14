@@ -238,7 +238,7 @@ export const INSTRUMENT_PATCHES = {
     gain3: 0.35,
     filterType: "lowpass",
     filterCutoff: 4000,
-    filterQ: 1.4,
+    filterQ: 0.7,  // Reduced from 1.4 to eliminate resonant peak
     attack: 0.38,
     decay: 3.5,
     sustainLevel: 0.85,

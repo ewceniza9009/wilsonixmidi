@@ -227,6 +227,8 @@ export class PolyphonicVoice {
       try {
         this.voiceGain.gain.cancelScheduledValues(now);
         this.voiceGain.gain.setTargetAtTime(0.0, now, decayTau);
+        const fadeSec = Math.max(0.08, Math.min(1.5, decayTau * 0.6));
+        this.voiceGain.gain.setValueAtTime(0.0, now + fadeSec);
       } catch (e) {}
 
       setTimeout(() => {
