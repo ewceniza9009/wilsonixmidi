@@ -5,6 +5,8 @@
 
 import { licenseManager } from "../security/license-manager.js";
 
+const esc = s => String(s).replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+
 export class LicenseModalUI {
   constructor(containerId, onActivationSuccess) {
     this.container = document.getElementById(containerId);
@@ -27,12 +29,12 @@ export class LicenseModalUI {
 
     let statusCardClass = "status-trial";
     let statusTitle = "30-DAY PRO TRIAL ACTIVE";
-    let statusDesc = `Full access enabled. <strong>${access.daysRemaining} days remaining</strong> (Expires: ${access.expires || "in 30 days"}).`;
+    let statusDesc = `Full access enabled. <strong>${access.daysRemaining} days remaining</strong> (Expires: ${esc(access.expires || "in 30 days")}).`;
 
     if (access.isLicensed) {
       statusCardClass = "status-pro";
       statusTitle = "PRO LICENSE ACTIVE";
-      statusDesc = `Registered to: <strong>${access.licensee}</strong> &bull; Access: <strong>${access.expires}</strong>`;
+      statusDesc = `Registered to: <strong>${esc(access.licensee)}</strong> &bull; Access: <strong>${esc(access.expires)}</strong>`;
     } else if (access.isExpired) {
       statusCardClass = "status-expired";
       statusTitle = "FREE MODE (TRIAL EXPIRED)";
@@ -55,7 +57,7 @@ export class LicenseModalUI {
               this.promptReason
                 ? `
               <div class="license-reason-alert" style="background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; color: #fbbf24; padding: 8px 12px; border-radius: 6px; font-size: 0.76rem; font-weight: 700; margin-bottom: 12px;">
-                ⚠️ ${this.promptReason}
+                ⚠️ ${esc(this.promptReason)}
               </div>
             `
                 : ""
@@ -65,7 +67,7 @@ export class LicenseModalUI {
             <div class="hardware-id-card">
               <label>MACHINE HARDWARE FINGERPRINT:</label>
               <div class="fingerprint-box">
-                <code id="hw-fingerprint-val">${devId}</code>
+                <code id="hw-fingerprint-val">${esc(devId)}</code>
                 <button class="copy-hw-btn" id="copy-hw-btn">COPY ID</button>
               </div>
               <p class="hw-tip">Give this ID to your administrator to receive an authorized signed license key.</p>
@@ -164,10 +166,15 @@ export class LicenseModalUI {
       activateBtn.disabled = true;
       activateBtn.innerText = "VERIFYING...";
 
-      const res = await licenseManager.activate(key);
-
-      activateBtn.disabled = false;
-      activateBtn.innerText = "ACTIVATE";
+      let res;
+      try {
+        res = await licenseManager.activate(key);
+      } catch (e) {
+        res = { success: false, error: "License validation failed unexpectedly. Please try again." };
+      } finally {
+        activateBtn.disabled = false;
+        activateBtn.innerText = "ACTIVATE";
+      }
 
       if (res.success) {
         if (msgEl) {

@@ -880,9 +880,9 @@ export class VirtualKeyboardUI {
       toggleCollapse(e.detail?.collapsed ?? null);
     });
 
-    // F4 hotkey to toggle piano collapse
+    // Ctrl+F4 toggles piano collapse (plain F1-F8 are rig-slot recalls)
     window.addEventListener("keydown", e => {
-      if (e.key === "F4" && !e.altKey && !e.ctrlKey && !e.metaKey) {
+      if (e.key === "F4" && e.ctrlKey && !e.altKey && !e.metaKey) {
         e.preventDefault();
         toggleCollapse();
       }

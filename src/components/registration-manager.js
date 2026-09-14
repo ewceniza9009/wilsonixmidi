@@ -9,6 +9,7 @@ import { multiLayerEngine, COMBI_PRESETS, HD_SOUNDBANKS } from "../audio/multi-l
 import { audioCore } from "../audio/audio-core.js";
 import { getTritonProgramById } from "../triton/combi-timbres.js";
 import { licenseManager } from "../security/license-manager.js";
+import { BANK_KEYS, isValidBanksShape } from "../security/setlist-validation.js";
 
 export class RegistrationManager {
   constructor() {
@@ -26,7 +27,7 @@ export class RegistrationManager {
       const stored = localStorage.getItem(this.storageKey);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (parsed.A && parsed.B && parsed.C && parsed.D) {
+        if (isValidBanksShape(parsed)) {
           return parsed;
         }
       }
@@ -321,12 +322,12 @@ export class RegistrationManager {
 
   importSetlist(jsonString) {
     try {
+      if (typeof jsonString !== "string" || jsonString.length === 0) return false;
       const parsed = JSON.parse(jsonString);
-      if (parsed.A && parsed.B) {
-        this.banks = parsed;
-        this.saveBanks();
-        return true;
-      }
+      if (!isValidBanksShape(parsed)) return false;
+      this.banks = parsed;
+      this.saveBanks();
+      return true;
     } catch (e) {
       console.error("Invalid setlist format:", e);
     }

@@ -86,7 +86,7 @@ export class MultiLayerUI {
 
           <div class="combi-selector-row">
             <button class="preset-arrow-btn" id="combi-prev-btn" title="Previous preset">◀</button>
-            <input type="text" id="combi-search-input" class="combi-search-input" placeholder="Search presets..." value="${this.combiSearchQuery}" />
+            <input type="text" id="combi-search-input" class="combi-search-input" placeholder="Search presets..." value="${esc(this.combiSearchQuery)}" />
             <select class="combi-preset-select" id="combi-preset-select" title="Choose combi preset">
               ${catOrder
                 .map(
@@ -97,8 +97,8 @@ export class MultiLayerUI {
                     .filter(cp => !this.combiSearchQuery || cp.name.toLowerCase().includes(this.combiSearchQuery.toLowerCase()) || (cp.category && cp.category.toLowerCase().includes(this.combiSearchQuery.toLowerCase())))
                     .map(
                       cp => `
-                    <option value="${cp.id}" ${multiLayerEngine.activeCombi.id === cp.id ? "selected" : ""}>
-                      ${cp.name}
+                    <option value="${esc(cp.id)}" ${multiLayerEngine.activeCombi.id === cp.id ? "selected" : ""}>
+                      ${esc(cp.name)}
                     </option>
                   `
                     )
@@ -118,7 +118,7 @@ export class MultiLayerUI {
           ${allPresets
             .filter(cp => cp.name.toLowerCase().includes(this.combiSearchQuery.toLowerCase()) || (cp.category && cp.category.toLowerCase().includes(this.combiSearchQuery.toLowerCase())))
             .slice(0, 15)
-            .map(cp => `<button class="combi-search-chip ${multiLayerEngine.activeCombi.id === cp.id ? "active" : ""}" data-combi-search="${cp.id}">${cp.name}</button>`)
+            .map(cp => `<button class="combi-search-chip ${multiLayerEngine.activeCombi.id === cp.id ? "active" : ""}" data-combi-search="${esc(cp.id)}">${esc(cp.name)}</button>`)
             .join("")}
         </div>` : ""}
 
@@ -132,8 +132,8 @@ export class MultiLayerUI {
               .map(
                 up => `
               <span class="user-preset-chip ${multiLayerEngine.activeCombi.id === up.id ? "active" : ""}">
-                <button class="user-preset-load" data-user-preset="${up.id}" title="Load ${up.name}">${up.name}</button>
-                <button class="user-preset-del" data-user-del="${up.id}" title="Delete">✕</button>
+                <button class="user-preset-load" data-user-preset="${esc(up.id)}" title="Load ${esc(up.name)}">${esc(up.name)}</button>
+                <button class="user-preset-del" data-user-del="${esc(up.id)}" title="Delete">✕</button>
               </span>
             `
               )
@@ -151,7 +151,7 @@ export class MultiLayerUI {
               .map(
                 (entry, i) => `
               <li class="setlist-entry" data-setlist-idx="${i}">
-                <button class="setlist-load" data-setlist-load="${i}" title="Load">${i + 1}. ${entry.name || entry.id}</button>
+                <button class="setlist-load" data-setlist-load="${i}" title="Load">${i + 1}. ${esc(entry.name || entry.id)}</button>
                 <button class="setlist-move" data-setlist-move="${i}|-1" title="Move up">▲</button>
                 <button class="setlist-move" data-setlist-move="${i}|1" title="Move down">▼</button>
                 <button class="setlist-del" data-setlist-del="${i}" title="Remove">✕</button>
@@ -174,7 +174,7 @@ export class MultiLayerUI {
                 </button>
                 <span class="strip-num">LAYER ${idx + 1}</span>
               </div>
-              <div class="strip-layer-name" data-layer="${idx}" title="${layer.name}">${layer.name}</div>
+              <div class="strip-layer-name" data-layer="${idx}" title="${esc(layer.name)}">${esc(layer.name)}</div>
 
               <!-- Instrument Picker (searchable: all PCM workstation banks + every Triton tab bank incl. VA) -->
               <div class="strip-inst-picker timbre-picker" data-layer="${idx}">
@@ -279,7 +279,7 @@ export class MultiLayerUI {
                   <div class="strip-header">
                     <span class="strip-num">${zk === "lower" ? "LOWER ZONE" : "UPPER ZONE"} · ${zk === "lower" ? "BELOW POINT" : "AT/ABOVE POINT"}</span>
                   </div>
-                  <div class="strip-layer-name split-zone-name" id="split-name-${zk}" title="${z.name || "Current Stack"}">${z.name || "Current Stack"}</div>
+                  <div class="strip-layer-name split-zone-name" id="split-name-${zk}" title="${esc(z.name || "Current Stack")}">${esc(z.name || "Current Stack")}</div>
                   <div class="strip-inst-picker timbre-picker" data-split-zone="${zk}">
                     <label class="strip-picker-label">ZONE TIMBRE 🔍</label>
                     <div class="timbre-combo" data-split-zone="${zk}">

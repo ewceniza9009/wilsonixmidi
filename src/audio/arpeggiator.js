@@ -257,9 +257,17 @@ export class Arpeggiator {
       this.activeArpNotes.set(midi, releaseTimeout);
     }
 
-    // Schedule next tick
-    const intervalMs = Math.max(25, stepDuration * 1000);
-    this.timerId = setTimeout(() => this.tick(), intervalMs);
+    // Audio-clock look-ahead: schedule the next step on the WebAudio timeline
+    // instead of a naive relative timeout, so main-thread jank never
+    // accumulates into tempo drift. If a step runs late, the next interval
+    // shrinks to catch back up to the clock grid instead of pushing every
+    // following note later.
+    if (!this.nextNoteTime || this.nextNoteTime <= ctx.currentTime) {
+      this.nextNoteTime = ctx.currentTime;
+    }
+    const delayMs = Math.max(25, (this.nextNoteTime + stepDuration - ctx.currentTime) * 1000);
+    this.nextNoteTime += stepDuration;
+    this.timerId = setTimeout(() => this.tick(), delayMs);
   }
 }
 

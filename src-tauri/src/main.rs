@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::path::Path;
 use tauri::ipc::Response;
 
 #[tauri::command]
@@ -33,8 +34,38 @@ async fn pick_media() -> Result<Vec<String>, String> {
     .map_err(|e| e.to_string())?
 }
 
+const MEDIA_EXTENSIONS: &[&str] = &[
+    "mp3", "mp2", "wav", "aif", "aiff", "flac", "ogg", "oga", "opus", "m4a", "aac", "mp4", "m4v",
+    "mov", "webm", "wma",
+];
+
+/// Only allow reading files that could plausibly have been selected through the
+/// media picker/playlist. Blocks traversal segments and null/control characters.
+fn is_safe_media_path(path: &str) -> bool {
+    if path.is_empty() || path.len() > 4096 {
+        return false;
+    }
+    if path.bytes().any(|b| b < 0x20 || b == 0x7f) {
+        return false;
+    }
+    if path.split(['/', '\\']).any(|seg| seg == "..") {
+        return false;
+    }
+    match Path::new(path)
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_ascii_lowercase())
+    {
+        Some(ext) => MEDIA_EXTENSIONS.contains(&ext.as_str()),
+        None => false,
+    }
+}
+
 #[tauri::command]
 fn read_media(path: String) -> Result<Response, String> {
+    if !is_safe_media_path(&path) {
+        return Err("read_media rejected: the requested path is not a supported media file".into());
+    }
     match std::fs::read(&path) {
         Ok(bytes) => Ok(Response::new(bytes)),
         Err(e) => Err(format!("{e}")),

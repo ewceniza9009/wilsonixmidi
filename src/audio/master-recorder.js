@@ -51,7 +51,15 @@ export class MasterRecorder {
     // Tap master output before destination
     if (audioCore.analyser) {
       audioCore.analyser.connect(this.processorNode);
-      this.processorNode.connect(ctx.destination);
+      // Keep the ScriptProcessor tap audibly silent: it must stay connected to
+      // keep rendering (captured into recBuffers), but routing it to the
+      // destination directly would double the live monitor mix AND bypass the
+      // hardware limiter. A zero-gain sink records the same signal with zero
+      // audible footprint, so what you hear while recording matches playback.
+      this.tapMute = ctx.createGain();
+      this.tapMute.gain.value = 0.0;
+      this.processorNode.connect(this.tapMute);
+      this.tapMute.connect(ctx.destination);
     }
 
     this.timerInterval = setInterval(() => {

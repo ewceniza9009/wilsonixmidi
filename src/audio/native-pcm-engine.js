@@ -1755,31 +1755,6 @@ export class NativePcmEngine {
     };
   }
 
-  // Cached per-instrument timbre classification. Computed ONCE per instrument
-  // id instead of string-hunting on every keypress of the same program.
-  _instTimbre(instId) {
-    const key = instId || "";
-    let t = this._timbreCache && this._timbreCache.get(key);
-    if (t) return t;
-    const lower = key.toLowerCase();
-    const isSax = lower.includes("sax");
-    const isChoir = key === "choir_aahs" || key === "m1_choir" || key === "m1_ooh_ahh" || lower.includes("choir");
-    const isHashy = !isSax && !isChoir && (
-      lower.includes("string") || lower.includes("brass") ||
-      lower.includes("trumpet") || lower.includes("trombone") ||
-      lower.includes("violin") || lower.includes("cello") ||
-      lower.includes("flute") || lower.includes("clarinet") ||
-      lower.includes("universe") || lower.includes("fresh_air") ||
-      lower.includes("pad")
-    );
-    t = [isSax, isChoir, isHashy];
-    if (!this._timbreCache) this._timbreCache = new Map();
-    this._timbreCache.set(key, t);
-    return t;
-  }
-
-
-
   _acquireHammer(dest) {
     let pool = this._hammerPools.get(dest);
     if (!pool) {
@@ -2132,9 +2107,9 @@ export class NativePcmEngine {
   }
 
   setPitchBend(semitones) {
-    this.pitchBendSemitones = semitones;
+    this.pitchBendSemitones = Math.max(-12, Math.min(12, semitones));
     const now = this.ctx.currentTime;
-    const bendRatio = Math.pow(2, semitones / 12);
+    const bendRatio = Math.pow(2, this.pitchBendSemitones / 12);
 
     const updateVoicePitch = (voices) => {
       voices.forEach(v => {

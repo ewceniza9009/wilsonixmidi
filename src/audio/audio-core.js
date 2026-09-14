@@ -85,22 +85,6 @@ export class AudioCore {
     this.busPad = this.ctx.createGain();
     this.busPad.gain.value = 0.45;
 
-    // Master bus glue compressor: optical-style leveling for stacked chords.
-    // Bypassed by default — the 0.7 busPad + hardware limiter already prevent
-    // clipping. Only engaged by heavy FX presets to contain sustained tails.
-    this.busComp = this.ctx.createDynamicsCompressor();
-    this.busComp.threshold.value = -16.0;
-    this.busComp.knee.value = 12.0;
-    this.busComp.ratio.value = 1.6;
-    this.busComp.attack.value = 0.015;
-    this.busComp.release.value = 0.300;
-
-    // Bypass gain: routes AROUND the bus compressor when it's not needed,
-    // removing its per-quantum DSP overhead entirely.
-    this.busCompBypass = this.ctx.createGain();
-    this.busCompBypass.gain.value = 1.0;
-    this.busCompEnabled = false;
-
     // Dynamic Master Kaoss Filter (Lowpass filter modulated in real time by X/Y Pad)
     this.masterFilter = this.ctx.createBiquadFilter();
     this.masterFilter.type = "lowpass";
@@ -180,7 +164,7 @@ export class AudioCore {
       }
       if (this.hardwareLimiter) {
         // Reset compressor gain reduction if wedged
-        this.hardwareLimiter.threshold.setValueAtTime(-0.5, now);
+        this.hardwareLimiter.threshold.setValueAtTime(-1.0, now);
       }
       if (this.fxRack?.talkbox) {
         // Force-bypass and tear down any active wet-path nodes to guarantee
@@ -198,41 +182,6 @@ export class AudioCore {
     const base = (this.ctx.baseLatency || 0.0026) * 1000;
     const output = (this.ctx.outputLatency || 0.005) * 1000;
     this.reportedLatencyMs = Math.round((base + output) * 10) / 10;
-  }
-
-  measureLatency() {
-    if (!this.ctx) {
-      return { baseMs: 2.6, outputMs: 5.0, measuredMs: 7.6, reportedMs: 7.6, lockMs: 0.1, sampleRate: 48000, state: "uninitialized" };
-    }
-
-    if (!this._clockStartPerf || !this._clockStartAudio || this.ctx.state !== "running") {
-      this._clockStartPerf = performance.now();
-      this._clockStartAudio = this.ctx.currentTime;
-    }
-
-    const baseMs = (this.ctx.baseLatency || 0.0026) * 1000;
-    const outputMs = (this.ctx.outputLatency || 0.005) * 1000;
-
-    // Live audio clock drift calculation:
-    const elapsedWall = (performance.now() - this._clockStartPerf) / 1000;
-    const elapsedAudio = this.ctx.currentTime - this._clockStartAudio;
-    const driftSec = elapsedWall - elapsedAudio;
-
-    // Live quantum phase fluctuation:
-    const phaseJitterMs = Math.sin(performance.now() * 0.005) * 0.3 + (Math.abs(driftSec) % 0.002) * 1000;
-    const measuredMs = Math.max(1.8, Math.round((baseMs + outputMs + phaseJitterMs) * 10) / 10);
-
-    return {
-      baseMs: Math.round(baseMs * 10) / 10,
-      outputMs: Math.round(outputMs * 10) / 10,
-      measuredMs,
-      reportedMs: measuredMs,
-      lockMs: Math.round(driftSec * 10000) / 10,
-      sampleRate: this.ctx.sampleRate || 48000,
-      state: this.ctx.state,
-      profile: this.currentLatencyProfile,
-      profileLabel: (LATENCY_PROFILES[this.currentLatencyProfile] || LATENCY_PROFILES["balanced"]).label,
-    };
   }
 
   setLatencyProfile(profileId) {
@@ -261,16 +210,6 @@ export class AudioCore {
 
   onLatencyProfileChange(cb) {
     if (typeof cb === "function") this.profileListeners.push(cb);
-  }
-
-  getPeakLevel() {
-    if (!this.analyser) return 0;
-    this.analyser.getByteFrequencyData(this.peakBuffer);
-    let max = 0;
-    for (let i = 0; i < this.peakBuffer.length; i++) {
-      if (this.peakBuffer[i] > max) max = this.peakBuffer[i];
-    }
-    return max / 255;
   }
 
   // --- Diagnostics: capture exactly what the app sends to the DAC ---
@@ -487,12 +426,6 @@ export class AudioCore {
     if (!this.masterGain || !this.ctx) return;
     const v = Math.max(0, Math.min(3.0, val * 3.0));
     this.masterGain.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02);
-  }
-
-  // Toggle the bus compressor on/off. When OFF, audio routes through a
-  // bypass gain node with zero DSP overhead. When ON, the compressor
-  setBusCompEnabled(enabled) {
-    this.busCompEnabled = !!enabled;
   }
 
   // DIAG recorder: taps post-limiter master output so crackle reports can be

@@ -8,79 +8,146 @@
 [![Audio: Web Audio API](https://img.shields.io/badge/Audio-Direct%20PCM%20%2B%20VA%20Engine-FF6F00?style=for-the-badge&logo=audio)](https://github.com/ewceniza9009/wilsonixmidi)
 [![Framework: Tauri v2 + Vite](https://img.shields.io/badge/Framework-Tauri%20v2%20%7C%20Rust-673AB7?style=for-the-badge)](https://tauri.app/)
 [![License: Proprietary](https://img.shields.io/badge/License-WILSONIX%20Commercial-red?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi)
-[![Version: v1.0.9](https://img.shields.io/badge/Version-v1.0.9%20Build%2010%20Production-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
+[![Version: v1.1.0](https://img.shields.io/badge/Version-v1.1.0%20Build%2011%20Production-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
 
 ---
 
-## 🚀 Official Production Downloads (v1.0.9 Build 10 Latest Release)
+## 🚀 Official Production Downloads (v1.1.0 Build 11 Latest Release)
 
 | Package / Distribution | Target Operating System | Architecture | Direct Download Link |
 |:---|:---|:---:|:---:|
-| **Windows Desktop Installer** | Windows 10 / 11 | x64 | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX.MIDIKEY_1.0.9_x64-setup.exe) |
+| **Windows Desktop Installer** | Windows 10 / 11 | x64 | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX.MIDIKEY_1.1.0_x64-setup.exe) |
 | **Android Package (APK)** | Android 8.0+ (Oreo to Android 15) | ARM64 / x86_64 | [⬇️ Download Android APK (`.apk`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/wilsonix-midikey.apk) |
 
 *Official binaries and checksums are verified and hosted on the [GitHub Releases page](https://github.com/ewceniza9009/wilsonixmidi/releases).*
 
 ---
 
-## 📑 Granular Changelog & Release Notes (v1.0.9 • Build 10)
+## ✨ Key Features at a Glance
 
-### 1. 🎤 Authentic Roger Troutman / Heil Physical Talkbox Emulation (`A045`)
-- **Triple Formant Resonance Peaks**: High-gain series resonant peaking filters precisely tuned to physical human vocal tract cavities:
-  - **F1 (Throat / Jaw Height)**: 650 Hz (+15 dB)
-  - **F2 (Mouth Cavity / Tongue Shape)**: 1550 Hz (+14 dB)
-  - **F3 (Nasal / Teeth Resonance)**: 2850 Hz (+10 dB)
-- **Dynamic Vowel Articulation Morphing**: Key strikes trigger an organic vowel shape sweep (closed-mouth "W" consonant opening dynamically into "AH / OH / EE" singing vowels depending on velocity).
-- **Physical Driver Saturation & Damping**: Heil Talk Box compression driver tube saturation curve with 5.4 kHz vinyl acoustic tube damping and brickwall vocal safety limiting.
+- 🎹 **Hybrid Dual-Core Sound Engine** — Direct multi-layer PCM Rompler, dual-oscillator Virtual Analog subtractive synth (TVA/TVF, hard-sync leads), and physical-modeling brass, reeds, drums & percussion, engineered for zero-latency live performance.
+- 🎚️ **4-Timbre Combi Stacking** — Stack up to four layers with per-layer volume, pan, octave, semitone and velocity control, plus a dual-zone split console with dynamic split point selection.
+- 🎛️ **102-Algorithm Hardware Master FX Rack** — Compressor, Dimension-D chorus, tube drive, vintage phaser, Leslie 122 rotary, tape flanger, optical tremolo, bitcrusher/decimator, formant talkbox, Haas stereo widener, ping-pong tape delay, concert reverb, 3-band EQ, Kaoss filter, and a calibrated hardware look-ahead limiter.
+- 🥁 **Physical-Modeling Drums & Percussion** — Acoustic kick, wood-shell snare, bronze hi-hats, and chromatically tuned Latin percussion (cowbell, cascara timbales, congas) with true zero-latency strike response.
+- 💾 **Stage Registration Memory (32 Rigs)** — 4 Banks × 8 Slots with `F1`–`F8` instant recall, full live-state snapshots, and schema-validated JSON setlist import/export.
+- 🎹 **16-Pad MPC Chord Matrix & Scale Engine** — One-touch Jazz, Gospel, Neo-Soul and Pop voicings with a quantizing scale/key lock engine.
+- 🔁 **Clock-Anchored Arpeggiator & Multi-Track Looper** — Web Audio look-ahead scheduling keeps tempo rock-solid under heavy stage load.
+- 🎙️ **Lossless WAV Master Recorder + Media Player** — Pre-DAC waveform capture with a zero-gain monitor sink; MP3/WAV/FLAC/OGG/M4A/AAC backing-track deck with playlist support.
+- 📊 **Hardware HUD & Diagnostics** — 60 FPS VU metering, real-time latency/CPU profiling, panic reset, and an 8-second pre-DAC waveform diagnostic tap.
+- 🔒 **Crypto-Hardened Security & Licensing** — ECDSA P-256 signature verification with hardware machine binding, strict CSP, and boot-time re-validation of stored licenses.
 
-### 2. 🥁 Real Acoustic Drum Kit & Physical Modeling Synthesis (Grooves & Soundbanks)
-- **Zero-Latency 0.00ms Physical Modeling**: Instant strike response without heavyweight sample buffering.
-- **Punchy Acoustic Sub-Kick**: Dual-layer 52 Hz / 36 Hz resonant sub-bass pitch envelope + acoustic wood beater attack click.
-- **Crisp Acoustic Snare**: Resonant wood shell body + dual-band filtered wire rattle (>3.8 kHz) + rim/stick impact.
-- **Metallic Bronze Hi-Hats with Instant Optical Choke**: Pure high-frequency bronze shimmer (>8.5 kHz) with natural decay on open hits and instant sub-millisecond choke when striking closed hats or pedal.
-- **Cymbals & Latin Percussion**: Natural bell ping acoustic ride cymbal, explosive crash cymbal, resonant toms, Latin cowbell, and multi-tone wind chimes.
-
-### 3. 🪘 Dedicated Congas & Analog Synth Drum Presets
-- **Afro-Cuban Congas**: Open/slap acoustic conga synthesis mapped across soundbank `PRC07`, `C007`, and Combi preset `afro_cuban_congas`.
-- **Analog Synth Drum (Simmons SDSV Space Drum)**: Classic 80s downward pitch-sweep space drum synth with sub-punch on `PRC11`, `C008`, `C009`, and Combi `analog_synth_drum_space`.
-- **Studio Acoustic Kit**: Full General MIDI mapped acoustic kit preset on `PRC12` and Combi `studio_acoustic_kit`.
-
-### 4. 🎹 Full Chromatic Pitch Tracking Across 88 Keys for Drums & Percussions
-- Every key across all 88 keys now features distinct chromatic pitch tracking or General MIDI drum key mapping (from B0 to C6), replacing previous monotone percussions.
-
-### 5. ⚡ Permanent Zero-Drop Web Audio Architecture
-- Redesigned the entire FX rack routing with permanent static audio graph nodes.
-- Eliminated dynamic node recreation and teardown disconnect timers, achieving zero audio dropouts, 0.00% CPU overhead when bypassed, and zero garbage collection memory spikes.
-
-### 6. 🎛️ Live Preset Selection & TouchView Highlighting Fixes
-- Resolved audio node connection exceptions across rotary speakers and chorus processors during rapid preset switching.
+*For the full deep-dive, see the [Master Feature Catalog](#-master-feature-catalog--core-capabilities) below.*
 
 ---
 
-## 🌟 Architectural Overview & Core Capabilities
+## 📑 Granular Changelog & Release Notes (v1.1.0 • Build 11)
 
-```
-+---------------------------------------------------------------------------------------+
-|                                  WILSONIX MIDIKEY ELITE                               |
-+---------------------------------------------------------------------------------------+
-|  [Hardware HUD] Master Vol | Transpose | 60FPS VU Meter | Rig Snapshots | Workspace  |
-+---------------------------------------------------------------------------------------+
-|                                    WORKSPACE CONSOLES                                 |
-|  +------------------+  +------------------+  +------------------+  +----------------+ |
-|  | KORG TouchView   |  | 4-Timbre Combi   |  | Split Keyboard   |  | Ableton Device | |
-|  | Workstation Main |  | Layer Mixer Rack |  | Console (Upper/L)|  | Master FX Rack | |
-|  +------------------+  +------------------+  +------------------+  +----------------+ |
-+---------------------------------------------------------------------------------------+
-|                                     DSP AUDIO ENGINE                                  |
-|  +-------------------------------------+  +-----------------------------------------+ |
-|  | Direct Multi-Layer PCM Rompler      |  | Dual-Oscillator Virtual Analog (VA)     | |
-|  | (16-bit 44.1kHz High-Density Banks) |  | Subtractive Synthesizer with TVA & TVF  | |
-|  +-------------------------------------+  +-----------------------------------------+ |
-+---------------------------------------------------------------------------------------+
-|                                  HARDWARE PLATFORMS                                   |
-|       Windows Desktop (Tauri v2 / Rust)       |        Android Mobile & Tablet        |
-+---------------------------------------------------------------------------------------+
-```
+### 1. 🎚️ Master Recorder Audio Tap Isolation & Zero-Gain Monitor Sink
+- **Zero-Gain Sink Routing**: ScriptProcessor capture node now feeds an isolated zero-gain sink (`tapMute.gain = 0.0`) to keep audio buffer rendering active without double-monitoring or bypassing the master hardware limiter.
+- **True Pre-DAC Waveform Capture**: Recorded output is completely clean and faithful without doubling the live monitor mix or altering gain staging during recording.
+
+### 2. ⏱️ Audio-Clock Look-Ahead Arpeggiator Scheduling
+- **Web Audio Timeline Grid**: Replaced naive cumulative `setTimeout` scheduling with high-precision Web Audio clock (`ctx.currentTime`) anchoring.
+- **Zero Tempo Drift**: Eliminates timing jitter and tempo drift caused by main-thread UI repaints or background task scheduling during complex live performances.
+
+### 3. 🛡️ Security Hardening, XSS Mitigation & Setlist Schema Validation
+- **Pure Schema Validation**: Added `src/security/setlist-validation.js` with comprehensive validation (`isValidBanksShape`, `isValidSlot`, bounds and structure checking) for registration setlist imports and local storage.
+- **UI Injection Protection**: Added HTML escaping (`esc()`) across layer names, combi presets, setlist entries, split zones, and hardware ID values.
+- **Tauri Path Traversal Protection**: Added `is_safe_media_path()` in Rust backend to enforce media format whitelist, prevent path traversal (`..`), and reject control characters.
+- **Content Security Policy (CSP)**: Configured strict production and development CSP headers in Tauri configuration.
+
+### 4. 🪘 SFX DSP Engine Deduplication & Pitched Percussion
+- **DSP Engine Cleanup**: Deduplicated legacy duplicate methods in `SfxSoundGenerator`, ensuring modern physical modeling synthesizers are consistently active.
+- **Chromatic Cowbell Tuning**: Dynamic pitch ratio scaling (`587 * pitchMul`, `845 * pitchMul`) enables properly tuned percussion across all keys.
+- **Pitch Bend Range Clamping**: Safely restricted pitch bend semitones strictly to `[-12, +12]` to prevent arithmetic overflow in voice oscillators.
+
+### 5. 🧠 Event Listener Memory Optimization & Hotkey Separation
+- **Pad Event Pooling**: Consolidated per-pad window mouseup listeners into a single shared handler (`_globalPadMouseUp`), preventing memory leakage during frequent UI re-renders.
+- **Hotkey Collision Fix**: Assigned virtual piano keyboard collapse to `Ctrl+F4`, preserving `F1`–`F8` for dedicated 1-touch registration bank switching.
+
+---
+
+## 🌟 Master Feature Catalog & Core Capabilities
+
+### 🎹 1. Dual-Core DSP Sound Engines
+- **Direct Multi-Layer PCM Rompler**: 16-bit 44.1kHz sample streaming engine with multi-velocity soundboard modeling, sympathetic string resonance, and round-robin voice allocation.
+- **Dual-Oscillator Virtual Analog (VA) Subtractive Synthesizer**: Features Time-Variant Filters (TVF) and Time-Variant Amplifiers (TVA), hard-sync oscillators (Brian's Sync Lead), multi-waveform generation (Saw, Square, Triangle, Sine, Pulse Width Modulation), and rich analog unison detune.
+- **Physical Modeling Synthesizers**: Real-time physical acoustics for alto saxophone, breathy tenor sax, talkbox vocal tract formants, acoustic drums, cascara timbales, and Latin percussion.
+
+### 🎚️ 2. 4-Timbre Multi-Layer Combinations (Combi)
+- **4-Layer Stacking Architecture**: Stack up to four simultaneous timbres across PCM Rompler banks, Virtual Analog presets, and Soundfont instruments.
+- **Per-Layer Controls**: Individual volume fader, stereo pan, octave transposition (-2 to +2), semitone fine-tune, velocity curve response, solo, and mute switches.
+- **Instant Search & Categorized Preset Library**: 13+ production combi combinations with fast category filtering and single-click recall.
+
+### ✂️ 3. Split Keyboard Performance Console
+- **Dual Performance Zones**: Divide the 88-key keybed into independent Lower Zone (bass/accompaniment) and Upper Zone (lead/piano/brass).
+- **Dynamic Split Point Selection**: Select split points via direct visual keyboard clicking or quick numeric MIDI key selection.
+- **Independent Zone Sound Selection**: Assign any Rompler instrument, Triton VA program, or custom stack to either zone with distinct octave transpositions.
+
+### 🎛️ 4. 102 Algorithm Hardware Master FX Rack
+- **IFX 0 (Studio Dynamics Compressor)**: Optical-style peak leveling, threshold, ratio, attack, release, and makeup gain for drum punch and piano sustain.
+- **IFX 1 (Rhodes Stereo Auto-Pan)**: Dynamic stereo ping-pong panning with speed and depth modulation.
+- **IFX 2 (Dimension D Stereo Chorus)**: Multi-voice Roland/Dimension-D style analog chorus widening.
+- **IFX 3 (Valve Force Tube Drive)**: Hyperbolic tangent soft-clipping tube saturation with tone control.
+- **IFX 4 (6-Stage Vintage Phaser)**: Sweeping phase notch filters with feedback resonance for funk and clavinet.
+- **IFX 5 (Leslie 122 Rotary Speaker Cabinet)**: Authentic dual-rotor Doppler acceleration with Chorale (slow) and Tremolo (fast) brake switching.
+- **IFX 6 (Stereo Tape Flanger)**: Resonant comb-filter jet flanging with polarity inversion.
+- **IFX 7 (Vintage Optical Tremolo)**: Photocell amplitude pulsing for surf guitars and vintage keys.
+- **IFX 8 (Retro Bitcrusher / Decimator)**: 2-bit to 16-bit word length reduction and downsampling (1kHz to 20kHz) for vintage sampler grit.
+- **IFX 9 (Heil Formant Talk Box)**: Triple formant vocal cavity filter (F1 650Hz, F2 1550Hz, F3 2850Hz) with dynamic vowel morphing (Roger Troutman style).
+- **IFX 10 (Haas Stereo Spatial Widener)**: Psychoacoustic psycho-stereo delay widening without mono phase cancellation.
+- **MFX 1 (Ping-Pong Tape Delay)**: Tempo-synchronized cross-feedback stereo delay lines.
+- **MFX 2 (Concert Hall & Plate Reverb)**: Lush diffusion reverberation with customizable decay, pre-delay, and high-frequency damping.
+- **Master 3-Band Parametric EQ**: Low shelf (80Hz), sweepable mid peaking (1.4kHz), and high shelf (10kHz).
+- **Master Kaoss Dynamic Filter**: Real-time lowpass filter frequency and resonance modulation via touch/mouse X/Y pad.
+- **Hardware Lookahead Limiter**: Brickwall peak containment calibrated to -1.0 dB to eliminate DAC digital clipping.
+
+### 🥁 5. Real Acoustic Drum Kit & Physical Modeling Percussion
+- **Zero-Latency Physical Synthesis**: Instant strike response with 0.00ms latency.
+- **Acoustic Sub-Kick**: Dual-layer 52Hz/36Hz resonant pitch envelope with acoustic wood beater transient.
+- **Wood Shell Snare**: Dual-band filtered wire rattle (>3.8kHz) with rimshot impact dynamics.
+- **Optical Choke Bronze Hi-Hats**: Dynamic open-hat decay with instant sub-millisecond optical choking on closed hits or pedal triggers.
+- **Full Percussion Palette**: Afro-Cuban congas (slap/open), Latin cowbell (chromatically tuned across keys), cascara timbales, crash cymbals, ride bells, and Simmons SDSV space drums.
+- **Full 88-Key Drum Mapping**: Chromatic pitch tracking or General MIDI drum key mapping across all 88 keys.
+
+### 💾 6. Stage Registration Memory & Live Setlist Manager
+- **32 Live Rig Snapshots**: 4 Banks (A, B, C, D) × 8 Slots (1–8) for instant 1-touch sound switching during live gigs.
+- **Full State Snapshot**: Stores and recalls Combi 4-timbre stacks, Rompler instruments, Triton VA programs, split points, FX parameters, master octave, and velocity curves.
+- **Hardware Keyboard Hotkeys**: Direct slot recalls via `F1`–`F8` keys, bank cycling, and `Ctrl+F4` piano collapse.
+- **JSON Setlist Import & Export**: Export entire performance setlists to JSON files and import on any stage device with pure schema verification.
+
+### 🎛️ 7. 16-Pad MPC Chord Trigger Matrix & Scale Engine
+- **16 Velocity-Sensitive Chord Pads**: Trigger rich multi-note jazz, gospel, neo-soul, and pop chord progressions with a single touch.
+- **Custom Voicings & Strumming**: Realistic humanized strum offsets, adjustable velocity curves, and chord editing.
+- **Scale & Key Lock Engine**: Quantize all incoming keyboard and pad notes to Major, Minor, Pentatonic, Dorian, Blues, Mixolydian, and Harmonic Minor scales.
+
+### 🔁 8. Live Groove Arpeggiator & Performance Looper
+- **High-Precision Clock Look-Ahead**: Web Audio clock anchoring eliminates tempo drift under heavy system load.
+- **6 Arp Patterns**: Up, Down, Up/Down, Random, Chord Strum, and Live Groove.
+- **Multi-Track Live Looper**: Overdub live performance layers, synchronize with master BPM, and clear or bounce loops on the fly.
+
+### 🎙️ 9. Lossless Master WAV Recorder & Media Player
+- **Pre-DAC True Waveform Tap**: Direct capture of the master audio stream into uncompressed 16-bit 44.1kHz stereo WAV.
+- **Zero-Gain Monitor Sink**: Audio recorder runs completely silently without double-monitoring or altering stage mix levels.
+- **Backing Track Media Player**: Built-in audio deck supporting MP3, WAV, FLAC, OGG, M4A, and AAC with playlist queues, pitch/speed shifts, and background playback.
+
+### 📊 10. Hardware HUD & Real-Time Diagnostics
+- **60 FPS VU Meter**: Dual-channel stereo peak and RMS level indicators.
+- **Latency & CPU Engine Profiler**: Live monitoring of Web Audio base latency, output latency, and buffer stability with 3 switchable latency profiles (Ultra-Low, Balanced, Conservative).
+- **Master Kaoss X/Y Pad**: Multi-touch and mouse gesture control for real-time filter sweeps and effects modulation.
+- **Panic Engine Reset**: Instant one-click kill switch for stuck MIDI notes and DSP node recovery.
+- **8-Second WAV Waveform Diagnostic Tap**: Instant capture and download of real-time audio output for signal diagnosis.
+
+### 🔌 11. MIDI Hardware Connectivity & MIDI Learn
+- **Web MIDI API**: Plug-and-play USB/Bluetooth MIDI keyboard controller support.
+- **MIDI Learn & CC Mapping**: Map any hardware knob, fader, or modulation wheel to filter cutoff, volume, pan, or FX dry/wet.
+- **Velocity Curve Shaping**: 5 selectable velocity response profiles (Linear, Soft, Hard, Compressed, Wide Dynamic).
+
+### 🔒 12. Enterprise-Grade Security & Licensing Architecture
+- **ECDSA P-256 SPKI Cryptographic Verification**: Offline cryptographic license signature verification using public key cryptography.
+- **Boot-Time License Re-Validation**: Stored licenses are cryptographically re-verified against the embedded public key on every launch, auto-reverting forged or tampered records.
+- **Hardware Machine Fingerprinting**: Secure, non-invasive device ID generation for authorized workstation deployments.
+- **Tauri Security Boundary**: Strict Content Security Policy (CSP), directory traversal protection, and file path verification.
 
 ---
 
@@ -132,24 +199,30 @@
 
 ---
 
-## 🎛️ 102 Algorithm Hardware Master FX Rack
+## 🏗️ Architectural Overview & Signal Flow
 
-| FX Slot | Processor Name | Core Parameters | Character & Target Instruments |
-| :--- | :--- | :--- | :--- |
-| **IFX 0** | Studio Dynamics Compressor | Thresh, Ratio, Attack, Release, Makeup, Mix | Peak leveling, punchy drum bus, acoustic piano sustain |
-| **IFX 1** | Rhodes Stereo Auto-Pan | Rate (0.2–8Hz), Depth, Mix | Ping-pong stereo field modulation for Rhodes & Wurli |
-| **IFX 2** | Dimension D Stereo Chorus | Rate, Depth, Wet/Dry Mix | Rich analog ensemble widening for strings & pads |
-| **IFX 3** | Valve Force Tube Drive | Drive, Tone (2k–16kHz), Mix | Hyperbolic tangent soft-clipping for guitars, organs & leads |
-| **IFX 4** | 6-Stage Vintage Phaser | Rate (0.1–5Hz), Mix, Feedback | Sweeping phase notches for funk guitars & clavs |
-| **IFX 5** | Leslie 122 Rotary Cabinet | Slow (Chorale) / Fast (Tremolo), Drive, Mix | Authentic dual-rotor Doppler acceleration for B3 organs |
-| **IFX 6** | Stereo Tape Flanger | Rate, Feedback, Mix | Jet-plane resonant comb-filtering for leads & synth stabs |
-| **IFX 7** | Vintage Optical Tremolo | Rate (0.5–12Hz), Depth, Mix | Photocell amplitude pulsing for surf guitars & vintage keys |
-| **IFX 8** | Retro Bitcrusher / Decimator | Bits (2–16), Downsample (1k–20kHz), Drive, Mix | 8-bit / 12-bit vintage sampler crunch and aliasing |
-| **IFX 9** | Heil Formant Talk Box | Formants F1/F2/F3, Vowel Morph, Tube Drive, Mix | Roger Troutman vocal articulation & Heil mouth tube modeling |
-| **IFX 10** | Haas Stereo Spatial Widener | Width (0–250%), Haas Delay (1–35ms), Mix | Mid/Side psychoacoustic stereo widening without phase cancel |
-| **MFX 1** | Ping-Pong Tape Delay | Division (1/16 to 1/1), Feedback, Mix | Dual-channel tempo-synchronized stereo echo |
-| **MFX 2** | Concert Hall / Plate Reverb | Decay (0.5–5s), Room Size, Pre-Delay, Mix | Smooth diffusion reverberation for live stage ambiance |
-| **MEQ** | Master 3-Band Parametric EQ | Low (80Hz), Mid (1.4kHz), High (10kHz) | Master console output sweetening and stage tone balancing |
+```
++---------------------------------------------------------------------------------------+
+|                                  WILSONIX MIDIKEY ELITE                               |
++---------------------------------------------------------------------------------------+
+|  [Hardware HUD] Master Vol | Transpose | 60FPS VU Meter | Rig Snapshots | Workspace  |
++---------------------------------------------------------------------------------------+
+|                                    WORKSPACE CONSOLES                                 |
+|  +------------------+  +------------------+  +------------------+  +----------------+ |
+|  | KORG TouchView   |  | 4-Timbre Combi   |  | Split Keyboard   |  | Ableton Device | |
+|  | Workstation Main |  | Layer Mixer Rack |  | Console (Upper/L)|  | Master FX Rack | |
+|  +------------------+  +------------------+  +------------------+  +----------------+ |
++---------------------------------------------------------------------------------------+
+|                                     DSP AUDIO ENGINE                                  |
+|  +-------------------------------------+  +-----------------------------------------+ |
+|  | Direct Multi-Layer PCM Rompler      |  | Dual-Oscillator Virtual Analog (VA)     | |
+|  | (16-bit 44.1kHz High-Density Banks) |  | Subtractive Synthesizer with TVA & TVF  | |
+|  +-------------------------------------+  +-----------------------------------------+ |
++---------------------------------------------------------------------------------------+
+|                                  HARDWARE PLATFORMS                                   |
+|       Windows Desktop (Tauri v2 / Rust)       |        Android Mobile & Tablet        |
++---------------------------------------------------------------------------------------+
+```
 
 ---
 
@@ -194,15 +267,19 @@ npm install
 # 2. Start Live Development Server
 npm run dev
 
-# 3. Build Windows Desktop NSIS Setup Installer (.exe)
-npm run build:desktop
-# Output: src-tauri/target/release/bundle/nsis/WILSONIX MIDIKEY_1.0.9_x64-setup.exe
+# 3. Run Automated Unit Test Suite & Linter
+npm test
+npm run lint
 
-# 4. Build Android APK (.apk)
+# 4. Build Windows Desktop NSIS Setup Installer (.exe)
+npm run build:desktop
+# Output: src-tauri/target/release/bundle/nsis/WILSONIX MIDIKEY_1.1.0_x64-setup.exe
+
+# 5. Build Android APK (.apk)
 npm run build:apk
 # Output: dist-apk/wilsonix-midikey.apk
 
-# 5. Build All Platforms Simultaneously
+# 6. Build All Platforms Simultaneously
 npm run build:all
 ```
 

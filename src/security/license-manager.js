@@ -34,8 +34,10 @@ export class LicenseManager {
     this.trialStorageKey = "midikey_elite_trial_state";
     this.deviceFingerprint = this.generateDeviceFingerprint();
     this.cryptoPublicKeyPromise = null;
+    this._licenseConfirmed = null; // null = pending optimistic, true/false = verified
     this.licenseData = this.loadLicense();
     this.trialData = this.initOrLoadTrial();
+    this.revalidateLicense();
   }
 
   async getCryptoPublicKey() {
@@ -296,6 +298,18 @@ export class LicenseManager {
   }
 
   /**
+   * Decodes the licensee segment of a license key. Never throws: if the
+   * segment is not valid percent-encoding, the raw text is returned instead.
+   */
+  decodeLicensee(raw) {
+    try {
+      return decodeURIComponent(raw).replace(/_/g, " ");
+    } catch (e) {
+      return raw.replace(/_/g, " ");
+    }
+  }
+
+  /**
    * Validates a license key format:
    * Standard: MKPRO-<NAME>-<EXPIRY>-<SIG>
    * Hardware-locked: MKPRO-<NAME>-<EXPIRY>-<DEVID>-<SIG>
@@ -335,7 +349,7 @@ export class LicenseManager {
 
       return {
         valid: true,
-        licensee: decodeURIComponent(licensee).replace(/_/g, " "),
+        licensee: this.decodeLicensee(licensee),
         type: expiryStr === "LIFETIME" ? "Lifetime Pro License" : "Time-Limited Pro License",
         expires: expiryDate,
         rawKey: cleanKey,
@@ -375,7 +389,7 @@ export class LicenseManager {
 
       return {
         valid: true,
-        licensee: decodeURIComponent(licensee).replace(/_/g, " "),
+        licensee: this.decodeLicensee(licensee),
         type: `Hardware-Locked Pro License (${targetDevId})`,
         expires: expiryDate,
         rawKey: cleanKey,
@@ -389,16 +403,23 @@ export class LicenseManager {
    * Activates a license and stores securely in localStorage
    */
   async activate(key) {
-    const result = await this.verifyKey(key);
+    let result;
+    try {
+      result = await this.verifyKey(key);
+    } catch (e) {
+      return { success: false, error: "License validation failed unexpectedly. Please try again." };
+    }
     if (result.valid) {
       this.licenseData = {
         key: key.trim().toUpperCase(),
+        rawKey: key.trim().toUpperCase(),
         licensee: result.licensee,
         type: result.type,
         expires: result.expires,
         activatedAt: new Date().toISOString(),
         device: this.deviceFingerprint,
       };
+      this._licenseConfirmed = true;
       if (typeof localStorage !== "undefined") {
         localStorage.setItem(this.storageKey, JSON.stringify(this.licenseData));
       }
@@ -412,14 +433,55 @@ export class LicenseManager {
       if (typeof localStorage === "undefined") return null;
       const stored = localStorage.getItem(this.storageKey);
       if (!stored) return null;
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      if (!parsed || typeof parsed !== "object") return null;
+      // Legacy keys (pre-hardening) only stored the clean key; promote it so
+      // they can still be cryptographically re-validated on boot.
+      if (!parsed.rawKey && typeof parsed.key === "string" && parsed.key.startsWith("MKPRO")) {
+        parsed.rawKey = parsed.key;
+      }
+      // Anything that isn't a re-verifiable key is treated as tampered.
+      return parsed.rawKey ? parsed : null;
     } catch (e) {
       return null;
     }
   }
 
+  /**
+   * Re-verifies the stored license against the embedded public key and the
+   * device fingerprint on every launch. This closes the "edit localStorage
+   * once, unlocked forever" bypass: a forged/edited record fails the ECDSA
+   * check (or the hardware-device binding) and is automatically reverted.
+   */
+  async revalidateLicense() {
+    const ld = this.licenseData;
+    if (!ld || !ld.rawKey) {
+      this._licenseConfirmed = false;
+      return;
+    }
+    let result = null;
+    try {
+      result = await this.verifyKey(ld.rawKey);
+    } catch (e) {
+      result = null;
+    }
+    if (!result || !result.valid) {
+      this._licenseConfirmed = false;
+      this.deactivate();
+      return;
+    }
+    ld.expires = result.expires;
+    ld.device = this.deviceFingerprint;
+    this._licenseConfirmed = true;
+  }
+
   isLicensed() {
-    return this.licenseData !== null && !!this.licenseData.key;
+    const ld = this.licenseData;
+    if (!ld || !ld.key) return false;
+    // Hardware-locked keys must still be bound to this machine.
+    if (ld.device && ld.device !== this.deviceFingerprint) return false;
+    if (this._licenseConfirmed === false) return false;
+    return true; // null = optimistic while the boot-time ECDSA check runs
   }
 
   getLicenseInfo() {
@@ -428,6 +490,7 @@ export class LicenseManager {
 
   deactivate() {
     this.licenseData = null;
+    this._licenseConfirmed = false;
     if (typeof localStorage !== "undefined") {
       localStorage.removeItem(this.storageKey);
     }

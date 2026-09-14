@@ -229,7 +229,7 @@ export class ChordPadsUI {
         ${chords
           .map(
             (c, i) => `
-          <div class="chord-pad" id="chord-pad-${i}" data-index="${i}" title="Trigger chord ${c.name} (Key: ${c.key})">
+          <div class="chord-pad" id="chord-pad-${i}" data-index="${i}" role="button" aria-pressed="false" aria-label="Trigger chord ${c.name} (key ${c.key})" title="Trigger chord ${c.name} (Key: ${c.key})">
             <div class="pad-num">[${c.key}]</div>
             <div class="pad-name">${c.name}</div>
             <div class="pad-light"></div>
@@ -268,22 +268,18 @@ export class ChordPadsUI {
       const triggerOn = () => {
         this.playChord(idx);
         pad.classList.add("active");
+        pad.setAttribute("aria-pressed", "true");
       };
 
       const triggerOff = () => {
         this.releaseChord(idx);
         pad.classList.remove("active");
+        pad.setAttribute("aria-pressed", "false");
       };
 
       pad.addEventListener("mousedown", e => {
         e.preventDefault();
         triggerOn();
-      });
-
-      window.addEventListener("mouseup", () => {
-        if (pad.classList.contains("active")) {
-          triggerOff();
-        }
       });
 
       pad.addEventListener(
@@ -304,6 +300,22 @@ export class ChordPadsUI {
         { passive: false }
       );
     });
+
+    // Single shared window-level release: re-renders replace the pad nodes, so a
+    // per-pad window listener would leak one handler per pad per render. This is
+    // bound once for the life of the component and releases the active pad (at
+    // most one can be active, since playChord() releases all others first).
+    if (!this._globalPadMouseUp) {
+      this._globalPadMouseUp = () => {
+        const active = this.container.querySelector(".chord-pad.active");
+        if (!active) return;
+        const idx = parseInt(active.getAttribute("data-index"));
+        this.releaseChord(idx);
+        active.classList.remove("active");
+        active.setAttribute("aria-pressed", "false");
+      };
+      window.addEventListener("mouseup", this._globalPadMouseUp);
+    }
   }
 
   playChord(index) {
@@ -327,7 +339,10 @@ export class ChordPadsUI {
     this.activeNotesMap.forEach((notes, idx) => {
       notes.forEach(m => multiLayerEngine.noteOff(m));
       const pad = this.container?.querySelector(`#chord-pad-${idx}`);
-      if (pad) pad.classList.remove("active");
+      if (pad) {
+        pad.classList.remove("active");
+        pad.setAttribute("aria-pressed", "false");
+      }
     });
     this.activeNotesMap.clear();
   }

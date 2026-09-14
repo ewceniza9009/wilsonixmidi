@@ -73,6 +73,19 @@ function readAndroidBuildGradle() {
   };
 }
 
+const CARGO_PATH = path.join(ROOT, "src-tauri", "Cargo.toml");
+
+function updateCargoToml(nextVersion) {
+  if (!fs.existsSync(CARGO_PATH)) {
+    console.warn("⚠️  src-tauri/Cargo.toml not found, skipping Cargo.toml.");
+    return false;
+  }
+  let content = fs.readFileSync(CARGO_PATH, "utf-8");
+  content = content.replace(/^version\s*=\s*["'][^"']+["']/m, `version = "${nextVersion}"`);
+  fs.writeFileSync(CARGO_PATH, content, "utf-8");
+  return true;
+}
+
 function updateAndroidBuildGradle(nextCode, nextVersion) {
   if (!fs.existsSync(GRADLE_PATH)) {
     console.warn("⚠️  android/app/build.gradle not found, skipping Android.");
@@ -158,7 +171,12 @@ function main() {
     console.log(`✓ Updated src-tauri/tauri.conf.json (${nextVersion})`);
   }
 
-  // 7. Update src/version.js
+  // 7. Update src-tauri/Cargo.toml
+  if (updateCargoToml(nextVersion)) {
+    console.log(`✓ Updated src-tauri/Cargo.toml (${nextVersion})`);
+  }
+
+  // 8. Update src/version.js
   updateVersionJs(nextVersion, nextCode, today);
   console.log(`✓ Updated src/version.js (v${nextVersion}b${nextCode})`);
 

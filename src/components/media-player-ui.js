@@ -112,10 +112,10 @@ export class MediaPlayerUI {
 
               <div class="media-transport">
                 <div class="media-transport-left">
-                  <button class="media-tbtn" id="btn-media-prev" title="Previous">⏮</button>
-                  <button class="media-tbtn media-tbtn-play" id="btn-media-play" title="Play / Pause">▶</button>
-                  <button class="media-tbtn" id="btn-media-stop" title="Stop">⏹</button>
-                  <button class="media-tbtn" id="btn-media-next" title="Next">⏭</button>
+                  <button class="media-tbtn" id="btn-media-prev" aria-label="Previous track" title="Previous">⏮</button>
+                  <button class="media-tbtn media-tbtn-play" id="btn-media-play" aria-label="Play / Pause" title="Play / Pause">▶</button>
+                  <button class="media-tbtn" id="btn-media-stop" aria-label="Stop" title="Stop">⏹</button>
+                  <button class="media-tbtn" id="btn-media-next" aria-label="Next track" title="Next">⏭</button>
                 </div>
                 <div class="media-transport-right">
                   <button class="media-chip" id="btn-media-loop" title="Loop mode">🔁 OFF</button>
@@ -369,7 +369,7 @@ export class MediaPlayerUI {
           <span class="media-pl-meta">${meta.label} · ${fmtTime(t.duration)} · ${fmtSize(t.size)}</span>
         </div>
         <span class="media-pl-status" title="${t.missing ? (t.placeholder ? "Browser build: re-drop this file to play again" : "File not found on disk") : t.source === "session" ? "Session file (re-add after restart in browser)" : "Saved path"}">${t.missing ? (t.placeholder ? "↪" : "✕") : "✓"}</span>
-        <button class="media-pl-del" data-id="${t.id}" title="Remove">✕</button>
+        <button class="media-pl-del" data-id="${this._esc(t.id)}" title="Remove">✕</button>
       `;
 
       const idxEl = row.querySelector(".media-pl-idx");

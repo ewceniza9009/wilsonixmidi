@@ -404,36 +404,6 @@ export class SfxSoundGenerator {
   // 3. WEIRD & SCI-FI FX
   // =========================================================================
 
-  triggerLaserZap(velocity = 100, customGain = 1.0, destNode = null) {
-    const ctx = this.ctx;
-    const now = ctx.currentTime;
-    const vel = velocity / 127;
-    const dest = this.getDest(destNode);
-
-    const osc = ctx.createOscillator();
-    osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(2400, now);
-    osc.frequency.exponentialRampToValueAtTime(65, now + 0.14);
-
-    const filter = ctx.createBiquadFilter();
-    filter.type = "lowpass";
-    filter.frequency.setValueAtTime(4500, now);
-    filter.frequency.exponentialRampToValueAtTime(200, now + 0.14);
-    filter.Q.value = 4.5;
-
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.60 * vel * customGain, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-
-    osc.connect(filter);
-    filter.connect(gain);
-    if (dest) gain.connect(dest);
-
-    osc.start(now);
-    osc.stop(now + 0.16);
-    return osc;
-  }
-
   triggerAlienDrone(pitchMidi = 48, velocity = 95, customGain = 1.0, destNode = null) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
@@ -805,49 +775,6 @@ export class SfxSoundGenerator {
     slap.stop(now + 0.025);
 
     return { osc, slap };
-  }
-
-  triggerTimbales(midiNote = 60, velocity = 105, customGain = 1.0, destNode = null) {
-    const ctx = this.ctx;
-    const now = ctx.currentTime;
-    const vel = velocity / 127;
-    const dest = this.getDest(destNode);
-    const pitchFactor = Math.pow(2, (midiNote - 60) / 12);
-    const freq = Math.max(120, Math.min(1800, 380 * pitchFactor));
-    const dur = 0.25;
-
-    // Steel cascara shell ring
-    const osc = ctx.createOscillator();
-    osc.type = "triangle";
-    osc.frequency.setValueAtTime(freq * 2.2, now);
-    osc.frequency.exponentialRampToValueAtTime(freq, now + 0.03);
-
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(1.15 * vel * customGain, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
-
-    // Metallic rimshot strike
-    const rim = ctx.createOscillator();
-    rim.type = "square";
-    rim.frequency.setValueAtTime(Math.min(5000, 2400 * pitchFactor), now);
-    rim.frequency.exponentialRampToValueAtTime(600, now + 0.01);
-    const rimGain = ctx.createGain();
-    rimGain.gain.setValueAtTime(0.55 * vel * customGain, now);
-    rimGain.gain.exponentialRampToValueAtTime(0.001, now + 0.015);
-
-    osc.connect(gain);
-    rim.connect(rimGain);
-    if (dest) {
-      gain.connect(dest);
-      rimGain.connect(dest);
-    }
-
-    osc.start(now);
-    rim.start(now);
-    osc.stop(now + dur + 0.05);
-    rim.stop(now + 0.02);
-
-    return { osc, rim };
   }
 
   triggerAnalogSynthDrum(velocity = 115, customGain = 1.0, destNode = null, midiNote = 60) {
@@ -1266,60 +1193,6 @@ export class SfxSoundGenerator {
     return { bellGain, noiseGain };
   }
 
-  triggerCowbell(velocity = 110, customGain = 1.0, destNode = null) {
-    const ctx = this.ctx;
-    const now = ctx.currentTime;
-    const vel = velocity / 127;
-    const dest = this.getDest(destNode);
-    const dur = 0.38;
-
-    // Dual square wave fundamental (587Hz & 845Hz) for authentic Latin cowbell bite
-    const osc1 = ctx.createOscillator();
-    osc1.type = "square";
-    osc1.frequency.setValueAtTime(587, now);
-
-    const osc2 = ctx.createOscillator();
-    osc2.type = "square";
-    osc2.frequency.setValueAtTime(845, now);
-
-    const bp = ctx.createBiquadFilter();
-    bp.type = "bandpass";
-    bp.frequency.value = 780;
-    bp.Q.value = 4.2;
-
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(1.10 * vel * customGain, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
-
-    // Initial woodstick click
-    const click = ctx.createOscillator();
-    click.type = "triangle";
-    click.frequency.setValueAtTime(1800, now);
-    click.frequency.exponentialRampToValueAtTime(400, now + 0.015);
-    const clickGain = ctx.createGain();
-    clickGain.gain.setValueAtTime(0.50 * vel * customGain, now);
-    clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
-
-    osc1.connect(bp);
-    osc2.connect(bp);
-    bp.connect(gain);
-    click.connect(clickGain);
-
-    if (dest) {
-      gain.connect(dest);
-      clickGain.connect(dest);
-    }
-
-    osc1.start(now);
-    osc2.start(now);
-    click.start(now);
-    osc1.stop(now + dur + 0.05);
-    osc2.stop(now + dur + 0.05);
-    click.stop(now + 0.025);
-
-    return { gain, clickGain };
-  }
-
   triggerWindChimes(velocity = 100, customGain = 1.0, destNode = null) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
@@ -1387,22 +1260,23 @@ export class SfxSoundGenerator {
     return noise;
   }
 
-  triggerCowbell(velocity = 95, customGain = 1.0, destNode = null) {
+  triggerCowbell(velocity = 95, customGain = 1.0, destNode = null, midiNote = null) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
     const dest = this.getDest(destNode);
+    const pitchMul = midiNote != null ? Math.max(0.5, Math.min(2.0, Math.pow(2, (midiNote - 56) / 12))) : 1.0;
 
     const o1 = ctx.createOscillator();
     const o2 = ctx.createOscillator();
     o1.type = "square";
     o2.type = "square";
-    o1.frequency.value = 587;
-    o2.frequency.value = 845;
+    o1.frequency.value = 587 * pitchMul;
+    o2.frequency.value = 845 * pitchMul;
 
     const bp = ctx.createBiquadFilter();
     bp.type = "bandpass";
-    bp.frequency.value = 720;
+    bp.frequency.value = 720 * pitchMul;
     bp.Q.value = 1.8;
 
     const gain = ctx.createGain();
@@ -2200,57 +2074,6 @@ export class SfxSoundGenerator {
     return oscs[0];
   }
 
-  triggerWindChimes(pitchMidi = 72, velocity = 100, customGain = 1.0, destNode = null) {
-    const ctx = this.ctx;
-    const now = ctx.currentTime;
-    const vel = Math.max(0.2, Math.min(1.0, velocity / 127));
-    const dest = this.getDest(destNode);
-    if (!dest) return null;
-
-    const masterGain = ctx.createGain();
-    masterGain.gain.setValueAtTime(0.85 * vel * customGain, now);
-    masterGain.connect(dest);
-
-    // Cascading Mark Tree glissando: 12 cascading bar chime strikes
-    const numBars = 12;
-    const baseFreq = 2200 * Math.pow(2, (pitchMidi - 72) / 24);
-    const oscs = [];
-
-    for (let i = 0; i < numBars; i++) {
-      const strikeTime = now + i * 0.038 + (Math.random() * 0.008);
-      const freq = baseFreq * Math.pow(1.075, i);
-
-      // Fundamental chime tine
-      const o1 = ctx.createOscillator();
-      o1.type = "sine";
-      o1.frequency.setValueAtTime(freq, strikeTime);
-
-      // Inharmonic sparkle overtone
-      const o2 = ctx.createOscillator();
-      o2.type = "triangle";
-      o2.frequency.setValueAtTime(freq * 2.76, strikeTime);
-
-      const g = ctx.createGain();
-      g.gain.setValueAtTime(0.0001, now);
-      g.gain.setValueAtTime(0.0001, strikeTime);
-      g.gain.linearRampToValueAtTime(0.35 * (1 - i * 0.03), strikeTime + 0.004);
-      g.gain.exponentialRampToValueAtTime(0.0001, strikeTime + 1.6);
-
-      o1.connect(g);
-      o2.connect(g);
-      g.connect(masterGain);
-
-      o1.start(strikeTime);
-      o2.start(strikeTime);
-      o1.stop(strikeTime + 1.7);
-      o2.stop(strikeTime + 1.7);
-      oscs.push(o1, o2);
-    }
-
-    this.trackSfx([...oscs, masterGain], 2.8);
-    return oscs[0];
-  }
-
   triggerCrystalChimes(pitchMidi = 72, velocity = 100, customGain = 1.0, destNode = null) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
@@ -2536,32 +2359,6 @@ export class SfxSoundGenerator {
     tailNoise.start(now + 0.036);
     tailNoise.stop(now + 0.30);
     return tailNoise;
-  }
-
-  triggerBongos(isHigh = true, velocity = 95, customGain = 1.0, destNode = null) {
-    const ctx = this.ctx;
-    const now = ctx.currentTime;
-    const vel = velocity / 127;
-    const dest = this.getDest(destNode);
-    if (!dest) return null;
-
-    const osc = ctx.createOscillator();
-    osc.type = "sine";
-    const baseFreq = isHigh ? 380 : 210;
-    osc.frequency.setValueAtTime(baseFreq * 1.5, now);
-    osc.frequency.exponentialRampToValueAtTime(baseFreq, now + 0.03);
-
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(0.001, now);
-    g.gain.linearRampToValueAtTime(0.80 * vel * customGain, now + 0.003);
-    g.gain.exponentialRampToValueAtTime(0.001, now + (isHigh ? 0.12 : 0.20));
-
-    osc.connect(g);
-    g.connect(dest);
-
-    osc.start(now);
-    osc.stop(now + 0.22);
-    return osc;
   }
 
   triggerTimbales(midiNote = 64, velocity = 95, customGain = 1.0, destNode = null) {
