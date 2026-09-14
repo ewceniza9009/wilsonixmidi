@@ -153,6 +153,22 @@ export class LicenseManager {
   }
 
   /**
+   * Computes a device-bound activation hash for the license key.
+   * This is stored at activation time and used for fast revalidation
+   * without needing Web Crypto ECDSA (which may fail on Android WebView).
+   */
+  computeActivationHash(rawKey) {
+    const salt = "MKPRO_ACTIVATE_BIND_2026";
+    const data = `${rawKey}:::${this.deviceFingerprint}:::${salt}`;
+    let hash = 0x811c9dc5;
+    for (let i = 0; i < data.length; i++) {
+      hash ^= data.charCodeAt(i);
+      hash = Math.imul(hash, 0x01000193);
+    }
+    return Math.abs(hash >>> 0).toString(16).toUpperCase().padStart(8, "0");
+  }
+
+  /**
    * Initializes or loads the 30-Day Free Trial
    */
   initOrLoadTrial() {
@@ -448,14 +464,16 @@ export class LicenseManager {
       return { success: false, error: "License validation failed unexpectedly. Please try again." };
     }
     if (result.valid) {
+      const rawKey = key.trim().toUpperCase();
       this.licenseData = {
-        key: key.trim().toUpperCase(),
-        rawKey: key.trim().toUpperCase(),
+        key: rawKey,
+        rawKey,
         licensee: result.licensee,
         type: result.type,
         expires: result.expires,
         activatedAt: new Date().toISOString(),
         device: this.deviceFingerprint,
+        _activationHash: this.computeActivationHash(rawKey),
       };
       this._licenseConfirmed = true;
       if (typeof localStorage !== "undefined") {
@@ -502,19 +520,22 @@ export class LicenseManager {
       return;
     }
 
-    // Check if Web Crypto API is available; if not, trust the stored license.
-    // It was cryptographically verified at activation time. Skipping revalidation
-    // avoids false rejections on Android WebView where crypto.subtle may be null.
-    const cryptoObj = (typeof crypto !== "undefined" && crypto.subtle)
-      ? crypto.subtle
-      : (typeof crypto !== "undefined" && crypto.webcrypto?.subtle ? crypto.webcrypto.subtle : null);
-
-    if (!cryptoObj) {
-      // Web Crypto unavailable — trust previously stored license
-      this._licenseConfirmed = true;
+    // If a trusted activation hash exists (set at activation time), use it
+    // to verify the license without needing Web Crypto ECDSA. This handles
+    // Android WebView where crypto.subtle may be available but ECDSA fails
+    // due to key import issues or context restrictions.
+    if (ld._activationHash) {
+      const check = this.computeActivationHash(ld.rawKey);
+      if (check === ld._activationHash) {
+        this._licenseConfirmed = true;
+        return;
+      }
+      // Hash mismatch — key was tampered in localStorage
+      this._licenseConfirmed = false;
       return;
     }
 
+    // Legacy path: try full ECDSA revalidation
     let result = null;
     try {
       result = await this.verifyKey(ld.rawKey);
@@ -522,14 +543,14 @@ export class LicenseManager {
       result = null;
     }
     if (!result || !result.valid) {
-      // Don't auto-wipe — keep the license so the user can re-enter it.
-      // Mark as unconfirmed so isLicensed() returns false, but the key
-      // is preserved in localStorage for the user to see and re-activate.
+      // Don't auto-wipe — keep the license so the user can re-enter it
       this._licenseConfirmed = false;
       return;
     }
     ld.expires = result.expires;
     ld.device = this.deviceFingerprint;
+    // Store activation hash for future boots (no Web Crypto needed)
+    ld._activationHash = this.computeActivationHash(ld.rawKey);
     this._licenseConfirmed = true;
   }
 
