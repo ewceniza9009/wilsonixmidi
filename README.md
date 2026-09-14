@@ -8,15 +8,15 @@
 [![Audio: Web Audio API](https://img.shields.io/badge/Audio-Direct%20PCM%20%2B%20VA%20Engine-FF6F00?style=for-the-badge&logo=audio)](https://github.com/ewceniza9009/wilsonixmidi)
 [![Framework: Tauri v2 + Vite](https://img.shields.io/badge/Framework-Tauri%20v2%20%7C%20Rust-673AB7?style=for-the-badge)](https://tauri.app/)
 [![License: Proprietary](https://img.shields.io/badge/License-WILSONIX%20Commercial-red?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi)
-[![Version: v1.1.5](https://img.shields.io/badge/Version-v1.1.5%20Build%2016%20Production-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
+[![Version: v1.1.6](https://img.shields.io/badge/Version-v1.1.6%20Build%2017%20Production-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
 
 ---
 
-## 🚀 Official Production Downloads (v1.1.5 Build 16 Latest Release)
+## 🚀 Official Production Downloads (v1.1.6 Build 17 Latest Release)
 
 | Package / Distribution | Target Operating System | Architecture | Direct Download Link |
 |:---|:---|:---:|:---:|
-| **Windows Desktop Installer** | Windows 10 / 11 | x64 | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX.MIDIKEY_1.1.5_x64-setup.exe) |
+| **Windows Desktop Installer** | Windows 10 / 11 | x64 | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX.MIDIKEY_1.1.6_x64-setup.exe) |
 | **Android Package (APK)** | Android 8.0+ (Oreo to Android 15) | ARM64 / x86_64 | [⬇️ Download Android APK (`.apk`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/wilsonix-midikey.apk) |
 
 *Official binaries and checksums are verified and hosted on the [GitHub Releases page](https://github.com/ewceniza9009/wilsonixmidi/releases).*
@@ -41,7 +41,34 @@
 
 ---
 
-## 📑 Granular Changelog & Release Notes (v1.1.5 • Build 16)
+## 📑 Granular Changelog & Release Notes (v1.1.6 • Build 17)
+
+### 1. 🎚️ Expanded Signature 4-Timbre Combi Presets
+- **Curated Multi-Genre Sound Stacks**: Added and finely calibrated 7 signature 4-timbre combis:
+  - **Neo-Soul Chill**: Studio DX7 FM Piano + Warm Strings + Celestial Universe Pad + Finger Sub Bass.
+  - **Lo-Fi Study Beats**: Abletunes Felt Upright Piano + Vibraphone + Mellow Upright Bass + Korg M1 Universe Air.
+  - **Lo-Fi Vintage Tape Rhodes**: Vintage Stage Rhodes + Organic Kalimba Bell + Upright Bass + Vinyl String Pad.
+  - **Bossa Nova Sunset**: Abletunes Upright Piano + Acoustic Bass + Vibraphone + Soft Air Pad.
+  - **Acid Jazz Groove**: Dyno FM EP + Resonant Synth Bass + Bright Brass Stabs + Triton Lead.
+  - **Blue Note Trio**: 24-bit Abletunes Upright Grand + Upright Bass + Jazz Organ + Soft Pad.
+  - **Synthesizer You**: 4-Layer Triton Analog Poly Synth stack.
+- **Dynamic Headroom Equalization**: Integrated automated `1 / sqrt(N)` combi scaling and bus pad protection (`0.45`), preventing master limiter clipping on dense multi-voice chords.
+
+### 2. 🎛️ Gig HUD & Preset Ribbon Interactive Integration
+- **Direct Ribbon Recall**: Updated the **★ SIGNATURE 4-TIMBRE COMBIS** bank in `gig-hud.js` with instant category indexing and one-touch loading.
+- **Visual Status Feedback**: Instant HUD badge synchronization with active combi layers and split configurations.
+
+### 3. 🎹 Virtual Keyboard Touch Tracking & Hardware Acceleration
+- **Smooth 60 FPS Rendering**: Applied CSS hardware-accelerated transforms (`transform: translateZ(0)` and `will-change: transform`) to virtual piano keys.
+- **Multi-Touch Precision**: Retained pointer and touch event maps for fluid, chord-ready performance on Android tablets and touch monitors.
+
+### 4. 🔒 Pro License Manager & Android WebView Robustness
+- **Software Hash Fallback**: Resilient device-bound activation key generation even when Android WebView disables WebGL/Canvas fingerprinting.
+- **Null-Safe Setlist Validator**: Seamless loading of external JSON setlist files without crashes from uninitialized or null layer properties.
+
+---
+
+## 📑 Prior Release Notes (v1.1.5 • Build 16)
 
 ### 1. 🛡️ Robust Setlist Schema & Null-Safety Validation
 - **Deep Null-Safety Handling**: Updated `isValidSlot` in `setlist-validation.js` to use loose null checks (`!= null`), safely tolerating explicitly serialized `null` properties in external setlists without rejecting valid configuration snapshots.
