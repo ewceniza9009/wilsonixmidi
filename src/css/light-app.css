@@ -330,14 +330,149 @@
    sa shell scope -> tanang descendant nga mo-inherit, light-on-dark. */
 [data-theme="light"] .chord-station-card,
 [data-theme="light"] .looper-station-card,
+[data-theme="light"] .split-console-view,
+[data-theme="light"] .split-keyboard-console,
 [data-theme="light"] .fx-rack-strip {
   --text-primary: #f3f4f6 !important;
   --text-secondary: #cbd5e1 !important;
   --text-subtle: #94a3b8 !important;
-  --text-muted: #7b8797 !important;
+  --text-muted: #94a3b8 !important;
   --text-on-accent: #ffffff !important;
   color: var(--text-primary);
 }
+
+/* SPLIT CONSOLE VIEW — Complete light theme re-pin */
+[data-theme="light"] .split-console-view {
+  --bg-surface: #181b22 !important;
+  --bg-card: #282d3a !important;
+  --bg-card-hover: #313747 !important;
+  --border-subtle: rgba(255, 255, 255, 0.08) !important;
+  --border-medium: rgba(255, 255, 255, 0.15) !important;
+  background: linear-gradient(180deg, rgba(168, 85, 247, 0.1), rgba(10, 12, 18, 0.85)) !important;
+  border-color: rgba(168, 85, 247, 0.35) !important;
+}
+
+[data-theme="light"] .split-console-view.on {
+  border-color: var(--accent-amber) !important;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.2) !important;
+}
+
+[data-theme="light"] .split-console-sub {
+  color: #cbd5e1 !important;
+}
+
+[data-theme="light"] .split-console-sub b {
+  color: #fde68a !important;
+}
+
+[data-theme="light"] .split-master-area {
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+[data-theme="light"] .split-label {
+  color: #94a3b8 !important;
+}
+
+[data-theme="light"] .split-status-badge {
+  background: #1a1f28 !important;
+  color: #94a3b8 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+[data-theme="light"] .split-status-badge.on {
+  background: var(--accent-amber) !important;
+  color: #0f1117 !important;
+  border-color: var(--accent-amber) !important;
+}
+
+[data-theme="light"] .split-point-select {
+  background-color: #0f131a !important;
+  color: #38bdf8 !important;
+  border: 1px solid var(--accent-amber) !important;
+}
+
+[data-theme="light"] .split-point-select option {
+  background-color: #0f131a !important;
+  color: #f1f5f9 !important;
+}
+
+[data-theme="light"] .split-card {
+  background: rgba(12, 15, 22, 0.75) !important;
+}
+
+[data-theme="light"] .split-card-tag {
+  color: #94a3b8 !important;
+}
+
+[data-theme="light"] .split-card-hint {
+  color: #cbd5e1 !important;
+}
+
+[data-theme="light"] .timbre-combo-input {
+  background: #090c12 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+}
+
+[data-theme="light"] .timbre-combo-list {
+  background: #0d111a !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+[data-theme="light"] .timbre-opt-name {
+  color: #f1f5f9 !important;
+}
+
+[data-theme="light"] .timbre-opt-meta {
+  color: #94a3b8 !important;
+}
+
+[data-theme="light"] .split-fx-select {
+  background-color: #090c12 !important;
+  color: #38bdf8 !important;
+  border: 1px solid rgba(56, 189, 248, 0.35) !important;
+}
+
+[data-theme="light"] .split-fx-select option {
+  background-color: #0d111a !important;
+  color: #f1f5f9 !important;
+}
+
+[data-theme="light"] .split-oct-btn {
+  background: linear-gradient(180deg, #2a3346 0%, #1c2331 100%) !important;
+  color: #f1f5f9 !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+}
+
+[data-theme="light"] .split-oct-val {
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .split-vol-val {
+  color: #fb923c !important;
+}
+
+[data-theme="light"] .split-card-current {
+  background: rgba(0, 0, 0, 0.45) !important;
+  color: #cbd5e1 !important;
+  border: 1px dashed rgba(255, 255, 255, 0.16) !important;
+}
+
+[data-theme="light"] .split-card-current b {
+  color: var(--accent-amber) !important;
+}
+
+[data-theme="light"] .split-help-line {
+  color: #cbd5e1 !important;
+  background: rgba(0, 0, 0, 0.3) !important;
+  border: 1px dashed rgba(255, 255, 255, 0.12) !important;
+}
+
+[data-theme="light"] .split-help-line b {
+  color: #ffffff !important;
+}
+
 [data-theme="light"] .demo-station-card,
 [data-theme="light"] .demo-volume-control,
 [data-theme="light"] .demo-station-frame {
