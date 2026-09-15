@@ -10,6 +10,7 @@ import { audioCore } from "../audio/audio-core.js";
 import { getTritonProgramById } from "../triton/combi-timbres.js";
 import { licenseManager } from "../security/license-manager.js";
 import { BANK_KEYS, isValidBanksShape } from "../security/setlist-validation.js";
+import { getComponent } from "./component-registry.js";
 
 export class RegistrationManager {
   constructor() {
@@ -202,9 +203,7 @@ export class RegistrationManager {
         const prog = item.tritonProg || getTritonProgramById(item.tritonProgId);
         if (prog) {
           multiLayerEngine.setTritonVaProgram(prog);
-          if (window.__tritonConsole && typeof window.__tritonConsole.selectProgramById === "function") {
-            window.__tritonConsole.selectProgramById(prog.id);
-          }
+          getComponent("tritonConsole")?.selectProgramById?.(prog.id);
         }
       }
       // 2. Combi 4-Timbre Stack

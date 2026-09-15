@@ -4,6 +4,8 @@
  * Uses dual-channel prime-staggered delay taps + cascaded spatial allpass diffusers with highpass DC blocking.
  */
 
+import { constantPowerMixScaled, applyBypassGains, applyMixGains } from "./dry-wet-utils.js";
+
 export class AlgorithmicReverb {
   constructor(ctx) {
     this.ctx = ctx;
@@ -119,27 +121,14 @@ export class AlgorithmicReverb {
 
   setMix(val) {
     this.mix = Math.max(0, Math.min(1, val));
-    const now = this.ctx.currentTime;
     if (this.enabled) {
-      const dryFrac = Math.cos(this.mix * Math.PI * 0.5);
-      const wetFrac = Math.sin(this.mix * Math.PI * 0.5) * 0.75;
-      this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
-      this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
+      applyMixGains(this.wetGain, this.dryGain, this.mix, m => constantPowerMixScaled(m, 0.75), this.ctx, 0.02);
     }
   }
 
   setBypass(bypassed) {
     this.enabled = !bypassed;
-    const now = this.ctx ? this.ctx.currentTime : 0;
-    if (bypassed) {
-      this.wetGain.gain.setValueAtTime(0.0, now);
-      this.dryGain.gain.setValueAtTime(1.0, now);
-    } else {
-      const m = this.mix > 0 ? this.mix : 0.22;
-      const dryFrac = Math.cos(m * Math.PI * 0.5);
-      const wetFrac = Math.sin(m * Math.PI * 0.5) * 0.75;
-      this.wetGain.gain.setValueAtTime(wetFrac, now);
-      this.dryGain.gain.setValueAtTime(dryFrac, now);
-    }
+    const m = this.mix > 0 ? this.mix : 0.22;
+    applyBypassGains(this.wetGain, this.dryGain, bypassed, m, scaled => constantPowerMixScaled(scaled, 0.75), this.ctx);
   }
 }

@@ -27,6 +27,7 @@ function base64ToUint8Array(b64) {
 }
 
 const TRIAL_SALT = "MK_ELITE_TRIAL_PROTECT_2026";
+const ACTIVATION_HMAC_SALT = "MKPRO_ACTIVATION_HMAC_SALT_2026";
 
 export class LicenseManager {
   constructor() {
@@ -128,8 +129,8 @@ export class LicenseManager {
 
   /**
    * Computes a device-bound activation hash for the license key.
-   * This is stored at activation time and used for fast revalidation
-   * without needing Web Crypto ECDSA (which may fail on Android WebView).
+   * Uses HMAC-SHA256 via Web Crypto when available (much stronger than
+   * FNV-1a), falling back to FNV-1a for environments without Web Crypto.
    */
   computeActivationHash(rawKey) {
     const salt = "MKPRO_ACTIVATE_BIND_2026";
@@ -140,6 +141,46 @@ export class LicenseManager {
       hash = Math.imul(hash, 0x01000193);
     }
     return Math.abs(hash >>> 0).toString(16).toUpperCase().padStart(8, "0");
+  }
+
+  /**
+   * HMAC-SHA256 activation token via Web Crypto. Returns base64url string
+   * or null if Web Crypto is unavailable. This is the preferred activation
+   * binding for platforms where Web Crypto works (desktop browsers, modern
+   * Android WebView).
+   */
+  async computeActivationToken(rawKey) {
+    try {
+      const cryptoObj = (typeof crypto !== "undefined" && crypto.subtle)
+        ? crypto.subtle
+        : (typeof crypto !== "undefined" && crypto.webcrypto?.subtle ? crypto.webcrypto.subtle : null);
+      if (!cryptoObj) return null;
+
+      const keyData = new TextEncoder().encode(rawKey);
+      const deviceData = new TextEncoder().encode(this.deviceFingerprint);
+      const combined = new Uint8Array(keyData.length + deviceData.length);
+      combined.set(keyData);
+      combined.set(deviceData, keyData.length);
+
+      const hmacKey = await cryptoObj.importKey(
+        "raw",
+        new TextEncoder().encode(ACTIVATION_HMAC_SALT),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"]
+      );
+
+      const sig = await cryptoObj.sign("HMAC", hmacKey, combined);
+      const bytes = new Uint8Array(sig);
+      let base64 = "";
+      for (let i = 0; i < bytes.length; i++) {
+        base64 += String.fromCharCode(bytes[i]);
+      }
+      return (typeof btoa === "function" ? btoa(base64) : Buffer.from(base64, "binary").toString("base64"))
+        .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    } catch (e) {
+      return null;
+    }
   }
 
   /**
@@ -419,9 +460,14 @@ export class LicenseManager {
   }
 
   /**
-   * Activates a license and stores securely in localStorage
+   * Activates a license and stores securely in localStorage.
+   *
+   * @param {string} key  The MKPRO-... license key.
+   * @param {string} [activationCode]  Optional MKACT-... activation code
+   *   issued by the admin for this specific device. Required when direct
+   *   ECDSA license-key verification fails (e.g. Android WebView).
    */
-  async activate(key) {
+  async activate(key, activationCode) {
     let result;
     try {
       result = await this.verifyKey(key);
@@ -430,23 +476,44 @@ export class LicenseManager {
     }
 
     if (result.valid) {
-      return this._storeLicense(key, result);
+      return await this._storeLicense(key, result, null);
     }
 
-    // ECDSA verification failed — try format-only acceptance for environments
-    // where Web Crypto API is available but signature verification fails
-    // (e.g. Android WebView key import issues).
-    const formatResult = this.verifyKeyFormat(key);
-    if (formatResult.valid) {
-      console.warn("[LicenseManager] ECDSA failed — accepting by format + activation hash.");
-      return this._storeLicense(key, formatResult);
+    // ECDSA license-key verification failed. Try the admin-issued activation
+    // code path: a separately-signed token binding this exact key to this
+    // exact device, verified with the same ECDSA public key.
+    if (activationCode) {
+      const rawKey = key.trim().toUpperCase();
+      try {
+        const actResult = await this.verifyActivationCode(activationCode, rawKey);
+        if (actResult.valid) {
+          // Extract licensee from the key structure
+          const parts = rawKey.split("-");
+          const licensee = parts.length >= 4 ? this.decodeLicensee(parts[1]) : "Pro Musician";
+          const expiryStr = parts.length >= 4 ? parts[2] : "LIFETIME";
+          const resultObj = {
+            valid: true,
+            licensee,
+            type: expiryStr === "LIFETIME" ? "Lifetime Pro License" : "Time-Limited Pro License",
+            expires: expiryStr === "LIFETIME" ? "Lifetime" : new Date(parseInt(expiryStr, 16)).toLocaleDateString(),
+            rawKey,
+          };
+          return await this._storeLicense(key, resultObj, activationCode);
+        }
+      } catch (e) {
+        // Activation code verification failed — fall through to rejection
+      }
     }
 
-    return { success: false, error: result.reason || formatResult.reason };
+    const hint = !activationCode && !result.valid
+      ? " If direct verification failed, request a device activation code from your administrator."
+      : "";
+    return { success: false, error: (result.reason || "License key could not be verified.") + hint };
   }
 
-  _storeLicense(key, result) {
+  async _storeLicense(key, result, activationCode) {
     const rawKey = key.trim().toUpperCase();
+    const activationToken = await this.computeActivationToken(rawKey);
     this.licenseData = {
       key: rawKey,
       rawKey,
@@ -455,7 +522,9 @@ export class LicenseManager {
       expires: result.expires,
       activatedAt: new Date().toISOString(),
       device: this.deviceFingerprint,
+      _activationToken: activationToken,
       _activationHash: this.computeActivationHash(rawKey),
+      _activationCode: activationCode || null,
     };
     this._licenseConfirmed = true;
     if (typeof localStorage !== "undefined") {
@@ -465,55 +534,57 @@ export class LicenseManager {
   }
 
   /**
-   * Format-only validation (no ECDSA). Checks key structure and parses
-   * fields. Used as fallback when Web Crypto fails on Android WebView.
+   * Verifies a device-bound activation code issued by the admin CLI or
+   * admin HTML tool. Activation codes are ECDSA-signed over the payload
+   * "ACTIVATE:<licenseKey>:<deviceId>" and allow activation on platforms
+   * where direct license-key ECDSA verification is unavailable.
+   *
+   * Format: MKACT-<DEVICE_ID>-<ECDSA_HEX_SIG>
+   * The device ID must match the current machine; the license key must
+   * match the key being activated.
+   *
+   * Returns { valid: true } on success, or { valid: false, reason }.
    */
-  verifyKeyFormat(key) {
-    if (!key || typeof key !== "string") return { valid: false, reason: "Invalid key" };
-    const cleanKey = key.trim().toUpperCase();
-    const parts = cleanKey.split("-");
-    if (parts[0] !== "MKPRO") return { valid: false, reason: "Key must start with MKPRO-" };
+  async verifyActivationCode(activationCode, rawLicenseKey) {
+    if (!activationCode || typeof activationCode !== "string") {
+      return { valid: false, reason: "Activation code is required." };
+    }
 
-    if (parts.length === 4) {
-      const [, licensee, expiryStr] = parts;
-      if (!licensee || licensee.length < 2) return { valid: false, reason: "Invalid licensee" };
-      if (expiryStr !== "LIFETIME") {
-        const ts = parseInt(expiryStr, 16);
-        if (isNaN(ts)) return { valid: false, reason: "Corrupt expiry" };
-        if (Date.now() > ts) return { valid: false, reason: "License expired" };
-      }
+    const clean = activationCode.trim().toUpperCase();
+    const parts = clean.split("-");
+    // MKACT-<DEV-XXXXXXXX>-<HEX SIG>
+    // parts[0] = "MKACT", parts[1] = "DEV", parts[2..] = device id segments, last = SIG
+    if (parts.length < 3 || parts[0] !== "MKACT") {
+      return { valid: false, reason: "Activation code must start with MKACT- and include device ID and signature." };
+    }
+
+    // Reconstruct device ID: everything between first and last dash segments.
+    // Device IDs are DEV_XXXXXXXX or DEV-XXXXXXXX (8 hex chars), so they're
+    // always 2-3 segments (DEV / XXXXXXXX or DEV / XXXX / XXXX).
+    // We also need to extract the trailing hex signature.
+    const sigHex = parts[parts.length - 1];
+    const devParts = parts.slice(1, parts.length - 1);
+    const deviceId = devParts.join("-");
+
+    // Validate device matches
+    const normalizedDev = deviceId.replace(/_/g, "-").toUpperCase();
+    const normalizedCurrent = this.deviceFingerprint.replace(/_/g, "-").toUpperCase();
+    if (normalizedDev !== normalizedCurrent) {
       return {
-        valid: true,
-        licensee: this.decodeLicensee(licensee),
-        type: expiryStr === "LIFETIME" ? "Lifetime Pro License" : "Time-Limited Pro License",
-        expires: expiryStr === "LIFETIME" ? "Lifetime" : new Date(parseInt(expiryStr, 16)).toLocaleDateString(),
-        rawKey: cleanKey,
+        valid: false,
+        reason: `Activation code is for device [${deviceId}], but this machine is [${this.deviceFingerprint}].`,
       };
     }
 
-    if (parts.length === 5) {
-      const [, licensee, expiryStr, targetDevId] = parts;
-      if (!licensee || licensee.length < 2) return { valid: false, reason: "Invalid licensee" };
-      const normalizedDevId = targetDevId.replace(/-/g, "_");
-      const normalizedCurrentDev = this.deviceFingerprint.replace(/-/g, "_");
-      if (normalizedDevId !== normalizedCurrentDev) {
-        return { valid: false, reason: `Hardware-locked to [${targetDevId}], this device is [${this.deviceFingerprint}]` };
-      }
-      if (expiryStr !== "LIFETIME") {
-        const ts = parseInt(expiryStr, 16);
-        if (isNaN(ts)) return { valid: false, reason: "Corrupt expiry" };
-        if (Date.now() > ts) return { valid: false, reason: "License expired" };
-      }
-      return {
-        valid: true,
-        licensee: this.decodeLicensee(licensee),
-        type: `Hardware-Locked Pro License (${targetDevId})`,
-        expires: expiryStr === "LIFETIME" ? "Lifetime" : new Date(parseInt(expiryStr, 16)).toLocaleDateString(),
-        rawKey: cleanKey,
-      };
+    // Verify ECDSA signature
+    const payload = `ACTIVATE:${rawLicenseKey}:${deviceId}`;
+    const isValid = await this.verifyEcdsaSignature(payload, sigHex);
+
+    if (!isValid) {
+      return { valid: false, reason: "Activation code signature is invalid or forged." };
     }
 
-    return { valid: false, reason: "Key must follow format: MKPRO-NAME-EXPIRY-SIGNATURE" };
+    return { valid: true, deviceId };
   }
 
   loadLicense() {
@@ -552,7 +623,21 @@ export class LicenseManager {
       return;
     }
 
-    // If a trusted activation hash exists (set at activation time), use it
+    // 1. Prefer HMAC-SHA256 activation token (strongest client-side binding).
+    //    This token is set at activation time via Web Crypto and cannot be
+    //    forged without the HMAC secret embedded in the binary.
+    if (ld._activationToken) {
+      const currentToken = await this.computeActivationToken(ld.rawKey);
+      if (currentToken && currentToken === ld._activationToken) {
+        this._licenseConfirmed = true;
+        return;
+      }
+      // Token mismatch — either the key or device was tampered with
+      this._licenseConfirmed = false;
+      return;
+    }
+
+    // 2. If a trusted activation hash exists (set at activation time), use it
     // to verify the license without needing Web Crypto ECDSA. This handles
     // Android WebView where crypto.subtle may be available but ECDSA fails
     // due to key import issues or context restrictions.
@@ -567,7 +652,7 @@ export class LicenseManager {
       return;
     }
 
-    // Legacy path: try full ECDSA revalidation
+    // 3. Legacy path: try full ECDSA revalidation
     let result = null;
     try {
       result = await this.verifyKey(ld.rawKey);
@@ -581,7 +666,8 @@ export class LicenseManager {
     }
     ld.expires = result.expires;
     ld.device = this.deviceFingerprint;
-    // Store activation hash for future boots (no Web Crypto needed)
+    // Store activation token + hash for future boots
+    ld._activationToken = await this.computeActivationToken(ld.rawKey);
     ld._activationHash = this.computeActivationHash(ld.rawKey);
     this._licenseConfirmed = true;
   }

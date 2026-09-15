@@ -2133,6 +2133,32 @@ body.mobile-stage-keys .studio-keyboard-deck {
   font-size: 0.7rem;
   color: var(--text-muted);
 }
+.demo-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.demo-search-icon {
+  position: absolute;
+  left: 10px;
+  font-size: 0.8rem;
+  pointer-events: none;
+  opacity: 0.8;
+}
+.demo-search-input {
+  width: 100%;
+  padding: 8px 12px 8px 32px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  outline: none;
+}
+.demo-search-input:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.15);
+}
 .demo-song-list {
   display: flex;
   flex-direction: column;

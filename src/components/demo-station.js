@@ -18,8 +18,10 @@ export class DemoStationUI {
     this.timers = [];
     this.progressInterval = null;
     this.activeMidiNotes = new Set();
+    this.searchQuery = "";
 
     this.render();
+    this.renderList();
     this.bindEvents();
   }
 
@@ -35,33 +37,51 @@ export class DemoStationUI {
           </div>
           <span class="demo-hint">Clips play live on the current stage rig — watch the keys!</span>
         </div>
-        <div class="demo-song-list">
-          ${DEMO_SONGS.map(
-            song => `
-            <div class="demo-song-row" data-song="${song.id}">
-              <div class="demo-song-label">
-                <span class="demo-song-title">${song.title}</span>
-                <span class="demo-song-subtitle">${song.subtitle}</span>
-              </div>
-              <div class="demo-song-controls">
-                <div class="demo-progress-track">
-                  <div class="demo-progress-fill" id="demo-progress-${song.id}"></div>
-                </div>
-                <button class="demo-station-play-btn" id="demo-play-${song.id}" title="Play 30s demo">
-                  ▶ PLAY
-                </button>
-              </div>
-            </div>
-          `
-          ).join("")}
+        <div class="demo-search-wrap">
+          <input type="text" class="demo-search-input" id="demo-search" placeholder="Search songs..." value="" autocomplete="off" />
         </div>
+        <div class="demo-song-list" id="demo-song-list"></div>
       </div>
     `;
   }
 
-  bindEvents() {
-    DEMO_SONGS.forEach(song => {
-      const btn = this.container.querySelector(`#demo-play-${song.id}`);
+  renderList() {
+    const list = this.container.querySelector("#demo-song-list");
+    if (!list) return;
+
+    const q = this.searchQuery.toLowerCase().trim();
+    const filtered = q
+      ? DEMO_SONGS.filter(
+          (s) =>
+            s.title.toLowerCase().includes(q) ||
+            s.subtitle.toLowerCase().includes(q),
+        )
+      : DEMO_SONGS;
+
+    list.innerHTML = filtered
+      .map(
+        (song) => `
+      <div class="demo-song-row" data-song="${song.id}">
+        <div class="demo-song-label">
+          <span class="demo-song-title">${song.title}</span>
+          <span class="demo-song-subtitle">${song.subtitle}</span>
+        </div>
+        <div class="demo-song-controls">
+          <div class="demo-progress-track">
+            <div class="demo-progress-fill" id="demo-progress-${song.id}"></div>
+          </div>
+          <button class="demo-station-play-btn" id="demo-play-${song.id}" title="Play 30s demo">
+            ▶ PLAY
+          </button>
+        </div>
+      </div>
+    `,
+      )
+      .join("");
+
+    // Fresh button nodes each render — bind once, no duplicate listeners
+    filtered.forEach((song) => {
+      const btn = list.querySelector(`#demo-play-${song.id}`);
       btn?.addEventListener("click", () => {
         if (this.isPlaying && this.currentSong === song.id) {
           this.stop();
@@ -72,13 +92,25 @@ export class DemoStationUI {
     });
   }
 
+  bindEvents() {
+    const searchInput = this.container.querySelector("#demo-search");
+    if (searchInput) {
+      searchInput.addEventListener("input", (e) => {
+        this.searchQuery = e.target.value;
+        this.renderList();
+      });
+    }
+  }
+
   async play(song) {
     if (this.isPlaying) {
       this.stop();
     }
 
     // Always silence any lingering engine state before a new clip
-    try { multiLayerEngine.panic(); } catch (e) {}
+    try {
+      multiLayerEngine.panic();
+    } catch (e) {}
 
     try {
       const ctx = audioCore.init();
@@ -99,10 +131,10 @@ export class DemoStationUI {
         const embedded = song.embeddedInsts || [];
         const soundfonts = song.soundfontInsts || [];
         await Promise.all([
-          ...embedded.map(inst =>
-            pcm.isReady ? pcm.decodeEmbeddedAnchors(inst) : Promise.resolve()
+          ...embedded.map((inst) =>
+            pcm.isReady ? pcm.decodeEmbeddedAnchors(inst) : Promise.resolve(),
           ),
-          ...soundfonts.map(inst => pcm.loadSoundfont(inst)),
+          ...soundfonts.map((inst) => pcm.loadSoundfont(inst)),
         ]);
       }
     } catch (e) {
@@ -118,7 +150,7 @@ export class DemoStationUI {
     this.clearTimers();
     this.updateButtons();
 
-    song.events.forEach(ev => {
+    song.events.forEach((ev) => {
       if (ev.type === "pedal") {
         const at = songStart + ev.time / 1000;
         noteScheduler.pedal(ev.down, at, "demo-" + song.id);
@@ -131,18 +163,24 @@ export class DemoStationUI {
 
         // Visual key lighting aligned to the audible moment (wall clock approx)
         const onDelay = Math.max(0, (at - ctx.currentTime) * 1000);
-        const visTimer = setTimeout(() => {
-          if (!this.isPlaying || this.currentSong !== song.id) return;
-          this.emitKeyVisual([ev.note], true, ev.vel);
-        }, Math.max(0, onDelay - 12));
+        const visTimer = setTimeout(
+          () => {
+            if (!this.isPlaying || this.currentSong !== song.id) return;
+            this.emitKeyVisual([ev.note], true, ev.vel);
+          },
+          Math.max(0, onDelay - 12),
+        );
         this.timers.push(visTimer);
 
         const offDelay = Math.max(0, (offAt - ctx.currentTime) * 1000);
-        const visOffTimer = setTimeout(() => {
-          if (!this.isPlaying || this.currentSong !== song.id) return;
-          this.activeMidiNotes.delete(ev.note);
-          this.emitKeyVisual([ev.note], false, 0);
-        }, Math.max(0, offDelay - 12));
+        const visOffTimer = setTimeout(
+          () => {
+            if (!this.isPlaying || this.currentSong !== song.id) return;
+            this.activeMidiNotes.delete(ev.note);
+            this.emitKeyVisual([ev.note], false, 0);
+          },
+          Math.max(0, offDelay - 12),
+        );
         this.timers.push(visOffTimer);
       }
     });
@@ -174,7 +212,9 @@ export class DemoStationUI {
     }
 
     for (const note of this.activeMidiNotes) {
-      try { multiLayerEngine.noteOff(note); } catch (e) {}
+      try {
+        multiLayerEngine.noteOff(note);
+      } catch (e) {}
       this.emitKeyVisual([note], false, 0);
     }
     this.activeMidiNotes.clear();
@@ -190,12 +230,12 @@ export class DemoStationUI {
   }
 
   clearTimers() {
-    this.timers.forEach(t => clearTimeout(t));
+    this.timers.forEach((t) => clearTimeout(t));
     this.timers = [];
   }
 
   updateButtons() {
-    DEMO_SONGS.forEach(song => {
+    DEMO_SONGS.forEach((song) => {
       const btn = this.container.querySelector(`#demo-play-${song.id}`);
       if (!btn) return;
       const isThisSong = this.isPlaying && this.currentSong === song.id;
@@ -214,7 +254,9 @@ export class DemoStationUI {
   emitKeyVisual(notes, pressed, velocity = 95) {
     try {
       window.dispatchEvent(
-        new CustomEvent("wilsonix-keys-visual", { detail: { notes, pressed, velocity } })
+        new CustomEvent("wilsonix-keys-visual", {
+          detail: { notes, pressed, velocity },
+        }),
       );
     } catch (e) {}
   }

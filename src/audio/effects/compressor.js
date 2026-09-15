@@ -4,6 +4,8 @@
  * variable knee, fast attack/release ballistics, and parallel compression mix.
  */
 
+import { constantPowerMix, applyBypassGains, applyMixGains } from "./dry-wet-utils.js";
+
 export class StudioCompressor {
   constructor(ctx) {
     this.ctx = ctx;
@@ -98,27 +100,14 @@ export class StudioCompressor {
 
   setMix(val) {
     this.mix = Math.max(0, Math.min(1.0, val));
-    const now = this.ctx.currentTime;
     if (this.enabled) {
-      const wetFrac = Math.sin(this.mix * Math.PI * 0.5);
-      const dryFrac = Math.cos(this.mix * Math.PI * 0.5);
-      this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
-      this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
+      applyMixGains(this.wetGain, this.dryGain, this.mix, constantPowerMix, this.ctx);
     }
   }
 
   setBypass(bypassed) {
     this.enabled = !bypassed;
-    const now = this.ctx ? this.ctx.currentTime : 0;
-    if (bypassed) {
-      this.wetGain.gain.setValueAtTime(0.0, now);
-      this.dryGain.gain.setValueAtTime(1.0, now);
-    } else {
-      const wetFrac = Math.sin(this.mix * Math.PI * 0.5);
-      const dryFrac = Math.cos(this.mix * Math.PI * 0.5);
-      this.wetGain.gain.setValueAtTime(wetFrac, now);
-      this.dryGain.gain.setValueAtTime(dryFrac, now);
-    }
+    applyBypassGains(this.wetGain, this.dryGain, bypassed, this.mix, constantPowerMix, this.ctx);
   }
 
   getReduction() {

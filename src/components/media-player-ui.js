@@ -20,7 +20,13 @@ const EXT_META = {
 };
 
 function extMeta(ext) {
-  return EXT_META[ext] || { icon: "●", color: "#9ca3af", label: (ext || "?").toUpperCase() };
+  return (
+    EXT_META[ext] || {
+      icon: "●",
+      color: "#9ca3af",
+      label: (ext || "?").toUpperCase(),
+    }
+  );
 }
 
 function fmtTime(sec) {
@@ -44,6 +50,7 @@ export class MediaPlayerUI {
     this.dragDepth = 0;
     this._raf = 0;
     this._renderQueue = [];
+    this.searchQuery = "";
   }
 
   render() {
@@ -61,25 +68,24 @@ export class MediaPlayerUI {
       <div class="media-console">
         <div class="media-header">
           <div class="media-header-left">
-            <span class="media-header-badge">MASTER PLAYBACK</span>
-            <h2 class="media-station-title">AUDIO & VIDEO MEDIA DECK</h2>
+            <span class="media-header-badge">LIVE STAGE PLAYER</span>
+            <h2 class="media-station-title">MEDIA DECK</h2>
           </div>
           <div class="media-header-right">
             <button class="media-btn media-btn-primary" id="btn-media-open">
-              ${mediaPlayer.isTauri ? "📂 OPEN MEDIA" : "📂 BROWSE FILES"}
+              ${mediaPlayer.isTauri ? "📂 OPEN" : "📂 ADD FILES"}
             </button>
-            <button class="media-btn media-btn-danger" id="btn-media-clear">CLEAR ALL</button>
+            <button class="media-btn media-btn-danger" id="btn-media-clear">CLEAR</button>
           </div>
         </div>
 
         <div class="media-body">
-          <!-- LEFT: Player Console -->
           <div class="media-player-panel">
             <div class="media-dropzone" id="media-dropzone">
               <div class="media-drop-inner">
                 <span class="media-drop-icon">⬇</span>
-                <span class="media-drop-text">DROP AUDIO / VIDEO FILES ANYWHERE IN THIS BAY</span>
-                <span class="media-drop-sub">mp3 · mp4 · wav · flac · m4a · ogg · opus · aac · webm + more</span>
+                <span class="media-drop-text">DROP AUDIO / VIDEO FILES HERE</span>
+                <span class="media-drop-sub">mp3 · wav · flac · m4a · mp4 · ogg · opus + more</span>
               </div>
             </div>
 
@@ -88,12 +94,12 @@ export class MediaPlayerUI {
                 <span class="media-np-tag" id="media-np-ext-badge">—</span>
                 <div class="media-np-title-wrap">
                   <span class="media-np-title" id="media-np-title">NO MEDIA LOADED</span>
-                  <span class="media-np-sub" id="media-np-sub">Add files or drop them into the bay</span>
+                  <span class="media-np-sub" id="media-np-sub">Drop files or click ADD FILES</span>
                 </div>
                 <span class="media-np-status" id="media-np-status"></span>
               </div>
 
-              <canvas class="media-waveform" id="media-wave-canvas" width="900" height="120"></canvas>
+              <canvas class="media-waveform" id="media-wave-canvas" width="900" height="160"></canvas>
 
               <div class="media-meters">
                 <div class="media-meter">
@@ -112,10 +118,10 @@ export class MediaPlayerUI {
 
               <div class="media-transport">
                 <div class="media-transport-left">
-                  <button class="media-tbtn" id="btn-media-prev" aria-label="Previous track" title="Previous">⏮</button>
+                  <button class="media-tbtn" id="btn-media-prev" aria-label="Previous" title="Previous">⏮</button>
                   <button class="media-tbtn media-tbtn-play" id="btn-media-play" aria-label="Play / Pause" title="Play / Pause">▶</button>
                   <button class="media-tbtn" id="btn-media-stop" aria-label="Stop" title="Stop">⏹</button>
-                  <button class="media-tbtn" id="btn-media-next" aria-label="Next track" title="Next">⏭</button>
+                  <button class="media-tbtn" id="btn-media-next" aria-label="Next" title="Next">⏭</button>
                 </div>
                 <div class="media-transport-right">
                   <button class="media-chip" id="btn-media-loop" title="Loop mode">🔁 OFF</button>
@@ -134,7 +140,6 @@ export class MediaPlayerUI {
             </div>
           </div>
 
-          <!-- RIGHT: Playlist Rail -->
           <div class="media-playlist">
             <div class="media-pl-header">
               <span>PLAYLIST</span>
@@ -143,6 +148,9 @@ export class MediaPlayerUI {
             <div class="media-pl-tools">
               <button class="media-pl-tool" id="btn-media-move-up" title="Move up" disabled>▲</button>
               <button class="media-pl-tool" id="btn-media-move-down" title="Move down" disabled>▼</button>
+            </div>
+            <div class="media-pl-search-wrap">
+              <input type="text" class="media-pl-search" id="media-pl-search" placeholder="Search tracks..." />
             </div>
             <div class="media-pl-list" id="media-pl-list"></div>
           </div>
@@ -224,9 +232,17 @@ export class MediaPlayerUI {
       const cur = order.indexOf(mediaPlayer.loopMode);
       mediaPlayer.setLoop(order[(cur + 1) % 3]);
     });
+    this.els.search = this.container.querySelector("#media-pl-search");
+    if (this.els.search) {
+      this.els.search.addEventListener("input", (e) => {
+        this.searchQuery = e.target.value;
+        this.renderPlaylist();
+      });
+    }
     this.els.seek.addEventListener("input", (e) => {
       const track = mediaPlayer.current;
-      if (!track || !Number.isFinite(track.duration) || track.duration <= 0) return;
+      if (!track || !Number.isFinite(track.duration) || track.duration <= 0)
+        return;
       const ratio = parseInt(e.target.value, 10) / 1000;
       mediaPlayer.seek(ratio * track.duration);
     });
@@ -261,7 +277,7 @@ export class MediaPlayerUI {
           if (pending) {
             this._pendingPick = null;
             const rebound = mediaPlayer.playlist.find(
-              (t) => t.id === pending && !t.missing && !t.placeholder
+              (t) => t.id === pending && !t.missing && !t.placeholder,
             );
             if (rebound) {
               mediaPlayer.play(rebound.id);
@@ -292,7 +308,10 @@ export class MediaPlayerUI {
         if (paths.length) {
           await mediaPlayer.addPaths(paths);
           if (mediaPlayer.currentIndex < 0) {
-            this._selectTrack(mediaPlayer.playlist[mediaPlayer.playlist.length - paths.length].id);
+            this._selectTrack(
+              mediaPlayer.playlist[mediaPlayer.playlist.length - paths.length]
+                .id,
+            );
           }
         }
       } catch (err) {
@@ -307,7 +326,9 @@ export class MediaPlayerUI {
         const pending = this._pendingPick;
         this._pendingPick = null;
         const rebound = pending
-          ? mediaPlayer.playlist.find((t) => t.id === pending && !t.missing && !t.placeholder)
+          ? mediaPlayer.playlist.find(
+              (t) => t.id === pending && !t.missing && !t.placeholder,
+            )
           : null;
         if (rebound) {
           mediaPlayer.play(rebound.id);
@@ -320,6 +341,7 @@ export class MediaPlayerUI {
   }
 
   _clearAll() {
+    if (!confirm("Clear entire playlist? This cannot be undone.")) return;
     mediaPlayer.clear();
   }
 
@@ -347,22 +369,37 @@ export class MediaPlayerUI {
     const list = this.els.list;
     if (!list) return;
     const tracks = mediaPlayer.playlist;
+    const q = this.searchQuery.trim().toLowerCase();
+    const visible = q
+      ? tracks.filter((t) => t.name.toLowerCase().includes(q))
+      : tracks;
     this.els.plCount.textContent = `${tracks.length} TRACK${tracks.length === 1 ? "" : "S"}`;
     this.els.moveUp.disabled = mediaPlayer.currentIndex <= 0;
     this.els.moveDown.disabled =
-      mediaPlayer.currentIndex < 0 || mediaPlayer.currentIndex >= tracks.length - 1;
+      mediaPlayer.currentIndex < 0 ||
+      mediaPlayer.currentIndex >= tracks.length - 1;
+
+    if (this.els.dropzone) {
+      this.els.dropzone.classList.toggle(
+        "media-dropzone-compact",
+        tracks.length > 0,
+      );
+    }
 
     list.innerHTML = "";
-    tracks.forEach((t, i) => {
+    visible.forEach((t, i) => {
       const meta = extMeta(t.ext);
+      const realIdx = mediaPlayer.playlist.indexOf(t);
       const row = document.createElement("div");
       row.className = "media-pl-row";
-      if (i === mediaPlayer.currentIndex) row.classList.add("media-pl-row-active");
+      if (realIdx === mediaPlayer.currentIndex)
+        row.classList.add("media-pl-row-active");
       if (t.missing) row.classList.add("media-pl-row-missing");
-      const playing = i === mediaPlayer.currentIndex && mediaPlayer.isPlaying;
+      const playing =
+        realIdx === mediaPlayer.currentIndex && mediaPlayer.isPlaying;
 
       row.innerHTML = `
-        <span class="media-pl-idx">${String(i + 1).padStart(2, "0")}</span>
+        <span class="media-pl-idx">${String(realIdx + 1).padStart(2, "0")}</span>
         <span class="media-pl-icon" style="color:${meta.color}">${playing ? "►" : meta.icon}</span>
         <div class="media-pl-info">
           <span class="media-pl-name">${this._esc(t.name)}</span>
@@ -372,8 +409,7 @@ export class MediaPlayerUI {
         <button class="media-pl-del" data-id="${this._esc(t.id)}" title="Remove">✕</button>
       `;
 
-      const idxEl = row.querySelector(".media-pl-idx");
-      idxEl.addEventListener("click", () => this._selectTrack(t.id));
+      row.addEventListener("click", () => this._selectTrack(t.id));
 
       list.appendChild(row);
 
@@ -386,16 +422,18 @@ export class MediaPlayerUI {
       // Drag reorder
       row.draggable = true;
       row.addEventListener("dragstart", (e) => {
-        e.dataTransfer.setData("text/plain", String(i));
+        e.dataTransfer.setData("text/plain", String(realIdx));
         row.classList.add("media-pl-row-dragging");
       });
-      row.addEventListener("dragend", () => row.classList.remove("media-pl-row-dragging"));
+      row.addEventListener("dragend", () =>
+        row.classList.remove("media-pl-row-dragging"),
+      );
       row.addEventListener("dragover", (e) => e.preventDefault());
       row.addEventListener("drop", (e) => {
         e.preventDefault();
         const from = parseInt(e.dataTransfer.getData("text/plain"), 10);
-        if (Number.isInteger(from) && from !== i) {
-          mediaPlayer.reorder(from, i);
+        if (Number.isInteger(from) && from !== realIdx) {
+          mediaPlayer.reorder(from, realIdx);
         }
       });
     });
@@ -420,10 +458,17 @@ export class MediaPlayerUI {
     badge.textContent = meta.label;
     badge.style.color = meta.color;
     badge.style.borderColor = meta.color;
-    status.className = "media-np-status " +
-      (track.missing ? "media-np-status-missing" : mediaPlayer.isPlaying ? "media-np-status-playing" : "media-np-status-ready");
+    status.className =
+      "media-np-status " +
+      (track.missing
+        ? "media-np-status-missing"
+        : mediaPlayer.isPlaying
+          ? "media-np-status-playing"
+          : "media-np-status-ready");
     status.textContent = track.missing
-      ? (track.placeholder ? "RE-ADD FILE" : "MISSING FILE")
+      ? track.placeholder
+        ? "RE-ADD FILE"
+        : "MISSING FILE"
       : mediaPlayer.isPlaying
         ? "PLAYING"
         : "READY";
@@ -494,7 +539,9 @@ export class MediaPlayerUI {
       if (timeCur) timeCur.textContent = fmtTime(ct);
       if (timeTotal) timeTotal.textContent = fmtTime(track.duration);
       if (track.duration > 0 && seek) {
-        seek.value = String(Math.min(1000, Math.round((ct / track.duration) * 1000)));
+        seek.value = String(
+          Math.min(1000, Math.round((ct / track.duration) * 1000)),
+        );
       }
       if (playBtn && isPlaying) {
         playBtn.textContent = "❚❚";
@@ -521,11 +568,15 @@ export class MediaPlayerUI {
           for (let i = from; i < to && i < arr.length; i++) s += arr[i];
           return s / n;
         };
-        const lvl = Math.min(100, avg(freq, 0, freq.length / 2) / 255 * 100);
+        const lvl = Math.min(100, (avg(freq, 0, freq.length / 2) / 255) * 100);
         this.meterL.style.height = `${lvl}%`;
         this.meterR.style.height = `${lvl}%`;
       }
-    } else if (this.meterL && this.meterR && this.meterL.style.height !== "0%") {
+    } else if (
+      this.meterL &&
+      this.meterR &&
+      this.meterL.style.height !== "0%"
+    ) {
       this.meterL.style.height = "0%";
       this.meterR.style.height = "0%";
     }

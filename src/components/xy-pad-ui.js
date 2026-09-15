@@ -59,6 +59,9 @@ export class XyPadUI {
     const resetBtn = document.getElementById("xy-reset-btn");
 
     if (!surface) return;
+    this._surface = surface;
+    this._holdBtn = holdBtn;
+    this._resetBtn = resetBtn;
 
     const setFromPoint = (clientX, clientY) => {
       const rect = surface.getBoundingClientRect();
@@ -71,77 +74,101 @@ export class XyPadUI {
       this.applyModulation();
     };
 
-    // Mouse events
-    surface.addEventListener("mousedown", e => {
+    // Bound handlers stored on the instance so destroy() can remove them.
+    // Mouse events are bound to window so drags continue outside the widget.
+    this._onMouseDown = e => {
       e.preventDefault();
       this.isDragging = true;
       setFromPoint(e.clientX, e.clientY);
-    });
+    };
 
-    window.addEventListener("mousemove", e => {
+    this._onWindowMouseMove = e => {
       if (this.isDragging) {
         setFromPoint(e.clientX, e.clientY);
       }
-    });
+    };
 
-    window.addEventListener("mouseup", () => {
+    this._onWindowMouseUp = () => {
       if (this.isDragging) {
         this.isDragging = false;
         if (!this.isHolding) {
           this.reset(true);
         }
       }
-    });
+    };
 
     // Touch events
-    surface.addEventListener(
-      "touchstart",
-      e => {
-        if (e.cancelable) e.preventDefault();
-        this.isDragging = true;
-        if (e.touches[0]) {
-          setFromPoint(e.touches[0].clientX, e.touches[0].clientY);
-        }
-      },
-      { passive: false }
-    );
+    this._onTouchStart = e => {
+      if (e.cancelable) e.preventDefault();
+      this.isDragging = true;
+      if (e.touches[0]) {
+        setFromPoint(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    };
 
-    surface.addEventListener(
-      "touchmove",
-      e => {
-        if (e.cancelable) e.preventDefault();
-        if (this.isDragging && e.touches[0]) {
-          setFromPoint(e.touches[0].clientX, e.touches[0].clientY);
-        }
-      },
-      { passive: false }
-    );
+    this._onTouchMove = e => {
+      if (e.cancelable) e.preventDefault();
+      if (this.isDragging && e.touches[0]) {
+        setFromPoint(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    };
 
-    surface.addEventListener("touchend", () => {
+    this._onTouchEnd = () => {
       this.isDragging = false;
       if (!this.isHolding) {
         this.reset(true);
       }
-    });
+    };
 
-    surface.addEventListener("touchcancel", () => {
-      this.isDragging = false;
-      if (!this.isHolding) {
-        this.reset(true);
-      }
-    });
-
-    // Button interactions
-    holdBtn?.addEventListener("click", () => {
+    this._onHoldClick = () => {
       this.isHolding = !this.isHolding;
-      holdBtn.classList.toggle("active", this.isHolding);
-    });
+      holdBtn?.classList.toggle("active", this.isHolding);
+    };
 
-    resetBtn?.addEventListener("click", () => {
+    this._onResetClick = () => {
       this.isHolding = false;
       holdBtn?.classList.remove("active");
       this.reset(false);
-    });
+    };
+
+    surface.addEventListener("mousedown", this._onMouseDown);
+    window.addEventListener("mousemove", this._onWindowMouseMove);
+    window.addEventListener("mouseup", this._onWindowMouseUp);
+
+    surface.addEventListener("touchstart", this._onTouchStart, { passive: false });
+    surface.addEventListener("touchmove", this._onTouchMove, { passive: false });
+    surface.addEventListener("touchend", this._onTouchEnd, { passive: false });
+    surface.addEventListener("touchcancel", this._onTouchEnd, { passive: false });
+
+    holdBtn?.addEventListener("click", this._onHoldClick);
+    resetBtn?.addEventListener("click", this._onResetClick);
+  }
+
+  destroy() {
+    window.removeEventListener("mousemove", this._onWindowMouseMove);
+    window.removeEventListener("mouseup", this._onWindowMouseUp);
+
+    if (this._surface) {
+      this._surface.removeEventListener("mousedown", this._onMouseDown);
+      this._surface.removeEventListener("touchstart", this._onTouchStart);
+      this._surface.removeEventListener("touchmove", this._onTouchMove);
+      this._surface.removeEventListener("touchend", this._onTouchEnd);
+      this._surface.removeEventListener("touchcancel", this._onTouchEnd);
+    }
+    this._holdBtn?.removeEventListener("click", this._onHoldClick);
+    this._resetBtn?.removeEventListener("click", this._onResetClick);
+
+    this._surface = null;
+    this._holdBtn = null;
+    this._resetBtn = null;
+    this._onMouseDown = null;
+    this._onWindowMouseMove = null;
+    this._onWindowMouseUp = null;
+    this._onTouchStart = null;
+    this._onTouchMove = null;
+    this._onTouchEnd = null;
+    this._onHoldClick = null;
+    this._onResetClick = null;
   }
 
   updatePuckVisual() {

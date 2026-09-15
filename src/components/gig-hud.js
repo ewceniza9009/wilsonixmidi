@@ -15,6 +15,7 @@ import { TRITON_BANKS } from "../triton/triton-soundbanks.js";
 import { getTritonProgramById } from "../triton/combi-timbres.js";
 import { arpeggiator } from "../audio/arpeggiator.js";
 import { APP_VERSION, BUILD_NUMBER, BUILD_DATE, getFullVersionString } from "../version.js";
+import { getComponent } from "./component-registry.js";
 
 export class GigHudUI {
   constructor(containerId, onOpenLicenseModal) {
@@ -570,9 +571,7 @@ export class GigHudUI {
       const prog = getTritonProgramById(progId);
       if (prog) {
         multiLayerEngine.setTritonVaProgram(prog);
-        if (window.__tritonConsole && typeof window.__tritonConsole.selectProgramById === "function") {
-          window.__tritonConsole.selectProgramById(progId);
-        }
+        getComponent("tritonConsole")?.selectProgramById?.(progId);
       }
       return;
     }
@@ -592,9 +591,7 @@ export class GigHudUI {
     const tritonProg = getTritonProgramById(selectedId);
     if (tritonProg) {
       multiLayerEngine.setTritonVaProgram(tritonProg);
-      if (window.__tritonConsole && typeof window.__tritonConsole.selectProgramById === "function") {
-        window.__tritonConsole.selectProgramById(selectedId);
-      }
+      getComponent("tritonConsole")?.selectProgramById?.(selectedId);
       return;
     }
     multiLayerEngine.setSingleInstrument(selectedId);
@@ -861,31 +858,38 @@ export class GigHudUI {
 
     const latencyVal = document.getElementById("hud-latency-val");
     const latencyPill = document.getElementById("hud-latency-pill");
+    let lastUpdate = 0;
 
-    const updateFrame = () => {
+    const updateFrame = (now) => {
       if (!this._vuRunning) return;
 
-      const l = audioCore.measureLatency();
-      const shown = l.measuredMs || l.reportedMs;
-      if (shown) {
-        this._latencySmoothed = this._latencySmoothed === null ? shown : this._latencySmoothed * 0.6 + shown * 0.4;
-        if (latencyVal) {
-          latencyVal.innerText = `${this._latencySmoothed.toFixed(1)}ms`;
-          latencyPill?.classList.toggle("latency-warm", this._latencySmoothed > 20);
-          latencyPill?.classList.toggle("latency-hot", this._latencySmoothed > 50);
+      // Throttle to ~10Hz, matching the original setInterval(100) cadence.
+      // requestAnimationFrame lets the tab pause the loop when backgrounded
+      // instead of burning CPU for a hidden HUD.
+      if (now - lastUpdate >= 100) {
+        lastUpdate = now;
+        const l = audioCore.measureLatency();
+        const shown = l.measuredMs || l.reportedMs;
+        if (shown) {
+          this._latencySmoothed = this._latencySmoothed === null ? shown : this._latencySmoothed * 0.6 + shown * 0.4;
+          if (latencyVal) {
+            latencyVal.innerText = `${this._latencySmoothed.toFixed(1)}ms`;
+            latencyPill?.classList.toggle("latency-warm", this._latencySmoothed > 20);
+            latencyPill?.classList.toggle("latency-hot", this._latencySmoothed > 50);
+          }
         }
       }
+      this.vuAnimationId = requestAnimationFrame(updateFrame);
     };
 
-    updateFrame();
-    this.vuIntervalId = setInterval(updateFrame, 100);
+    this.vuAnimationId = requestAnimationFrame(updateFrame);
   }
 
   stopVuMonitor() {
     this._vuRunning = false;
-    if (this.vuIntervalId) {
-      clearInterval(this.vuIntervalId);
-      this.vuIntervalId = null;
+    if (this.vuAnimationId) {
+      cancelAnimationFrame(this.vuAnimationId);
+      this.vuAnimationId = null;
     }
   }
 

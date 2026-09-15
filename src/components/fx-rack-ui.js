@@ -5,6 +5,24 @@
 
 import { audioCore } from "../audio/audio-core.js";
 
+/**
+ * Formats a knob value for its unit, shared by both the global sync path
+ * (updateKnobVisual) and the drag path (bindKnobs). Keeps display logic in
+ * one place so unit formatting stays consistent.
+ */
+function formatKnobValue(v, unit) {
+  if (unit === "%") return `${Math.round(Math.max(0, Math.min(1, v)) * 100)}%`;
+  if (unit === "dB") return `${v >= 0 ? "+" : ""}${v.toFixed(1)}dB`;
+  if (unit === "Hz") return v >= 1000 ? `${(v / 1000).toFixed(1)}kHz` : `${Math.round(v)}Hz`;
+  if (unit === "ms") return `${Math.round(v)}ms`;
+  if (unit === ":1") return `${Math.round(v)}:1`;
+  if (unit === "bit") return `${Math.round(v)}-bit`;
+  if (unit === "x") return `${v.toFixed(1)}x`;
+  if (unit === "s") return v < 0.2 ? `${Math.round(v * 1000)}ms` : `${v.toFixed(1)}s`;
+  if (unit === "note") return v.toFixed(2);
+  return `${v.toFixed(1)}${unit}`;
+}
+
 export class FxRackUI {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
@@ -37,17 +55,7 @@ export class FxRackUI {
     const norm = range === 0 ? 0 : Math.max(0, Math.min(1, (v - min) / range));
     const deg = -140 + norm * 280;
     if (pointer) pointer.style.transform = `rotate(${deg}deg)`;
-    if (valEl) {
-      if (unit === "%") valEl.innerText = `${Math.round(norm * 100)}%`;
-      else if (unit === "dB") valEl.innerText = `${v >= 0 ? "+" : ""}${v.toFixed(1)}dB`;
-      else if (unit === "Hz") valEl.innerText = v >= 1000 ? `${(v / 1000).toFixed(1)}kHz` : `${Math.round(v)}Hz`;
-      else if (unit === "ms") valEl.innerText = `${Math.round(v)}ms`;
-      else if (unit === ":1") valEl.innerText = `${Math.round(v)}:1`;
-      else if (unit === "bit") valEl.innerText = `${Math.round(v)}-bit`;
-      else if (unit === "x") valEl.innerText = `${v.toFixed(1)}x`;
-      else if (unit === "s") valEl.innerText = v < 0.2 ? `${Math.round(v * 1000)}ms` : `${v.toFixed(1)}s`;
-      else valEl.innerText = `${v.toFixed(1)}${unit}`;
-    }
+    if (valEl) valEl.innerText = formatKnobValue(v, unit);
   }
 
   render() {
@@ -537,16 +545,7 @@ export class FxRackUI {
         const norm = (v - min) / (max - min);
         const deg = -140 + norm * 280; // -140 deg to +140 deg
         if (pointer) pointer.style.transform = `rotate(${deg}deg)`;
-        if (valEl) {
-          if (unit === "%") valEl.innerText = `${Math.round(norm * 100)}%`;
-          else if (unit === "dB") valEl.innerText = `${v >= 0 ? "+" : ""}${v.toFixed(1)}dB`;
-          else if (unit === "Hz") valEl.innerText = v >= 1000 ? `${(v / 1000).toFixed(1)}kHz` : `${Math.round(v)}Hz`;
-          else if (unit === "ms") valEl.innerText = `${Math.round(v)}ms`;
-          else if (unit === ":1") valEl.innerText = `${Math.round(v)}:1`;
-          else if (unit === "bit") valEl.innerText = `${Math.round(v)}-bit`;
-          else if (unit === "x") valEl.innerText = `${v.toFixed(1)}x`;
-          else valEl.innerText = `${v.toFixed(1)}${unit}`;
-        }
+        if (valEl) valEl.innerText = formatKnobValue(v, unit);
       };
 
       updateKnobUi(val);

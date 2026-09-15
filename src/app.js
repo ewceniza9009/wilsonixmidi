@@ -21,6 +21,7 @@ import { GroovePlayerUI } from "./components/groove-player-ui.js";
 import { DemoStationUI } from "./components/demo-station.js";
 import { MediaPlayerUI } from "./components/media-player-ui.js";
 import { multiLayerEngine } from "./audio/multi-layer-engine.js";
+import { registerComponent } from "./components/component-registry.js";
 
 class MidiKeyEliteApp {
   constructor() {
@@ -197,7 +198,7 @@ class MidiKeyEliteApp {
     // 4. Korg Triton Hardware TouchView Console
     try {
       this.tritonConsole = new TritonWorkstationUI("triton-workstation-mount");
-      window.__tritonConsole = this.tritonConsole;
+      registerComponent("tritonConsole", this.tritonConsole);
     } catch (e) {
       console.warn("TritonWorkstationUI init:", e);
     }
@@ -205,7 +206,7 @@ class MidiKeyEliteApp {
     // 5. Combi 4-Timbre Multi-Layer Mixer
     try {
       this.multiLayerConsole = new MultiLayerUI("multi-layer-mount");
-      window.__multiLayerConsole = this.multiLayerConsole;
+      registerComponent("multiLayerConsole", this.multiLayerConsole);
     } catch (e) {
       console.warn("MultiLayerUI init:", e);
     }

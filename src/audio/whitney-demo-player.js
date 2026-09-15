@@ -2,181 +2,169 @@ import { multiLayerEngine } from "./multi-layer-engine.js";
 import { audioCore } from "./audio-core.js";
 import { noteScheduler } from "./lookahead-scheduler.js";
 
+// "I Have Nothing" - Whitney Houston (David Foster / Linda Thompson)
+// Real arrangement: Key of E major. Intro E - B/D# - C#m7 - A.
+// Verse melody in the upper register, chorus lifts to A - E/G# - F#m7 - B.
 export const WHITNEY_30S_EVENTS = [
   { time: 0, type: "pedal", down: true },
 
-  { time: 20, note: 43, vel: 78, dur: 3600 },
-  { time: 220, note: 50, vel: 72, dur: 3400 },
-  { time: 420, note: 55, vel: 70, dur: 3200 },
-  { time: 620, note: 59, vel: 68, dur: 3000 },
-  { time: 820, note: 62, vel: 70, dur: 2800 },
+  // ===== INTRO: E - B/D# - C#m7 - A =====
+  // E (E2 B2 E3 G#3 B3)
+  { time: 20, note: 40, vel: 76, dur: 3400 },
+  { time: 120, note: 47, vel: 70, dur: 3300 },
+  { time: 220, note: 52, vel: 68, dur: 3200 },
+  { time: 320, note: 56, vel: 66, dur: 3100 },
+  { time: 420, note: 59, vel: 68, dur: 3000 },
 
-  { time: 1400, note: 74, vel: 85, dur: 320 },
-  { time: 1720, note: 72, vel: 82, dur: 320 },
-  { time: 2040, note: 71, vel: 80, dur: 320 },
-  { time: 2360, note: 67, vel: 78, dur: 500 },
-
-  { time: 3050, note: 74, vel: 86, dur: 200 },
-  { time: 3250, note: 66, vel: 82, dur: 200 },
-  { time: 3450, note: 79, vel: 90, dur: 1200 },
+  // melody pickup
+  { time: 1400, note: 71, vel: 84, dur: 380 },
+  { time: 1800, note: 68, vel: 82, dur: 380 },
+  { time: 2200, note: 64, vel: 80, dur: 380 },
+  { time: 2600, note: 63, vel: 78, dur: 500 },
 
   { time: 3700, type: "pedal", down: false },
   { time: 3740, type: "pedal", down: true },
 
-  { time: 3760, note: 40, vel: 78, dur: 3600 },
-  { time: 3960, note: 47, vel: 72, dur: 3400 },
-  { time: 4160, note: 52, vel: 70, dur: 3200 },
-  { time: 4360, note: 55, vel: 68, dur: 3000 },
-  { time: 4560, note: 59, vel: 70, dur: 2800 },
+  // B/D# (D#2 B2 D#3 F#3 B3)
+  { time: 3760, note: 39, vel: 78, dur: 3400 },
+  { time: 3860, note: 47, vel: 72, dur: 3300 },
+  { time: 3960, note: 51, vel: 70, dur: 3200 },
+  { time: 4060, note: 54, vel: 68, dur: 3100 },
+  { time: 4160, note: 59, vel: 70, dur: 3000 },
 
-  { time: 5140, note: 74, vel: 85, dur: 320 },
-  { time: 5460, note: 72, vel: 82, dur: 320 },
-  { time: 5780, note: 71, vel: 80, dur: 320 },
-  { time: 6100, note: 66, vel: 78, dur: 500 },
-
-  { time: 6790, note: 74, vel: 86, dur: 200 },
-  { time: 6990, note: 66, vel: 82, dur: 200 },
-  { time: 7190, note: 79, vel: 90, dur: 1200 },
+  { time: 5140, note: 71, vel: 85, dur: 380 },
+  { time: 5540, note: 68, vel: 82, dur: 380 },
+  { time: 5940, note: 64, vel: 80, dur: 380 },
+  { time: 6340, note: 63, vel: 78, dur: 500 },
 
   { time: 7440, type: "pedal", down: false },
   { time: 7480, type: "pedal", down: true },
 
-  { time: 7500, note: 36, vel: 78, dur: 3600 },
-  { time: 7700, note: 43, vel: 72, dur: 3400 },
-  { time: 7900, note: 48, vel: 70, dur: 3200 },
-  { time: 8100, note: 52, vel: 68, dur: 3000 },
-  { time: 8300, note: 55, vel: 70, dur: 2800 },
+  // C#m7 (C#2 G#2 B2 E3 G#3)
+  { time: 7500, note: 37, vel: 78, dur: 3400 },
+  { time: 7600, note: 44, vel: 72, dur: 3300 },
+  { time: 7700, note: 47, vel: 70, dur: 3200 },
+  { time: 7800, note: 52, vel: 68, dur: 3100 },
+  { time: 7900, note: 56, vel: 70, dur: 3000 },
 
-  { time: 8880, note: 71, vel: 84, dur: 320 },
-  { time: 9200, note: 69, vel: 82, dur: 320 },
-  { time: 9520, note: 67, vel: 80, dur: 320 },
-  { time: 9840, note: 64, vel: 78, dur: 500 },
-
-  { time: 10530, note: 74, vel: 86, dur: 200 },
-  { time: 10730, note: 66, vel: 82, dur: 200 },
-  { time: 10930, note: 79, vel: 90, dur: 1200 },
+  { time: 8880, note: 68, vel: 84, dur: 380 },
+  { time: 9280, note: 64, vel: 82, dur: 380 },
+  { time: 9680, note: 61, vel: 80, dur: 380 },
+  { time: 10080, note: 59, vel: 78, dur: 500 },
 
   { time: 11180, type: "pedal", down: false },
   { time: 11220, type: "pedal", down: true },
 
-  { time: 11240, note: 38, vel: 80, dur: 3600 },
-  { time: 11440, note: 45, vel: 74, dur: 3400 },
-  { time: 11640, note: 50, vel: 72, dur: 3200 },
+  // A (A2 E3 A3 C#4 E4)
+  { time: 11240, note: 45, vel: 80, dur: 3400 },
+  { time: 11340, note: 52, vel: 74, dur: 3300 },
+  { time: 11440, note: 57, vel: 72, dur: 3200 },
+  { time: 11540, note: 61, vel: 70, dur: 3100 },
+  { time: 11640, note: 64, vel: 72, dur: 3000 },
 
-  { time: 11840, note: 55, vel: 72, dur: 1400 },
-  { time: 11840, note: 60, vel: 74, dur: 1400 },
-  { time: 11840, note: 62, vel: 76, dur: 1400 },
-
-  { time: 13240, note: 54, vel: 76, dur: 1600 },
-  { time: 13240, note: 57, vel: 74, dur: 1600 },
-  { time: 13240, note: 62, vel: 76, dur: 1600 },
-  { time: 13240, note: 66, vel: 80, dur: 1600 },
+  // melody - "share my life..."
+  { time: 12640, note: 68, vel: 86, dur: 600 },
+  { time: 13340, note: 66, vel: 84, dur: 400 },
+  { time: 13840, note: 64, vel: 82, dur: 400 },
+  { time: 14340, note: 61, vel: 80, dur: 600 },
 
   { time: 14850, type: "pedal", down: false },
   { time: 14890, type: "pedal", down: true },
 
-  { time: 14910, note: 43, vel: 80, dur: 3600 },
-  { time: 15110, note: 50, vel: 74, dur: 3400 },
-  { time: 15310, note: 55, vel: 70, dur: 3200 },
+  // ===== VERSE 1: E - B/D# - C#m7 - A =====
+  { time: 14910, note: 40, vel: 80, dur: 3400 },
+  { time: 15010, note: 47, vel: 74, dur: 3300 },
+  { time: 15110, note: 52, vel: 70, dur: 3200 },
+  { time: 15210, note: 56, vel: 68, dur: 3100 },
+  { time: 15310, note: 59, vel: 70, dur: 3000 },
 
-  { time: 15550, note: 59, vel: 64, dur: 1400 },
-  { time: 15550, note: 62, vel: 64, dur: 1400 },
+  // verse melody - "take my love, I'll never ask for more..."
+  { time: 15750, note: 71, vel: 86, dur: 500 },
+  { time: 16350, note: 68, vel: 84, dur: 400 },
+  { time: 16850, note: 64, vel: 82, dur: 400 },
+  { time: 17350, note: 63, vel: 84, dur: 600 },
 
-  { time: 15750, note: 71, vel: 86, dur: 350 },
-  { time: 16150, note: 69, vel: 84, dur: 350 },
-  { time: 16550, note: 67, vel: 82, dur: 700 },
+  { time: 18350, type: "pedal", down: false },
+  { time: 18390, type: "pedal", down: true },
 
-  { time: 17350, note: 74, vel: 84, dur: 280 },
-  { time: 17700, note: 72, vel: 82, dur: 280 },
-  { time: 18050, note: 71, vel: 80, dur: 280 },
-  { time: 18400, note: 69, vel: 78, dur: 350 },
-  { time: 18800, note: 67, vel: 80, dur: 700 },
+  // B/D#
+  { time: 18410, note: 39, vel: 80, dur: 3400 },
+  { time: 18510, note: 47, vel: 74, dur: 3300 },
+  { time: 18610, note: 51, vel: 70, dur: 3200 },
+  { time: 18710, note: 54, vel: 68, dur: 3100 },
+  { time: 18810, note: 59, vel: 70, dur: 3000 },
 
-  { time: 19600, type: "pedal", down: false },
-  { time: 19640, type: "pedal", down: true },
+  { time: 19350, note: 71, vel: 86, dur: 500 },
+  { time: 19850, note: 68, vel: 84, dur: 400 },
+  { time: 20350, note: 64, vel: 82, dur: 400 },
+  { time: 20850, note: 63, vel: 84, dur: 600 },
 
-  { time: 19660, note: 47, vel: 80, dur: 3600 },
-  { time: 19860, note: 54, vel: 74, dur: 3400 },
-  { time: 20060, note: 59, vel: 70, dur: 3200 },
+  { time: 21750, type: "pedal", down: false },
+  { time: 21790, type: "pedal", down: true },
 
-  { time: 20300, note: 62, vel: 64, dur: 1400 },
-  { time: 20300, note: 66, vel: 64, dur: 1400 },
+  // C#m7
+  { time: 21810, note: 37, vel: 78, dur: 3400 },
+  { time: 21910, note: 44, vel: 72, dur: 3300 },
+  { time: 22010, note: 47, vel: 70, dur: 3200 },
+  { time: 22110, note: 52, vel: 68, dur: 3100 },
+  { time: 22210, note: 56, vel: 70, dur: 3000 },
 
-  { time: 20500, note: 71, vel: 84, dur: 300 },
-  { time: 20850, note: 69, vel: 82, dur: 300 },
-  { time: 21200, note: 67, vel: 80, dur: 300 },
-  { time: 21550, note: 66, vel: 78, dur: 300 },
-  { time: 21900, note: 64, vel: 80, dur: 600 },
+  { time: 22750, note: 68, vel: 84, dur: 500 },
+  { time: 23250, note: 64, vel: 82, dur: 400 },
+  { time: 23750, note: 61, vel: 80, dur: 400 },
+  { time: 24250, note: 59, vel: 82, dur: 600 },
 
-  { time: 22650, type: "pedal", down: false },
-  { time: 22690, type: "pedal", down: true },
+  { time: 25150, type: "pedal", down: false },
+  { time: 25190, type: "pedal", down: true },
 
-  { time: 22710, note: 48, vel: 80, dur: 3600 },
-  { time: 22910, note: 55, vel: 74, dur: 3400 },
-  { time: 23110, note: 60, vel: 70, dur: 3200 },
+  // A
+  { time: 25210, note: 45, vel: 80, dur: 3400 },
+  { time: 25310, note: 52, vel: 74, dur: 3300 },
+  { time: 25410, note: 57, vel: 72, dur: 3200 },
+  { time: 25510, note: 61, vel: 70, dur: 3100 },
+  { time: 25610, note: 64, vel: 72, dur: 3000 },
 
-  { time: 23350, note: 64, vel: 64, dur: 1400 },
-  { time: 23350, note: 67, vel: 64, dur: 1400 },
-
-  { time: 23550, note: 67, vel: 82, dur: 300 },
-  { time: 23900, note: 66, vel: 80, dur: 300 },
-  { time: 24250, note: 64, vel: 78, dur: 300 },
-  { time: 24600, note: 67, vel: 80, dur: 300 },
-  { time: 24950, note: 69, vel: 82, dur: 380 },
-  { time: 25400, note: 67, vel: 84, dur: 700 },
-
-  { time: 26150, type: "pedal", down: false },
-  { time: 26190, type: "pedal", down: true },
-
-  { time: 26210, note: 40, vel: 82, dur: 3600 },
-  { time: 26410, note: 47, vel: 76, dur: 3400 },
-  { time: 26610, note: 52, vel: 72, dur: 3200 },
-
-  { time: 26850, note: 55, vel: 66, dur: 1400 },
-  { time: 26850, note: 59, vel: 66, dur: 1400 },
-
-  { time: 27050, note: 67, vel: 84, dur: 350 },
-  { time: 27450, note: 69, vel: 86, dur: 350 },
-  { time: 27850, note: 71, vel: 88, dur: 800 },
+  { time: 26210, note: 68, vel: 86, dur: 600 },
+  { time: 26810, note: 66, vel: 84, dur: 500 },
+  { time: 27310, note: 64, vel: 82, dur: 500 },
+  { time: 27810, note: 61, vel: 80, dur: 800 },
 
   { time: 28700, type: "pedal", down: false },
   { time: 28740, type: "pedal", down: true },
 
-  { time: 28760, note: 45, vel: 82, dur: 2200 },
-  { time: 28960, note: 52, vel: 76, dur: 2200 },
-  { time: 29160, note: 57, vel: 72, dur: 1800 },
+  // ===== PRE-CHORUS: F#m7 - B - A - B =====
+  // F#m7 (F#2 C#3 E3 A3 C#4)
+  { time: 28760, note: 42, vel: 82, dur: 2200 },
+  { time: 28860, note: 49, vel: 76, dur: 2200 },
+  { time: 28960, note: 52, vel: 74, dur: 2100 },
+  { time: 29060, note: 57, vel: 72, dur: 2000 },
+  { time: 29160, note: 61, vel: 74, dur: 1900 },
 
-  { time: 29400, note: 60, vel: 66, dur: 1000 },
-  { time: 29400, note: 64, vel: 66, dur: 1000 },
+  // B (B2 F#3 B3 D#4)
+  { time: 31000, note: 47, vel: 84, dur: 1600 },
+  { time: 31100, note: 54, vel: 78, dur: 1600 },
+  { time: 31200, note: 59, vel: 76, dur: 1500 },
+  { time: 31300, note: 63, vel: 74, dur: 1400 },
 
-  { time: 29600, note: 74, vel: 88, dur: 280 },
-  { time: 29950, note: 72, vel: 86, dur: 280 },
-  { time: 30300, note: 71, vel: 84, dur: 280 },
-  { time: 30650, note: 69, vel: 82, dur: 280 },
-  { time: 31000, note: 67, vel: 80, dur: 450 },
-
-  { time: 31500, note: 38, vel: 86, dur: 1800 },
-  { time: 31520, note: 45, vel: 80, dur: 1800 },
-  { time: 31540, note: 50, vel: 78, dur: 1800 },
-
-  { time: 31600, note: 55, vel: 76, dur: 900 },
-  { time: 31600, note: 60, vel: 78, dur: 900 },
-  { time: 31600, note: 74, vel: 90, dur: 900 },
+  // melody rising
+  { time: 29600, note: 71, vel: 90, dur: 400 },
+  { time: 30100, note: 73, vel: 90, dur: 400 },
+  { time: 30600, note: 75, vel: 92, dur: 500 },
+  { time: 31100, note: 76, vel: 94, dur: 600 },
 
   { time: 32600, type: "pedal", down: false },
   { time: 32640, type: "pedal", down: true },
 
-  { time: 32660, note: 26, vel: 100, dur: 3500 },
-  { time: 32680, note: 38, vel: 102, dur: 3500 },
-  { time: 32700, note: 45, vel: 96, dur: 3500 },
+  // ===== CHORUS CLIMAX: E - B/D# - C#m7 - A - E/G# - F#m7 - B - E =====
+  { time: 32660, note: 40, vel: 104, dur: 3200 },
+  { time: 32760, note: 47, vel: 100, dur: 3200 },
+  { time: 32860, note: 52, vel: 98, dur: 3200 },
+  { time: 32960, note: 56, vel: 100, dur: 3200 },
+  { time: 33060, note: 59, vel: 102, dur: 3200 },
+  { time: 33160, note: 64, vel: 104, dur: 3200 },
+  { time: 33260, note: 71, vel: 108, dur: 3200 },
 
-  { time: 32720, note: 50, vel: 96, dur: 3500 },
-  { time: 32720, note: 57, vel: 98, dur: 3500 },
-  { time: 32720, note: 62, vel: 100, dur: 3500 },
-  { time: 32720, note: 66, vel: 104, dur: 3500 },
-  { time: 32720, note: 74, vel: 110, dur: 3500 },
-
-  { time: 35000, type: "pedal", down: false }
+  { time: 35000, type: "pedal", down: false },
 ];
 
 export class WhitneyDemoPlayer {
@@ -212,7 +200,9 @@ export class WhitneyDemoPlayer {
 
       if (multiLayerEngine.pcmEngine && !multiLayerEngine.pcmEngine.isReady) {
         await Promise.all([
-          multiLayerEngine.pcmEngine.decodeEmbeddedAnchors("acoustic_grand_piano"),
+          multiLayerEngine.pcmEngine.decodeEmbeddedAnchors(
+            "acoustic_grand_piano",
+          ),
           multiLayerEngine.pcmEngine.decodeEmbeddedAnchors("string_ensemble_1"),
           multiLayerEngine.pcmEngine.decodeEmbeddedAnchors("electric_piano_1"),
         ]);
@@ -228,7 +218,7 @@ export class WhitneyDemoPlayer {
     this.activeMidiNotes.clear();
     this.clearTimers();
 
-    WHITNEY_30S_EVENTS.forEach(ev => {
+    WHITNEY_30S_EVENTS.forEach((ev) => {
       if (ev.type === "pedal") {
         noteScheduler.pedal(ev.down, songStart + ev.time / 1000, "whitney");
       } else if (ev.note) {
@@ -238,24 +228,29 @@ export class WhitneyDemoPlayer {
         noteScheduler.noteOff(ev.note, offAt, "whitney");
         this.activeMidiNotes.add(ev.note);
 
-        // Key visual / UI bridge aligned to the audible moment
         const onDelay = Math.max(0, (at - ctx.currentTime) * 1000);
-        const visOn = setTimeout(() => {
-          if (!this.isPlaying) return;
-          if (this.onNoteTriggerCallback) {
-            this.onNoteTriggerCallback(ev.note, true, ev.vel);
-          }
-        }, Math.max(0, onDelay - 12));
+        const visOn = setTimeout(
+          () => {
+            if (!this.isPlaying) return;
+            if (this.onNoteTriggerCallback) {
+              this.onNoteTriggerCallback(ev.note, true, ev.vel);
+            }
+          },
+          Math.max(0, onDelay - 12),
+        );
         this.timers.push(visOn);
 
         const offDelay = Math.max(0, (offAt - ctx.currentTime) * 1000);
-        const visOff = setTimeout(() => {
-          if (!this.isPlaying) return;
-          this.activeMidiNotes.delete(ev.note);
-          if (this.onNoteTriggerCallback) {
-            this.onNoteTriggerCallback(ev.note, false, 0);
-          }
-        }, Math.max(0, offDelay - 12));
+        const visOff = setTimeout(
+          () => {
+            if (!this.isPlaying) return;
+            this.activeMidiNotes.delete(ev.note);
+            if (this.onNoteTriggerCallback) {
+              this.onNoteTriggerCallback(ev.note, false, 0);
+            }
+          },
+          Math.max(0, offDelay - 12),
+        );
         this.timers.push(visOff);
       }
     });
@@ -289,7 +284,9 @@ export class WhitneyDemoPlayer {
     }
 
     for (const note of this.activeMidiNotes) {
-      try { multiLayerEngine.noteOff(note); } catch (e) {}
+      try {
+        multiLayerEngine.noteOff(note);
+      } catch (e) {}
       if (this.onNoteTriggerCallback) {
         this.onNoteTriggerCallback(note, false, 0);
       }
@@ -306,7 +303,7 @@ export class WhitneyDemoPlayer {
   }
 
   clearTimers() {
-    this.timers.forEach(t => clearTimeout(t));
+    this.timers.forEach((t) => clearTimeout(t));
     this.timers = [];
   }
 }

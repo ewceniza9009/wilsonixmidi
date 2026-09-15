@@ -118,6 +118,15 @@ export class LicenseModalUI {
                   <button class="activate-submit-btn" id="activate-submit-btn">ACTIVATE</button>
                 </div>
                 <div class="key-help-hint">Format: MKPRO-&lt;LICENSEE&gt;-&lt;EXPIRY&gt;-&lt;SIGNATURE&gt;</div>
+
+                <div style="margin-top: 10px; margin-bottom: 4px;">
+                  <label style="margin: 0;">DEVICE ACTIVATION CODE <span style="color: #94a3b8; font-weight: 400; text-transform: none;">(only if required)</span></label>
+                </div>
+                <div class="key-input-row">
+                  <input type="text" id="activation-code-input" placeholder="MKACT-DEV-XXXXXXXX-..." spellcheck="false" autocomplete="off" />
+                </div>
+                <div class="key-help-hint">If your administrator provided an activation code, paste it here. Desktop users typically do not need this.</div>
+
                 <div class="activation-msg" id="activation-msg"></div>
               </div>
             `
@@ -163,12 +172,15 @@ export class LicenseModalUI {
         return;
       }
 
+      const actCodeInput = document.getElementById("activation-code-input");
+      const activationCode = actCodeInput?.value?.trim() || null;
+
       activateBtn.disabled = true;
       activateBtn.innerText = "VERIFYING...";
 
       let res;
       try {
-        res = await licenseManager.activate(key);
+        res = await licenseManager.activate(key, activationCode);
       } catch (e) {
         res = { success: false, error: "License validation failed unexpectedly. Please try again." };
       } finally {
