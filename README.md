@@ -8,15 +8,15 @@
 [![Audio: Web Audio API](https://img.shields.io/badge/Audio-Direct%20PCM%20%2B%20VA%20Engine-FF6F00?style=for-the-badge&logo=audio)](https://github.com/ewceniza9009/wilsonixmidi)
 [![Framework: Tauri v2 + Vite](https://img.shields.io/badge/Framework-Tauri%20v2%20%7C%20Rust-673AB7?style=for-the-badge)](https://tauri.app/)
 [![License: Proprietary](https://img.shields.io/badge/License-WILSONIX%20Commercial-red?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi)
-[![Version: v2.0.1](https://img.shields.io/badge/Version-v2.0.1%20Build%2020%20Production-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
+[![Version: v2.0.2](https://img.shields.io/badge/Version-v2.0.2%20Build%2021%20Production-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
 
 ---
 
-## 🚀 Official Production Downloads (v2.0.1 Build 20 Latest Release)
+## 🚀 Official Production Downloads (v2.0.2 Build 21 Latest Release)
 
 | Package / Distribution        | Target Operating System           |  Architecture  |                                                             Direct Download Link                                                              |
 | :---------------------------- | :-------------------------------- | :------------: | :-------------------------------------------------------------------------------------------------------------------------------------------: |
-| **Windows Desktop Installer** | Windows 10 / 11                   |      x64       | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX.MIDIKEY_2.0.1_x64-setup.exe) |
+| **Windows Desktop Installer** | Windows 10 / 11                   |      x64       | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX.MIDIKEY_2.0.2_x64-setup.exe) |
 | **Android Package (APK)**     | Android 8.0+ (Oreo to Android 15) | ARM64 / x86_64 |        [⬇️ Download Android APK (`.apk`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/wilsonix-midikey.apk)         |
 
 _Official binaries and checksums are verified and hosted on the [GitHub Releases page](https://github.com/ewceniza9009/wilsonixmidi/releases)._
@@ -43,7 +43,31 @@ _For the full deep-dive, see the [Master Feature Catalog](#-master-feature-catal
 
 ---
 
-## 📑 Granular Changelog & Release Notes (v2.0.1 • Build 20)
+## 📑 Granular Changelog & Release Notes (v2.0.2 • Build 21)
+
+### 1. ☀️ Light Theme — Keyboard Deck Strip
+
+- **Full Light-Mode Keyboard HUD**: New `light-app.css` (400 lines) provides complete light-theme coverage for the keyboard deck strip — pitch bend / mod / air wheels, octave mini-picker, velocity accent pills, curve accent strip, hide-keys toggle, and the sustain latch + pedal LED. All styles are 100% scoped to `[data-theme="light"]` with zero runtime cost in dark mode.
+
+### 2. 🔊 Session Clip Looper Volume Control
+
+- **Dedicated Loop Volume Slider**: New **LOOP VOL** fader (10–100%, default 55%) in the looper header lets performers ride the clip playback level under their live preset without affecting the master mix or individual layer gains.
+- **Per-Note Gain Scaling**: The looper gain multiplier is applied at the note-scheduling layer (`L.gain * this.looperGain`), keeping the audio worklet sample loop untouched for zero added latency.
+
+### 3. 🎛️ New Live SFX Instruments
+
+- **⚡ Sound System Laser Zap** (`laser_zap`): Punchy electronic laser sweep for DJ transitions and drops.
+- **🎺 Dancehall Stage Airhorn Blast** (`dub_horn`): Classic dancehall/reggae airhorn one-shot for live hype.
+- **💣 Heavy 808 Sub-Boom / Bass Drop** (`sub_boom`): Deep 808-style sub-bass boom for trap and EDM drops.
+- **🌊 White Noise Sweep & Transition Riser** (`noise_riser`): Building white noise riser for tension and transitions.
+
+### 4. 🧹 Codebase Formatting & Hygiene
+
+- **Prettier Standardization**: Applied consistent code formatting across `gig-hud.js` — object literals expanded to multi-line, arrow function parentheses normalized, string quotes standardized to double-quotes. Zero logic changes.
+
+---
+
+## 📑 Prior Release Notes (v2.0.1 • Build 20)
 
 ### 1. 🔁 Clip Looper Sustain-Playback Fix
 
@@ -400,7 +424,7 @@ npm run lint
 
 # 4. Build Windows Desktop NSIS Setup Installer (.exe)
 npm run build:desktop
-# Output: src-tauri/target/release/bundle/nsis/WILSONIX MIDIKEY_2.0.1_x64-setup.exe
+# Output: src-tauri/target/release/bundle/nsis/WILSONIX MIDIKEY_2.0.2_x64-setup.exe
 
 # 5. Build Android APK (.apk)
 npm run build:apk

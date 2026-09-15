@@ -1,0 +1,399 @@
+/* ============================================================================
+   WILSONIX MIDIKEY — LIGHT THEME · KEYBOARD DECK STRIP (HUD strip only)
+   Scoped 100% to `[data-theme="light"]`. Covers only the HUD region:
+   pitch·mod/air wheels, octave mini-picker, velocity accent, curve accent,
+   hide-keys toggle and the sustain latch + pedal LED + its label.
+   Loaded last (after keyboard.css). Uncommitted & unpushed.
+   ============================================================================ */
+
+/* ----------------------------------------------------------------------------
+   1 · PITCH BEND / MOD / AIR WHEELS
+   ---------------------------------------------------------------------------- */
+[data-theme="light"] .wheel-bay,
+[data-theme="light"] .wheel-unit {
+  background: #eef1f4;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+}
+[data-theme="light"] .wheel-unit label {
+  color: #3c3c43;
+}
+[data-theme="light"] .wheel-track {
+  background: #dedfe3;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+[data-theme="light"] .wheel-thumb {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+}
+
+/* ----------------------------------------------------------------------------
+   2 · OCTAVE HUD (mini octave + C3-C5 + oct-up/down)
+   ---------------------------------------------------------------------------- */
+[data-theme="light"] .octave-hud-unit,
+[data-theme="light"] .hud-btn {
+  background: #ffffff;
+  color: #3c3c43;
+  border-color: rgba(0, 0, 0, 0.14);
+}
+[data-theme="light"] .hud-btn:hover {
+  background: #e7f1fb;
+  color: #0071e3;
+  border-color: rgba(0, 113, 227, 0.45);
+}
+
+/* ----------------------------------------------------------------------------
+   3 · VELOCITY ACCENT (PP MP MF FF SFZ) + CURVE (LIN PUNCH SOFT) STRIP
+   ---------------------------------------------------------------------------- */
+[data-theme="light"] .velocity-accent-unit,
+[data-theme="light"] .velocity-curve-strip {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+}
+[data-theme="light"] .velocity-readout,
+[data-theme="light"] #hud-velocity-readout,
+[data-theme="light"] #hud-curve-readout {
+  color: #3c3c43;
+}
+[data-theme="light"] .accent-badge,
+[data-theme="light"] #hud-accent-badge {
+  color: #3c3c43;
+}
+[data-theme="light"] .accent-preset-btns {
+  background: transparent;
+}
+[data-theme="light"] .accent-mini-btn {
+  background: #f4f5f6;
+  color: #3c3c43;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+[data-theme="light"] .accent-mini-btn:hover {
+  background: #e7f1fb;
+  color: #0071e3;
+}
+[data-theme="light"] .accent-mini-btn.active {
+  background: #0071e3;
+  color: #ffffff;
+  border-color: #0071e3;
+}
+
+/* ----------------------------------------------------------------------------
+   4 · VELOCITY / CURVE DROPDOWNS (native selects + their dark options)
+   ---------------------------------------------------------------------------- */
+[data-theme="light"] .hud-dropdown-select,
+[data-theme="light"] .velocity-dropdown-select,
+[data-theme="light"] .curve-dropdown-select {
+  background-color: #ffffff;
+  color: #3c3c43;
+  border-color: rgba(0, 0, 0, 0.16);
+  color-scheme: light;
+}
+[data-theme="light"] .hud-dropdown-select option,
+[data-theme="light"] .velocity-dropdown-select option,
+[data-theme="light"] .curve-dropdown-select option {
+  background-color: #ffffff !important;
+  color: #3c3c43 !important;
+  color-scheme: light !important;
+}
+
+/* ----------------------------------------------------------------------------
+   4B · SCALE HUD — ROOT-NOTE + SCALE-MODE selects (the classes the REAL
+        virtual-keyboard.js:184-192 emits: .hud-select.hud-root-select /
+        .hud-select.hud-scale-select). Base dark lives at keyboard.css:1266-1278.
+   ---------------------------------------------------------------------------- */
+[data-theme="light"] .scale-hud-unit,
+[data-theme="light"] .hud-scale-unit {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+}
+[data-theme="light"] .scale-label,
+[data-theme="light"] .hud-scale-label {
+  color: #3c3c43;
+}
+[data-theme="light"] .hud-root-select,
+[data-theme="light"] .hud-scale-select,
+[data-theme="light"] .hud-select {
+  background-color: #ffffff;
+  color: #3c3c43;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  color-scheme: light;
+}
+[data-theme="light"] .hud-root-select option,
+[data-theme="light"] .hud-scale-select option,
+[data-theme="light"] .hud-select option {
+  background-color: #ffffff !important;
+  color: #3c3c43 !important;
+  color-scheme: light !important;
+}
+
+/* ----------------------------------------------------------------------------
+   5 · HIDE KEYS TOGGLE
+   ---------------------------------------------------------------------------- */
+[data-theme="light"] .collapse-keys-unit {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+}
+[data-theme="light"] .collapse-keys-btn,
+[data-theme="light"] .collapse-icon,
+[data-theme="light"] .collapse-text {
+  color: #3c3c43;
+}
+[data-theme="light"] .collapse-keys-btn:hover {
+  color: #0071e3;
+}
+
+/* ----------------------------------------------------------------------------
+   6 · SUSTAIN LATCH — button, pedal LED and the label (white-on-white fix)
+   ---------------------------------------------------------------------------- */
+[data-theme="light"] .sustain-latch-unit {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+}
+[data-theme="light"] .sustain-btn, 
+[data-theme="light"] .zoom-btn {
+  background: #ffffff;
+  color: #3c3c43;                       /* fixes white label → visible dark text */
+  border-color: rgba(0, 0, 0, 0.16);
+}
+[data-theme="light"] .sustain-btn:hover {
+  background: #e7f1fb;
+  color: #0071e3;
+}
+[data-theme="light"] .sustain-btn.active {
+  background: #e7f1fb;
+  color: #0071e3;
+  border-color: rgba(0, 113, 227, 0.5);
+}
+[data-theme="light"] .pedal-led {
+  background: #b9bec6;
+  box-shadow: none;
+}
+[data-theme="light"] .sustain-btn.active .pedal-led {
+  background: #12b76a;
+  box-shadow: 0 0 8px rgba(18, 183, 106, 0.6);
+}
+
+/* ============================================================================
+   7 · SCALE HUD — KEY-root + SCALE-type selects (the black pair you pasted:
+   .hud-root-select + .hud-scale-select, dark base at keyboard.css:1266-1278)
+   ============================================================================ */
+[data-theme="light"] .scale-hud-unit {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+[data-theme="light"] .scale-label,
+[data-theme="light"] .hud-scale-label,
+[data-theme="light"] .hud-root-label {
+  color: #3c3c43;
+}
+[data-theme="light"] .hud-root-select,
+[data-theme="light"] .hud-scale-select,
+[data-theme="light"] .hud-scale-type,
+[data-theme="light"] .hud-scale-pick {
+  background-color: #ffffff;
+  color: #3c3c43;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  color-scheme: light;
+}
+[data-theme="light"] .hud-root-select option,
+[data-theme="light"] .hud-scale-select option,
+[data-theme="light"] .hud-scale-type option,
+[data-theme="light"] .hud-scale-pick option {
+  background-color: #ffffff !important;
+  color: #3c3c43 !important;
+  color-scheme: light !important;
+}
+[data-theme="light"] .hud-root-select:hover,
+[data-theme="light"] .hud-scale-select:hover {
+  border-color: rgba(0, 113, 227, 0.45);
+}
+
+/* ----------------------------------------------------------------------------
+   7 · SCALE HUD (KEY: root + scale-type selects — real classes from markup)
+   ---------------------------------------------------------------------------- */
+[data-theme="light"] .scale-hud-unit {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+}
+[data-theme="light"] .scale-label {
+  color: #3c3c43;
+}
+[data-theme="light"] .hud-select,
+[data-theme="light"] .hud-root-select,
+[data-theme="light"] .hud-scale-select {
+  background-color: #ffffff !important;
+  color: #3c3c43 !important;
+  border-color: #ffffff !important;
+  color-scheme: light !important;
+}
+[data-theme="light"] .hud-select option,
+[data-theme="light"] .hud-root-select option,
+[data-theme="light"] .hud-scale-select option {
+  background-color: #ffffff !important;
+  color: #3c3c43 !important;
+  color-scheme: light !important;
+}
+
+/* EXCLUDED from light theme (user directive): the WS tab strip
+   (COMBI / FX / DEMO / CHORDS / «all ws-tab-btns») keeps its dark base.
+   Base lives at workstation.css:1298-1341. Re-pin under light so the
+   app's native variable flip cannot white them out. */
+[data-theme="light"] .ws-tab-btn:hover,
+[data-theme="light"] .ws-tab-btn {
+  background: linear-gradient(180deg, #222836 0%, #171c26 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top-color: rgba(255, 255, 255, 0.2);
+  color: #94a3b8;
+  font-size: 0.58rem;
+  font-weight: 800;
+  padding: 3px 5px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  transition: all 0.12s ease;
+  flex-shrink: 0 !important;
+}
+[data-theme="light"] .ws-tab-btn:hover {
+  background: linear-gradient(180deg, #2d3546 0%, #202735 100%);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+[data-theme="light"] .ws-tab-btn.active {
+  background: linear-gradient(135deg, rgba(255, 118, 77, 0.35), rgba(255, 118, 77, 0.12));
+  border-color: var(--accent-amber);
+  color: #ffedd5;
+  box-shadow: 0 0 8px var(--accent-amber-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* CHORD PADS — excluded from the light theme like the ws tab strip.
+   Base dark: .chord-pad at workstation.css:2066 uses var(--bg-card) #282d3a
+   + var(--border-subtle) rgba(255,255,255,0.08); .active at :2090 uses
+   var(--accent-cyan). Users: pad should NOT follow the native light flip. */
+[data-theme="light"] .chord-pad {
+  background: #282d3a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+[data-theme="light"] .chord-pad:hover {
+  background: #2d3546;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+[data-theme="light"] .chord-pad.active {
+  background: linear-gradient(135deg, rgba(0, 210, 255, 0.35), rgba(0, 210, 255, 0.1));
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 16px var(--accent-cyan-glow);
+}
+
+/* COMBICHEM LAYERS CONSOLE - excluded from the light theme like the ws
+   tab strip + chord pads. Base: .combi-layers-console at triton.css:478
+   uses var(--bg-surface) #181b22 (dark) / #f1f3f5 (LIGHT, theme.css:65) +
+   var(--border-subtle). Users: the console shell must NOT follow the flip. */
+[data-theme="light"] .combi-layers-console {
+  background: #181b22;
+  border: 1px solid var(--border-subtle);
+}
+
+/* combi layer rows / child surfaces - keep the console family dark */
+[data-theme="light"] .combi-layer-row,
+[data-theme="light"] .combi-layer-header,
+[data-theme="light"] .combi-layers-title,
+[data-theme="light"] .combi-layers-label {
+  background: #181b22;
+  border: 1px solid var(--border-subtle);
+}
+
+/* LAYER CHANNEL STRIP — re-pin the surface the user pasted to the TRUE dark base.
+   Base: triton.css:1092 background: var(--bg-card) (#282d3a dark, #ffffff light) ;
+         :1093 border: 1px solid var(--border-subtle) (rgba(255,255,255,0.08) dark) */
+[data-theme="light"] .layer-channel-strip {
+  background: #282d3a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+[data-theme="light"] .layer-channel-strip.active,
+[data-theme="light"] .layer-channel-strip:hover {
+  background: #2d3546;
+}
+
+/* CHORD-STATION + LOOPER-STATION CARDS — full console family via VARIABLE
+   SCOPE, not per-descendant. These two shells each own the var scope
+   (base: .chord-station-card at workstation.css:1905, .looper-station-card
+   at workstation.css:2356 both define the console region). Native light
+   flips --bg-surface → #ffffff (theme.css:65), --bg-card → #ffffff (:67),
+   --bg-card-hover → #f0f0f0 (:68), --border-subtle → rgba(0,0,0,0.08)
+   (:73), --border-medium → rgba(0,0,0,0.15) (:74) — so EVERY descendant
+   the user named (chord pads, looper rows, bank/genre strips, titles,
+   headers, stations) went white. One scope-level re-pin of all five flip
+   vars to their TRUE dark literals (theme.css:10/12/13/32/33) = every
+   descendant inherits dark. No per-class list. No next-surface left. */
+[data-theme="light"] .chord-station-card,
+[data-theme="light"] .looper-station-card {
+  --bg-surface: #181b22 !important;
+  --bg-card: #282d3a !important;
+  --bg-card-hover: #313747 !important;
+  --border-subtle: rgba(255, 255, 255, 0.08) !important;
+  --border-medium: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* FX RACK STRIP — same inheritance cure as the chord/looper station cards:
+   re-pin the 5 flip vars at the strip's own scope so the ENTIRE rack
+   family (strip + rack frame + every fx slot row + params + buttons)
+   stays dark under light. Mirror: triton.css:1905-family, verified dark
+   literals from theme.css:10/12/13/32/33. */
+[data-theme="light"] .fx-rack-strip {
+  --bg-surface: #181b22;
+  --bg-card: #282d3a;
+  --bg-card-hover: #313747;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-medium: rgba(255, 255, 255, 0.15);
+}
+[data-theme="light"] .fx-rack-strip .fx-rack,
+[data-theme="light"] .fx-rack-strip .fx-rack-frame,
+[data-theme="light"] .fx-rack-strip .fx-slot-row {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+}
+
+/* CHORD / LOOPER STATION — TEXT-SIDE re-pin (mirror of the shell bg re-pin).
+   Ang shell nag-upit na (#181b22), apan ang pad-name/genre text nasakay sa
+   --text-primary #f3f4f6 (dark) → #3c3c43 (light, theme.css:75) — busa dark
+   text sa dark surface = dili makita. Re-pin ang tanang text var sa ilawom
+   sa shell scope -> tanang descendant nga mo-inherit, light-on-dark. */
+[data-theme="light"] .chord-station-card,
+[data-theme="light"] .looper-station-card,
+[data-theme="light"] .fx-rack-strip {
+  --text-primary: #f3f4f6 !important;
+  --text-secondary: #cbd5e1 !important;
+  --text-subtle: #94a3b8 !important;
+  --text-muted: #7b8797 !important;
+  --text-on-accent: #ffffff !important;
+  color: var(--text-primary);
+}
+[data-theme="light"] .demo-station-card,
+[data-theme="light"] .demo-volume-control,
+[data-theme="light"] .demo-station-frame {
+  --bg-surface: #181b22 !important;
+  --bg-card: #282d3a !important;
+  --bg-card-hover: #313747 !important;
+  --border-subtle: rgba(255, 255, 255, 0.08) !important;
+  --border-medium: rgba(255, 255, 255, 0.15) !important;
+  --text-primary: #f3f4f6 !important;
+  --text-secondary: #9ca3af !important;
+  --text-muted: #6b7280 !important;
+  background: #181b22 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+[data-theme="light"] .license-dialog {
+  --bg-surface-elevated: #212530 !important;
+  --bg-surface: #181b22 !important;
+  --bg-card: #282d3a !important;
+  --bg-card-hover: #313747 !important;
+  --border-subtle: rgba(255, 255, 255, 0.08) !important;
+  --border-medium: rgba(255, 255, 255, 0.15) !important;
+  --text-primary: #f3f4f6 !important;
+  --text-secondary: #9ca3af !important;
+  --text-muted: #6b7280 !important;
+  background: #212530 !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}

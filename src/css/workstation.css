@@ -246,7 +246,7 @@ body.mobile-stage-keys .studio-keyboard-deck {
   font-size: 0.85rem;
   font-weight: 900;
   letter-spacing: 0.5px;
-  color: var(--text-primary);
+  color: #ffffff;
   white-space: nowrap;
 }
 
@@ -2378,6 +2378,22 @@ body.mobile-stage-keys .studio-keyboard-deck {
   letter-spacing: 1px;
 }
 
+.looper-station .demo-vol-control,
+[data-theme="light"] .looper-station .demo-vol-control {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.looper-station .demo-vol-slider {
+  flex: 0 1 110px;
+  min-width: 60px;
+  max-width: 120px;
+  width: auto;
+}
 .looper-tempo-badge {
   display: flex;
   gap: 8px;

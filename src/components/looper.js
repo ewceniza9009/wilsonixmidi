@@ -27,7 +27,7 @@ export class ClipLooper {
     this.snapToBeats = options.snapToBeats ?? true;
     this.seamGuardSec = options.seamGuardSec ?? 0.03;
     this.startLeadSec = options.startLeadSec ?? 0.05;
-    this.looperGain = options.looperGain ?? 1.0;
+    this.looperGain = typeof options.looperGain === "number" ? options.looperGain : 0.55;
 
     this.tracks = [
       this._blankTrack(0),
@@ -72,6 +72,19 @@ export class ClipLooper {
       <div class="looper-station">
         <div class="looper-header">
           <span class="looper-title">SESSION CLIP LOOPER</span>
+          <div class="demo-vol-control">
+            <span class="demo-vol-label">LOOP VOL</span>
+            <input
+              type="range"
+              class="demo-vol-slider"
+              id="looper-volume-slider"
+              min="10"
+              max="100"
+              value="${Math.round(this.looperGain * 100)}"
+              title="Session clip playback volume (rides under your live preset)"
+            />
+            <span class="demo-vol-pct" id="looper-vol-pct">${Math.round(this.looperGain * 100)}%</span>
+          </div>
           <div class="looper-tempo-badge">
             <span id="looper-bpm-display">${this.bpm} BPM</span>
             <span class="bar-count-badge">${this.beatsPerBar}/4</span>
@@ -105,6 +118,15 @@ export class ClipLooper {
 
   bindEvents() {
     if (!this.container) return;
+    const volSlider = this.container.querySelector("#looper-volume-slider");
+    const volPct = this.container.querySelector("#looper-vol-pct");
+    if (volSlider) {
+      volSlider.addEventListener("input", (e) => {
+        const v = parseFloat(e.target.value) / 100;
+        this.looperGain = v;
+        if (volPct) volPct.textContent = `${Math.round(v * 100)}%`;
+      });
+    }
     this.container.querySelectorAll(".slot-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         const trackId = parseInt(btn.getAttribute("data-track"));
@@ -634,7 +656,7 @@ export class ClipLooper {
           L.inst,
           transposed,
           velocity,
-          L.gain,
+          L.gain * this.looperGain,
           at,
         );
       } catch (e) {}
