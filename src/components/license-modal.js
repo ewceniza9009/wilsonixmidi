@@ -46,60 +46,81 @@ export class LicenseModalUI {
         <div class="license-dialog">
           <div class="dialog-header">
             <div class="dialog-title">
-              <span class="lock-icon">🔒</span>
-              <h3>WILSONIX PRO ACTIVATION & ACCESS</h3>
+              <div class="dialog-title-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+              </div>
+              <div class="dialog-title-meta">
+                <h3>WILSONIX PRO ACTIVATION</h3>
+                <span class="dialog-subtitle">Hardware License & Pro Feature Access</span>
+              </div>
             </div>
-            <button class="dialog-close-btn" id="license-close-btn">✕</button>
+            <button class="dialog-close-btn" id="license-close-btn" aria-label="Close dialog">✕</button>
           </div>
 
           <div class="dialog-body">
             ${
               this.promptReason
                 ? `
-              <div class="license-reason-alert" style="background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; color: #fbbf24; padding: 8px 12px; border-radius: 6px; font-size: 0.76rem; font-weight: 700; margin-bottom: 12px;">
-                ⚠️ ${esc(this.promptReason)}
+              <div class="license-reason-alert">
+                <span class="alert-icon">⚠️</span>
+                <span>${esc(this.promptReason)}</span>
               </div>
             `
                 : ""
             }
 
             <!-- Hardware ID Card -->
-            <div class="hardware-id-card">
-              <label>MACHINE HARDWARE FINGERPRINT:</label>
+            <div class="license-card hardware-id-card">
+              <div class="card-header-row">
+                <label>MACHINE HARDWARE FINGERPRINT</label>
+                <span class="hw-badge">UNIQUE ID</span>
+              </div>
               <div class="fingerprint-box">
-                <code id="hw-fingerprint-val">${esc(devId)}</code>
-                <button class="copy-hw-btn" id="copy-hw-btn">COPY ID</button>
+                <div class="fingerprint-code-wrap">
+                  <span class="fingerprint-prefix">HWID:</span>
+                  <code id="hw-fingerprint-val">${esc(devId)}</code>
+                </div>
+                <button class="copy-hw-btn" id="copy-hw-btn" title="Copy Hardware ID to Clipboard">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  <span class="copy-text">COPY ID</span>
+                </button>
               </div>
               <p class="hw-tip">Give this ID to your administrator to receive an authorized signed license key.</p>
             </div>
 
             <!-- Access Status Card -->
-            <div class="license-status-card ${statusCardClass}">
+            <div class="license-card license-status-card ${statusCardClass}">
               <div class="status-indicator-dot"></div>
               <div class="status-meta">
-                <div class="status-title">${statusTitle}</div>
+                <div class="status-title-row">
+                  <span class="status-title">${statusTitle}</span>
+                  <span class="status-tag">${access.isLicensed ? "PRO UNLOCKED" : (access.isExpired ? "FREE MODE" : "30-DAY TRIAL")}</span>
+                </div>
                 <div class="status-desc">${statusDesc}</div>
               </div>
             </div>
 
-            <!-- Feature Tier Comparison (Option A Soft Gating) -->
-            <div class="license-tier-box" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 10px; margin-bottom: 12px; font-size: 0.70rem;">
-              <div style="font-weight: 800; color: #94a3b8; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Feature Comparison:</div>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                <div style="color: #cbd5e1;">
-                  <strong style="color: #38bdf8;">✓ Free / Standard:</strong>
-                  <ul style="margin: 4px 0 0 16px; padding: 0; line-height: 1.4;">
-                    <li>88-Key Virtual Piano</li>
-                    <li>Full Synth Engine & Soundbanks</li>
-                    <li>Keyboard Split & Octave Controls</li>
+            <!-- Feature Tier Comparison -->
+            <div class="license-card license-tier-box">
+              <div class="tier-box-title">FEATURE ACCESS COMPARISON</div>
+              <div class="tier-grid">
+                <div class="tier-col tier-standard">
+                  <div class="tier-badge standard-badge">✓ Free / Standard</div>
+                  <ul class="tier-feature-list">
+                    <li><span class="chk-icon">✓</span> 88-Key Virtual Piano</li>
+                    <li><span class="chk-icon">✓</span> Full Synth & Soundbanks</li>
+                    <li><span class="chk-icon">✓</span> Split & Octave Controls</li>
                   </ul>
                 </div>
-                <div style="color: #cbd5e1;">
-                  <strong style="color: #f59e0b;">★ Pro Unlocked:</strong>
-                  <ul style="margin: 4px 0 0 16px; padding: 0; line-height: 1.4;">
-                    <li>Lossless Master WAV Recording</li>
-                    <li>Custom Stage Rig Memory Storage</li>
-                    <li>4-Timbre Combi Mixer Stacks</li>
+                <div class="tier-col tier-pro">
+                  <div class="tier-badge pro-badge">★ Pro Unlocked</div>
+                  <ul class="tier-feature-list">
+                    <li><span class="star-icon">★</span> Lossless WAV Recording</li>
+                    <li><span class="star-icon">★</span> Custom Stage Rig Storage</li>
+                    <li><span class="star-icon">★</span> 4-Timbre Combi Mixer</li>
                   </ul>
                 </div>
               </div>
@@ -110,22 +131,22 @@ export class LicenseModalUI {
               !access.isLicensed
                 ? `
               <div class="activation-form">
-                <div style="margin-bottom: 4px;">
-                  <label style="margin: 0;">ENTER YOUR PRO LICENSE KEY:</label>
+                <div class="form-group">
+                  <label for="license-key-input">ENTER YOUR PRO LICENSE KEY</label>
+                  <div class="key-input-row">
+                    <input type="text" id="license-key-input" placeholder="MKPRO-NAME-LIFETIME-XXXXXXXX" spellcheck="false" autocomplete="off" />
+                    <button class="activate-submit-btn" id="activate-submit-btn">ACTIVATE</button>
+                  </div>
+                  <div class="key-help-hint">Format: <code>MKPRO-&lt;LICENSEE&gt;-&lt;EXPIRY&gt;-&lt;SIGNATURE&gt;</code></div>
                 </div>
-                <div class="key-input-row">
-                  <input type="text" id="license-key-input" placeholder="MKPRO-NAME-LIFETIME-XXXXXXXX" spellcheck="false" autocomplete="off" />
-                  <button class="activate-submit-btn" id="activate-submit-btn">ACTIVATE</button>
-                </div>
-                <div class="key-help-hint">Format: MKPRO-&lt;LICENSEE&gt;-&lt;EXPIRY&gt;-&lt;SIGNATURE&gt;</div>
 
-                <div style="margin-top: 10px; margin-bottom: 4px;">
-                  <label style="margin: 0;">DEVICE ACTIVATION CODE <span style="color: #94a3b8; font-weight: 400; text-transform: none;">(only if required)</span></label>
+                <div class="form-group" style="margin-top: 10px;">
+                  <label for="activation-code-input">DEVICE ACTIVATION CODE <span class="optional-hint">(only if required)</span></label>
+                  <div class="key-input-row">
+                    <input type="text" id="activation-code-input" placeholder="MKACT-DEV-XXXXXXXX-..." spellcheck="false" autocomplete="off" />
+                  </div>
+                  <div class="key-help-hint">If your administrator provided a device code, paste it here. Desktop users typically do not need this.</div>
                 </div>
-                <div class="key-input-row">
-                  <input type="text" id="activation-code-input" placeholder="MKACT-DEV-XXXXXXXX-..." spellcheck="false" autocomplete="off" />
-                </div>
-                <div class="key-help-hint">If your administrator provided an activation code, paste it here. Desktop users typically do not need this.</div>
 
                 <div class="activation-msg" id="activation-msg"></div>
               </div>
@@ -158,8 +179,14 @@ export class LicenseModalUI {
 
     copyBtn?.addEventListener("click", () => {
       navigator.clipboard.writeText(licenseManager.deviceFingerprint);
-      copyBtn.innerText = "COPIED!";
-      setTimeout(() => (copyBtn.innerText = "COPY ID"), 2000);
+      const textSpan = copyBtn.querySelector(".copy-text");
+      if (textSpan) {
+        textSpan.innerText = "COPIED!";
+        setTimeout(() => (textSpan.innerText = "COPY ID"), 2000);
+      } else {
+        copyBtn.innerText = "COPIED!";
+        setTimeout(() => (copyBtn.innerText = "COPY ID"), 2000);
+      }
     });
 
     activateBtn?.addEventListener("click", async () => {

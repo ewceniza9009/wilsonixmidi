@@ -1,26 +1,33 @@
 /* ============================================================================
-   WILSONIX MIDIKEY — LIGHT THEME · KEYBOARD DECK STRIP (HUD strip only)
-   Scoped 100% to `[data-theme="light"]`. Covers only the HUD region:
-   pitch·mod/air wheels, octave mini-picker, velocity accent, curve accent,
-   hide-keys toggle and the sustain latch + pedal LED + its label.
-   Loaded last (after keyboard.css). Uncommitted & unpushed.
+   WILSONIX MIDIKEY — LIGHT THEME · KEYBOARD DECK STRIP
+   Unified Satin Aluminum DAW Strip styling
    ============================================================================ */
+
+/* ----------------------------------------------------------------------------
+   0 · KEYBOARD CONTROLS STRIP CONTAINER
+   ---------------------------------------------------------------------------- */
+[data-theme="light"] .keyboard-controls-bar {
+  background: linear-gradient(180deg, #edf0f5 0%, #e2e6ec 100%);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.16);
+  box-shadow: inset 0 1px 0 #ffffff, 0 1px 3px rgba(0, 0, 0, 0.06);
+}
 
 /* ----------------------------------------------------------------------------
    1 · PITCH BEND / MOD / AIR WHEELS
    ---------------------------------------------------------------------------- */
-[data-theme="light"] .wheel-bay,
-[data-theme="light"] .wheel-unit {
-  background: #eef1f4;
+[data-theme="light"] .wheel-bay {
+  background: rgba(255, 255, 255, 0.85);
   border: 1px solid rgba(0, 0, 0, 0.10);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 [data-theme="light"] .wheel-unit label {
-  color: #3c3c43;
+  color: #475569;
 }
 [data-theme="light"] .wheel-track {
-  background: #dedfe3;
-  border: 1px solid rgba(0, 0, 0, 0.14);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.12);
+  background: #cbd5e1;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 [data-theme="light"] .wheel-thumb {
   background: #ffffff;
@@ -29,210 +36,171 @@
 }
 
 /* ----------------------------------------------------------------------------
-   2 · OCTAVE HUD (mini octave + C3-C5 + oct-up/down)
+   2 · MODULAR HUD UNITS CONTAINER (OCTAVE, SCALE, VELOCITY, ZOOM, ETC)
    ---------------------------------------------------------------------------- */
 [data-theme="light"] .octave-hud-unit,
+[data-theme="light"] .scale-hud-unit,
+[data-theme="light"] .velocity-accent-unit,
+[data-theme="light"] .key-zoom-unit,
+[data-theme="light"] .qwerty-toggle-unit,
+[data-theme="light"] .sustain-latch-unit,
+[data-theme="light"] .xy-toggle-unit,
+[data-theme="light"] .chord-hud-unit,
+[data-theme="light"] .layout-hud-unit,
+[data-theme="light"] .stage-toggle-unit,
+[data-theme="light"] .panic-unit,
+[data-theme="light"] .collapse-keys-unit {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* ----------------------------------------------------------------------------
+   3 · BUTTONS & READOUTS
+   ---------------------------------------------------------------------------- */
 [data-theme="light"] .hud-btn {
-  background: #ffffff;
-  color: #3c3c43;
-  border-color: rgba(0, 0, 0, 0.14);
+  background: #f1f4f8;
+  color: #334155;
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 [data-theme="light"] .hud-btn:hover {
-  background: #e7f1fb;
-  color: #0071e3;
-  border-color: rgba(0, 113, 227, 0.45);
+  background: #e2e8f0;
+  color: #0f172a;
+  border-color: rgba(0, 0, 0, 0.16);
 }
 
-/* ----------------------------------------------------------------------------
-   3 · VELOCITY ACCENT (PP MP MF FF SFZ) + CURVE (LIN PUNCH SOFT) STRIP
-   ---------------------------------------------------------------------------- */
-[data-theme="light"] .velocity-accent-unit,
-[data-theme="light"] .velocity-curve-strip {
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.10);
+[data-theme="light"] .octave-hud-unit .hud-btn {
+  background: #f1f4f8;
+  color: #334155;
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
-[data-theme="light"] .velocity-readout,
-[data-theme="light"] #hud-velocity-readout,
-[data-theme="light"] #hud-curve-readout {
-  color: #3c3c43;
+[data-theme="light"] .octave-hud-unit .hud-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
 }
-[data-theme="light"] .accent-badge,
-[data-theme="light"] #hud-accent-badge {
-  color: #3c3c43;
+[data-theme="light"] .octave-hud-unit .hud-btn.range-btn {
+  background: rgba(2, 132, 199, 0.12);
+  color: #0284c7;
+  border: 1px solid rgba(2, 132, 199, 0.35);
 }
-[data-theme="light"] .accent-preset-btns {
-  background: transparent;
-}
-[data-theme="light"] .accent-mini-btn {
-  background: #f4f5f6;
-  color: #3c3c43;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-}
-[data-theme="light"] .accent-mini-btn:hover {
-  background: #e7f1fb;
-  color: #0071e3;
-}
-[data-theme="light"] .accent-mini-btn.active {
-  background: #0071e3;
+[data-theme="light"] .octave-hud-unit .hud-btn.range-btn:hover {
+  background: #0284c7;
   color: #ffffff;
-  border-color: #0071e3;
+}
+[data-theme="light"] .octave-readout {
+  color: #ea580c;
+  text-shadow: none;
 }
 
 /* ----------------------------------------------------------------------------
-   4 · VELOCITY / CURVE DROPDOWNS (native selects + their dark options)
+   4 · VELOCITY & CURVE
    ---------------------------------------------------------------------------- */
-[data-theme="light"] .hud-dropdown-select,
-[data-theme="light"] .velocity-dropdown-select,
-[data-theme="light"] .curve-dropdown-select {
-  background-color: #ffffff;
-  color: #3c3c43;
-  border-color: rgba(0, 0, 0, 0.16);
-  color-scheme: light;
+[data-theme="light"] .velocity-readout {
+  color: #475569;
 }
-[data-theme="light"] .hud-dropdown-select option,
-[data-theme="light"] .velocity-dropdown-select option,
-[data-theme="light"] .curve-dropdown-select option {
-  background-color: #ffffff !important;
-  color: #3c3c43 !important;
-  color-scheme: light !important;
-}
-
-/* ----------------------------------------------------------------------------
-   4B · SCALE HUD — ROOT-NOTE + SCALE-MODE selects (the classes the REAL
-        virtual-keyboard.js:184-192 emits: .hud-select.hud-root-select /
-        .hud-select.hud-scale-select). Base dark lives at keyboard.css:1266-1278.
-   ---------------------------------------------------------------------------- */
-[data-theme="light"] .scale-hud-unit,
-[data-theme="light"] .hud-scale-unit {
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.10);
-}
-[data-theme="light"] .scale-label,
-[data-theme="light"] .hud-scale-label {
-  color: #3c3c43;
-}
-[data-theme="light"] .hud-root-select,
-[data-theme="light"] .hud-scale-select,
-[data-theme="light"] .hud-select {
-  background-color: #ffffff;
-  color: #3c3c43;
-  border: 1px solid rgba(0, 0, 0, 0.16);
-  color-scheme: light;
-}
-[data-theme="light"] .hud-root-select option,
-[data-theme="light"] .hud-scale-select option,
-[data-theme="light"] .hud-select option {
-  background-color: #ffffff !important;
-  color: #3c3c43 !important;
-  color-scheme: light !important;
-}
-
-/* ----------------------------------------------------------------------------
-   5 · HIDE KEYS TOGGLE
-   ---------------------------------------------------------------------------- */
-[data-theme="light"] .collapse-keys-unit {
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.10);
-}
-[data-theme="light"] .collapse-keys-btn,
-[data-theme="light"] .collapse-icon,
-[data-theme="light"] .collapse-text {
-  color: #3c3c43;
-}
-[data-theme="light"] .collapse-keys-btn:hover {
-  color: #0071e3;
-}
-
-/* ----------------------------------------------------------------------------
-   6 · SUSTAIN LATCH — button, pedal LED and the label (white-on-white fix)
-   ---------------------------------------------------------------------------- */
-[data-theme="light"] .sustain-latch-unit {
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.10);
-}
-[data-theme="light"] .sustain-btn, 
+[data-theme="light"] .accent-mini-btn,
 [data-theme="light"] .zoom-btn {
-  background: #ffffff;
-  color: #3c3c43;                       /* fixes white label → visible dark text */
-  border-color: rgba(0, 0, 0, 0.16);
+  background: #f1f4f8;
+  color: #475569;
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
-[data-theme="light"] .sustain-btn:hover {
-  background: #e7f1fb;
-  color: #0071e3;
+[data-theme="light"] .accent-mini-btn:hover,
+[data-theme="light"] .zoom-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
 }
-[data-theme="light"] .sustain-btn.active {
-  background: #e7f1fb;
-  color: #0071e3;
-  border-color: rgba(0, 113, 227, 0.5);
-}
-[data-theme="light"] .pedal-led {
-  background: #b9bec6;
-  box-shadow: none;
-}
-[data-theme="light"] .sustain-btn.active .pedal-led {
-  background: #12b76a;
-  box-shadow: 0 0 8px rgba(18, 183, 106, 0.6);
-}
-
-/* ============================================================================
-   7 · SCALE HUD — KEY-root + SCALE-type selects (the black pair you pasted:
-   .hud-root-select + .hud-scale-select, dark base at keyboard.css:1266-1278)
-   ============================================================================ */
-[data-theme="light"] .scale-hud-unit {
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-}
-[data-theme="light"] .scale-label,
-[data-theme="light"] .hud-scale-label,
-[data-theme="light"] .hud-root-label {
-  color: #3c3c43;
-}
-[data-theme="light"] .hud-root-select,
-[data-theme="light"] .hud-scale-select,
-[data-theme="light"] .hud-scale-type,
-[data-theme="light"] .hud-scale-pick {
-  background-color: #ffffff;
-  color: #3c3c43;
-  border: 1px solid rgba(0, 0, 0, 0.16);
-  color-scheme: light;
-}
-[data-theme="light"] .hud-root-select option,
-[data-theme="light"] .hud-scale-select option,
-[data-theme="light"] .hud-scale-type option,
-[data-theme="light"] .hud-scale-pick option {
-  background-color: #ffffff !important;
-  color: #3c3c43 !important;
-  color-scheme: light !important;
-}
-[data-theme="light"] .hud-root-select:hover,
-[data-theme="light"] .hud-scale-select:hover {
-  border-color: rgba(0, 113, 227, 0.45);
+[data-theme="light"] .accent-mini-btn.active,
+[data-theme="light"] .zoom-btn.active {
+  background: linear-gradient(135deg, #ff764d 0%, #ea580c 100%);
+  color: #ffffff;
+  border-color: #ea580c;
 }
 
 /* ----------------------------------------------------------------------------
-   7 · SCALE HUD (KEY: root + scale-type selects — real classes from markup)
+   5 · DROPDOWNS & SELECTS
    ---------------------------------------------------------------------------- */
-[data-theme="light"] .scale-hud-unit {
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.10);
-}
-[data-theme="light"] .scale-label {
-  color: #3c3c43;
-}
 [data-theme="light"] .hud-select,
 [data-theme="light"] .hud-root-select,
 [data-theme="light"] .hud-scale-select {
-  background-color: #ffffff !important;
-  color: #3c3c43 !important;
-  border-color: #ffffff !important;
+  background: transparent !important;
+  color: #0284c7 !important;
+  border: none !important;
+  box-shadow: none !important;
   color-scheme: light !important;
 }
+
+[data-theme="light"] .hud-dropdown-select {
+  background-color: #f1f4f8 !important;
+  color: #0284c7 !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  color-scheme: light !important;
+}
+
 [data-theme="light"] .hud-select option,
 [data-theme="light"] .hud-root-select option,
-[data-theme="light"] .hud-scale-select option {
+[data-theme="light"] .hud-scale-select option,
+[data-theme="light"] .hud-dropdown-select option {
   background-color: #ffffff !important;
-  color: #3c3c43 !important;
+  color: #1e293b !important;
   color-scheme: light !important;
+}
+
+/* ----------------------------------------------------------------------------
+   6 · LABELS & TOGGLES
+   ---------------------------------------------------------------------------- */
+[data-theme="light"] .scale-label,
+[data-theme="light"] .zoom-label {
+  color: #475569;
+}
+[data-theme="light"] .toggle-pill {
+  color: #475569;
+}
+[data-theme="light"] .toggle-pill input[type="checkbox"]:checked + span {
+  color: #0284c7;
+}
+
+/* ----------------------------------------------------------------------------
+   7 · SUSTAIN PEDAL LATCH
+   ---------------------------------------------------------------------------- */
+[data-theme="light"] .sustain-btn {
+  color: #475569;
+}
+[data-theme="light"] .pedal-led {
+  background: #94a3b8;
+}
+[data-theme="light"] .sustain-btn.active {
+  color: #059669;
+}
+[data-theme="light"] .sustain-btn.active .pedal-led {
+  background: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+}
+
+/* ----------------------------------------------------------------------------
+   8 · PANIC & HIDE KEYS BUTTONS
+   ---------------------------------------------------------------------------- */
+[data-theme="light"] .panic-btn {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+[data-theme="light"] .panic-btn:hover {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+[data-theme="light"] .collapse-keys-btn {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #d97706;
+}
+[data-theme="light"] .collapse-keys-btn:hover {
+  background: rgba(245, 158, 11, 0.25);
+  color: #b45309;
+}
+[data-theme="light"] .collapse-keys-btn.active {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #ffffff;
 }
 
 /* EXCLUDED from light theme (user directive): the WS tab strip
@@ -385,15 +353,8 @@
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 [data-theme="light"] .license-dialog {
-  --bg-surface-elevated: #212530 !important;
-  --bg-surface: #181b22 !important;
-  --bg-card: #282d3a !important;
-  --bg-card-hover: #313747 !important;
-  --border-subtle: rgba(255, 255, 255, 0.08) !important;
-  --border-medium: rgba(255, 255, 255, 0.15) !important;
-  --text-primary: #f3f4f6 !important;
-  --text-secondary: #9ca3af !important;
-  --text-muted: #6b7280 !important;
-  background: #212530 !important;
+  background: linear-gradient(180deg, #1d222e 0%, #12151d 100%) !important;
+  color: #ffffff !important;
   border: 1px solid rgba(255, 255, 255, 0.15) !important;
 }
+

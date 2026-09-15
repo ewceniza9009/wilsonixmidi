@@ -30,11 +30,14 @@
 
   <style>
     /* Critical Form & Dropdown Fast Rendering / Zero White Flash */
-    :root, html, body {
-      color-scheme: dark !important;
+    :root:not([data-theme="light"]), 
+    :root:not([data-theme="light"]) body {
+      color-scheme: dark;
       background-color: #12141a;
     }
-    select, option, optgroup {
+    :root:not([data-theme="light"]) select, 
+    :root:not([data-theme="light"]) option, 
+    :root:not([data-theme="light"]) optgroup {
       color-scheme: dark !important;
       background-color: #141720 !important;
       color: #f1f5f9 !important;
