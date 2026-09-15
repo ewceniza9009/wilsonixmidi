@@ -1007,6 +1007,11 @@ export class GigHudUI {
                 <span class="settings-val" id="settings-sustain-decay-val">${multiLayerEngine.settings.sustainDecayTau.toFixed(1)}</span>
               </label>
               <label class="settings-row">
+                <span class="settings-label">Held Note Max</span>
+                <input type="range" class="settings-slider" id="settings-held-note" min="2" max="60" step="1" value="${multiLayerEngine.settings.heldNoteSec}">
+                <span class="settings-val" id="settings-held-note-val">${multiLayerEngine.settings.heldNoteSec}s</span>
+              </label>
+              <label class="settings-row">
                 <span class="settings-label">Polyphony Cap</span>
                 <input type="range" class="settings-slider" id="settings-polyphony" min="16" max="128" step="16" value="${multiLayerEngine.settings.polyphonyCap}">
                 <span class="settings-val" id="settings-polyphony-val">${multiLayerEngine.settings.polyphonyCap}</span>
@@ -1111,6 +1116,7 @@ export class GigHudUI {
     };
     bindSlider("settings-sustain-hold", "settings-sustain-hold-val", "sustainHoldSec", v => `${v}s`);
     bindSlider("settings-sustain-decay", "settings-sustain-decay-val", "sustainDecayTau", v => v.toFixed(1));
+    bindSlider("settings-held-note", "settings-held-note-val", "heldNoteSec", v => `${v}s`);
     bindSlider("settings-polyphony", "settings-polyphony-val", "polyphonyCap", v => `${v}`);
     bindSlider("settings-velocity", "settings-velocity-val", "defaultVelocity", v => `${v}`);
     bindSlider("settings-octave", "settings-octave-val", "defaultOctave", v => `C${v}`);

@@ -829,6 +829,12 @@ export class MultiLayerEngine {
     this._workletNode = null;
     this._workletReady = false;
 
+    // Held-note max sustain (no pedal): notes ring while keys are held, then
+    // fade after heldNoteSec. Sustain pedal state tracked here for the timers.
+    this.sustainPedalActive = false;
+    this.heldNotes = new Set();
+    this._heldNoteTimers = new Map();
+
     // Ambient Pad Sidechain Ducking: smoothly dips Layer 1 (pad/strings) when Layer 0 (piano/lead) plays
     this.isPadDuckingEnabled = false;
     try {
@@ -842,8 +848,9 @@ export class MultiLayerEngine {
     // User settings (persisted to localStorage)
     this.settings = {
       // Sustain
-      sustainHoldSec: 7,      // auto-release timeout (3–30s)
-      sustainDecayTau: 2.4,   // decay rate while pedal held (0.5–8s)
+      sustainHoldSec: 7,      // pedal held: auto-release timeout (3–30s)
+      sustainDecayTau: 2.4,   // pedal held: decay rate (0.5–8s)
+      heldNoteSec: 15,        // NO pedal, key held: rings for this long, then fades (2–60s)
       // Audio
       polyphonyCap: 64,       // max simultaneous voices (16–128)
       masterVolumePct: 50,    // default master volume on load (0–100)
@@ -862,6 +869,7 @@ export class MultiLayerEngine {
           const s = this.settings;
           if (typeof raw.sustainHoldSec === "number") s.sustainHoldSec = Math.max(3, Math.min(30, raw.sustainHoldSec));
           if (typeof raw.sustainDecayTau === "number") s.sustainDecayTau = Math.max(0.5, Math.min(8, raw.sustainDecayTau));
+          if (typeof raw.heldNoteSec === "number") s.heldNoteSec = Math.max(2, Math.min(60, raw.heldNoteSec));
           if (typeof raw.polyphonyCap === "number") s.polyphonyCap = Math.max(16, Math.min(128, raw.polyphonyCap));
           if (typeof raw.masterVolumePct === "number") s.masterVolumePct = Math.max(0, Math.min(100, raw.masterVolumePct));
           if (typeof raw.defaultOctave === "number") s.defaultOctave = Math.max(1, Math.min(7, raw.defaultOctave));
@@ -879,6 +887,7 @@ export class MultiLayerEngine {
     switch (key) {
       case "sustainHoldSec": s.sustainHoldSec = Math.max(3, Math.min(30, Number(value) || 7)); break;
       case "sustainDecayTau": s.sustainDecayTau = Math.max(0.5, Math.min(8, Number(value) || 2.4)); break;
+      case "heldNoteSec": s.heldNoteSec = Math.max(2, Math.min(60, Number(value) || 15)); break;
       case "polyphonyCap": s.polyphonyCap = Math.max(16, Math.min(128, Number(value) || 64)); break;
       case "masterVolumePct": s.masterVolumePct = Math.max(0, Math.min(100, Number(value) || 50)); break;
       case "defaultOctave": s.defaultOctave = Math.max(1, Math.min(7, Number(value) || 4)); break;
@@ -898,6 +907,9 @@ export class MultiLayerEngine {
     }
     if (key === "polyphonyCap" && this.pcmEngine) {
       this.pcmEngine.MAX_VOICES = s.polyphonyCap;
+    }
+    if (key === "sustainDecayTau" && this._workletReady && this._workletNode) {
+      try { this._workletNode.setParam("sustainTau", s.sustainDecayTau); } catch (e) {}
     }
     if (key === "theme") {
       document.documentElement.setAttribute("data-theme", s.theme);
@@ -1077,6 +1089,7 @@ export class MultiLayerEngine {
     }
     if (this.pcmEngine) {
       this.pcmEngine.MAX_VOICES = this.settings.polyphonyCap;
+      this.pcmEngine._sustainSettings = this.settings;
       this.syncLayerFx();
       this.syncSplitFx();
     }
@@ -1110,6 +1123,7 @@ export class MultiLayerEngine {
       const ok = await this._workletNode.init();
       if (ok) {
         this._workletReady = true;
+        try { this._workletNode.setParam("sustainTau", this.settings.sustainDecayTau); } catch (e) {}
       } else {
         this._workletNode = null;
       }
@@ -1196,6 +1210,7 @@ export class MultiLayerEngine {
     tritonVaEngine.allNotesOff();
     this.vaAllNotesOff();
     synthEngine.panic();
+    this._clearHeldNoteState();
 
     this.isSplitMode = false;
     this.isSynthMode = false;
@@ -1231,6 +1246,7 @@ export class MultiLayerEngine {
     tritonVaEngine.allNotesOff();
     this.vaAllNotesOff();
     synthEngine.panic();
+    this._clearHeldNoteState();
 
     this.isDualLayerActive = enabled !== undefined ? !!enabled : !this.isDualLayerActive;
     this.isSynthMode = false;
@@ -1291,6 +1307,7 @@ export class MultiLayerEngine {
     tritonVaEngine.allNotesOff();
     this.vaAllNotesOff();
     synthEngine.panic();
+    this._clearHeldNoteState();
 
     this.isSplitMode = false;
     this.isSynthMode = true;
@@ -1309,6 +1326,7 @@ export class MultiLayerEngine {
     tritonVaEngine.allNotesOff();
     this.vaAllNotesOff();
     synthEngine.panic();
+    this._clearHeldNoteState();
 
     this.isSplitMode = false;
     this.isTritonVaMode = true;
@@ -1338,6 +1356,7 @@ export class MultiLayerEngine {
       tritonVaEngine.allNotesOff();
       this.vaAllNotesOff();
       synthEngine.panic();
+      this._clearHeldNoteState();
     }
     this.init();
     this.notifyLayerChange();
@@ -1363,6 +1382,7 @@ export class MultiLayerEngine {
       this.vaAllNotesOff();
       synthEngine.panic();
       if (this._workletReady && this._workletNode) this._workletNode.allNotesOff();
+      this._clearHeldNoteState();
 
       this.activeCombi = COMBI_PRESETS[presetId];
       this.isCombiMode = true;
@@ -1564,6 +1584,12 @@ export class MultiLayerEngine {
 
     const now = when > 0 ? when : (audioCore.ctx ? audioCore.ctx.currentTime : 0);
 
+    // Live held-note tracking: a key held with no sustain pedal rings for
+    // heldNoteSec, then fades. Scheduled (when > 0) notes arm the timer at
+    // their scheduled play time.
+    this.heldNotes.add(midiNote);
+    this._armHeldNoteTimer(midiNote, now);
+
     if (audioCore.fxRack?.talkbox && audioCore.fxRack.talkbox.enabled) {
       audioCore.fxRack.talkbox.triggerVocalAttack(velocity);
     }
@@ -1652,6 +1678,11 @@ export class MultiLayerEngine {
 
   noteOff(midiNote, when = 0) {
     audioCore.ensureRunning();
+
+    // Key lifted: stop the held-note timer; the note's tail is now governed by
+    // the normal release / sustain-pedal path.
+    this.heldNotes.delete(midiNote);
+    this._clearHeldNoteTimer(midiNote);
 
     const now = when > 0 ? when : (audioCore.ctx ? audioCore.ctx.currentTime : 0);
 
@@ -1750,9 +1781,97 @@ export class MultiLayerEngine {
     }
   }
 
+  // Held-note auto-release (no pedal): after heldNoteSec, fade a note whose key
+  // is still held down. startTime lets scheduled notes arm at play time.
+  _armHeldNoteTimer(midiNote, startTime = null) {
+    this._clearHeldNoteTimer(midiNote);
+    if (this.sustainPedalActive) return;
+    const sec = this.settings?.heldNoteSec;
+    if (typeof sec !== "number" || !(sec > 0)) return;
+    const ctxTime = audioCore.ctx ? audioCore.ctx.currentTime : 0;
+    const scheduledDelay = startTime != null && startTime > ctxTime ? (startTime - ctxTime) * 1000 : 0;
+    this._heldNoteTimers.set(midiNote, setTimeout(() => {
+      this._heldNoteTimers.delete(midiNote);
+      if (this.sustainPedalActive) return;
+      if (!this.heldNotes.has(midiNote)) return;
+      if (!audioCore.ctx || audioCore.ctx.state === "suspended" || audioCore.ctx.state === "interrupted") return;
+      this._stopNoteSound(midiNote, 0);
+    }, sec * 1000 + scheduledDelay));
+  }
+
+  _clearHeldNoteTimer(midiNote) {
+    const t = this._heldNoteTimers.get(midiNote);
+    if (t) {
+      clearTimeout(t);
+      this._heldNoteTimers.delete(midiNote);
+    }
+  }
+
+  _clearAllHeldNoteTimers() {
+    this._heldNoteTimers.forEach(t => clearTimeout(t));
+    this._heldNoteTimers.clear();
+  }
+
+  _clearHeldNoteState() {
+    this._clearAllHeldNoteTimers();
+    this.heldNotes.clear();
+  }
+
+  // Audio-only note stop: mirrors noteOff() routing but never touches visuals or
+  // pad-ducking bookkeeping - used for the held-note auto-fade so a still-pressed
+  // key stays lit while its sound rings out.
+  _stopNoteSound(midiNote, when = 0) {
+    if (this.isSplitMode) {
+      const isLower = midiNote < this.splitPointMidi;
+      const zone = this.splitZone(isLower ? "lower" : "upper");
+      if (zone && zone.inst !== null && zone.inst !== undefined && zone.inst !== "current_stack") {
+        const transposedMidi = Math.max(21, Math.min(108, midiNote + (zone.oct || 0) * 12));
+        if (zone.vaProg) {
+          if (when === 0 && this._workletReady && this._workletNode) this._workletNode.noteSilentOff(transposedMidi);
+          else this.getVaEngineFor(zone.vaProg, zone.gain, isLower ? 4 : 5).noteOff(transposedMidi, when);
+        } else if (this.pcmEngine) {
+          this.pcmEngine.stopNote(zone.inst, transposedMidi, when);
+        }
+        return;
+      }
+    }
+
+    if (this.isTritonVaMode && this.activeTritonVaProg) {
+      if (when === 0 && this._workletReady && this._workletNode) this._workletNode.noteSilentOff(midiNote);
+      else tritonVaEngine.noteOff(midiNote, when);
+      return;
+    }
+
+    if (this.pcmEngine) {
+      if (this.isCombiMode) {
+        for (let i = 0; i < this.layers.length; i++) {
+          const layer = this.layers[i];
+          if (!layer.enabled) continue;
+          const transposedMidi = Math.max(21, Math.min(108, midiNote + layer.oct * 12));
+          if (layer.vaProg) {
+            if (when === 0 && this._workletReady && this._workletNode) this._workletNode.noteSilentOff(transposedMidi);
+            else this.getVaEngineFor(layer.vaProg, layer.gain, i).noteOff(transposedMidi, when);
+          } else {
+            this.pcmEngine.stopNote(layer.inst, transposedMidi, when);
+          }
+        }
+      } else {
+        this.pcmEngine.stopNote(this.activeSingleInst, midiNote, when);
+      }
+    }
+  }
+
   setSustainPedal(isDown, when = 0) {
     if (!this.pcmEngine) this.init();
     audioCore.ensureRunning();
+    this.sustainPedalActive = !!isDown;
+    // Pedal governs sustained notes: cancel held-note timers while down, re-arm
+    // them for keys still physically held once the pedal lifts.
+    if (isDown) {
+      this._clearAllHeldNoteTimers();
+    } else {
+      this.heldNotes.forEach(n => this._armHeldNoteTimer(n));
+    }
     // Notify worklet for live VA sustain handling
     if (this._workletReady && this._workletNode) {
       this._workletNode.setSustainPedal(isDown);
@@ -1804,6 +1923,7 @@ export class MultiLayerEngine {
     tritonVaEngine.allNotesOff();
     this.vaAllNotesOff();
     if (this._workletReady && this._workletNode) this._workletNode.allNotesOff();
+    this._clearHeldNoteState();
 
     if (audioCore.fxRack) {
       try {

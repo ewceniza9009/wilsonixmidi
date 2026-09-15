@@ -40,6 +40,9 @@ class WorkletVoice {
     this.envStage = 0;
     this.envLevel = 0.0;
 
+    // True while the sustain pedal kept this voice ringing after its key lifted
+    this.pedalHeld = false;
+
     // Filter states (SVF)
     this.ic1eqL = 0;
     this.ic2eqL = 0;
@@ -54,14 +57,21 @@ class WorkletVoice {
     this.freq = 440.0 * Math.pow(2.0, (note - 69.0) / 12.0);
     this.startTime = time;
     this.envStage = 1; // Attack
+    this.pedalHeld = false;
     this.phase1 = 0;
     this.phase2 = 0;
     this.phaseSub = 0;
   }
 
-  noteOff() {
+  noteOff(pedal = false) {
     if (this.active && this.envStage !== 0) {
-      this.envStage = 4; // Release
+      if (pedal) {
+        // Sustain pedal down: keep ringing (held at the sustain level), decayed
+        // by sustainTau in the render loop until the pedal lifts.
+        this.pedalHeld = true;
+      } else {
+        this.envStage = 4; // Release
+      }
     }
   }
 
@@ -69,6 +79,7 @@ class WorkletVoice {
     this.active = false;
     this.envStage = 0;
     this.envLevel = 0.0;
+    this.pedalHeld = false;
     this.ic1eqL = 0;
     this.ic2eqL = 0;
     this.ic1eqR = 0;
@@ -119,6 +130,11 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
     // a 16-note chord can't stack to 7× full-scale and slam the master bus.
     this.polyScale = 1.0;
 
+    // Sustain-pedal behavior: pedalHeld voices decay with this tau while the
+    // pedal is down and force-release when it lifts.
+    this.pedalDown = false;
+    this.sustainTau = 2.4;
+
     // MessagePort handling
     this.port.onmessage = e => {
       this.handleMessage(e.data);
@@ -139,13 +155,25 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
       else if (data.name === "subLevel") this.subLevel = data.value;
       else if (data.name === "wave1") this.waveType1 = data.value;
       else if (data.name === "wave2") this.waveType2 = data.value;
+      else if (data.name === "sustainTau") this.sustainTau = data.value;
     } else if (data.type === "sustain") {
-      // Sustain pedal: when released, force-release all held voices
+      // Sustain pedal: down = keep ringing (decay via sustainTau), up = release
+      // the pedal-held voices. Genuinely held keys (not pedal-held) stay.
+      this.pedalDown = !!data.down;
       if (!data.down) {
         for (let i = 0; i < MAX_VOICES; i++) {
-          if (this.voices[i].active && this.voices[i].envStage === 3) {
-            this.voices[i].envStage = 4; // Release
+          const v = this.voices[i];
+          if (v.active && v.pedalHeld) {
+            v.pedalHeld = false;
+            v.envStage = 4; // Release
           }
+        }
+      }
+    } else if (data.type === "silentOff") {
+      // Audio-only release (no visual echo) - held-note max-sustain fade.
+      for (let i = 0; i < MAX_VOICES; i++) {
+        if (this.voices[i].active && this.voices[i].note === data.note) {
+          this.voices[i].noteOff(this.pedalDown);
         }
       }
     } else if (data.type === "allNotesOff") {
@@ -184,7 +212,7 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
       // Note Off
       for (let i = 0; i < MAX_VOICES; i++) {
         if (this.voices[i].active && this.voices[i].note === note) {
-          this.voices[i].noteOff();
+          this.voices[i].noteOff(this.pedalDown);
         }
       }
       this.port.postMessage({ type: "visual", note, on: false, vel: 0 });
@@ -256,6 +284,7 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
     const attackRate = 1.0 / Math.max(0.001, this.attack * this.sampleRate);
     const decayRate = 1.0 / Math.max(0.001, this.decay * this.sampleRate);
     const releaseRate = 1.0 / Math.max(0.001, this.release * this.sampleRate);
+    const sustainDecayRate = 1.0 / Math.max(0.001, this.sustainTau * this.sampleRate);
 
     // Filter coeff calculation (State Variable Filter)
     const g = Math.tan(PI * Math.min(0.48, this.cutoff * this.invSampleRate));
@@ -285,6 +314,18 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
           if (voice.envLevel <= this.sustain) {
             voice.envLevel = this.sustain;
             voice.envStage = 3; // Sustain
+          }
+        } else if (voice.envStage === 3) { // Sustain
+          // Pedal-held voices (key lifted while the pedal is down) fade with
+          // sustainTau until they die out or the pedal lifts.
+          if (voice.pedalHeld) {
+            voice.envLevel -= sustainDecayRate;
+            if (voice.envLevel <= 0.0005) {
+              voice.envLevel = 0.0;
+              voice.active = false;
+              voice.envStage = 0;
+              voice.pedalHeld = false;
+            }
           }
         } else if (voice.envStage === 4) { // Release
           voice.envLevel -= releaseRate;

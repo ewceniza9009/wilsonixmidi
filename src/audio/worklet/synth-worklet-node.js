@@ -79,6 +79,14 @@ export class SynthWorkletNode {
     return this.writer.writeMidi(0x80, midiNote, 0, this.ctx.currentTime);
   }
 
+  // Release a note's audio without echoing the visual key-off callback - used
+  // when the held-note max-sustain fade fires while the key is still pressed.
+  noteSilentOff(midiNote) {
+    if (!this.isReady || !this.node) return false;
+    this.node.port.postMessage({ type: "silentOff", note: midiNote });
+    return true;
+  }
+
   allNotesOff() {
     if (!this.isReady) return;
     if (this.writer) {
