@@ -46,7 +46,7 @@ function Safe-RemoveDirectory {
     }
 }
 
-Clear-Host
+try { Clear-Host } catch {}
 Write-Host "================================================================" -ForegroundColor Cyan
 Write-Host "   WILSONIX MIDIKEY - SAFE CACHE CLEANER FOR TAURI INSTALLER" -ForegroundColor Cyan
 Write-Host "================================================================" -ForegroundColor Cyan
