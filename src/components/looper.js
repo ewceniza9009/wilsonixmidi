@@ -1,6 +1,14 @@
 /**
- * Ableton-Style Synchronized 4-Track Clip Looper
- * Records MIDI event streams, quantizes loop seams, and supports real-time multi-track overdubbing.
+ * Ableton-Style Synchronized 4-Track Clip Looper — CHAMPION BUILD
+ *
+ * - Count-in start, manual STOP, beat-snapped loop length
+ * - Orphan off events filtered (count-in key holds no longer poison the loop)
+ * - Orphan sustain releases cleaned up
+ * - Seam guard never cancels the first note of an iteration
+ * - PER-TRACK PRESET PRESERVATION: each track snapshots the full 4-layer
+ *   combi (instruments, gains, octaves, per-layer FX) at record time and
+ *   replays through dedicated looper buses. Live playing uses whatever
+ *   preset you switch to and never collides with the loop's sound.
  */
 
 import { audioCore } from "../audio/audio-core.js";
@@ -8,44 +16,71 @@ import { synthEngine } from "../audio/synth-engine.js";
 import { multiLayerEngine } from "../audio/multi-layer-engine.js";
 import { noteScheduler } from "../audio/lookahead-scheduler.js";
 
+let __clipLooperHooked = false;
+
 export class ClipLooper {
-  constructor(containerId) {
+  constructor(containerId, options = {}) {
     this.container = document.getElementById(containerId);
-    this.bpm = 120;
-    this.bars = 4; // 4-bar loop standard
+    this.bpm = options.bpm ?? 120;
+    this.beatsPerBar = options.beatsPerBar ?? 4;
+    this.countInBars = options.countInBars ?? 1;
+    this.snapToBeats = options.snapToBeats ?? true;
+    this.seamGuardSec = options.seamGuardSec ?? 0.03;
+    this.startLeadSec = options.startLeadSec ?? 0.05;
+    this.looperGain = options.looperGain ?? 1.0;
 
     this.tracks = [
-      { id: 0, state: "empty", events: [], activeNotes: new Set(), refill: null, nextIterStart: 0 },
-      { id: 1, state: "empty", events: [], activeNotes: new Set(), refill: null, nextIterStart: 0 },
-      { id: 2, state: "empty", events: [], activeNotes: new Set(), refill: null, nextIterStart: 0 },
-      { id: 3, state: "empty", events: [], activeNotes: new Set(), refill: null, nextIterStart: 0 },
+      this._blankTrack(0),
+      this._blankTrack(1),
+      this._blankTrack(2),
+      this._blankTrack(3),
     ];
 
     this.recordingTrackId = null;
     this.recordStartTime = 0;
+    this.countInNodes = [];
 
     this.render();
     this.bindEvents();
     this.hookSynthEngine();
+
+    window.clipLooper = this;
   }
+
+  _blankTrack(id) {
+    return {
+      id,
+      state: "empty",
+      events: [],
+      activeNotes: new Set(),
+      refill: null,
+      nextIterStart: 0,
+      loopLen: 0,
+      countIn: null,
+      preset: null, // snapshot taken at record start
+      initialSustain: false,
+    };
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // UI
+  // ──────────────────────────────────────────────────────────────────────
 
   render() {
     if (!this.container) return;
-
     this.container.innerHTML = `
       <div class="looper-station">
         <div class="looper-header">
           <span class="looper-title">SESSION CLIP LOOPER</span>
           <div class="looper-tempo-badge">
             <span id="looper-bpm-display">${this.bpm} BPM</span>
-            <span class="bar-count-badge">4 BARS</span>
+            <span class="bar-count-badge">${this.beatsPerBar}/4</span>
           </div>
         </div>
-
         <div class="looper-tracks-grid">
           ${this.tracks
             .map(
-              t => `
+              (t) => `
             <div class="loop-slot-card" id="loop-slot-${t.id}">
               <div class="slot-head">
                 <span class="slot-num">TRACK ${t.id + 1}</span>
@@ -60,7 +95,7 @@ export class ClipLooper {
                 <button class="slot-btn clear-btn" data-track="${t.id}" data-action="clear">✕</button>
               </div>
             </div>
-          `
+          `,
             )
             .join("")}
         </div>
@@ -68,120 +103,425 @@ export class ClipLooper {
     `;
   }
 
-  getLoopDurationMs() {
-    // 4 beats per bar * 4 bars = 16 beats
-    return (60 / this.bpm) * 4 * this.bars * 1000;
-  }
-
-  getLoopDurationSec() {
-    return this.getLoopDurationMs() / 1000;
-  }
-
-  hookSynthEngine() {
-    const originalNoteOn = synthEngine.noteOn.bind(synthEngine);
-    const originalNoteOff = synthEngine.noteOff.bind(synthEngine);
-
-    synthEngine.noteOn = (midiNote, velocity) => {
-      // Call original for heldNotes tracking + visual callbacks (oscillators are permanently muted)
-      originalNoteOn(midiNote, velocity);
-      // Route through multiLayerEngine for actual PCM sample playback
-      multiLayerEngine.noteOn(midiNote, velocity);
-      if (this.recordingTrackId !== null) {
-        const ctx = audioCore.ctx;
-        const offset = ctx ? ctx.currentTime - this.recordStartTime : 0;
-        this.tracks[this.recordingTrackId].events.push({
-          type: "on",
-          note: midiNote,
-          vel: velocity,
-          time: offset,
-        });
-      }
-    };
-
-    synthEngine.noteOff = midiNote => {
-      originalNoteOff(midiNote);
-      multiLayerEngine.noteOff(midiNote);
-      if (this.recordingTrackId !== null) {
-        const ctx = audioCore.ctx;
-        const offset = ctx ? ctx.currentTime - this.recordStartTime : 0;
-        this.tracks[this.recordingTrackId].events.push({
-          type: "off",
-          note: midiNote,
-          time: offset,
-        });
-      }
-    };
-  }
-
   bindEvents() {
-    this.container.querySelectorAll(".slot-btn").forEach(btn => {
+    if (!this.container) return;
+    this.container.querySelectorAll(".slot-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         const trackId = parseInt(btn.getAttribute("data-track"));
         const action = btn.getAttribute("data-action");
-
         if (action === "rec") this.toggleRecord(trackId);
         else if (action === "play") this.togglePlay(trackId);
         else if (action === "clear") {
-          // If track is in recording state, stop recording early
-          if (this.tracks[trackId].state === "recording") {
+          const st = this.tracks[trackId].state;
+          if (st === "recording" || st === "counting")
             this.stopRecording(trackId);
-          } else {
-            this.clearTrack(trackId);
-          }
+          else this.clearTrack(trackId);
         }
       });
     });
   }
 
-  toggleRecord(trackId) {
+  updateTrackUi(trackId) {
     const track = this.tracks[trackId];
+    const card = document.getElementById(`loop-slot-${trackId}`);
+    const pill = document.getElementById(`slot-status-${trackId}`);
+    if (!card || !pill) return;
 
-    if (this.recordingTrackId === trackId) {
-      // Finish recording and transition to playback loop
-      this.finishRecording(trackId);
-    } else {
-      // Start recording on this track (overdub or fresh)
-      if (this.recordingTrackId !== null) {
-        this.finishRecording(this.recordingTrackId);
-      }
-      this.recordingTrackId = trackId;
-      const ctx = audioCore.ctx;
-      this.recordStartTime = ctx ? ctx.currentTime : 0;
-      track.state = "recording";
-      this.updateTrackUi(trackId);
+    card.className = `loop-slot-card state-${track.state}`;
+    pill.innerText = track.state.toUpperCase();
 
-      // Auto-finish after loop duration
-      setTimeout(() => {
-        if (this.recordingTrackId === trackId) {
-          this.finishRecording(trackId);
-        }
-      }, this.getLoopDurationMs());
+    const recBtn = card.querySelector(".rec-btn");
+    if (recBtn) {
+      recBtn.innerText =
+        track.state === "recording"
+          ? "■ STOP"
+          : track.state === "counting"
+            ? "… WAIT"
+            : "● REC";
+    }
+    const playBtn = card.querySelector(".play-btn");
+    if (playBtn) {
+      playBtn.innerText = track.state === "playing" ? "❚❚ PAUSE" : "▶ PLAY";
     }
   }
 
-  finishRecording(trackId) {
-    const track = this.tracks[trackId];
-    this.recordingTrackId = null;
-    if (track.events.length > 0) {
-      track.state = "playing";
-      this.startPlayback(trackId);
+  beatSec() {
+    return 60 / this.bpm;
+  }
+  barSec() {
+    return this.beatSec() * this.beatsPerBar;
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // Preset snapshot / restore
+  // ──────────────────────────────────────────────────────────────────────
+
+  /**
+   * Capture the current 4-layer combi state (or single-instrument state as a
+   * 1-layer snapshot) at record time. Replayed by startPlayback through the
+   * dedicated looper buses, so switching presets live never touches the loop.
+   */
+  _snapshotPreset() {
+    const snap = { layers: [], isCombiMode: false, isTritonVaMode: false };
+
+    if (
+      multiLayerEngine.isCombiMode &&
+      Array.isArray(multiLayerEngine.layers)
+    ) {
+      snap.isCombiMode = true;
+      for (let i = 0; i < 4; i++) {
+        const L = multiLayerEngine.layers[i] || {};
+        snap.layers.push({
+          inst: L.inst || "acoustic_grand_piano",
+          gain: typeof L.gain === "number" ? L.gain : 1.0,
+          oct: typeof L.oct === "number" ? L.oct : 0,
+          fx: L.fx || "clean",
+          enabled: L.enabled !== false,
+          vaProg: L.vaProg ? L.vaProg.id : null,
+        });
+      }
+    } else if (
+      multiLayerEngine.isTritonVaMode &&
+      multiLayerEngine.activeTritonVaProg
+    ) {
+      snap.isTritonVaMode = true;
+      snap.layers.push({
+        inst: "va:" + multiLayerEngine.activeTritonVaProg.id,
+        gain: 1.0,
+        oct: 0,
+        fx: "clean",
+        enabled: true,
+        vaProg: multiLayerEngine.activeTritonVaProg.id,
+      });
     } else {
-      track.state = "empty";
+      snap.layers.push({
+        inst: multiLayerEngine.activeSingleInst || "acoustic_grand_piano",
+        gain: 1.0,
+        oct: 0,
+        fx: "clean",
+        enabled: true,
+        vaProg: null,
+      });
     }
+    return snap;
+  }
+
+  _applyPresetToLooperBuses(trackId, preset) {
+    const pcm = multiLayerEngine.pcmEngine;
+    if (!pcm || !pcm.setLooperTrackFx) return;
+    for (let slot = 0; slot < 4; slot++) {
+      const L = preset.layers[slot];
+      const fx = L ? L.fx : "clean";
+      const g = L ? L.gain : 0.0;
+      try {
+        pcm.setLooperTrackFx(trackId, slot, fx);
+        pcm.setLooperTrackGain(trackId, slot, g);
+      } catch (e) {}
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // Engine hooks — capture live input
+  // ──────────────────────────────────────────────────────────────────────
+
+  hookSynthEngine() {
+    if (__clipLooperHooked) return;
+    __clipLooperHooked = true;
+
+    // Pass-through synthEngine → multiLayerEngine (unchanged behavior).
+    const origSynthOn = synthEngine.noteOn.bind(synthEngine);
+    const origSynthOff = synthEngine.noteOff.bind(synthEngine);
+    synthEngine.noteOn = (n, v, w) => {
+      origSynthOn(n, v, w);
+      multiLayerEngine.noteOn(n, v, w);
+    };
+    synthEngine.noteOff = (n, w) => {
+      origSynthOff(n, w);
+      multiLayerEngine.noteOff(n, w);
+    };
+
+    const origMlOn = multiLayerEngine.noteOn.bind(multiLayerEngine);
+    const origMlOff = multiLayerEngine.noteOff.bind(multiLayerEngine);
+    const origMlSus = multiLayerEngine.setSustainPedal.bind(multiLayerEngine);
+
+    multiLayerEngine.noteOn = (note, vel, when) => {
+      origMlOn(note, vel, when);
+      if (this.recordingTrackId !== null && !multiLayerEngine._schedAuthor) {
+        const ctx = audioCore.ctx;
+        if (!ctx) return;
+        const offset = ctx.currentTime - this.recordStartTime;
+        if (offset >= 0) {
+          this.tracks[this.recordingTrackId].events.push({
+            type: "on",
+            note,
+            vel,
+            time: offset,
+          });
+        }
+      }
+    };
+
+    multiLayerEngine.noteOff = (note, when) => {
+      origMlOff(note, when);
+      if (this.recordingTrackId !== null && !multiLayerEngine._schedAuthor) {
+        const ctx = audioCore.ctx;
+        if (!ctx) return;
+        const offset = ctx.currentTime - this.recordStartTime;
+        if (offset >= 0) {
+          this.tracks[this.recordingTrackId].events.push({
+            type: "off",
+            note,
+            time: offset,
+          });
+        }
+      }
+    };
+
+    multiLayerEngine.setSustainPedal = (down, when) => {
+      origMlSus(down, when);
+      if (this.recordingTrackId !== null && !multiLayerEngine._schedAuthor) {
+        const ctx = audioCore.ctx;
+        if (!ctx) return;
+        const offset = ctx.currentTime - this.recordStartTime;
+        if (offset >= 0) {
+          this.tracks[this.recordingTrackId].events.push({
+            type: "sustain",
+            down,
+            time: offset,
+          });
+        }
+      }
+    };
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // Recording
+  // ──────────────────────────────────────────────────────────────────────
+
+  toggleRecord(trackId) {
+    const track = this.tracks[trackId];
+
+    if (this.recordingTrackId === trackId || track.state === "counting") {
+      this.stopRecording(trackId);
+      return;
+    }
+
+    if (this.recordingTrackId !== null)
+      this.finishRecording(this.recordingTrackId);
+    this.tracks.forEach((t, i) => {
+      if (t.state === "counting") this._cancelCountIn(i);
+    });
+
+    if (track.state === "playing") {
+      this.stopPlayback(trackId);
+      track.state = "stopped";
+    }
+
+    track.events = [];
+    track.loopLen = 0;
+    track.preset = null;
+
+    if (this.countInBars > 0) {
+      this._startCountIn(trackId);
+    } else {
+      const ctx = audioCore.ctx;
+      if (!ctx) return;
+      this._beginRecordingAt(trackId, ctx.currentTime);
+    }
+  }
+
+  _startCountIn(trackId) {
+    const track = this.tracks[trackId];
+    const ctx = audioCore.ctx;
+    if (!ctx) return;
+
+    track.state = "counting";
+    this.updateTrackUi(trackId);
+
+    const beat = this.beatSec();
+    const countInBeats = this.countInBars * this.beatsPerBar;
+    const startAt = ctx.currentTime + 0.1;
+    const recordAt = startAt + countInBeats * beat;
+
+    this._scheduleCountInClicks(startAt, countInBeats, beat);
+
+    const delayMs = Math.max(0, (recordAt - ctx.currentTime) * 1000);
+    track.countIn = {
+      timerId: setTimeout(() => {
+        track.countIn = null;
+        if (track.state !== "counting") return;
+        this._beginRecordingAt(trackId, recordAt);
+      }, delayMs),
+    };
+  }
+
+  _cancelCountIn(trackId) {
+    const track = this.tracks[trackId];
+    if (track.countIn) {
+      clearTimeout(track.countIn.timerId);
+      track.countIn = null;
+    }
+    this._stopCountInClicks();
+    track.state = track.events.length > 0 ? "stopped" : "empty";
+    this.updateTrackUi(trackId);
+  }
+
+  _scheduleCountInClicks(startAt, beats, beatSec) {
+    const ctx = audioCore.ctx;
+    if (!ctx) return;
+    this._stopCountInClicks();
+    for (let i = 0; i < beats; i++) {
+      const t = startAt + i * beatSec;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const downbeat = i % this.beatsPerBar === 0;
+      osc.type = "square";
+      osc.frequency.value = downbeat ? 1600 : 1000;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(downbeat ? 0.35 : 0.2, t + 0.002);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.06);
+      this.countInNodes.push(osc);
+    }
+  }
+
+  _stopCountInClicks() {
+    this.countInNodes.forEach((o) => {
+      try {
+        o.stop();
+      } catch (_) {}
+    });
+    this.countInNodes = [];
+  }
+
+  _beginRecordingAt(trackId, startAt) {
+    const track = this.tracks[trackId];
+    const ctx = audioCore.ctx;
+    if (!ctx) return;
+
+    this.recordingTrackId = trackId;
+    this.recordStartTime = startAt;
+
+    // FREEZE THE PRESET NOW — this is what the loop will always sound like.
+    track.preset = this._snapshotPreset();
+
+    // Initial sustain state.
+    let initialSustain = false;
+    if (typeof multiLayerEngine.getSustainPedal === "function") {
+      initialSustain = !!multiLayerEngine.getSustainPedal();
+    } else if (typeof multiLayerEngine.sustainPedal === "boolean") {
+      initialSustain = multiLayerEngine.sustainPedal;
+    } else if (multiLayerEngine.pcmEngine?.sustainPedal) {
+      initialSustain = true;
+    }
+    track.initialSustain = initialSustain;
+    if (initialSustain) {
+      track.events.push({ type: "sustain", down: true, time: 0 });
+    }
+
+    track.state = "recording";
     this.updateTrackUi(trackId);
   }
 
   stopRecording(trackId) {
     const track = this.tracks[trackId];
-    this.recordingTrackId = null;
-    if (track.events.length > 0) {
-      track.state = "playing";
-      this.startPlayback(trackId);
-    } else {
-      track.state = "empty";
+
+    if (track.countIn) {
+      clearTimeout(track.countIn.timerId);
+      track.countIn = null;
+      this._stopCountInClicks();
+      track.state = track.events.length > 0 ? "stopped" : "empty";
+      this.updateTrackUi(trackId);
+      return;
     }
+    if (this.recordingTrackId !== trackId) return;
+    this.finishRecording(trackId);
+  }
+
+  finishRecording(trackId) {
+    const track = this.tracks[trackId];
+    const ctx = audioCore.ctx;
+    if (!ctx) return;
+
+    const elapsed = Math.max(0, ctx.currentTime - this.recordStartTime);
+    this.recordingTrackId = null;
+    this.recordStartTime = 0;
+    this._stopCountInClicks();
+
+    if (track.events.length === 0) {
+      track.loopLen = 0;
+      track.preset = null;
+      track.state = "empty";
+      this.updateTrackUi(trackId);
+      return;
+    }
+
+    // 1) Loop length.
+    let loopLen = elapsed;
+    if (this.snapToBeats) {
+      const beat = this.beatSec();
+      const beats = Math.max(1, Math.round(elapsed / beat));
+      loopLen = beats * beat;
+    }
+    loopLen = Math.max(loopLen, this.beatSec());
+
+    // 2) Release sustain if held at STOP.
+    const lastSus = [...track.events]
+      .reverse()
+      .find((e) => e.type === "sustain");
+    if (lastSus && lastSus.down) {
+      track.events.push({ type: "sustain", down: false, time: loopLen });
+    }
+
+    // 3) Close open notes 30ms before seam.
+    const open = new Map();
+    track.events.forEach((e) => {
+      if (e.type === "on") open.set(e.note, true);
+      else if (e.type === "off") open.delete(e.note);
+    });
+    open.forEach((_, note) => {
+      track.events.push({
+        type: "off",
+        note,
+        time: Math.max(0, loopLen - 0.03),
+      });
+    });
+
+    // 4) Drop orphan off events (releases with no matching on).
+    const seen = new Set();
+    const cleaned = [];
+    track.events.forEach((e) => {
+      if (e.type === "on") {
+        seen.add(e.note);
+        cleaned.push(e);
+      } else if (e.type === "off") {
+        if (seen.has(e.note)) {
+          seen.delete(e.note);
+          cleaned.push(e);
+        }
+      } else {
+        cleaned.push(e);
+      }
+    });
+    track.events = cleaned;
+
+    // 5) Trim to loop.
+    track.events = track.events.filter((e) => e.time < loopLen);
+
+    // 6) Sort.
+    track.events.sort((a, b) => a.time - b.time);
+
+    track.loopLen = Math.round(loopLen * 1000) / 1000;
+    track.state = "playing";
+    this.startPlayback(trackId);
     this.updateTrackUi(trackId);
   }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // Playback — routed through dedicated looper buses with the frozen preset
+  // ──────────────────────────────────────────────────────────────────────
 
   togglePlay(trackId) {
     const track = this.tracks[trackId];
@@ -198,35 +538,57 @@ export class ClipLooper {
   startPlayback(trackId) {
     const track = this.tracks[trackId];
     this.stopPlayback(trackId);
-
     if (!audioCore.ctx) return;
-    const loopLen = this.getLoopDurationSec();
+    if (!track.preset) track.preset = this._snapshotPreset();
 
-    // First audible iteration starts slightly ahead so the scheduler already
-    // has events placed on the audio clock before they are audible.
-    track.nextIterStart = audioCore.ctx.currentTime + 0.08;
+    const loopLen = track.loopLen > 0 ? track.loopLen : this.barSec();
+    const events = track.events.slice();
+    const preset = track.preset;
+
+    // Push the frozen preset FX + gains into this track's dedicated buses.
+    this._applyPresetToLooperBuses(trackId, preset);
+
+    const lead = Math.min(
+      this.startLeadSec,
+      noteScheduler.scheduleAheadSec * 0.5,
+    );
+    track.nextIterStart = audioCore.ctx.currentTime + lead;
 
     const scheduleIter = () => {
       if (track.state !== "playing") return;
       const ctx = audioCore.ctx;
       if (!ctx) return;
-      const sec = loopLen;
 
-      // Place the events of every iteration that falls inside the lookahead
-      // horizon. Because events carry an absolute audio time, one main-thread
-      // jank spike between iterations cannot stretch the loop seam.
-      while (track.nextIterStart < ctx.currentTime + noteScheduler.scheduleAheadSec) {
-        track.events.forEach(e => {
-          const at = track.nextIterStart + e.time;
+      while (
+        track.nextIterStart <
+        ctx.currentTime + noteScheduler.scheduleAheadSec
+      ) {
+        events.forEach((e) => {
+          let eventTime = e.time;
+
+          if (e.type === "off" && eventTime > 0) {
+            const distToSeam = loopLen - eventTime;
+            if (distToSeam >= 0 && distToSeam < this.seamGuardSec) {
+              eventTime = Math.max(0, eventTime - this.seamGuardSec);
+            }
+          }
+          const at = track.nextIterStart + eventTime;
+
           if (e.type === "on") {
-            noteScheduler.noteOn(e.note, e.vel, at, "looper-" + trackId);
+            this._playLooperEvent(trackId, preset, e.note, e.vel, at);
             track.activeNotes.add(e.note);
-          } else {
-            noteScheduler.noteOff(e.note, at, "looper-" + trackId);
+          } else if (e.type === "off") {
+            this._stopLooperEvent(trackId, preset, e.note, at);
             track.activeNotes.delete(e.note);
+          } else if (e.type === "sustain") {
+            // Sustain handled per-bus inside the engine; hook if present.
+            const pcm = multiLayerEngine.pcmEngine;
+            if (pcm && typeof pcm.setLooperTrackSustain === "function") {
+              pcm.setLooperTrackSustain(trackId, e.down, at);
+            }
           }
         });
-        track.nextIterStart += sec;
+        track.nextIterStart += loopLen;
       }
     };
 
@@ -236,36 +598,95 @@ export class ClipLooper {
     noteScheduler.start();
   }
 
+  _playLooperEvent(trackId, preset, midiNote, velocity, at) {
+    const pcm = multiLayerEngine.pcmEngine;
+    if (!pcm || typeof pcm.playLooperNote !== "function") return;
+
+    for (let slot = 0; slot < 4; slot++) {
+      const L = preset.layers[slot];
+      if (!L || !L.enabled) continue;
+      const transposed = Math.max(
+        21,
+        Math.min(108, midiNote + (L.oct || 0) * 12),
+      );
+      try {
+        pcm.playLooperNote(
+          trackId,
+          slot,
+          L.inst,
+          transposed,
+          velocity,
+          L.gain,
+          at,
+        );
+      } catch (e) {}
+    }
+  }
+
+  _stopLooperEvent(trackId, preset, midiNote, at) {
+    const pcm = multiLayerEngine.pcmEngine;
+    if (!pcm || typeof pcm.stopLooperNote !== "function") return;
+
+    for (let slot = 0; slot < 4; slot++) {
+      const L = preset.layers[slot];
+      if (!L || !L.enabled) continue;
+      const transposed = Math.max(
+        21,
+        Math.min(108, midiNote + (L.oct || 0) * 12),
+      );
+      try {
+        pcm.stopLooperNote(trackId, slot, L.inst, transposed, at);
+      } catch (e) {}
+    }
+  }
+
   stopPlayback(trackId) {
     const track = this.tracks[trackId];
+
     if (track.refill) {
       noteScheduler.removeRefill(track.refill);
       track.refill = null;
     }
+
+    // Cancel any events this track had scheduled.
     noteScheduler.discard("looper-" + trackId);
-    // Close every note that was open at the moment of stopping. Scheduled
-    // events were already discarded; the engine still rings any that started.
-    track.activeNotes.forEach(n => multiLayerEngine.noteOff(n));
+
+    // Kill voices on this track's dedicated looper buses.
+    const pcm = multiLayerEngine.pcmEngine;
+    if (pcm && pcm.looperInserts && pcm.looperInserts[trackId]) {
+      // Release every note that is currently open on this track.
+      track.activeNotes.forEach((note) => {
+        for (let slot = 0; slot < 4; slot++) {
+          const L = track.preset?.layers?.[slot];
+          if (!L) continue;
+          const transposed = Math.max(
+            21,
+            Math.min(108, note + (L.oct || 0) * 12),
+          );
+          try {
+            pcm.stopLooperNote(trackId, slot, L.inst, transposed);
+          } catch (e) {}
+        }
+      });
+      try {
+        pcm.clearLooperTrack(trackId);
+      } catch (e) {}
+    }
     track.activeNotes.clear();
-    const evNotes = new Set(track.events.filter(e => e.type === "on").map(e => e.note));
-    evNotes.forEach(n => multiLayerEngine.noteOff(n));
   }
 
   clearTrack(trackId) {
     const track = this.tracks[trackId];
     this.stopPlayback(trackId);
+    if (track.countIn) {
+      clearTimeout(track.countIn.timerId);
+      track.countIn = null;
+    }
+    this._stopCountInClicks();
     track.events = [];
+    track.loopLen = 0;
+    track.preset = null;
     track.state = "empty";
     this.updateTrackUi(trackId);
-  }
-
-  updateTrackUi(trackId) {
-    const track = this.tracks[trackId];
-    const card = document.getElementById(`loop-slot-${trackId}`);
-    const pill = document.getElementById(`slot-status-${trackId}`);
-    if (!card || !pill) return;
-
-    card.className = `loop-slot-card state-${track.state}`;
-    pill.innerText = track.state.toUpperCase();
   }
 }

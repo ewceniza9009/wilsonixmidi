@@ -1,13 +1,6 @@
 /**
  * Native Korg TRITON PCM Multisample Rompler Engine
  * Pre-caches genuine 24-bit multi-samples into RAM AudioBuffers with 0.00ms touch-to-sound latency.
- * Features:
- * - Dynamic Time-Variant Filter (TVF): Velocity-to-Cutoff & Resonance shaping (warm soft touch, biting punchy forte)
- * - Time-Variant Amplifier (TVA): Dynamic velocity curve & natural acoustic release
- * - Continuous Y-Axis Key Slide Expression / Polyphonic Aftertouch
- * - Sustain / Damper Pedal (Spacebar & On-Screen Latch)
- * - Pitch Bend & Mod Wheel support
- * - 88-Key SoundFont loader with instant nearest-neighbor sample fallback while decoding
  */
 
 import { KORG_PCM_BANKS } from "./korg-pcm-data.js";
@@ -16,23 +9,34 @@ import { SfxSoundGenerator } from "./sfx-sound-generator.js";
 import { sampleCache } from "./sample-cache.js";
 
 const NOTE_MAP = {
-  C: 0, "C#": 1, Db: 1, D: 2, "D#": 3, Eb: 3, E: 4, F: 5, "F#": 6, Gb: 6, G: 7, "G#": 8, Ab: 8, A: 9, "A#": 10, Bb: 10, B: 11
+  C: 0,
+  "C#": 1,
+  Db: 1,
+  D: 2,
+  "D#": 3,
+  Eb: 3,
+  E: 4,
+  F: 5,
+  "F#": 6,
+  Gb: 6,
+  G: 7,
+  "G#": 8,
+  Ab: 8,
+  A: 9,
+  "A#": 10,
+  Bb: 10,
+  B: 11,
 };
 
-// Module-level: instrument aliases resolved once, not rebuilt per keypress.
 const INST_ALIASES = {
-  // 1. Acoustic Pianos -> studio upright WAV multisamples (clean source, no MP3 grain)
   synthage_grand: "abletunes_upright",
   whitney_ballad: "abletunes_upright",
   ballad_master: "abletunes_upright",
   m1_piano_16: "abletunes_upright",
   abletunes_upright: "abletunes_upright",
   acoustic_grand_piano: "abletunes_upright",
-
-  // 2. Electric Pianos, FM Tines -> studio DX7 FM WAV multisamples (clean source, no MP3 grain)
   rhodes_stage_mp3: "electric_piano_1",
   electric_piano_1: "abletunes_fm_piano",
-  // REAL DX electric piano (GM program 5, genuine DX7-style FM EP timbre)
   electric_piano_2: "electric_piano_2",
   tri_stage_ep: "electric_piano_2",
   dx7_ep1: "electric_piano_2",
@@ -40,25 +44,17 @@ const INST_ALIASES = {
   abletunes_fm_piano: "abletunes_fm_piano",
   abletunes_fm_dx7: "abletunes_fm_piano",
   m1_fresh_air: "abletunes_fm_piano",
-
-  // 3. Real Electric & Acoustic Guitars
   distortion_guitar: "distortion_guitar",
   overdriven_guitar: "overdriven_guitar",
   electric_guitar_clean: "electric_guitar_clean",
   acoustic_guitar_nylon: "acoustic_guitar_nylon",
   fantom_nylon_pluck: "acoustic_guitar_nylon",
-
-  // 4. Organs
   drawbar_organ: "drawbar_organ",
   m1_rock_organ: "drawbar_organ",
   m1_organ_2: "drawbar_organ",
-
-  // 5. Real Bass & Sub
   synth_bass_1: "synth_bass_1",
   moog_punch_bass: "synth_bass_1",
   m1_slap_bass: "synth_bass_1",
-
-  // 6. Real Human Vocal Choir - 100% DISTINCT from Strings!
   choir_aahs: "choir_aahs",
   voice_oohs: "voice_oohs",
   m1_choir: "choir_aahs",
@@ -70,8 +66,6 @@ const INST_ALIASES = {
   angelic_oohs: "choir_aahs",
   vocal_breath: "breath_noise",
   breath_noise: "breath_noise",
-
-  // Concert Crowd & Applause Real Samples
   applause: "applause",
   concert_applause: "applause",
   stadium_roar: "applause",
@@ -79,8 +73,6 @@ const INST_ALIASES = {
   ovation: "applause",
   vox_applause: "applause",
   vox_crowd_cheer: "dj_cheer_r",
-
-  // Real Human Vocal Recordings
   vox_yeah: "vox_yeah_r",
   vox_yeah_r: "vox_yeah_r",
   vox_hey: "vox_hey_r",
@@ -93,19 +85,13 @@ const INST_ALIASES = {
   vox_hum: "voice_oohs",
   vox_beatbox: "drum_kick_r",
   angelic_choir: "choir_aahs",
-
-  // Bells & Chimes
   tubular_bells: "tubular_bells",
   wind_chimes: "wind_chimes",
   crystal_chimes: "crystal_chimes",
-
-  // DJ Authentic Samples
   dj_scratch_r: "dj_scratch_r",
   dj_partyhorn_r: "dj_partyhorn_r",
   dj_siren_r: "dj_siren_r",
   dj_whistle_r: "dj_whistle_r",
-
-  // Real Nature Field Recordings
   seashore: "seashore",
   ocean_waves: "seashore",
   nature_ocean: "seashore",
@@ -119,8 +105,6 @@ const INST_ALIASES = {
   nature_stream: "seashore",
   nature_crickets: "bird_tweet",
   nature_waterfall: "seashore",
-
-  // DJ & Cinematic Real Audio Samples
   fx_laser: "fx_laser_r",
   fx_alien: "fx_ghost_r",
   fx_bionic: "fx_robot_r",
@@ -152,30 +136,22 @@ const INST_ALIASES = {
   "808_boom": "fx_boom_r",
   noise_riser: "fx_mystic_r",
   sweep_riser: "fx_mystic_r",
-
-  // Real Acoustic & Synth Drums
   taiko_drum: "taiko_drum",
   thunder_taiko: "taiko_drum",
   percussion_taiko: "taiko_drum",
   synth_drum: "synth_drum",
   gunshot: "gunshot",
-
-  // 7. Strings & Pads
   string_ensemble_1: "string_ensemble_1",
   triton_warm_strings: "string_ensemble_1",
   symphonic_strings: "string_ensemble_1",
   m1_symphonic: "string_ensemble_1",
   m1_strings: "string_ensemble_1",
   m1_universe: "string_ensemble_1",
-
-  // 8. Brass, Horns & Synth Leads
   brass_section: "brass_section",
   fat_brass_horns: "brass_section",
   supersaw_lead: "brass_section",
   m1_brass_1: "brass_section",
   brass_1: "brass_section",
-
-  // 9. Woodwinds & Genuine Saxophones (Acoustic Blue Note Tenor Sax Multisamples)
   alto_sax: "tenor_sax",
   breathy_alto_sax: "tenor_sax",
   sax_genuine_solo: "tenor_sax",
@@ -194,8 +170,6 @@ const INST_ALIASES = {
   m1_flute: "flute",
   m1_pan_flute: "flute",
   pan_flute: "flute",
-
-  // 10. Doctor Mix M1 Instruments
   m1_guitar_1: "acoustic_guitar_steel",
   guitar_1: "acoustic_guitar_steel",
   m1_12string: "acoustic_guitar_steel",
@@ -216,7 +190,6 @@ const INST_ALIASES = {
   m1_solo_synth: "brass_section",
 };
 
-// Module-level: SOURCES ARE PEAK-NORMALIZED AT LOAD — not recreated per note.
 const INST_TRIM_GAINS = {
   acoustic_grand_piano: 1.0,
   abletunes_upright: 1.0,
@@ -228,7 +201,7 @@ const INST_TRIM_GAINS = {
   m1_choir: 1.15,
   choir_aahs: 1.15,
   acoustic_guitar_nylon: 1.25,
-  electric_guitar_clean: 1.30,
+  electric_guitar_clean: 1.3,
   alto_sax: 1.05,
   brass_section: 1.0,
   drawbar_organ: 1.0,
@@ -264,48 +237,177 @@ export function noteNameToMidi(noteStr) {
 }
 
 export const LAYER_FX_OPTIONS = {
-  // --- SYNTHESIZER YOU SIGNATURE FX ---
-  spring_surf: { id: "spring_surf", name: "🏄 Spring Reverb (Surf Foundation Drip)", category: "Synthesizer You FX" },
-  analog_juno_chorus: { id: "analog_juno_chorus", name: "🎹 Roland Juno Chorus (Synth Core)", category: "Synthesizer You FX" },
-  slapback_vocal: { id: "slapback_vocal", name: "🎤 Slapback Tape Delay (Vocal Punch)", category: "Synthesizer You FX" },
-  gated_cannon: { id: "gated_cannon", name: "💥 80s Gated Reverb (Snare Cannon)", category: "Synthesizer You FX" },
-  opto_tremolo_16th: { id: "opto_tremolo_16th", name: "⚡ Optical Tremolo (16th Groove Sync)", category: "Synthesizer You FX" },
-  tape_sat_master: { id: "tape_sat_master", name: "📼 Master Bus Tape Saturation & Glue", category: "Synthesizer You FX" },
-
-  // --- STUDIO MODULATION & ENSEMBLE ---
+  spring_surf: {
+    id: "spring_surf",
+    name: "🏄 Spring Reverb (Surf Foundation Drip)",
+    category: "Synthesizer You FX",
+  },
+  analog_juno_chorus: {
+    id: "analog_juno_chorus",
+    name: "🎹 Roland Juno Chorus (Synth Core)",
+    category: "Synthesizer You FX",
+  },
+  slapback_vocal: {
+    id: "slapback_vocal",
+    name: "🎤 Slapback Tape Delay (Vocal Punch)",
+    category: "Synthesizer You FX",
+  },
+  gated_cannon: {
+    id: "gated_cannon",
+    name: "💥 80s Gated Reverb (Snare Cannon)",
+    category: "Synthesizer You FX",
+  },
+  opto_tremolo_16th: {
+    id: "opto_tremolo_16th",
+    name: "⚡ Optical Tremolo (16th Groove Sync)",
+    category: "Synthesizer You FX",
+  },
+  tape_sat_master: {
+    id: "tape_sat_master",
+    name: "📼 Master Bus Tape Saturation & Glue",
+    category: "Synthesizer You FX",
+  },
   clean: { id: "clean", name: "Direct Clean (Dry Bypass)", category: "Clean" },
-  chorus_lush: { id: "chorus_lush", name: "Dimension D Stereo Chorus", category: "Modulation" },
-  chorus_vintage: { id: "chorus_vintage", name: "Analog Warm Ensemble", category: "Modulation" },
-  autopan_wide: { id: "autopan_wide", name: "1973 Suitcase Auto-Pan", category: "Modulation" },
-  autopan_fast: { id: "autopan_fast", name: "Fast Stereo Panning", category: "Modulation" },
-  rotary_fast: { id: "rotary_fast", name: "Leslie 122 Rotary (Fast)", category: "Modulation" },
-  rotary_slow: { id: "rotary_slow", name: "Leslie 122 Rotary (Chorale)", category: "Modulation" },
-  phaser_6stage: { id: "phaser_6stage", name: "Analog 6-Stage Phaser", category: "Modulation" },
-  phaser_deep: { id: "phaser_deep", name: "Deep Jet Sweep Phaser", category: "Modulation" },
-  flanger_stereo: { id: "flanger_stereo", name: "Stereo Tape Flanger", category: "Modulation" },
-  tremolo_pulse: { id: "tremolo_pulse", name: "Opto-Tremolo Pulse", category: "Modulation" },
-  supersaw_unison: { id: "supersaw_unison", name: "Supersaw Unison Detune", category: "Modulation" },
-
-  // --- TIME & SPACE DELAYS & REVERBS ---
-  delay_tape: { id: "delay_tape", name: "Ping-Pong Tape Delay", category: "Delay & Reverb" },
-  delay_dub: { id: "delay_dub", name: "Space Dub Echo (Dotted 8th)", category: "Delay & Reverb" },
-  trance_delay: { id: "trance_delay", name: "Trance Ping-Pong (1/8 Dotted)", category: "Delay & Reverb" },
-  reverb_hall: { id: "reverb_hall", name: "Cathedral Ambient Reverb", category: "Delay & Reverb" },
-  reverb_plate: { id: "reverb_plate", name: "Studio Plate Reverb", category: "Delay & Reverb" },
-  reverb_room: { id: "reverb_room", name: "Warm Acoustic Room Reverb", category: "Delay & Reverb" },
-
-  // --- TUBE DRIVE & SATURATION ---
-  tube_warm: { id: "tube_warm", name: "12AX7 Tube Saturation", category: "Drive & EQ" },
-  tube_lead: { id: "tube_lead", name: "Screaming Tube Overdrive", category: "Drive & EQ" },
-  distortion_metal: { id: "distortion_metal", name: "High-Gain Distortion", category: "Drive & EQ" },
-  shred_stack: { id: "shred_stack", name: "Shreddage High-Gain Stack", category: "Drive & EQ" },
-  air_eq: { id: "air_eq", name: "Air & Presence EQ (+4dB Treble)", category: "Drive & EQ" },
-  warm_eq: { id: "warm_eq", name: "Warm Vintage EQ (+3dB Bass)", category: "Drive & EQ" },
-  punch_comp: { id: "punch_comp", name: "Punch Limiter / Compressor", category: "Dynamics & Special" },
-  lofi_vinyl: { id: "lofi_vinyl", name: "Lo-Fi Vintage Vinyl / Warmth", category: "Dynamics & Special" },
-  tape_lowpass: { id: "tape_lowpass", name: "Tape Lowpass (Warm HF Rolloff)", category: "Dynamics & Special" },
-  trance_gate: { id: "trance_gate", name: "Trance Gate (Rhythmic Slicer)", category: "Dynamics & Special" },
-  sidechain_pump: { id: "sidechain_pump", name: "Sidechain Pump (Ducking)", category: "Dynamics & Special" },
+  chorus_lush: {
+    id: "chorus_lush",
+    name: "Dimension D Stereo Chorus",
+    category: "Modulation",
+  },
+  chorus_vintage: {
+    id: "chorus_vintage",
+    name: "Analog Warm Ensemble",
+    category: "Modulation",
+  },
+  autopan_wide: {
+    id: "autopan_wide",
+    name: "1973 Suitcase Auto-Pan",
+    category: "Modulation",
+  },
+  autopan_fast: {
+    id: "autopan_fast",
+    name: "Fast Stereo Panning",
+    category: "Modulation",
+  },
+  rotary_fast: {
+    id: "rotary_fast",
+    name: "Leslie 122 Rotary (Fast)",
+    category: "Modulation",
+  },
+  rotary_slow: {
+    id: "rotary_slow",
+    name: "Leslie 122 Rotary (Chorale)",
+    category: "Modulation",
+  },
+  phaser_6stage: {
+    id: "phaser_6stage",
+    name: "Analog 6-Stage Phaser",
+    category: "Modulation",
+  },
+  phaser_deep: {
+    id: "phaser_deep",
+    name: "Deep Jet Sweep Phaser",
+    category: "Modulation",
+  },
+  flanger_stereo: {
+    id: "flanger_stereo",
+    name: "Stereo Tape Flanger",
+    category: "Modulation",
+  },
+  tremolo_pulse: {
+    id: "tremolo_pulse",
+    name: "Opto-Tremolo Pulse",
+    category: "Modulation",
+  },
+  supersaw_unison: {
+    id: "supersaw_unison",
+    name: "Supersaw Unison Detune",
+    category: "Modulation",
+  },
+  delay_tape: {
+    id: "delay_tape",
+    name: "Ping-Pong Tape Delay",
+    category: "Delay & Reverb",
+  },
+  delay_dub: {
+    id: "delay_dub",
+    name: "Space Dub Echo (Dotted 8th)",
+    category: "Delay & Reverb",
+  },
+  trance_delay: {
+    id: "trance_delay",
+    name: "Trance Ping-Pong (1/8 Dotted)",
+    category: "Delay & Reverb",
+  },
+  reverb_hall: {
+    id: "reverb_hall",
+    name: "Cathedral Ambient Reverb",
+    category: "Delay & Reverb",
+  },
+  reverb_plate: {
+    id: "reverb_plate",
+    name: "Studio Plate Reverb",
+    category: "Delay & Reverb",
+  },
+  reverb_room: {
+    id: "reverb_room",
+    name: "Warm Acoustic Room Reverb",
+    category: "Delay & Reverb",
+  },
+  tube_warm: {
+    id: "tube_warm",
+    name: "12AX7 Tube Saturation",
+    category: "Drive & EQ",
+  },
+  tube_lead: {
+    id: "tube_lead",
+    name: "Screaming Tube Overdrive",
+    category: "Drive & EQ",
+  },
+  distortion_metal: {
+    id: "distortion_metal",
+    name: "High-Gain Distortion",
+    category: "Drive & EQ",
+  },
+  shred_stack: {
+    id: "shred_stack",
+    name: "Shreddage High-Gain Stack",
+    category: "Drive & EQ",
+  },
+  air_eq: {
+    id: "air_eq",
+    name: "Air & Presence EQ (+4dB Treble)",
+    category: "Drive & EQ",
+  },
+  warm_eq: {
+    id: "warm_eq",
+    name: "Warm Vintage EQ (+3dB Bass)",
+    category: "Drive & EQ",
+  },
+  punch_comp: {
+    id: "punch_comp",
+    name: "Punch Limiter / Compressor",
+    category: "Dynamics & Special",
+  },
+  lofi_vinyl: {
+    id: "lofi_vinyl",
+    name: "Lo-Fi Vintage Vinyl / Warmth",
+    category: "Dynamics & Special",
+  },
+  tape_lowpass: {
+    id: "tape_lowpass",
+    name: "Tape Lowpass (Warm HF Rolloff)",
+    category: "Dynamics & Special",
+  },
+  trance_gate: {
+    id: "trance_gate",
+    name: "Trance Gate (Rhythmic Slicer)",
+    category: "Dynamics & Special",
+  },
+  sidechain_pump: {
+    id: "sidechain_pump",
+    name: "Sidechain Pump (Ducking)",
+    category: "Dynamics & Special",
+  },
 };
 
 export class LayerInsertProcessor {
@@ -315,12 +417,10 @@ export class LayerInsertProcessor {
     this.input = ctx.createGain();
     this.currentFx = "clean";
 
-    // Set 2-channel stereo explicitly
     this.input.channelCount = 2;
     this.input.channelCountMode = "explicit";
     this.input.channelInterpretation = "speakers";
 
-    // Sub-processors
     this.dryGain = ctx.createGain();
     this.wetGain = ctx.createGain();
     this.dryGain.gain.value = 1.0;
@@ -341,25 +441,51 @@ export class LayerInsertProcessor {
     this.effectChainOutput.channelCountMode = "explicit";
     this.effectChainOutput.channelInterpretation = "speakers";
 
-    // Direct Dry path
     this.input.connect(this.dryGain);
     this.dryGain.connect(this.destination);
 
-    // Wet FX path
     this.input.connect(this.effectChainInput);
     this.effectChainOutput.connect(this.wetGain);
     this.wetGain.connect(this.destination);
 
     this.activeFxNodes = [];
+    this.engine = null;
+    this.sustainActive = false;
+    this.sustainedVoices = new Set();
     this.setEffect("clean");
+  }
+
+  setSustain(isDown) {
+    this.sustainActive = !!isDown;
+    if (!this.sustainActive) {
+      const now = this.ctx.currentTime;
+      this.sustainedVoices.forEach((v) => {
+        try {
+          v.voiceGain.gain.cancelScheduledValues(now);
+          v.voiceGain.gain.setTargetAtTime(0, now, 0.06);
+          v.src.stop(now + 0.25);
+        } catch (e) {}
+        if (this.engine) this.engine.removeVoice(v.midiNote, v);
+      });
+      this.sustainedVoices.clear();
+    }
   }
 
   flush() {
     try {
-      // Kill wet path immediately
+      const now = this.ctx.currentTime;
+      this.sustainedVoices?.forEach((v) => {
+        try {
+          v.voiceGain.gain.cancelScheduledValues(now);
+          v.voiceGain.gain.setTargetAtTime(0, now, 0.01);
+          v.src.stop(now + 0.05);
+        } catch (e) {}
+      });
+      this.sustainedVoices?.clear();
+
       this.wetGain.gain.cancelScheduledValues(this.ctx.currentTime);
       this.wetGain.gain.setValueAtTime(0, this.ctx.currentTime);
-      this.activeFxNodes.forEach(node => {
+      this.activeFxNodes.forEach((node) => {
         try {
           if (node.gain && node.gain.cancelScheduledValues) {
             node.gain.cancelScheduledValues(this.ctx.currentTime);
@@ -374,14 +500,12 @@ export class LayerInsertProcessor {
     this.currentFx = fxType || "clean";
     const ctx = this.ctx;
 
-    // IMMEDIATELY silence the wet path to kill any lingering reverb/delay tails
     this.wetGain.gain.cancelScheduledValues(ctx.currentTime);
     this.wetGain.gain.setValueAtTime(0, ctx.currentTime);
 
-    // Disconnect old FX nodes
     try {
       this.effectChainInput.disconnect();
-      this.activeFxNodes.forEach(node => {
+      this.activeFxNodes.forEach((node) => {
         try {
           if (node.stop) node.stop();
           node.disconnect();
@@ -396,85 +520,99 @@ export class LayerInsertProcessor {
       return;
     }
 
-    // Default balance
-    const isSerialInsert = ["air_eq", "warm_eq", "punch_comp", "tube_warm", "tube_lead", "distortion_metal", "lofi_vinyl", "tape_lowpass", "trance_delay", "shred_stack"].includes(this.currentFx);
-    // Reliable audible wet blend per effect (was a flat 0.15 for everything,
-    // which left chorus/reverb inaudible). Modulation/time types get real presence.
+    const isSerialInsert = [
+      "air_eq",
+      "warm_eq",
+      "punch_comp",
+      "tube_warm",
+      "tube_lead",
+      "distortion_metal",
+      "lofi_vinyl",
+      "tape_lowpass",
+      "trance_delay",
+      "shred_stack",
+    ].includes(this.currentFx);
+
     const WET_BLEND = {
       chorus_lush: 0.34,
-      chorus_vintage: 0.30,
-      analog_juno_chorus: 0.30,
+      chorus_vintage: 0.3,
+      analog_juno_chorus: 0.3,
       reverb_hall: 0.34,
       reverb_plate: 0.28,
       reverb_room: 0.24,
       delay_tape: 0.24,
       delay_dub: 0.24,
     };
+
     if (isSerialInsert) {
       this.dryGain.gain.setValueAtTime(0.0, ctx.currentTime);
       this.wetGain.gain.setValueAtTime(1.0, ctx.currentTime);
     } else {
       this.dryGain.gain.setValueAtTime(1.0, ctx.currentTime);
-      this.wetGain.gain.setValueAtTime(WET_BLEND[this.currentFx] ?? 0.15, ctx.currentTime);
+      this.wetGain.gain.setValueAtTime(
+        WET_BLEND[this.currentFx] ?? 0.15,
+        ctx.currentTime,
+      );
     }
 
     switch (this.currentFx) {
       case "chorus_lush":
       case "chorus_vintage": {
-        // True Studio Dimension D Stereo Chorus (audible shimmering width)
         const isLush = this.currentFx === "chorus_lush";
         const delayL = ctx.createDelay(0.1);
         const delayR = ctx.createDelay(0.1);
         delayL.delayTime.value = isLush ? 0.022 : 0.019;
         delayR.delayTime.value = isLush ? 0.026 : 0.023;
-
         const lfo = ctx.createOscillator();
         lfo.type = "sine";
         lfo.frequency.value = isLush ? 0.65 : 0.5;
-
         const lfoGainL = ctx.createGain();
         const lfoGainR = ctx.createGain();
         const depth = isLush ? 0.0028 : 0.0022;
         lfoGainL.gain.value = depth;
         lfoGainR.gain.value = depth * 0.78;
-
         lfo.connect(lfoGainL);
         lfo.connect(lfoGainR);
         lfoGainL.connect(delayL.delayTime);
         lfoGainR.connect(delayR.delayTime);
-
         const hp = ctx.createBiquadFilter();
         hp.type = "highpass";
         hp.frequency.value = 120;
-
         const lp = ctx.createBiquadFilter();
         lp.type = "lowpass";
         lp.frequency.value = 8500;
-
         this.effectChainInput.connect(hp);
         hp.connect(lp);
         lp.connect(delayL);
         lp.connect(delayR);
-
         const merger = ctx.createChannelMerger(2);
         delayL.connect(merger, 0, 0);
         delayR.connect(merger, 0, 1);
         merger.connect(this.effectChainOutput);
-
         lfo.start();
-        this.activeFxNodes.push(delayL, delayR, lfo, lfoGainL, lfoGainR, hp, lp, merger);
+        this.activeFxNodes.push(
+          delayL,
+          delayR,
+          lfo,
+          lfoGainL,
+          lfoGainR,
+          hp,
+          lp,
+          merger,
+        );
         break;
       }
-
       case "autopan_wide":
       case "autopan_fast": {
-        const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : ctx.createGain();
+        const panner = ctx.createStereoPanner
+          ? ctx.createStereoPanner()
+          : ctx.createGain();
         const lfo = ctx.createOscillator();
         lfo.type = "sine";
         lfo.frequency.value = this.currentFx === "autopan_fast" ? 2.5 : 1.2;
         if (ctx.createStereoPanner) {
           const lfoGain = ctx.createGain();
-          lfoGain.gain.value = 0.25; // Gentle subtle spread, never bouncing hard left-to-right
+          lfoGain.gain.value = 0.25;
           lfo.connect(lfoGain);
           lfoGain.connect(panner.pan);
           lfo.start();
@@ -484,7 +622,6 @@ export class LayerInsertProcessor {
         panner.connect(this.effectChainOutput);
         break;
       }
-
       case "rotary_fast":
       case "rotary_slow": {
         const filter = ctx.createBiquadFilter();
@@ -492,12 +629,12 @@ export class LayerInsertProcessor {
         filter.frequency.value = 850;
         filter.Q.value = 1.0;
         filter.gain.value = 1.4;
-
-        const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : ctx.createGain();
+        const panner = ctx.createStereoPanner
+          ? ctx.createStereoPanner()
+          : ctx.createGain();
         const lfo = ctx.createOscillator();
         lfo.type = "sine";
         lfo.frequency.value = this.currentFx === "rotary_fast" ? 4.2 : 0.9;
-
         if (ctx.createStereoPanner) {
           const lfoGain = ctx.createGain();
           lfoGain.gain.value = 0.15;
@@ -506,18 +643,16 @@ export class LayerInsertProcessor {
           lfo.start();
           this.activeFxNodes.push(lfo, lfoGain);
         }
-
         this.effectChainInput.connect(filter);
         filter.connect(panner);
         panner.connect(this.effectChainOutput);
         this.activeFxNodes.push(filter, panner);
         break;
       }
-
       case "tube_warm":
       case "tube_lead": {
         const shaper = ctx.createWaveShaper();
-        const drive = this.currentFx === "tube_lead" ? 0.70 : 0.35;
+        const drive = this.currentFx === "tube_lead" ? 0.7 : 0.35;
         const n_samples = 4096;
         const curve = new Float32Array(n_samples);
         const k = 1.0 + drive * 3.5;
@@ -527,15 +662,12 @@ export class LayerInsertProcessor {
         }
         shaper.curve = curve;
         shaper.oversample = "4x";
-
         const cab = ctx.createBiquadFilter();
         cab.type = "lowpass";
         cab.frequency.value = this.currentFx === "tube_lead" ? 4200 : 6500;
-
         const hp = ctx.createBiquadFilter();
         hp.type = "highpass";
         hp.frequency.value = 80;
-
         this.effectChainInput.connect(hp);
         hp.connect(shaper);
         shaper.connect(cab);
@@ -543,26 +675,22 @@ export class LayerInsertProcessor {
         this.activeFxNodes.push(hp, shaper, cab);
         break;
       }
-
       case "distortion_metal": {
         const dist = ctx.createWaveShaper();
         const n_samples = 4096;
         const curve = new Float32Array(n_samples);
         for (let i = 0; i < n_samples; ++i) {
           const x = (i * 2) / n_samples - 1;
-          curve[i] = Math.tanh(x * 3.6) * 0.80;
+          curve[i] = Math.tanh(x * 3.6) * 0.8;
         }
         dist.curve = curve;
         dist.oversample = "4x";
-
         const hp = ctx.createBiquadFilter();
         hp.type = "highpass";
         hp.frequency.value = 90;
-
         const cab = ctx.createBiquadFilter();
         cab.type = "lowpass";
         cab.frequency.value = 3800;
-
         this.effectChainInput.connect(hp);
         hp.connect(dist);
         dist.connect(cab);
@@ -570,20 +698,15 @@ export class LayerInsertProcessor {
         this.activeFxNodes.push(hp, dist, cab);
         break;
       }
-
       case "shred_stack": {
-        // Tight modern Shreddage chain: DC block -> Tube Screamer mid-push ->
-        // high-gain saturation -> tight lowcut -> 4x12 cab simulation
         const dc = ctx.createBiquadFilter();
         dc.type = "highpass";
         dc.frequency.value = 80;
-
         const scream = ctx.createBiquadFilter();
         scream.type = "peaking";
         scream.frequency.value = 2800;
         scream.Q.value = 1.0;
         scream.gain.value = 6.0;
-
         const shred = ctx.createWaveShaper();
         const n_samples = 4096;
         const curve = new Float32Array(n_samples);
@@ -593,15 +716,12 @@ export class LayerInsertProcessor {
         }
         shred.curve = curve;
         shred.oversample = "4x";
-
         const tight = ctx.createBiquadFilter();
         tight.type = "highpass";
         tight.frequency.value = 110;
-
         const cab = ctx.createBiquadFilter();
         cab.type = "lowpass";
         cab.frequency.value = 3600;
-
         this.effectChainInput.connect(dc);
         dc.connect(scream);
         scream.connect(shred);
@@ -611,7 +731,6 @@ export class LayerInsertProcessor {
         this.activeFxNodes.push(dc, scream, shred, tight, cab);
         break;
       }
-
       case "phaser_6stage":
       case "phaser_deep": {
         const ap1 = ctx.createBiquadFilter();
@@ -622,7 +741,6 @@ export class LayerInsertProcessor {
         ap2.type = "allpass";
         ap2.frequency.value = 1800;
         ap2.Q.value = 0.7;
-
         const lfo = ctx.createOscillator();
         lfo.type = "sine";
         lfo.frequency.value = this.currentFx === "phaser_deep" ? 0.35 : 0.8;
@@ -632,14 +750,12 @@ export class LayerInsertProcessor {
         lfoGain.connect(ap1.frequency);
         lfoGain.connect(ap2.frequency);
         lfo.start();
-
         this.effectChainInput.connect(ap1);
         ap1.connect(ap2);
         ap2.connect(this.effectChainOutput);
         this.activeFxNodes.push(ap1, ap2, lfo, lfoGain);
         break;
       }
-
       case "flanger_stereo": {
         const delay = ctx.createDelay(0.05);
         delay.delayTime.value = 0.0035;
@@ -651,22 +767,17 @@ export class LayerInsertProcessor {
         lfo.connect(lfoGain);
         lfoGain.connect(delay.delayTime);
         lfo.start();
-
         const hp = ctx.createBiquadFilter();
         hp.type = "highpass";
         hp.frequency.value = 140;
-
         const lp = ctx.createBiquadFilter();
         lp.type = "lowpass";
         lp.frequency.value = 4500;
-
         const fbDcBlock = ctx.createBiquadFilter();
         fbDcBlock.type = "highpass";
         fbDcBlock.frequency.value = 80;
-
         const feedback = ctx.createGain();
         feedback.gain.value = 0.22;
-
         this.effectChainInput.connect(hp);
         hp.connect(delay);
         delay.connect(lp);
@@ -674,10 +785,17 @@ export class LayerInsertProcessor {
         fbDcBlock.connect(feedback);
         feedback.connect(delay);
         lp.connect(this.effectChainOutput);
-        this.activeFxNodes.push(delay, lfo, lfoGain, hp, lp, fbDcBlock, feedback);
+        this.activeFxNodes.push(
+          delay,
+          lfo,
+          lfoGain,
+          hp,
+          lp,
+          fbDcBlock,
+          feedback,
+        );
         break;
       }
-
       case "delay_tape":
       case "delay_dub": {
         const delayL = ctx.createDelay(2.0);
@@ -685,80 +803,76 @@ export class LayerInsertProcessor {
         const dt = this.currentFx === "delay_dub" ? 0.42 : 0.28;
         delayL.delayTime.value = dt;
         delayR.delayTime.value = dt * 1.333;
-
         const fbDcL = ctx.createBiquadFilter();
         fbDcL.type = "highpass";
         fbDcL.frequency.value = 80;
         const fbDcR = ctx.createBiquadFilter();
         fbDcR.type = "highpass";
         fbDcR.frequency.value = 80;
-
         const feedbackL = ctx.createGain();
         const feedbackR = ctx.createGain();
-        const fb = this.currentFx === "delay_dub" ? 0.38 : 0.30;
+        const fb = this.currentFx === "delay_dub" ? 0.38 : 0.3;
         feedbackL.gain.value = fb;
         feedbackR.gain.value = fb;
-
         const hp = ctx.createBiquadFilter();
         hp.type = "highpass";
         hp.frequency.value = 140;
         const lp = ctx.createBiquadFilter();
         lp.type = "lowpass";
         lp.frequency.value = 3200;
-
         this.effectChainInput.connect(hp);
         hp.connect(lp);
         lp.connect(delayL);
         lp.connect(delayR);
-
         delayL.connect(fbDcL);
         fbDcL.connect(feedbackL);
         feedbackL.connect(delayL);
-
         delayR.connect(fbDcR);
         fbDcR.connect(feedbackR);
         feedbackR.connect(delayR);
-
         const merger = ctx.createChannelMerger(2);
         delayL.connect(merger, 0, 0);
         delayR.connect(merger, 0, 1);
         merger.connect(this.effectChainOutput);
-
-        this.activeFxNodes.push(delayL, delayR, hp, lp, fbDcL, fbDcR, feedbackL, feedbackR, merger);
+        this.activeFxNodes.push(
+          delayL,
+          delayR,
+          hp,
+          lp,
+          fbDcL,
+          fbDcR,
+          feedbackL,
+          feedbackR,
+          merger,
+        );
         break;
       }
-
       case "reverb_hall":
       case "reverb_plate":
       case "reverb_room": {
-        // 100% Pure Feedforward Studio Reverb (0% feedback loops, 0% ringing, 0% feedback blowup)
         const isHall = this.currentFx === "reverb_hall";
         const isPlate = this.currentFx === "reverb_plate";
-        const dampHz = isPlate ? 7000 : (isHall ? 5000 : 4200);
-
+        const dampHz = isPlate ? 7000 : isHall ? 5000 : 4200;
         const hp = ctx.createBiquadFilter();
         hp.type = "highpass";
         hp.frequency.value = 150;
-
         const lp = ctx.createBiquadFilter();
         lp.type = "lowpass";
         lp.frequency.value = dampHz;
-
         this.effectChainInput.connect(hp);
         hp.connect(lp);
-
-        // Prime-staggered feedforward multi-taps
-        const tapsL = isHall ? [0.023, 0.045, 0.078, 0.112] : [0.016, 0.032, 0.054, 0.082];
-        const tapsR = isHall ? [0.029, 0.052, 0.086, 0.125] : [0.021, 0.039, 0.063, 0.095];
+        const tapsL = isHall
+          ? [0.023, 0.045, 0.078, 0.112]
+          : [0.016, 0.032, 0.054, 0.082];
+        const tapsR = isHall
+          ? [0.029, 0.052, 0.086, 0.125]
+          : [0.021, 0.039, 0.063, 0.095];
         const weights = [0.45, 0.35, 0.25, 0.15];
-
         const sumL = ctx.createGain();
         const sumR = ctx.createGain();
         sumL.gain.value = 0.5;
         sumR.gain.value = 0.5;
-
         const nodes = [hp, lp, sumL, sumR];
-
         for (let i = 0; i < tapsL.length; i++) {
           const dL = ctx.createDelay(0.3);
           dL.delayTime.value = tapsL[i];
@@ -767,7 +881,6 @@ export class LayerInsertProcessor {
           lp.connect(dL);
           dL.connect(gL);
           gL.connect(sumL);
-
           const dR = ctx.createDelay(0.3);
           dR.delayTime.value = tapsR[i];
           const gR = ctx.createGain();
@@ -775,33 +888,26 @@ export class LayerInsertProcessor {
           lp.connect(dR);
           dR.connect(gR);
           gR.connect(sumR);
-
           nodes.push(dL, dR, gL, gR);
         }
-
-        // Diffusion allpass filters
         const apL = ctx.createBiquadFilter();
         apL.type = "allpass";
         apL.frequency.value = 1800;
         apL.Q.value = 0.7;
         sumL.connect(apL);
-
         const apR = ctx.createBiquadFilter();
         apR.type = "allpass";
         apR.frequency.value = 2200;
         apR.Q.value = 0.7;
         sumR.connect(apR);
-
         const merger = ctx.createChannelMerger(2);
         apL.connect(merger, 0, 0);
         apR.connect(merger, 0, 1);
         merger.connect(this.effectChainOutput);
-
         nodes.push(apL, apR, merger);
         this.activeFxNodes.push(...nodes);
         break;
       }
-
       case "air_eq": {
         const eq = ctx.createBiquadFilter();
         eq.type = "highshelf";
@@ -812,12 +918,11 @@ export class LayerInsertProcessor {
         this.activeFxNodes.push(eq);
         break;
       }
-
       case "warm_eq": {
         const low = ctx.createBiquadFilter();
         low.type = "lowshelf";
         low.frequency.value = 180;
-        low.gain.value = 1.0;  // Further reduced from 1.5 to eliminate noise floor boost
+        low.gain.value = 1.0;
         const high = ctx.createBiquadFilter();
         high.type = "lowpass";
         high.frequency.value = 7500;
@@ -827,7 +932,6 @@ export class LayerInsertProcessor {
         this.activeFxNodes.push(low, high);
         break;
       }
-
       case "punch_comp": {
         const comp = ctx.createDynamicsCompressor();
         comp.threshold.value = -16.0;
@@ -840,7 +944,6 @@ export class LayerInsertProcessor {
         this.activeFxNodes.push(comp);
         break;
       }
-
       case "lofi_vinyl": {
         const hp = ctx.createBiquadFilter();
         hp.type = "highpass";
@@ -854,7 +957,6 @@ export class LayerInsertProcessor {
         this.activeFxNodes.push(hp, lp);
         break;
       }
-
       case "tape_lowpass": {
         const lp = ctx.createBiquadFilter();
         lp.type = "lowpass";
@@ -865,7 +967,6 @@ export class LayerInsertProcessor {
         this.activeFxNodes.push(lp);
         break;
       }
-
       case "trance_gate": {
         const gainNode = ctx.createGain();
         gainNode.gain.value = 1.0;
@@ -882,7 +983,6 @@ export class LayerInsertProcessor {
         this.activeFxNodes.push(gainNode, lfo, gateGain);
         break;
       }
-
       case "sidechain_pump": {
         const gainNode = ctx.createGain();
         gainNode.gain.value = 1.0;
@@ -899,7 +999,6 @@ export class LayerInsertProcessor {
         this.activeFxNodes.push(gainNode, lfo, lfoGain);
         break;
       }
-
       case "trance_delay": {
         const delayL = ctx.createDelay(1.0);
         delayL.delayTime.value = 0.375;
@@ -931,10 +1030,18 @@ export class LayerInsertProcessor {
         delayL.connect(merger, 0, 0);
         delayR.connect(merger, 0, 1);
         merger.connect(this.effectChainOutput);
-        this.activeFxNodes.push(delayL, delayR, fbL, fbR, filter, dcL, dcR, merger);
+        this.activeFxNodes.push(
+          delayL,
+          delayR,
+          fbL,
+          fbR,
+          filter,
+          dcL,
+          dcR,
+          merger,
+        );
         break;
       }
-
       case "supersaw_unison": {
         const delays = [];
         const detunes = [-0.08, -0.04, 0.0, 0.04, 0.08];
@@ -959,7 +1066,6 @@ export class LayerInsertProcessor {
         this.activeFxNodes.push(...delays);
         break;
       }
-
       case "tremolo_pulse": {
         const gainNode = ctx.createGain();
         const lfo = ctx.createOscillator();
@@ -970,29 +1076,24 @@ export class LayerInsertProcessor {
         lfo.connect(lfoGain);
         lfoGain.connect(gainNode.gain);
         lfo.start();
-
         this.effectChainInput.connect(gainNode);
         gainNode.connect(this.effectChainOutput);
         this.activeFxNodes.push(gainNode, lfo, lfoGain);
         break;
       }
-
       case "spring_surf": {
         const hp = ctx.createBiquadFilter();
         hp.type = "highpass";
         hp.frequency.value = 220;
-
         const drip = ctx.createBiquadFilter();
         drip.type = "peaking";
         drip.frequency.value = 3400;
-        drip.Q.value = 2.5;  // Reduced from 4.2 to eliminate resonant peak
-        drip.gain.value = 5.0;  // Reduced from 8.5 to reduce harshness
-
+        drip.Q.value = 2.5;
+        drip.gain.value = 5.0;
         const d1 = ctx.createDelay(0.2);
         d1.delayTime.value = 0.038;
         const fb1 = ctx.createGain();
         fb1.gain.value = 0.45;
-
         this.effectChainInput.connect(hp);
         hp.connect(drip);
         drip.connect(d1);
@@ -1002,19 +1103,15 @@ export class LayerInsertProcessor {
         this.activeFxNodes.push(hp, drip, d1, fb1);
         break;
       }
-
       case "slapback_vocal": {
         const hp = ctx.createBiquadFilter();
         hp.type = "highpass";
         hp.frequency.value = 160;
-
         const lp = ctx.createBiquadFilter();
         lp.type = "lowpass";
         lp.frequency.value = 3400;
-
         const slap = ctx.createDelay(0.3);
-        slap.delayTime.value = 0.095; // 95ms zero feedback
-
+        slap.delayTime.value = 0.095;
         this.effectChainInput.connect(hp);
         hp.connect(lp);
         lp.connect(slap);
@@ -1022,23 +1119,19 @@ export class LayerInsertProcessor {
         this.activeFxNodes.push(hp, lp, slap);
         break;
       }
-
       case "gated_cannon": {
         const hp = ctx.createBiquadFilter();
         hp.type = "highpass";
         hp.frequency.value = 180;
-
         const lp = ctx.createBiquadFilter();
         lp.type = "lowpass";
         lp.frequency.value = 7500;
-
         const d1 = ctx.createDelay(0.3);
         d1.delayTime.value = 0.045;
         const d2 = ctx.createDelay(0.3);
         d2.delayTime.value = 0.085;
         const d3 = ctx.createDelay(0.3);
-        d3.delayTime.value = 0.140;
-
+        d3.delayTime.value = 0.14;
         this.effectChainInput.connect(hp);
         hp.connect(lp);
         lp.connect(d1);
@@ -1050,14 +1143,12 @@ export class LayerInsertProcessor {
         this.activeFxNodes.push(hp, lp, d1, d2, d3);
         break;
       }
-
       case "tape_sat_master": {
         const bump = ctx.createBiquadFilter();
         bump.type = "peaking";
         bump.frequency.value = 65;
         bump.gain.value = 1.5;
         bump.Q.value = 0.9;
-
         const shaper = ctx.createWaveShaper();
         shaper.oversample = "4x";
         const n = 2048;
@@ -1068,11 +1159,9 @@ export class LayerInsertProcessor {
           curve[i] = Math.tanh(k * x) / Math.tanh(k);
         }
         shaper.curve = curve;
-
         const lp = ctx.createBiquadFilter();
         lp.type = "lowpass";
         lp.frequency.value = 14500;
-
         this.effectChainInput.connect(bump);
         bump.connect(shaper);
         shaper.connect(lp);
@@ -1080,57 +1169,54 @@ export class LayerInsertProcessor {
         this.activeFxNodes.push(bump, shaper, lp);
         break;
       }
-
       case "analog_juno_chorus": {
         const delayL = ctx.createDelay(0.1);
         const delayR = ctx.createDelay(0.1);
         delayL.delayTime.value = 0.022;
         delayR.delayTime.value = 0.027;
-
         const lfo = ctx.createOscillator();
         lfo.type = "sine";
         lfo.frequency.value = 0.75;
-
         const lfoGainL = ctx.createGain();
         const lfoGainR = ctx.createGain();
         lfoGainL.gain.value = 0.0006;
         lfoGainR.gain.value = 0.0005;
-
         lfo.connect(lfoGainL);
         lfo.connect(lfoGainR);
         lfoGainL.connect(delayL.delayTime);
         lfoGainR.connect(delayR.delayTime);
-
         this.effectChainInput.connect(delayL);
         this.effectChainInput.connect(delayR);
-
         const merger = ctx.createChannelMerger(2);
         delayL.connect(merger, 0, 0);
         delayR.connect(merger, 0, 1);
         merger.connect(this.effectChainOutput);
         lfo.start();
-
-        this.activeFxNodes.push(delayL, delayR, lfo, lfoGainL, lfoGainR, merger);
+        this.activeFxNodes.push(
+          delayL,
+          delayR,
+          lfo,
+          lfoGainL,
+          lfoGainR,
+          merger,
+        );
         break;
       }
-
       case "opto_tremolo_16th": {
         const gainNode = ctx.createGain();
         const lfo = ctx.createOscillator();
         lfo.type = "sine";
-        lfo.frequency.value = 5.5;  // Reduced from 8.6 Hz for smoother modulation
+        lfo.frequency.value = 5.5;
         const lfoGain = ctx.createGain();
-        lfoGain.gain.value = 0.25;  // Reduced from 0.40 for shallower depth
+        lfoGain.gain.value = 0.25;
         lfo.connect(lfoGain);
         lfoGain.connect(gainNode.gain);
         lfo.start();
-
         this.effectChainInput.connect(gainNode);
         gainNode.connect(this.effectChainOutput);
         this.activeFxNodes.push(gainNode, lfo, lfoGain);
         break;
       }
-
       default:
         this.effectChainInput.connect(this.effectChainOutput);
         break;
@@ -1144,7 +1230,6 @@ export class NativePcmEngine {
     this.destination = destinationNode;
     this.sfxGenerator = new SfxSoundGenerator(ctx, destinationNode);
 
-    // 4 Dedicated Layer Insert Processors for the 4 Combi Racks
     this.layerInserts = [
       new LayerInsertProcessor(ctx, destinationNode),
       new LayerInsertProcessor(ctx, destinationNode),
@@ -1152,43 +1237,38 @@ export class NativePcmEngine {
       new LayerInsertProcessor(ctx, destinationNode),
     ];
 
-    // 2 Dedicated Split Keyboard Zone Inserts (LOWER = left hand below split point,
-    // UPPER = right hand at/above split point). Each half gets its own assignable
-    // instrument + insert FX chain, exactly like a combi rack strip.
     this.splitZoneInserts = {
       lower: new LayerInsertProcessor(ctx, destinationNode),
       upper: new LayerInsertProcessor(ctx, destinationNode),
     };
 
-    // Cache of decoded AudioBuffers: instId -> midiNote -> AudioBuffer
+    this.looperInserts = [];
+    for (let t = 0; t < 4; t++) {
+      const trackBuses = [];
+      for (let l = 0; l < 4; l++) {
+        const bus = new LayerInsertProcessor(ctx, destinationNode);
+        bus.engine = this;
+        trackBuses.push(bus);
+      }
+      this.looperInserts.push(trackBuses);
+    }
+
     this.decodedBuffers = new Map();
-    // Tracking active playing voices: midiNote -> array of voice records
     this.activeVoices = new Map();
-    // Sustained voices held by damper pedal: midiNote -> array of voice records
     this.sustainedVoices = new Map();
 
     this.sustainPedal = false;
     this.pitchBendSemitones = 0;
     this.modWheelAmount = 0;
 
-    // Global polyphony cap: ample headroom for fast 4-layer Combi arpeggios
     this.voiceQueue = [];
     this.MAX_VOICES = 64;
     this.heldNotes = new Set();
 
-    // Reusable voice spines (filter->gain per destination). AudioBufferSourceNode
-    // is single-use, but BiquadFilter + GainNode are NOT — pooling them removes
-    // 2 node allocations (plus channel-config writes) from every noteOn. Each
-    // keypress now creates only the single BufferSource it must.
-    //   destNode -> { free: [{ filter, voiceGain }] }
     this._spinePools = new Map();
-    // Reusable hammer transient (bandpass->gain) per destination.
     this._hammerPools = new Map();
-    // Reusable reed chiff transient (bandpass->gain) per destination.
     this._chiffPools = new Map();
 
-    // Shared felt-hammer transient: 60ms exponentially-decaying noise burst,
-    // bandpassed per-note to imitate grand hammer strike on piano voices
     try {
       const hlen = Math.floor(ctx.sampleRate * 0.06);
       this.hammerBuf = ctx.createBuffer(1, hlen, ctx.sampleRate);
@@ -1208,8 +1288,84 @@ export class NativePcmEngine {
     this.loadingSoundfonts = new Set();
     this.isReady = false;
 
-    // Initialize immediate embedded anchors and background soundfont loader
     this.initBuffers();
+  }
+
+  playLooperNote(
+    trackIndex,
+    layerSlot,
+    instId,
+    midiNote,
+    velocity,
+    gain = 1.0,
+    when = 0,
+  ) {
+    if (trackIndex < 0 || trackIndex > 3) return null;
+    if (layerSlot < 0 || layerSlot > 3) return null;
+    const bus = this.looperInserts[trackIndex]?.[layerSlot];
+    if (!bus) return null;
+    return this.playNote(
+      instId,
+      midiNote,
+      velocity,
+      gain,
+      null,
+      bus.input,
+      when,
+    );
+  }
+
+  stopLooperNote(trackIndex, layerSlot, instId, midiNote, when = 0) {
+    if (trackIndex < 0 || trackIndex > 3) return;
+    this.stopNote(instId, midiNote, when);
+  }
+
+  setLooperTrackFx(trackIndex, layerSlot, fxId) {
+    if (trackIndex < 0 || trackIndex > 3) return;
+    const bus = this.looperInserts[trackIndex]?.[layerSlot];
+    if (bus) bus.setEffect(fxId || "clean");
+  }
+
+  setLooperTrackGain(trackIndex, layerSlot, gain) {
+    if (trackIndex < 0 || trackIndex > 3) return;
+    const bus = this.looperInserts[trackIndex]?.[layerSlot];
+    if (bus && bus.input && bus.input.gain) {
+      const g = Math.max(0, Math.min(2.0, gain));
+      bus.input.gain.setTargetAtTime(g, this.ctx.currentTime, 0.02);
+    }
+  }
+
+  setLooperTrackSustain(trackIndex, isDown, when = 0) {
+    if (trackIndex < 0 || trackIndex > 3) return;
+    const buses = this.looperInserts[trackIndex];
+    if (!buses) return;
+    buses.forEach((bus) => {
+      try {
+        bus.setSustain(isDown);
+      } catch (e) {}
+    });
+  }
+
+  clearLooperTrack(trackIndex) {
+    if (trackIndex < 0 || trackIndex > 3) return;
+    const buses = this.looperInserts[trackIndex];
+    if (!buses) return;
+    buses.forEach((bus) => {
+      try {
+        bus.flush();
+      } catch (e) {}
+    });
+  }
+
+  _findLooperBusByDest(destNode) {
+    if (!this.looperInserts || !destNode) return null;
+    for (let t = 0; t < this.looperInserts.length; t++) {
+      for (let l = 0; l < this.looperInserts[t].length; l++) {
+        const bus = this.looperInserts[t][l];
+        if (bus && bus.input === destNode) return bus;
+      }
+    }
+    return null;
   }
 
   base64ToArrayBuffer(base64Uri) {
@@ -1231,7 +1387,6 @@ export class NativePcmEngine {
             resolve(buf);
             return;
           }
-          // Always guarantee 100% true 2-channel stereo with equal L+R presence on headphones
           if (buf.numberOfChannels === 1) {
             const stereoBuf = ctx.createBuffer(2, buf.length, buf.sampleRate);
             const monoData = buf.getChannelData(0);
@@ -1240,25 +1395,18 @@ export class NativePcmEngine {
             resolve(stereoBuf);
             return;
           }
-
-          // If buffer is 2-channel but channel 1 (Right) is silent or missing energy, clone channel 0 to channel 1
           if (buf.numberOfChannels >= 2) {
             const ch0 = buf.getChannelData(0);
             const ch1 = buf.getChannelData(1);
-            let ch0Sum = 0;
-            let ch1Sum = 0;
+            let ch0Sum = 0,
+              ch1Sum = 0;
             const sampleLen = Math.min(2000, ch0.length);
             for (let i = 0; i < sampleLen; i += 10) {
               ch0Sum += Math.abs(ch0[i]);
               ch1Sum += Math.abs(ch1[i]);
             }
-            if (ch0Sum > 0.001 && ch1Sum < 0.00005) {
-              // Right channel is empty/silent in MP3 encoding: duplicate left to right
-              ch1.set(ch0);
-            }
+            if (ch0Sum > 0.001 && ch1Sum < 0.00005) ch1.set(ch0);
           }
-          // Normalize quiet soundfont samples to 0.9 peak so voices run at sane
-          // levels without extreme downstream boost (which amplified noise + limiter crush)
           try {
             let peak = 0;
             for (let c = 0; c < buf.numberOfChannels; c++) {
@@ -1277,15 +1425,17 @@ export class NativePcmEngine {
                 }
               }
             }
-            // Safety edge fade: last 10ms slopes to zero so even a non-looped
-            // sample can never end in a hard stop/click
             try {
-              const edgeLen = Math.min(Math.floor(buf.sampleRate * 0.01), Math.floor(buf.length * 0.02));
+              const edgeLen = Math.min(
+                Math.floor(buf.sampleRate * 0.01),
+                Math.floor(buf.length * 0.02),
+              );
               if (edgeLen > 16) {
                 for (let c = 0; c < buf.numberOfChannels; c++) {
                   const d = buf.getChannelData(c);
                   for (let i = 0; i < edgeLen; i++) {
-                    d[buf.length - edgeLen + i] *= 0.5 * (1 + Math.cos((i / edgeLen) * Math.PI));
+                    d[buf.length - edgeLen + i] *=
+                      0.5 * (1 + Math.cos((i / edgeLen) * Math.PI));
                   }
                 }
               }
@@ -1293,27 +1443,24 @@ export class NativePcmEngine {
           } catch (e) {}
           resolve(buf);
         };
-
-        const res = ctx.decodeAudioData(
-          arrayBuf,
-          handleDecoded,
-          err => reject(err)
+        const res = ctx.decodeAudioData(arrayBuf, handleDecoded, (err) =>
+          reject(err),
         );
-        if (res && typeof res.then === "function") {
+        if (res && typeof res.then === "function")
           res.then(handleDecoded).catch(reject);
-        }
       } catch (err) {
         reject(err);
       }
     });
   }
 
-  // Graceful end-fade for buffers that stay unlooped: a loud tail hitting file
-  // end is an audible chop, so slope the last moments to silence instead
   fadeBufferEnd(buf, seconds) {
     try {
       if (!buf) return buf;
-      const fadeLen = Math.min(Math.floor(buf.sampleRate * seconds), Math.floor(buf.length * 0.25));
+      const fadeLen = Math.min(
+        Math.floor(buf.sampleRate * seconds),
+        Math.floor(buf.length * 0.25),
+      );
       if (fadeLen < 32) return buf;
       for (let c = 0; c < buf.numberOfChannels; c++) {
         const d = buf.getChannelData(c);
@@ -1328,45 +1475,43 @@ export class NativePcmEngine {
 
   createCrossfadedLoopBuffer(ctx, originalBuf, instId) {
     if (!originalBuf) return originalBuf;
-
-    // Only continuous bowing/blowing/drone pad instruments should loop when sustained.
-    // Percussive & decaying instruments (pianos, EPs, DX7, guitars, basses, bells) must decay naturally
-    // to prevent metallic buzzing, dirty feedback, and comb filtering during pedal sustain.
-    const isDroneInstrument = instId && (
-      instId.includes("string") || instId.includes("pad") || instId.includes("choir") ||
-      instId.includes("organ") || instId.includes("voice") || instId.includes("universe")
-    );
-
-    if (!isDroneInstrument || originalBuf.duration < 0.8) {
+    const isDroneInstrument =
+      instId &&
+      (instId.includes("string") ||
+        instId.includes("pad") ||
+        instId.includes("choir") ||
+        instId.includes("organ") ||
+        instId.includes("voice") ||
+        instId.includes("universe"));
+    if (!isDroneInstrument || originalBuf.duration < 0.8)
       return this.fadeBufferEnd(originalBuf, 0.4);
-    }
-
     const numChannels = Math.max(2, originalBuf.numberOfChannels);
     const sampleRate = originalBuf.sampleRate;
     const totalSamples = originalBuf.length;
-
-    const fadeSamples = Math.min(Math.floor(sampleRate * 0.06), Math.floor(totalSamples * 0.06));
+    const fadeSamples = Math.min(
+      Math.floor(sampleRate * 0.06),
+      Math.floor(totalSamples * 0.06),
+    );
     const loopEndSample = totalSamples - fadeSamples;
-    const minLoopLen = Math.min(Math.floor(sampleRate * 0.5), Math.floor(totalSamples * 0.2));
+    const minLoopLen = Math.min(
+      Math.floor(sampleRate * 0.5),
+      Math.floor(totalSamples * 0.2),
+    );
     const searchFrom = Math.floor(totalSamples * 0.15);
     const searchTo = loopEndSample - minLoopLen;
-    if (searchTo <= searchFrom || fadeSamples < 64) {
+    if (searchTo <= searchFrom || fadeSamples < 64)
       return this.fadeBufferEnd(originalBuf, 0.3);
-    }
-
     let loopStartSample = -1;
     try {
       const ref = originalBuf.getChannelData(0);
-      let sum = 0;
-      let cnt = 0;
+      let sum = 0,
+        cnt = 0;
       for (let i = searchFrom; i < loopEndSample; i += 7) {
         sum += ref[i] * ref[i];
         cnt++;
       }
       const rms = Math.sqrt(sum / Math.max(1, cnt));
-      if (rms < 0.001) {
-        return this.fadeBufferEnd(originalBuf, 0.3);
-      }
+      if (rms < 0.001) return this.fadeBufferEnd(originalBuf, 0.3);
       const W = Math.min(1024, fadeSamples * 2);
       const endBase = loopEndSample - W;
       const threshold = rms * 0.45;
@@ -1383,63 +1528,42 @@ export class NativePcmEngine {
         }
       }
     } catch (e) {}
-    if (loopStartSample < 0) {
-      return this.fadeBufferEnd(originalBuf, 0.3);
-    }
-
+    if (loopStartSample < 0) return this.fadeBufferEnd(originalBuf, 0.3);
     const newBuf = ctx.createBuffer(numChannels, loopEndSample, sampleRate);
-
     for (let ch = 0; ch < numChannels; ch++) {
       const srcCh = Math.min(ch, originalBuf.numberOfChannels - 1);
       const src = originalBuf.getChannelData(srcCh);
       const dst = newBuf.getChannelData(ch);
-
-      // 1. Copy initial onset transient untouched
-      for (let i = 0; i < loopStartSample; i++) {
-        dst[i] = src[i];
-      }
-
-      // 2. Crossfade loop tail smoothly into loop head (equal-power: no volume dip = no crackle)
+      for (let i = 0; i < loopStartSample; i++) dst[i] = src[i];
       for (let i = 0; i < fadeSamples; i++) {
         const t = i / fadeSamples;
-        const gainTail = Math.cos(t * Math.PI * 0.5); // 1.0 down to 0.0 (equal-power)
-        const gainHead = Math.sin(t * Math.PI * 0.5); // 0.0 up to 1.0 (equal-power)
-
+        const gainTail = Math.cos(t * Math.PI * 0.5);
+        const gainHead = Math.sin(t * Math.PI * 0.5);
         const headIdx = loopStartSample + i;
         const tailIdx = loopEndSample + i;
         dst[headIdx] = src[tailIdx] * gainTail + src[headIdx] * gainHead;
       }
-
-      // 3. Copy body of loop untouched
-      for (let i = loopStartSample + fadeSamples; i < loopEndSample; i++) {
+      for (let i = loopStartSample + fadeSamples; i < loopEndSample; i++)
         dst[i] = src[i];
-      }
     }
-
-    // Ensure stereo balance on created buffer
     if (newBuf.numberOfChannels >= 2) {
       const ch0 = newBuf.getChannelData(0);
       const ch1 = newBuf.getChannelData(1);
-      let ch0Sum = 0;
-      let ch1Sum = 0;
+      let ch0Sum = 0,
+        ch1Sum = 0;
       for (let i = 0; i < Math.min(1000, ch0.length); i += 10) {
         ch0Sum += Math.abs(ch0[i]);
         ch1Sum += Math.abs(ch1[i]);
       }
-      if (ch0Sum > 0.001 && ch1Sum < 0.00005) {
-        ch1.set(ch0);
-      }
+      if (ch0Sum > 0.001 && ch1Sum < 0.00005) ch1.set(ch0);
     }
-
     newBuf._isLoopable = true;
     newBuf._loopStartSec = loopStartSample / sampleRate;
     newBuf._loopEndSec = loopEndSample / sampleRate;
-
     return newBuf;
   }
 
   async initBuffers() {
-    // 1. Instantly decode acoustic grand piano, alto sax, tenor sax, AND choir anchors FIRST (< 15ms) for immediate zero-delay play
     await Promise.all([
       this.decodeEmbeddedAnchors("acoustic_grand_piano"),
       this.decodeEmbeddedAnchors("choir_aahs"),
@@ -1448,14 +1572,8 @@ export class NativePcmEngine {
     ]);
     this._createReedChiffBuffer();
     this.isReady = true;
-
-    // 2. Preload studio WAV banks for FM Piano and Upright
     this.loadAbletunesInstrument("fm_piano");
     this.loadAbletunesInstrument("upright_piano");
-
-    // 3. Preload essential starting soundfonts non-blockingly (on idle)
-    // 3. Preload core essential live soundfonts non-blockingly with CPU-friendly staggering
-    // Specialized SFX load on-demand when triggered, avoiding CPU/battery strain on tablets
     const idlePreload = async () => {
       const coreInstruments = [
         "electric_piano_2",
@@ -1478,11 +1596,9 @@ export class NativePcmEngine {
       ];
       for (const inst of coreInstruments) {
         await this.loadSoundfont(inst);
-        // Stagger decode batches to keep mobile CPU usage near zero
-        await new Promise(r => setTimeout(r, 120));
+        await new Promise((r) => setTimeout(r, 120));
       }
     };
-
     if (typeof window !== "undefined" && "requestIdleCallback" in window) {
       window.requestIdleCallback(() => idlePreload());
     } else {
@@ -1494,7 +1610,6 @@ export class NativePcmEngine {
     if (!instId || this.loadingSoundfonts.has(instId)) return;
     if (this.sfxGenerator && this.sfxGenerator.isSfxInstrument(instId)) return;
     this.loadingSoundfonts.add(instId);
-
     try {
       const resp = await fetch(`/soundfonts/${instId}-mp3.js`);
       if (!resp.ok) return;
@@ -1502,27 +1617,21 @@ export class NativePcmEngine {
       if (contentType.includes("text/html")) return;
       const text = await resp.text();
       if (!text || text.trim().startsWith("<")) return;
-
       const fn = new Function("MIDI", text);
       const MIDI = { Soundfont: {} };
       fn(MIDI);
       const samples = MIDI.Soundfont[instId];
       if (!samples) return;
-
-      if (!this.decodedBuffers.has(instId)) {
+      if (!this.decodedBuffers.has(instId))
         this.decodedBuffers.set(instId, new Map());
-      }
       const instMap = this.decodedBuffers.get(instId);
       const ctx = this.ctx;
-
-      // Decode priority range (middle octaves around C4 = 60) first for instant playability
       const entries = Object.entries(samples);
       entries.sort((a, b) => {
         const mA = noteNameToMidi(a[0]) || 60;
         const mB = noteNameToMidi(b[0]) || 60;
         return Math.abs(mA - 60) - Math.abs(mB - 60);
       });
-
       const BATCH_SIZE = 8;
       for (let i = 0; i < entries.length; i += BATCH_SIZE) {
         const batch = entries.slice(i, i + BATCH_SIZE);
@@ -1538,14 +1647,21 @@ export class NativePcmEngine {
                 sampleCache.setSample(cacheKey, arrayBuf, { instId, midi });
               }
               const audioBuf = await this.decodeAudioBuffer(ctx, arrayBuf);
-              const processedBuf = this.createCrossfadedLoopBuffer(ctx, audioBuf, instId);
+              const processedBuf = this.createCrossfadedLoopBuffer(
+                ctx,
+                audioBuf,
+                instId,
+              );
               instMap.set(midi, processedBuf);
             } catch (err) {}
-          })
+          }),
         );
       }
     } catch (err) {
-      console.warn(`[Native PCM Rompler] Failed to load soundfont: ${instId}`, err);
+      console.warn(
+        `[Native PCM Rompler] Failed to load soundfont: ${instId}`,
+        err,
+      );
     }
   }
 
@@ -1553,20 +1669,13 @@ export class NativePcmEngine {
     const bank = ABLETUNES_BANKS[bankKey];
     if (!bank) return;
     const instId = bank.id;
-
     if (this.loadingSoundfonts.has(instId)) return;
     this.loadingSoundfonts.add(instId);
-
-    if (!this.decodedBuffers.has(instId)) {
+    if (!this.decodedBuffers.has(instId))
       this.decodedBuffers.set(instId, new Map());
-    }
     const instMap = this.decodedBuffers.get(instId);
     const ctx = this.ctx;
-
-    // Load ALL velocity layers (vl1/vl2/vl3) at every anchor pitch: true touch
-    // dynamics (soft felt -> hard hammer) instead of one layer played louder
     const coreAnchors = bank.samples.slice();
-
     const BATCH = 4;
     for (let i = 0; i < coreAnchors.length; i += BATCH) {
       const batch = coreAnchors.slice(i, i + BATCH);
@@ -1580,26 +1689,39 @@ export class NativePcmEngine {
               const resp = await fetch(url);
               if (!resp.ok) return;
               arrayBuf = await resp.arrayBuffer();
-              sampleCache.setSample(cacheKey, arrayBuf, { instId, file: sample.f });
+              sampleCache.setSample(cacheKey, arrayBuf, {
+                instId,
+                file: sample.f,
+              });
             }
             const audioBuf = await this.decodeAudioBuffer(ctx, arrayBuf);
-            // FM bank carries a low -48dB shimmer bed in its final seconds that stacks
-            // audibly under sustain: fade the last 1.5s to silence (release character kept)
-            if (bankKey === "fm_piano" && audioBuf && audioBuf.length > ctx.sampleRate) {
-              const fadeLen = Math.min(Math.floor(ctx.sampleRate * 1.5), Math.floor(audioBuf.length * 0.25));
+            if (
+              bankKey === "fm_piano" &&
+              audioBuf &&
+              audioBuf.length > ctx.sampleRate
+            ) {
+              const fadeLen = Math.min(
+                Math.floor(ctx.sampleRate * 1.5),
+                Math.floor(audioBuf.length * 0.25),
+              );
               for (let c = 0; c < audioBuf.numberOfChannels; c++) {
                 const d = audioBuf.getChannelData(c);
                 for (let i = 0; i < fadeLen; i++) {
                   const t = i / fadeLen;
-                  d[audioBuf.length - fadeLen + i] *= 0.5 * (1 + Math.cos(t * Math.PI));
+                  d[audioBuf.length - fadeLen + i] *=
+                    0.5 * (1 + Math.cos(t * Math.PI));
                 }
               }
             }
-            const processedBuf = this.createCrossfadedLoopBuffer(ctx, audioBuf, instId);
+            const processedBuf = this.createCrossfadedLoopBuffer(
+              ctx,
+              audioBuf,
+              instId,
+            );
             instMap.set(sample.m, processedBuf);
             instMap.set(`${sample.m}_${sample.v}`, processedBuf);
           } catch (e) {}
-        })
+        }),
       );
     }
   }
@@ -1607,65 +1729,63 @@ export class NativePcmEngine {
   async decodeEmbeddedAnchors(instId) {
     const instData = KORG_PCM_BANKS[instId];
     if (!instData || !instData.anchors) return;
-
-    if (!this.decodedBuffers.has(instId)) {
+    if (!this.decodedBuffers.has(instId))
       this.decodedBuffers.set(instId, new Map());
-    }
     const instMap = this.decodedBuffers.get(instId);
     const ctx = this.ctx;
-
-    const anchorPromises = Object.entries(instData.anchors).map(async ([midiStr, base64]) => {
-      const midi = parseInt(midiStr);
-      try {
-        const arrayBuf = this.base64ToArrayBuffer(base64);
-        const audioBuf = await this.decodeAudioBuffer(ctx, arrayBuf);
-        const processedBuf = this.createCrossfadedLoopBuffer(ctx, audioBuf, instId);
-        instMap.set(midi, processedBuf);
-      } catch (e) {
-        console.warn(`[PCM Rompler] Anchor ${midi} decode failed for ${instId}:`, e);
-      }
-    });
-
+    const anchorPromises = Object.entries(instData.anchors).map(
+      async ([midiStr, base64]) => {
+        const midi = parseInt(midiStr);
+        try {
+          const arrayBuf = this.base64ToArrayBuffer(base64);
+          const audioBuf = await this.decodeAudioBuffer(ctx, arrayBuf);
+          const processedBuf = this.createCrossfadedLoopBuffer(
+            ctx,
+            audioBuf,
+            instId,
+          );
+          instMap.set(midi, processedBuf);
+        } catch (e) {
+          console.warn(
+            `[PCM Rompler] Anchor ${midi} decode failed for ${instId}:`,
+            e,
+          );
+        }
+      },
+    );
     await Promise.all(anchorPromises);
   }
 
   findNearestAnchor(instId, targetMidi, velocity = 95) {
-    if (this.sfxGenerator && this.sfxGenerator.isSfxInstrument(instId)) {
+    if (this.sfxGenerator && this.sfxGenerator.isSfxInstrument(instId))
       return null;
-    }
-
-    if (instId && INST_ALIASES[instId]) {
-      instId = INST_ALIASES[instId];
-    }
+    if (instId && INST_ALIASES[instId]) instId = INST_ALIASES[instId];
 
     if (instId && instId.startsWith("abletunes_")) {
-      const bankKey = instId === "abletunes_fm_piano" ? "fm_piano" : "upright_piano";
-      if (!this.decodedBuffers.has(instId) || this.decodedBuffers.get(instId).size === 0) {
+      const bankKey =
+        instId === "abletunes_fm_piano" ? "fm_piano" : "upright_piano";
+      if (
+        !this.decodedBuffers.has(instId) ||
+        this.decodedBuffers.get(instId).size === 0
+      ) {
         this.loadAbletunesInstrument(bankKey);
         const pianoMap = this.decodedBuffers.get("acoustic_grand_piano");
-        if (pianoMap && pianoMap.size > 0) {
+        if (pianoMap && pianoMap.size > 0)
           return this.findAnchorInMap(pianoMap, targetMidi);
-        }
         return null;
       }
       const instMap = this.decodedBuffers.get(instId);
-      const vl = velocity < 55 ? "vl1" : (velocity < 98 ? "vl2" : "vl3");
-
-      // 1. Exact match with velocity layer
+      const vl = velocity < 55 ? "vl1" : velocity < 98 ? "vl2" : "vl3";
       const exactKey = `${targetMidi}_${vl}`;
-      if (instMap.has(exactKey)) {
+      if (instMap.has(exactKey))
         return { anchorMidi: targetMidi, buffer: instMap.get(exactKey) };
-      }
-      // 2. Exact match default
-      if (instMap.has(targetMidi)) {
+      if (instMap.has(targetMidi))
         return { anchorMidi: targetMidi, buffer: instMap.get(targetMidi) };
-      }
-
-      // 3. Nearest neighbor search
       let closestMidi = null;
       let minDiff = Infinity;
       for (const key of instMap.keys()) {
-        const midi = typeof key === "number" ? key : parseInt(key.split("_")[0]);
+        const midi =
+          typeof key === "number" ? key : parseInt(key.split("_")[0]);
         const diff = Math.abs(targetMidi - midi);
         if (diff < minDiff) {
           minDiff = diff;
@@ -1673,10 +1793,9 @@ export class NativePcmEngine {
         }
       }
       if (closestMidi !== null) {
-        const buf = instMap.get(`${closestMidi}_${vl}`) || instMap.get(closestMidi);
-        if (buf) {
-          return { anchorMidi: closestMidi, buffer: buf };
-        }
+        const buf =
+          instMap.get(`${closestMidi}_${vl}`) || instMap.get(closestMidi);
+        if (buf) return { anchorMidi: closestMidi, buffer: buf };
       }
       const pianoMap = this.decodedBuffers.get("acoustic_grand_piano");
       return this.findAnchorInMap(pianoMap, targetMidi);
@@ -1686,28 +1805,45 @@ export class NativePcmEngine {
     if (!instMap || instMap.size === 0) {
       this.loadSoundfont(instId);
       const str = String(instId || "").toLowerCase();
-      if (str.includes("choir") || str.includes("ooh") || str.includes("ahh") || str.includes("voice")) {
+      if (
+        str.includes("choir") ||
+        str.includes("ooh") ||
+        str.includes("ahh") ||
+        str.includes("voice")
+      ) {
         instMap = this.decodedBuffers.get("choir_aahs");
-      } else if (str.includes("tenor_sax") || str.includes("sensual") || str.includes("blues_growl")) {
-        instMap = this.decodedBuffers.get("tenor_sax") || this.decodedBuffers.get("alto_sax");
+      } else if (
+        str.includes("tenor_sax") ||
+        str.includes("sensual") ||
+        str.includes("blues_growl")
+      ) {
+        instMap =
+          this.decodedBuffers.get("tenor_sax") ||
+          this.decodedBuffers.get("alto_sax");
       } else if (str.includes("soprano_sax") || str.includes("soprano")) {
-        instMap = this.decodedBuffers.get("soprano_sax") || this.decodedBuffers.get("alto_sax");
+        instMap =
+          this.decodedBuffers.get("soprano_sax") ||
+          this.decodedBuffers.get("alto_sax");
       } else if (str.includes("sax")) {
-        instMap = this.decodedBuffers.get("alto_sax") || this.decodedBuffers.get("tenor_sax");
+        instMap =
+          this.decodedBuffers.get("alto_sax") ||
+          this.decodedBuffers.get("tenor_sax");
       } else if (str.includes("flute") || str.includes("pan_flute")) {
         instMap = this.decodedBuffers.get("flute");
       } else if (str.includes("woodwind") || str.includes("clarinet")) {
-        instMap = this.decodedBuffers.get("clarinet") || this.decodedBuffers.get("alto_sax");
+        instMap =
+          this.decodedBuffers.get("clarinet") ||
+          this.decodedBuffers.get("alto_sax");
       } else if (str.includes("string") || str.includes("pad")) {
         instMap = this.decodedBuffers.get("string_ensemble_1");
       } else if (str.includes("electric") || str.includes("dx")) {
-        instMap = this.decodedBuffers.get("electric_piano_2") || this.decodedBuffers.get("electric_piano_1");
+        instMap =
+          this.decodedBuffers.get("electric_piano_2") ||
+          this.decodedBuffers.get("electric_piano_1");
       }
-      if (!instMap || instMap.size === 0) {
+      if (!instMap || instMap.size === 0)
         instMap = this.decodedBuffers.get("acoustic_grand_piano");
-      }
     }
-
     if (!instMap || instMap.size === 0) {
       for (const [id, map] of this.decodedBuffers.entries()) {
         if (map && map.size > 0) {
@@ -1716,50 +1852,36 @@ export class NativePcmEngine {
         }
       }
     }
-
-    if (!instMap || instMap.size === 0) {
-      return null;
-    }
-
+    if (!instMap || instMap.size === 0) return null;
     return this.findAnchorInMap(instMap, targetMidi);
   }
 
   findAnchorInMap(map, targetMidi) {
     if (!map || map.size === 0) return null;
-
-    // If exact note is cached, return with 0 semitone shift
-    if (map.has(targetMidi)) {
-      return {
-        anchorMidi: targetMidi,
-        buffer: map.get(targetMidi),
-      };
-    }
-
+    if (map.has(targetMidi))
+      return { anchorMidi: targetMidi, buffer: map.get(targetMidi) };
     let closestMidi = null;
     let minDiff = Infinity;
-
     for (const anchorMidi of map.keys()) {
       if (typeof anchorMidi !== "number") continue;
       const diff = Math.abs(targetMidi - anchorMidi);
       if (diff < minDiff) {
         minDiff = diff;
         closestMidi = anchorMidi;
-        if (diff <= 1) break; // Maximum achievable precision for nearest-anchor
+        if (diff <= 1) break;
       }
     }
-
     if (closestMidi === null) {
       const firstEntry = map.entries().next().value;
       if (firstEntry) {
-        return { anchorMidi: typeof firstEntry[0] === "number" ? firstEntry[0] : 60, buffer: firstEntry[1] };
+        return {
+          anchorMidi: typeof firstEntry[0] === "number" ? firstEntry[0] : 60,
+          buffer: firstEntry[1],
+        };
       }
       return null;
     }
-
-    return {
-      anchorMidi: closestMidi,
-      buffer: map.get(closestMidi),
-    };
+    return { anchorMidi: closestMidi, buffer: map.get(closestMidi) };
   }
 
   _acquireHammer(dest) {
@@ -1793,18 +1915,28 @@ export class NativePcmEngine {
   _instTimbre(instId) {
     const id = (instId || "").toLowerCase();
     const isSax = id.includes("sax");
-    const isChoir = id.includes("choir") || id.includes("ooh_ahh") || id.includes("vox") || id.includes("voice");
-    const isHashy = id.includes("guitar") || id.includes("pluck") || id.includes("harpsichord") || id.includes("slap_bass");
+    const isChoir =
+      id.includes("choir") ||
+      id.includes("ooh_ahh") ||
+      id.includes("vox") ||
+      id.includes("voice");
+    const isHashy =
+      id.includes("guitar") ||
+      id.includes("pluck") ||
+      id.includes("harpsichord") ||
+      id.includes("slap_bass");
     return [isSax, isChoir, isHashy];
   }
 
   _createReedChiffBuffer() {
     if (this.reedChiffBuf || !this.ctx) return;
     const sampleRate = this.ctx.sampleRate || 44100;
-    const len = Math.floor(sampleRate * 0.08); // 80ms organic cane reed breath transient
+    const len = Math.floor(sampleRate * 0.08);
     const buf = this.ctx.createBuffer(1, len, sampleRate);
     const data = buf.getChannelData(0);
-    let b0 = 0, b1 = 0, b2 = 0;
+    let b0 = 0,
+      b1 = 0,
+      b2 = 0;
     for (let i = 0; i < len; i++) {
       const t = i / len;
       const white = Math.random() * 2 - 1;
@@ -1812,8 +1944,12 @@ export class NativePcmEngine {
       b1 = 0.95 * b1 + white * 0.11;
       b2 = 0.85 * b2 + white * 0.25;
       const pink = (b0 + b1 + b2 + white * 0.1) * 0.6;
-      // Cane reed mechanical click on initial 12ms
-      const click = i < sampleRate * 0.012 ? Math.sin((i / (sampleRate * 0.012)) * Math.PI) * Math.sin(i * 0.35) * 0.45 : 0;
+      const click =
+        i < sampleRate * 0.012
+          ? Math.sin((i / (sampleRate * 0.012)) * Math.PI) *
+            Math.sin(i * 0.35) *
+            0.45
+          : 0;
       const env = Math.exp(-t * 7.2);
       data[i] = (pink * 0.75 + click) * env;
     }
@@ -1849,77 +1985,92 @@ export class NativePcmEngine {
     pool.free.push(c);
   }
 
-  playNote(instId, midiNote, velocity = 95, customGain = 1.0, layerIndex = null, destOverride = null, when = 0) {
+  playNote(
+    instId,
+    midiNote,
+    velocity = 95,
+    customGain = 1.0,
+    layerIndex = null,
+    destOverride = null,
+    when = 0,
+  ) {
     const dest = destOverride
       ? destOverride
-      : (layerIndex !== null && layerIndex !== undefined && this.layerInserts && this.layerInserts[layerIndex]
+      : layerIndex !== null &&
+          layerIndex !== undefined &&
+          this.layerInserts &&
+          this.layerInserts[layerIndex]
         ? this.layerInserts[layerIndex].input
-        : this.destination);
+        : this.destination;
 
     if (this.sfxGenerator && this.sfxGenerator.isSfxInstrument(instId)) {
-      return this.sfxGenerator.playSfxNote(instId, midiNote, velocity, customGain, dest, when);
+      return this.sfxGenerator.playSfxNote(
+        instId,
+        midiNote,
+        velocity,
+        customGain,
+        dest,
+        when,
+      );
     }
 
     const anchorData = this.findNearestAnchor(instId, midiNote, velocity);
-    if (!anchorData || !anchorData.buffer) {
-      return null;
-    }
+    if (!anchorData || !anchorData.buffer) return null;
 
     const ctx = this.ctx;
-    // `when > 0` = scheduled (lookahead) playback at an absolute audio time;
-    // `when` is clamped to now in the engine so a slightly-early dispatch still
-    // lands exactly at the scheduler's target instead of jank-shifting it.
     const now = when > 0 ? Math.max(when, ctx.currentTime) : ctx.currentTime;
     const velNorm = Math.max(0.08, Math.min(1.0, velocity / 127));
     this.heldNotes.add(midiNote);
 
-    // Pitch ratio: exact if anchor === target, otherwise nearest neighbor
     const semitoneDiff = midiNote - anchorData.anchorMidi;
     const basePlaybackRate = Math.pow(2, semitoneDiff / 12);
-    const bentPlaybackRate = basePlaybackRate * Math.pow(2, this.pitchBendSemitones / 12);
+    const bentPlaybackRate =
+      basePlaybackRate * Math.pow(2, this.pitchBendSemitones / 12);
 
-    // 0. Rapid re-trigger voice stealing for the SAME layer or instrument on this note:
     if (this.activeVoices.has(midiNote)) {
       const oldList = this.activeVoices.get(midiNote);
       if (oldList && oldList.length > 0) {
         const remaining = [];
-        oldList.forEach(oldV => {
-          const isSameLayer = (layerIndex !== null && layerIndex !== undefined && oldV.layerIndex === layerIndex);
-          const isSameInst = (oldV.instId === instId);
+        oldList.forEach((oldV) => {
+          const isSameLayer =
+            layerIndex !== null &&
+            layerIndex !== undefined &&
+            oldV.layerIndex === layerIndex;
+          const isSameInst = oldV.instId === instId;
           if (isSameLayer || (layerIndex === null && isSameInst)) {
             try {
               if (oldV.src) oldV.src.onended = null;
               oldV.voiceGain.gain.cancelScheduledValues(now);
-              oldV.voiceGain.gain.setValueAtTime(oldV.voiceGain.gain.value || 0.0, now);
+              oldV.voiceGain.gain.setValueAtTime(
+                oldV.voiceGain.gain.value || 0.0,
+                now,
+              );
               oldV.voiceGain.gain.linearRampToValueAtTime(0.0, now + 0.025);
-              if (oldV.src) oldV.src.stop(now + 0.030);
+              if (oldV.src) oldV.src.stop(now + 0.03);
             } catch (e) {}
             this.removeVoice(midiNote, oldV);
           } else {
             remaining.push(oldV);
           }
         });
-        if (remaining.length > 0) {
-          this.activeVoices.set(midiNote, remaining);
-        } else {
-          this.activeVoices.delete(midiNote);
-        }
+        if (remaining.length > 0) this.activeVoices.set(midiNote, remaining);
+        else this.activeVoices.delete(midiNote);
       }
     }
 
-    // 0b. Same-note re-trigger: kill ALL still-ringing SUSTAINED copies across all layers
-    // When re-triggering the same MIDI note, old sustained instances on ANY layer must
-    // stop — otherwise they accumulate during rapid chord switching (e.g. chord pads).
     if (this.sustainedVoices.has(midiNote)) {
       const susList = this.sustainedVoices.get(midiNote);
       if (susList && susList.length > 0) {
-        susList.forEach(oldV => {
+        susList.forEach((oldV) => {
           try {
             if (oldV.src) oldV.src.onended = null;
             oldV.voiceGain.gain.cancelScheduledValues(now);
-            oldV.voiceGain.gain.setValueAtTime(oldV.voiceGain.gain.value || 0.0, now);
+            oldV.voiceGain.gain.setValueAtTime(
+              oldV.voiceGain.gain.value || 0.0,
+              now,
+            );
             oldV.voiceGain.gain.linearRampToValueAtTime(0.0, now + 0.025);
-            if (oldV.src) oldV.src.stop(now + 0.030);
+            if (oldV.src) oldV.src.stop(now + 0.03);
           } catch (e) {}
           this.removeVoice(midiNote, oldV);
         });
@@ -1927,24 +2078,18 @@ export class NativePcmEngine {
       }
     }
 
-    // 1. Audio Buffer Source
     const src = ctx.createBufferSource();
     src.buffer = anchorData.buffer;
-
-    // Set pitch playback rate cleanly without artificial scoops or LFO detuning
     src.playbackRate.setValueAtTime(bentPlaybackRate, now);
 
-    // Infinite Smooth Hold for sustained instruments (Equal-Power Pre-Crossfaded: 0% chop, 0% clicks)
     if (anchorData.buffer && anchorData.buffer._isLoopable) {
       src.loop = true;
       src.loopStart = anchorData.buffer._loopStartSec;
       src.loopEnd = anchorData.buffer._loopEndSec;
     } else {
-      // Natural unlooped acoustic decay for grand pianos, EPs, and guitars
       src.loop = false;
     }
 
-    // 2. Dynamic Time-Variant Filter (TVF): Pure transparent lowpass with warm acoustic presence
     const [isSax, isChoir, isHashy] = this._instTimbre(instId);
     const filter = ctx.createBiquadFilter();
     filter.type = "lowpass";
@@ -1955,36 +2100,32 @@ export class NativePcmEngine {
     filter.connect(voiceGain);
     voiceGain.connect(dest);
 
-    // Wide, expressive dynamic cutoff range:
-    // Soft touch (Pianissimo) is warm, mellow and dark.
-    // Hard touch (Fortissimo) opens full high frequencies with bright acoustic harmonics.
-    const minCutoff = isSax ? 4000 : (isChoir ? 1000 : (isHashy ? 3000 : 3500));
-    const maxCutoff = isSax ? 16000 : (isChoir ? 8500 : (isHashy ? 16000 : 20000));
-    const dynamicCutoff = minCutoff + Math.pow(velNorm, 1.35) * (maxCutoff - minCutoff);
-
-    // Filter Key Tracking: cutoff scales with note frequency so higher keys ring full and bright
+    const minCutoff = isSax ? 4000 : isChoir ? 1000 : isHashy ? 3000 : 3500;
+    const maxCutoff = isSax ? 16000 : isChoir ? 8500 : isHashy ? 16000 : 20000;
+    const dynamicCutoff =
+      minCutoff + Math.pow(velNorm, 1.35) * (maxCutoff - minCutoff);
     const noteFreq = 440 * Math.pow(2, (midiNote - 69) / 12);
-    const keyTrackedCutoff = Math.max(dynamicCutoff, Math.min(20000, noteFreq * (2.0 + velNorm * 2.2)));
+    const keyTrackedCutoff = Math.max(
+      dynamicCutoff,
+      Math.min(20000, noteFreq * (2.0 + velNorm * 2.2)),
+    );
 
     filter.frequency.setValueAtTime(keyTrackedCutoff, now);
     filter.Q.setValueAtTime(0.35, now);
 
-    // 3. Time-Variant Amplifier (TVA): Wide dynamic range (true pianissimo to fortissimo)
     const trim = INST_TRIM_GAINS[instId] || 1.0;
     const dynamicAmp = Math.pow(velNorm, 1.25);
-    const peakGain = (0.10 + dynamicAmp * 0.90) * customGain * trim;
+    const peakGain = (0.1 + dynamicAmp * 0.9) * customGain * trim;
 
     voiceGain.gain.setValueAtTime(0.0, now);
-    if (isChoir) {
-      voiceGain.gain.setTargetAtTime(peakGain, now, 0.04);
-    } else {
-      voiceGain.gain.linearRampToValueAtTime(peakGain, now + 0.0035);
-    }
+    if (isChoir) voiceGain.gain.setTargetAtTime(peakGain, now, 0.04);
+    else voiceGain.gain.linearRampToValueAtTime(peakGain, now + 0.0035);
 
     voiceGain.gain.setTargetAtTime(0.0, now + 32.0, 3.5);
-    const maxLife = (anchorData.buffer && anchorData.buffer._isLoopable)
-      ? 60.0
-      : Math.min(8.0, (anchorData.buffer?.duration || 4.0) + 0.1);
+    const maxLife =
+      anchorData.buffer && anchorData.buffer._isLoopable
+        ? 60.0
+        : Math.min(8.0, (anchorData.buffer?.duration || 4.0) + 0.1);
     try {
       src.stop(now + maxLife);
     } catch (e) {}
@@ -1992,7 +2133,6 @@ export class NativePcmEngine {
     src.connect(filter);
     src.start(now);
 
-    // Voice record
     const voiceRecord = {
       src,
       filter,
@@ -2009,18 +2149,24 @@ export class NativePcmEngine {
       _isRemoved: false,
     };
 
-    // Global polyphony cap: steal oldest released voice when queue is full
     while (this.voiceQueue.length >= this.MAX_VOICES) {
-      const stealable = this.voiceQueue.filter(v => v && !this.heldNotes.has(v.midiNote));
+      const stealable = this.voiceQueue.filter(
+        (v) => v && !this.heldNotes.has(v.midiNote),
+      );
       let oldest = stealable[0];
       for (let i = 1; i < stealable.length; i++) {
-        if (!oldest) { oldest = stealable[i]; continue; }
-        if ((stealable[i].startTime || 0) < (oldest.startTime || 0)) oldest = stealable[i];
+        if (!oldest) {
+          oldest = stealable[i];
+          continue;
+        }
+        if ((stealable[i].startTime || 0) < (oldest.startTime || 0))
+          oldest = stealable[i];
       }
       if (!oldest) {
         oldest = this.voiceQueue[0];
         for (let i = 1; i < this.voiceQueue.length; i++) {
-          if (this.voiceQueue[i].startTime < oldest.startTime) oldest = this.voiceQueue[i];
+          if (this.voiceQueue[i].startTime < oldest.startTime)
+            oldest = this.voiceQueue[i];
         }
       }
       if (!oldest) break;
@@ -2028,24 +2174,23 @@ export class NativePcmEngine {
       try {
         if (target.src) target.src.onended = null;
         target.voiceGain.gain.cancelScheduledValues(now);
-        target.voiceGain.gain.setValueAtTime(target.voiceGain.gain.value || 0.0, now);
+        target.voiceGain.gain.setValueAtTime(
+          target.voiceGain.gain.value || 0.0,
+          now,
+        );
         target.voiceGain.gain.linearRampToValueAtTime(0.0, now + 0.025);
-        if (target.src) target.src.stop(now + 0.030);
+        if (target.src) target.src.stop(now + 0.03);
       } catch (e) {}
       this.removeVoice(target.midiNote, target);
     }
 
-    if (!this.activeVoices.has(midiNote)) {
-      this.activeVoices.set(midiNote, []);
-    }
+    if (!this.activeVoices.has(midiNote)) this.activeVoices.set(midiNote, []);
     this.activeVoices.get(midiNote).push(voiceRecord);
     this.voiceQueue.push(voiceRecord);
 
-    // Cleanup when sample finishes naturally
     src.onended = () => {
       this.removeVoice(midiNote, voiceRecord);
     };
-
     return voiceRecord;
   }
 
@@ -2053,7 +2198,9 @@ export class NativePcmEngine {
     if (!voiceRecord || voiceRecord._isRemoved) return;
     voiceRecord._isRemoved = true;
     if (voiceRecord.src) {
-      try { voiceRecord.src.onended = null; } catch (e) {}
+      try {
+        voiceRecord.src.onended = null;
+      } catch (e) {}
     }
     const qi = this.voiceQueue.indexOf(voiceRecord);
     if (qi !== -1) this.voiceQueue.splice(qi, 1);
@@ -2069,38 +2216,25 @@ export class NativePcmEngine {
       if (idx !== -1) susList.splice(idx, 1);
       if (susList.length === 0) this.sustainedVoices.delete(midiNote);
     }
-
-    // Clean disconnect to prevent Web Audio render-thread node accumulation on mobile/tablets
     try {
-      if (voiceRecord.voiceGain) {
-        voiceRecord.voiceGain.disconnect();
-      }
-      if (voiceRecord.filter) {
-        voiceRecord.filter.disconnect();
-      }
-      if (voiceRecord.src) {
-        voiceRecord.src.disconnect();
-      }
+      if (voiceRecord.voiceGain) voiceRecord.voiceGain.disconnect();
+      if (voiceRecord.filter) voiceRecord.filter.disconnect();
+      if (voiceRecord.src) voiceRecord.src.disconnect();
     } catch (e) {}
   }
 
-  // Real-time Key Slide Articulation / Polyphonic Expression (relativeY: 0.0 top to 1.0 bottom)
   setNoteExpression(midiNote, relativeY) {
     const voices = this.activeVoices.get(midiNote);
     if (!voices || voices.length === 0) return;
-
     const now = this.ctx.currentTime;
     const yNorm = Math.max(0.05, Math.min(1.0, relativeY));
-
-    voices.forEach(v => {
+    voices.forEach((v) => {
       try {
-        // Continuous timbre sweep while sliding on key
-        const minCut = 900;
-        const maxCut = 19000;
-        const targetCutoff = minCut * Math.pow(maxCut / minCut, Math.pow(yNorm, 0.75));
+        const minCut = 900,
+          maxCut = 19000;
+        const targetCutoff =
+          minCut * Math.pow(maxCut / minCut, Math.pow(yNorm, 0.75));
         v.filter.frequency.setTargetAtTime(targetCutoff, now, 0.035);
-
-        // Dynamic volume swell
         const targetGain = Math.pow(yNorm, 1.1) * (v.baseGain * 1.15);
         v.voiceGain.gain.setTargetAtTime(targetGain, now, 0.035);
       } catch (e) {}
@@ -2111,15 +2245,17 @@ export class NativePcmEngine {
     this.pitchBendSemitones = Math.max(-12, Math.min(12, semitones));
     const now = this.ctx.currentTime;
     const bendRatio = Math.pow(2, this.pitchBendSemitones / 12);
-
     const updateVoicePitch = (voices) => {
-      voices.forEach(v => {
+      voices.forEach((v) => {
         try {
-          v.src.playbackRate.setTargetAtTime(v.basePlaybackRate * bendRatio, now, 0.02);
+          v.src.playbackRate.setTargetAtTime(
+            v.basePlaybackRate * bendRatio,
+            now,
+            0.02,
+          );
         } catch (e) {}
       });
     };
-
     this.activeVoices.forEach(updateVoicePitch);
     this.sustainedVoices.forEach(updateVoicePitch);
   }
@@ -2127,12 +2263,13 @@ export class NativePcmEngine {
   setModWheel(amount) {
     this.modWheelAmount = Math.max(0, Math.min(1.0, amount));
     const now = this.ctx.currentTime;
-
-    // Mod wheel opens filter brilliance and adds acoustic presence
-    this.activeVoices.forEach(voices => {
-      voices.forEach(v => {
+    this.activeVoices.forEach((voices) => {
+      voices.forEach((v) => {
         try {
-          const modCutoff = Math.min(20000, v.baseCutoff + this.modWheelAmount * 6000);
+          const modCutoff = Math.min(
+            20000,
+            v.baseCutoff + this.modWheelAmount * 6000,
+          );
           v.filter.frequency.setTargetAtTime(modCutoff, now, 0.03);
         } catch (e) {}
       });
@@ -2154,23 +2291,39 @@ export class NativePcmEngine {
     }
 
     if (!this.sustainPedal) {
-      // Releasing damper pedal releases all held sustained notes with smooth exponential decay
-      this.sustainedVoices.forEach(voices => {
-        voices.forEach(v => {
+      this.sustainedVoices.forEach((voices) => {
+        voices.forEach((v) => {
           try {
-            const isChoir = v.instId === "choir_aahs" || v.instId === "m1_choir" || v.instId === "m1_ooh_ahh" || v.instId?.includes("choir");
-            const isString = v.instId === "string_ensemble_1" || v.instId?.includes("string") || v.instId?.includes("pad");
+            const isChoir =
+              v.instId === "choir_aahs" ||
+              v.instId === "m1_choir" ||
+              v.instId === "m1_ooh_ahh" ||
+              v.instId?.includes("choir");
+            const isString =
+              v.instId === "string_ensemble_1" ||
+              v.instId?.includes("string") ||
+              v.instId?.includes("pad");
             const isSax = v.instId === "alto_sax" || v.instId?.includes("sax");
-            const tau = isChoir ? 0.20 : (isString ? 0.08 : (isSax ? 0.12 : 0.015));
+            const tau = isChoir ? 0.2 : isString ? 0.08 : isSax ? 0.12 : 0.015;
             v.voiceGain.gain.cancelScheduledValues(now);
             v.voiceGain.gain.setTargetAtTime(0, now, tau);
-            const stopTime = isChoir ? 1.4 : (isString ? 0.5 : (isSax ? 0.55 : 0.1));
+            const stopTime = isChoir
+              ? 1.4
+              : isString
+                ? 0.5
+                : isSax
+                  ? 0.55
+                  : 0.1;
             v.src.stop(now + stopTime);
             if (v.vibLfo) {
-              try { v.vibLfo.stop(now + stopTime + 0.1); } catch (e) {}
+              try {
+                v.vibLfo.stop(now + stopTime + 0.1);
+              } catch (e) {}
             }
             if (v.growlLfo) {
-              try { v.growlLfo.stop(now + stopTime + 0.1); } catch (e) {}
+              try {
+                v.growlLfo.stop(now + stopTime + 0.1);
+              } catch (e) {}
             }
           } catch (e) {}
         });
@@ -2188,18 +2341,23 @@ export class NativePcmEngine {
     const now = when > 0 ? Math.max(when, ctx.currentTime) : ctx.currentTime;
     const remaining = [];
 
-    voices.forEach(v => {
+    voices.forEach((v) => {
       if (!instId || v.instId === instId || !this.heldNotes.has(v.midiNote)) {
+        const bus = this._findLooperBusByDest(v.dest);
+        if (bus && bus.sustainActive) {
+          bus.sustainedVoices.add(v);
+          return;
+        }
+
         if (this.sustainPedal) {
-          // Damper pedal held: keep voice ringing in sustained set
-          if (!this.sustainedVoices.has(midiNote)) {
+          if (!this.sustainedVoices.has(midiNote))
             this.sustainedVoices.set(midiNote, []);
-          }
           this.sustainedVoices.get(midiNote).push(v);
-          // Bound the sustain pool so marathon pedal use can't pile up unbounded voices
           try {
             let totalSus = 0;
-            this.sustainedVoices.forEach(list => { totalSus += list.length; });
+            this.sustainedVoices.forEach((list) => {
+              totalSus += list.length;
+            });
             while (totalSus > 48) {
               let oldest = null;
               let oldestKey = null;
@@ -2214,29 +2372,56 @@ export class NativePcmEngine {
               oldest.voiceGain.gain.cancelScheduledValues(now);
               oldest.voiceGain.gain.setTargetAtTime(0, now, 0.025);
               oldest.src.stop(now + 0.15);
-              if (oldest.vibLfo) { try { oldest.vibLfo.stop(now + 0.16); } catch (e) {} }
-              if (oldest.growlLfo) { try { oldest.growlLfo.stop(now + 0.16); } catch (e) {} }
+              if (oldest.vibLfo) {
+                try {
+                  oldest.vibLfo.stop(now + 0.16);
+                } catch (e) {}
+              }
+              if (oldest.growlLfo) {
+                try {
+                  oldest.growlLfo.stop(now + 0.16);
+                } catch (e) {}
+              }
               this.removeVoice(oldestKey, oldest);
               totalSus--;
             }
           } catch (e) {}
         } else {
-          // 100% Click-free acoustic damper release: fast natural decay (60ms for keys/guitars, 220ms for strings/pads)
-          // so fast 4-layer Combi playing cleanly recycles voices without audio queue buildup
           try {
-            const isChoir = v.instId === "choir_aahs" || v.instId === "m1_choir" || v.instId === "m1_ooh_ahh" || v.instId?.includes("choir");
-            const isString = v.instId === "string_ensemble_1" || v.instId?.includes("string") || v.instId?.includes("pad");
-            const isSax = v.instId === "alto_sax" || v.instId?.includes("sax") || v.instId?.includes("reed") || v.instId?.includes("flute");
-            const tau = isChoir ? 0.08 : (isString ? 0.06 : (isSax ? 0.03 : 0.015));
+            const isChoir =
+              v.instId === "choir_aahs" ||
+              v.instId === "m1_choir" ||
+              v.instId === "m1_ooh_ahh" ||
+              v.instId?.includes("choir");
+            const isString =
+              v.instId === "string_ensemble_1" ||
+              v.instId?.includes("string") ||
+              v.instId?.includes("pad");
+            const isSax =
+              v.instId === "alto_sax" ||
+              v.instId?.includes("sax") ||
+              v.instId?.includes("reed") ||
+              v.instId?.includes("flute");
+            const tau = isChoir ? 0.08 : isString ? 0.06 : isSax ? 0.03 : 0.015;
             v.voiceGain.gain.cancelScheduledValues(now);
             v.voiceGain.gain.setTargetAtTime(0, now, tau);
-            const stopTime = isChoir ? 0.28 : (isString ? 0.22 : (isSax ? 0.10 : 0.06));
+            const stopTime = isChoir
+              ? 0.28
+              : isString
+                ? 0.22
+                : isSax
+                  ? 0.1
+                  : 0.06;
             v.src.stop(now + stopTime);
             if (v.vibLfo) {
-              try { v.vibLfo.stop(now + stopTime + 0.02); } catch (e) {}
+              try {
+                v.vibLfo.stop(now + stopTime + 0.02);
+              } catch (e) {}
             }
             if (v.growlLfo) {
-              try { v.growlLfo.stop(now + stopTime + 0.02); } catch (e) {}
+              try {
+                v.growlLfo.stop(now + stopTime + 0.02);
+              } catch (e) {}
             }
           } catch (e) {}
         }
@@ -2245,11 +2430,8 @@ export class NativePcmEngine {
       }
     });
 
-    if (remaining.length > 0) {
-      this.activeVoices.set(midiNote, remaining);
-    } else {
-      this.activeVoices.delete(midiNote);
-    }
+    if (remaining.length > 0) this.activeVoices.set(midiNote, remaining);
+    else this.activeVoices.delete(midiNote);
   }
 
   hasActiveSfxSample(instId = null) {
@@ -2257,7 +2439,11 @@ export class NativePcmEngine {
       if (!v || !v.instId) return false;
       if (instId) return v.instId === instId;
       if (v.instId.endsWith("_r")) return true;
-      return v.instId === "thunder_clap" || v.instId === "lightning_bolt" || v.instId === "thunder_storm";
+      return (
+        v.instId === "thunder_clap" ||
+        v.instId === "lightning_bolt" ||
+        v.instId === "thunder_storm"
+      );
     };
     for (const list of this.activeVoices.values()) {
       for (const v of list) if (matches(v)) return true;
@@ -2274,13 +2460,17 @@ export class NativePcmEngine {
       if (!v || !v.instId) return false;
       if (instId) return v.instId === instId;
       if (v.instId.endsWith("_r")) return true;
-      return v.instId === "thunder_clap" || v.instId === "lightning_bolt" || v.instId === "thunder_storm";
+      return (
+        v.instId === "thunder_clap" ||
+        v.instId === "lightning_bolt" ||
+        v.instId === "thunder_storm"
+      );
     };
     const silence = (map) => {
       const keptKeys = [];
       map.forEach((voices, key) => {
         const keep = [];
-        voices.forEach(v => {
+        voices.forEach((v) => {
           if (matches(v)) {
             try {
               v.voiceGain.gain.cancelScheduledValues(now);
@@ -2296,7 +2486,7 @@ export class NativePcmEngine {
         if (keep.length > 0) map.set(key, keep);
         else keptKeys.push(key);
       });
-      keptKeys.forEach(k => map.delete(k));
+      keptKeys.forEach((k) => map.delete(k));
     };
     silence(this.activeVoices);
     silence(this.sustainedVoices);
@@ -2316,9 +2506,16 @@ export class NativePcmEngine {
           v.voiceGain.gain.linearRampToValueAtTime(0.0, now + 0.003);
         }
         if (v.src) v.src.stop(now + 0.004);
-        if (v.vibLfo) { try { v.vibLfo.stop(now + 0.005); } catch (e) {} }
-        if (v.growlLfo) { try { v.growlLfo.stop(now + 0.005); } catch (e) {} }
-
+        if (v.vibLfo) {
+          try {
+            v.vibLfo.stop(now + 0.005);
+          } catch (e) {}
+        }
+        if (v.growlLfo) {
+          try {
+            v.growlLfo.stop(now + 0.005);
+          } catch (e) {}
+        }
         setTimeout(() => {
           try {
             if (v.voiceGain) v.voiceGain.disconnect();
@@ -2329,8 +2526,8 @@ export class NativePcmEngine {
       } catch (e) {}
     };
 
-    this.activeVoices.forEach(list => list.forEach(killVoice));
-    this.sustainedVoices.forEach(list => list.forEach(killVoice));
+    this.activeVoices.forEach((list) => list.forEach(killVoice));
+    this.sustainedVoices.forEach((list) => list.forEach(killVoice));
     this.voiceQueue.forEach(killVoice);
 
     this.activeVoices.clear();
@@ -2338,13 +2535,28 @@ export class NativePcmEngine {
     this.heldNotes.clear();
     this.voiceQueue.length = 0;
 
-    // Flush layer insert effect buffers (delay feedback loops & reverb tails)
     if (this.layerInserts) {
-      this.layerInserts.forEach(ins => { try { ins.flush(); } catch (e) {} });
+      this.layerInserts.forEach((ins) => {
+        try {
+          ins.flush();
+        } catch (e) {}
+      });
     }
     if (this.splitZoneInserts) {
-      Object.values(this.splitZoneInserts).forEach(ins => { try { ins.flush(); } catch (e) {} });
+      Object.values(this.splitZoneInserts).forEach((ins) => {
+        try {
+          ins.flush();
+        } catch (e) {}
+      });
+    }
+    if (this.looperInserts) {
+      this.looperInserts.forEach((trackBuses) => {
+        trackBuses.forEach((ins) => {
+          try {
+            ins.flush();
+          } catch (e) {}
+        });
+      });
     }
   }
 }
-

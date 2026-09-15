@@ -84,16 +84,24 @@ export class LookaheadScheduler {
   }
 
   _dispatch(ev) {
-    switch (ev.type) {
-      case "on":
-        multiLayerEngine.noteOn(ev.note, ev.vel, ev.when);
-        break;
-      case "off":
-        multiLayerEngine.noteOff(ev.note, ev.when);
-        break;
-      case "pedal":
-        multiLayerEngine.setSustainPedal(ev.down, ev.when);
-        break;
+    // Tag the engine so consumers (e.g. the clip looper's record hook) can
+    // tell scheduled playback apart from live input. Cleared synchronously
+    // after dispatch — single-threaded, so no async leakage.
+    multiLayerEngine._schedAuthor = ev.author || "";
+    try {
+      switch (ev.type) {
+        case "on":
+          multiLayerEngine.noteOn(ev.note, ev.vel, ev.when);
+          break;
+        case "off":
+          multiLayerEngine.noteOff(ev.note, ev.when);
+          break;
+        case "pedal":
+          multiLayerEngine.setSustainPedal(ev.down, ev.when);
+          break;
+      }
+    } finally {
+      multiLayerEngine._schedAuthor = "";
     }
   }
 
