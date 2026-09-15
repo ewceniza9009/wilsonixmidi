@@ -8,15 +8,15 @@
 [![Audio: Web Audio API](https://img.shields.io/badge/Audio-Direct%20PCM%20%2B%20VA%20Engine-FF6F00?style=for-the-badge&logo=audio)](https://github.com/ewceniza9009/wilsonixmidi)
 [![Framework: Tauri v2 + Vite](https://img.shields.io/badge/Framework-Tauri%20v2%20%7C%20Rust-673AB7?style=for-the-badge)](https://tauri.app/)
 [![License: Proprietary](https://img.shields.io/badge/License-WILSONIX%20Commercial-red?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi)
-[![Version: v2.0.0](https://img.shields.io/badge/Version-v2.0.0%20Build%2019%20Production-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
+[![Version: v2.0.1](https://img.shields.io/badge/Version-v2.0.1%20Build%2020%20Production-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
 
 ---
 
-## 🚀 Official Production Downloads (v2.0.0 Build 19 Latest Release)
+## 🚀 Official Production Downloads (v2.0.1 Build 20 Latest Release)
 
 | Package / Distribution        | Target Operating System           |  Architecture  |                                                             Direct Download Link                                                              |
 | :---------------------------- | :-------------------------------- | :------------: | :-------------------------------------------------------------------------------------------------------------------------------------------: |
-| **Windows Desktop Installer** | Windows 10 / 11                   |      x64       | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX.MIDIKEY_2.0.0_x64-setup.exe) |
+| **Windows Desktop Installer** | Windows 10 / 11                   |      x64       | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX.MIDIKEY_2.0.1_x64-setup.exe) |
 | **Android Package (APK)**     | Android 8.0+ (Oreo to Android 15) | ARM64 / x86_64 |        [⬇️ Download Android APK (`.apk`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/wilsonix-midikey.apk)         |
 
 _Official binaries and checksums are verified and hosted on the [GitHub Releases page](https://github.com/ewceniza9009/wilsonixmidi/releases)._
@@ -43,7 +43,22 @@ _For the full deep-dive, see the [Master Feature Catalog](#-master-feature-catal
 
 ---
 
-## 📑 Granular Changelog & Release Notes (v2.0.0 • Build 19)
+## 📑 Granular Changelog & Release Notes (v2.0.1 • Build 20)
+
+### 1. 🔁 Clip Looper Sustain-Playback Fix
+
+- **Sticky Sustain Flag Elimination**: Resolved a critical looper bug where a clip played back with sustain would latch the per-bus `sustainActive` flag onto all 4 buses of that track — meaning any clip subsequently recorded with the damper pedal **up** still played back with sustain. Looper buses now reset to the recorded initial-sustain state at every loop iteration and on playback start/stop, so clips always faithfully reproduce exactly what was played during recording.
+- **Accurate Initial-Sustain Capture**: Recording now reads the real-time pedal state from the correct engine property (`multiLayerEngine.sustainPedalActive`) instead of a dead accessor, ensuring clips recorded with the pedal held down correctly open with sustain.
+
+### 2. 📱 Rig Bank Touch-Size Overhaul (Tablet & Mobile)
+
+- **Bigger Tap Targets**: Rig bank/slot pills grew from ~12–16px to comfortable **34px desktop / 36px tablet** touch targets with proper flex-centering, so performers can hit register recalls reliably on tablets and phones.
+- **Tablet No-Longer-Shrinks**: The ≤1200px media query previously shrank rig buttons with `!important`; it now enforces the roomier 36px sizes instead.
+- **Drawer Height Raised**: The tools drawer expanded height was bumped from 48/44px to **56px** so the larger pills fully fit.
+
+---
+
+## 📑 Prior Release Notes (v2.0.0 • Build 19)
 
 ### 1. 🎹 MIDI File Import & Smart Demo Station Playback
 
@@ -385,7 +400,7 @@ npm run lint
 
 # 4. Build Windows Desktop NSIS Setup Installer (.exe)
 npm run build:desktop
-# Output: src-tauri/target/release/bundle/nsis/WILSONIX MIDIKEY_2.0.0_x64-setup.exe
+# Output: src-tauri/target/release/bundle/nsis/WILSONIX MIDIKEY_2.0.1_x64-setup.exe
 
 # 5. Build Android APK (.apk)
 npm run build:apk
