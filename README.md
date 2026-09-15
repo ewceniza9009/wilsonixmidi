@@ -8,15 +8,15 @@
 [![Audio: Web Audio API](https://img.shields.io/badge/Audio-Direct%20PCM%20%2B%20VA%20Engine-FF6F00?style=for-the-badge&logo=audio)](https://github.com/ewceniza9009/wilsonixmidi)
 [![Framework: Tauri v2 + Vite](https://img.shields.io/badge/Framework-Tauri%20v2%20%7C%20Rust-673AB7?style=for-the-badge)](https://tauri.app/)
 [![License: Proprietary](https://img.shields.io/badge/License-WILSONIX%20Commercial-red?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi)
-[![Version: v1.1.7](https://img.shields.io/badge/Version-v1.1.7%20Build%2018%20Production-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
+[![Version: v2.0.0](https://img.shields.io/badge/Version-v2.0.0%20Build%2019%20Production-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
 
 ---
 
-## 🚀 Official Production Downloads (v1.1.7 Build 18 Latest Release)
+## 🚀 Official Production Downloads (v2.0.0 Build 19 Latest Release)
 
 | Package / Distribution        | Target Operating System           |  Architecture  |                                                             Direct Download Link                                                              |
 | :---------------------------- | :-------------------------------- | :------------: | :-------------------------------------------------------------------------------------------------------------------------------------------: |
-| **Windows Desktop Installer** | Windows 10 / 11                   |      x64       | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX.MIDIKEY_1.1.7_x64-setup.exe) |
+| **Windows Desktop Installer** | Windows 10 / 11                   |      x64       | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX.MIDIKEY_2.0.0_x64-setup.exe) |
 | **Android Package (APK)**     | Android 8.0+ (Oreo to Android 15) | ARM64 / x86_64 |        [⬇️ Download Android APK (`.apk`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/wilsonix-midikey.apk)         |
 
 _Official binaries and checksums are verified and hosted on the [GitHub Releases page](https://github.com/ewceniza9009/wilsonixmidi/releases)._
@@ -33,6 +33,8 @@ _Official binaries and checksums are verified and hosted on the [GitHub Releases
 - 💾 **Stage Registration Memory (32 Rigs)** — 4 Banks × 8 Slots with `F1`–`F8` instant recall, full live-state snapshots, and schema-validated JSON setlist import/export.
 - 🎹 **12-Pad MPC Chord Matrix & Scale Engine** — One-touch Jazz, Gospel, Neo-Soul and Pop voicings (24-chord learn bank, 11 genre banks) with a quantizing scale/key lock engine.
 - 🔁 **Clock-Anchored Arpeggiator & Multi-Track Looper** — Web Audio look-ahead scheduling keeps tempo rock-solid under heavy stage load.
+- 🎹 **Standard MIDI File Import** — Drag-and-drop `.mid`/`.midi` demo playback with tempo, velocity, and duration parsing plus a dedicated playback volume and persistent custom song library.
+- ⏱️ **Held-Note Max-Sustain Limiter** — Auto-resets runaway held notes (2–60s configurable ceiling) silently in the audio engine to stop drone notes and stuck sustains mid-gig.
 - 🎙️ **Lossless WAV Master Recorder + Media Player** — Pre-DAC waveform capture with a zero-gain monitor sink; MP3/WAV/FLAC/OGG/M4A/AAC backing-track deck with playlist support.
 - 📊 **Hardware HUD & Diagnostics** — 60 FPS VU metering, real-time latency/CPU profiling, panic reset, and an 8-second pre-DAC waveform diagnostic tap.
 - 🔒 **Crypto-Hardened Security & Licensing** — ECDSA P-256 signature verification with hardware machine binding, strict CSP, and boot-time re-validation of stored licenses.
@@ -41,7 +43,33 @@ _For the full deep-dive, see the [Master Feature Catalog](#-master-feature-catal
 
 ---
 
-## 📑 Granular Changelog & Release Notes (v1.1.7 • Build 18)
+## 📑 Granular Changelog & Release Notes (v2.0.0 • Build 19)
+
+### 1. 🎹 MIDI File Import & Smart Demo Station Playback
+
+- **Drag-and-Drop Standard MIDI File Import**: Import `.mid`/`.midi` files directly into the Demo Station — a zero-dependency MIDI parser (`midi-converter-engine.js`) reads Note On/Off, velocity, duration, tempo, and time signatures, converting them into live sequenced playback with correct timing.
+- **Playback Volume Control**: Imported MIDI songs and built-in demos now have a dedicated demo volume fader, letting performers blend backing arrangements against the live keyboard mix.
+- **Custom Song Library Persistence**: Imported MIDI demos are saved to `localStorage` as a personal custom demo collection, reloaded on next launch.
+- **Clean Stage EP Combi (`clean_electric_piano`)**: New signature 4-timbre stack pairing a clean stage electric piano with warm companion layers for polished worship/gospel ballad work.
+
+### 2. 🎚️ Held-Note Auto-Reset & Max-Sustain Limiter
+
+- **Max-Sustain Protection**: Any note held longer than the configurable **Held Note Max** (2–60 seconds, default 15s) is automatically, silently released in the audio engine — eliminating runaway drone notes, hanging sustained pads, and stuck sustains during chaotic live segments.
+- **Per-Note Arsenal Timer**: Each held note arms its own limiter; releasing the key cancels it while the damper pedal continues normally for intentional lyrical sustains.
+- **Fully Audio-Only Reset**: The auto-reset pathway bypasses visuals/midi-out so it never flashes UI or retriggers hardware — just clean silence.
+- **HUD Control**: New **Held Note Max** slider in the Gig HUD to dial the sustain ceiling live.
+
+### 3. 🔊 Master-Bus Buzz/Hiss Elimination
+
+- **Complete Master-Bus Noise Overhaul**: Eliminated persistent buzzing/hissing and high-freq artifacts across the entire chain — master recorder (WAV) sink, lookahead limiter detector, and router/synth sum buses — for a dead-silent rest state and cleaner recordings.
+
+### 4. 🧱 Demo Song Engine Modularization
+
+- **Per-Song Module Split**: The monolithic demo-song bank was refactored into 20 dedicated per-song ES modules under `src/audio/demo-songs/` — dramatically improving maintainability, tree-shaking, and hot-reload speed without changing song content.
+
+---
+
+## 📑 Prior Release Notes (v1.1.7 • Build 18)
 
 ### 1. 🔁 Champion 4-Track Synchronized Clip Looper & Preset Freezing
 
@@ -119,7 +147,7 @@ _For the full deep-dive, see the [Master Feature Catalog](#-master-feature-catal
 
 - **4-Layer Stacking Architecture**: Stack up to four simultaneous timbres across PCM Rompler banks, Virtual Analog presets, and Soundfont instruments.
 - **Per-Layer Controls**: Individual volume fader, stereo pan, octave transposition (-2 to +2), semitone fine-tune, velocity curve response, solo, and mute switches.
-- **Instant Search & Categorized Preset Library**: 53 production combi combinations (13 starred signature stacks) with fast category filtering and single-click recall.
+- **Instant Search & Categorized Preset Library**: 56 production combi combinations (32 starred signature stacks) with fast category filtering and single-click recall.
 
 ### ✂️ 3. Split Keyboard Performance Console
 
@@ -270,6 +298,7 @@ _For the full deep-dive, see the [Master Feature Catalog](#-master-feature-catal
 11. **★ Neo-Soul Chill**: DX7 FM Tines + Breathy Sax + Lo-Fi Auto-Pan Rhodes.
 12. **★ Gospel Praise**: Concert Grand + Hammond B3 Organ + Symphonic Strings.
 13. **★ Acid Jazz Groove**: Dyno Tine EP + 90s Slap Bass + Leslie Rotary Organ.
+14. **★ Clean Stage Electric Piano**: Suit & Stage EP + FM Bell Tine + Warm Soft Strings + Pocket Bass.
 
 ---
 
@@ -356,7 +385,7 @@ npm run lint
 
 # 4. Build Windows Desktop NSIS Setup Installer (.exe)
 npm run build:desktop
-# Output: src-tauri/target/release/bundle/nsis/WILSONIX MIDIKEY_1.1.0_x64-setup.exe
+# Output: src-tauri/target/release/bundle/nsis/WILSONIX MIDIKEY_2.0.0_x64-setup.exe
 
 # 5. Build Android APK (.apk)
 npm run build:apk

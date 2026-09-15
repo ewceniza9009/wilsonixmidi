@@ -4,8 +4,8 @@
  * Updated via: npm run version:patch | npm run version:minor | npm run version:major
  */
 
-export const APP_VERSION = "1.1.7";
-export const BUILD_NUMBER = 18;
+export const APP_VERSION = "2.0.0";
+export const BUILD_NUMBER = 19;
 export const BUILD_DATE = "2026-09-15";
 export const APP_TITLE = "WILSONIX MIDIKEY";
 export const APP_ID = "com.wilsonix.midikey";
