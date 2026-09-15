@@ -411,6 +411,8 @@ export class ClipLooper {
     let initialSustain = false;
     if (typeof multiLayerEngine.getSustainPedal === "function") {
       initialSustain = !!multiLayerEngine.getSustainPedal();
+    } else if (typeof multiLayerEngine.sustainPedalActive === "boolean") {
+      initialSustain = multiLayerEngine.sustainPedalActive;
     } else if (typeof multiLayerEngine.sustainPedal === "boolean") {
       initialSustain = multiLayerEngine.sustainPedal;
     } else if (multiLayerEngine.pcmEngine?.sustainPedal) {
@@ -419,6 +421,14 @@ export class ClipLooper {
     track.initialSustain = initialSustain;
     if (initialSustain) {
       track.events.push({ type: "sustain", down: true, time: 0 });
+    }
+
+    // Start this track's looper buses from the current pedal state so a clip
+    // recorded with sustain OFF never inherits a leftover sustain flag from a
+    // previously played clip (each bus holds its own sticky sustainActive bit).
+    const pcm = multiLayerEngine.pcmEngine;
+    if (pcm && typeof pcm.setLooperTrackSustain === "function") {
+      pcm.setLooperTrackSustain(trackId, initialSustain);
     }
 
     track.state = "recording";
@@ -563,6 +573,14 @@ export class ClipLooper {
         track.nextIterStart <
         ctx.currentTime + noteScheduler.scheduleAheadSec
       ) {
+        // Start every iteration from a neutral sustain state so a clip that was
+        // recorded with the pedal UP never inherits a leftover sustain flag
+        // (each looper bus keeps its own sticky sustainActive bit once set).
+        const pcmReset = multiLayerEngine.pcmEngine;
+        if (pcmReset && typeof pcmReset.setLooperTrackSustain === "function") {
+          pcmReset.setLooperTrackSustain(trackId, !!track.initialSustain);
+        }
+
         events.forEach((e) => {
           let eventTime = e.time;
 
@@ -671,6 +689,11 @@ export class ClipLooper {
       try {
         pcm.clearLooperTrack(trackId);
       } catch (e) {}
+      // Clear the sticky per-bus sustain flag so a future clip recorded with
+      // the pedal UP never inherits sustain from this (or any prior) session.
+      if (pcm && typeof pcm.setLooperTrackSustain === "function") {
+        pcm.setLooperTrackSustain(trackId, false);
+      }
     }
     track.activeNotes.clear();
   }

@@ -208,7 +208,7 @@ body.mobile-stage-keys .studio-keyboard-deck {
 }
 
 .hud-tools-drawer.expanded {
-  max-height: 48px !important;
+  max-height: 56px !important;
   opacity: 1 !important;
   pointer-events: auto !important;
   padding: 3px 6px !important;
@@ -625,10 +625,15 @@ body.mobile-stage-keys .studio-keyboard-deck {
   background: #1e2433;
   color: #94a3b8;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 2px;
-  font-size: 0.52rem;
+  border-radius: 4px;
+  font-size: 0.66rem;
   font-weight: 900;
-  padding: 1px 3px;
+  min-width: 30px;
+  height: 34px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
 }
 
@@ -647,16 +652,16 @@ body.mobile-stage-keys .studio-keyboard-deck {
   background: #181c26;
   color: #cbd5e1;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 2px;
-  font-size: 0.52rem;
+  border-radius: 4px;
+  font-size: 0.66rem;
   font-weight: 800;
-  width: 14px;
-  height: 16px;
+  min-width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  padding: 0;
+  padding: 0 4px;
 }
 
 .rig-slot-pill:hover {
@@ -675,10 +680,15 @@ body.mobile-stage-keys .studio-keyboard-deck {
   background: linear-gradient(180deg, #1e3a5f 0%, #0f172a 100%);
   color: #38bdf8;
   border: 1px solid rgba(56, 189, 248, 0.4);
-  border-radius: 2px;
-  font-size: 0.50rem;
+  border-radius: 4px;
+  font-size: 0.60rem;
   font-weight: 900;
-  padding: 1px 4px;
+  min-width: 32px;
+  height: 34px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   margin-left: 2px;
   transition: all 0.15s ease;
@@ -1434,15 +1444,16 @@ body.mobile-stage-keys .studio-keyboard-deck {
 
   /* Collapsible tools drawer styling for tablet */
   .hud-tools-drawer.expanded {
-    max-height: 44px !important;
+    max-height: 56px !important;
     padding: 2px 4px !important;
   }
   .tools-drawer-inner {
     gap: 6px !important;
   }
-  .rig-label { font-size: 0.50rem !important; }
-  .rig-bank-pill { padding: 1px 3px !important; font-size: 0.50rem !important; }
-  .rig-slot-pill { width: 14px !important; height: 16px !important; font-size: 0.50rem !important; }
+  .rig-label { font-size: 0.54rem !important; }
+  .rig-bank-pill { min-width: 32px !important; height: 36px !important; font-size: 0.62rem !important; padding: 0 8px !important; }
+  .rig-slot-pill { width: 36px !important; height: 36px !important; min-width: 0 !important; font-size: 0.62rem !important; padding: 0 4px !important; }
+  .rig-save-btn { min-width: 34px !important; height: 36px !important; padding: 0 8px !important; font-size: 0.58rem !important; }
 }
 
 /* 2. Compact Tablets & Large Phones (max-width: 960px) */
