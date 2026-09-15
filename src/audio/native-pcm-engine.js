@@ -968,13 +968,16 @@ export class LayerInsertProcessor {
         break;
       }
       case "trance_gate": {
+        // The old base=1.0 + square LFO ±1.0 produced a gain sweep of 0↔2 — the
+        // "open" half of the gate amplified by 2×, clipping into the limiter.
+        // Use 0.5 ± 0.5 so the swing is a clean 0→1.
         const gainNode = ctx.createGain();
-        gainNode.gain.value = 1.0;
+        gainNode.gain.value = 0.5;
         const lfo = ctx.createOscillator();
         lfo.type = "square";
         lfo.frequency.value = 4.0;
         const gateGain = ctx.createGain();
-        gateGain.gain.value = 1.0;
+        gateGain.gain.value = 0.5;
         lfo.connect(gateGain);
         gateGain.connect(gainNode.gain);
         lfo.start();

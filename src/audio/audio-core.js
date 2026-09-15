@@ -61,12 +61,18 @@ export class AudioCore {
     this.peakBuffer = new Uint8Array(this.analyser.frequencyBinCount);
 
     // Transparent Hardware Output Safety Limiter (Prevents DAC clipping with zero waveform modulation & zero squashing)
+    // Old settings (knee=12, ratio=4, release=60ms) started gain reduction at
+    // ~-7dB and recovered per-beat, so sustained chords sat in the knee and the
+    // gain "breathed"/pumped - a constant buzzy background hum. Tight knee +
+    // high ratio + slower release make it clamp only true peaks (the busPad
+    // keeps program material well below threshold) and recover too slowly to
+    // pump musically.
     this.hardwareLimiter = this.ctx.createDynamicsCompressor();
     this.hardwareLimiter.threshold.value = -1.0;  // True brickwall safety ceiling
-    this.hardwareLimiter.knee.value = 12.0;       // Smooth soft-knee transition (eliminates hard corner chatter/buzzing)
-    this.hardwareLimiter.ratio.value = 4.0;       // Controlled peak clamp (smooth & musical, no pumping)
+    this.hardwareLimiter.knee.value = 4.0;        // Tight-ish knee: clamp only real peaks
+    this.hardwareLimiter.ratio.value = 12.0;      // Peaks go down to the ceiling, not into it
     this.hardwareLimiter.attack.value = 0.003;    // 3ms - fast transparent peak catching without pumping
-    this.hardwareLimiter.release.value = 0.060;   // 60ms smooth instant recovery (no laggy ducking)
+    this.hardwareLimiter.release.value = 0.100;   // 100ms - recovers too slowly to pump per-beat
 
     // Initialize FX Rack
     this.fxRack = new FxRackManager(this.ctx);

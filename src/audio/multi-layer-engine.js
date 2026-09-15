@@ -1090,7 +1090,16 @@ export class MultiLayerEngine {
     const ctx = audioCore.ctx;
     if (!ctx) return null;
     try {
-      const dest = audioCore.hardwareLimiter || ctx.destination;
+      // Route through the FX Rack input (same as NativePcmEngine) so the worklet
+      // gets the rack, masterFilter, busPad trim and DC blocker before the
+      // limiter. Connecting straight to hardwareLimiter previously slammed the
+      // limiter with an un-trimmed 16-voice sum - no busPad headroom, no DC
+      // blocker - which read as constant limiter grab/release buzz.
+      const dest =
+        (audioCore.fxRack && audioCore.fxRack.input) ||
+        audioCore.dcBlocker ||
+        audioCore.masterGain ||
+        ctx.destination;
       this._workletNode = new SynthWorkletNode(ctx, dest);
       // Bridge worklet visual callbacks → synthEngine.onNoteChangeCallback → virtual keyboard highlighting
       this._workletNode.onVisualCallback = (midi, isPressed, vel) => {

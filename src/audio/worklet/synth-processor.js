@@ -115,6 +115,10 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
     this.sustain = 0.65;
     this.release = 0.350;
 
+    // Polyphony headroom: per-voice output is 0.45, scaled by 1/sqrt(active) so
+    // a 16-note chord can't stack to 7× full-scale and slam the master bus.
+    this.polyScale = 1.0;
+
     // MessagePort handling
     this.port.onmessage = e => {
       this.handleMessage(e.data);
@@ -241,6 +245,14 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
     outL.fill(0);
     outR.fill(0);
 
+    // Polyphony-aware output trim: scale down per-voice so a full 16-note chord
+    // can't stack to 7× full-scale and slam the master bus.
+    let activeCount = 0;
+    for (let v = 0; v < MAX_VOICES; v++) if (this.voices[v].active) activeCount++;
+    const targetScale = 1.0 / Math.sqrt(Math.max(1, activeCount));
+    this.polyScale += (targetScale - this.polyScale) * 0.12;
+    const voiceGain = 0.45 * this.polyScale;
+
     const attackRate = 1.0 / Math.max(0.001, this.attack * this.sampleRate);
     const decayRate = 1.0 / Math.max(0.001, this.decay * this.sampleRate);
     const releaseRate = 1.0 / Math.max(0.001, this.release * this.sampleRate);
@@ -310,8 +322,8 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
         voice.ic1eqR = 2.0 * v1R - voice.ic1eqR;
         voice.ic2eqR = 2.0 * v2R - voice.ic2eqR;
 
-        outL[i] += v2L * 0.45;
-        outR[i] += v2R * 0.45;
+        outL[i] += v2L * voiceGain;
+        outR[i] += v2R * voiceGain;
       }
     }
 
