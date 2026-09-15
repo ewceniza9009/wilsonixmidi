@@ -4,7 +4,7 @@
  * driving both the audible engine and the on-screen key visual bridge.
  */
 
-import { DEMO_SONGS } from "../audio/demo-songs.js";
+import { DEMO_SONGS } from "../audio/demo-songs/index.js";
 import { multiLayerEngine } from "../audio/multi-layer-engine.js";
 import { audioCore } from "../audio/audio-core.js";
 import { noteScheduler } from "../audio/lookahead-scheduler.js";
