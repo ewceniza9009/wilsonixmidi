@@ -265,6 +265,17 @@ export const COMBI_PRESETS = {
       { id: 3, name: "Moog Synth Bass", inst: "synth_bass_1", fx: "warm_eq", gain: 0.65, pan: -0.05, oct: -1, minVel: 75, maxVel: 127, enabled: false },
     ],
   },
+  clean_electric_piano: {
+    id: "clean_electric_piano",
+    name: "★ Clean Stage Electric Piano (Suit & Stage EP + Bell)",
+    category: "Electric Piano",
+    layers: [
+      { id: 0, name: "Suit & Stage EP", inst: "electric_piano_1", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "FM Bell Tine", inst: "electric_piano_2", fx: "clean", gain: 0.45, pan: 0.05, oct: 0, minVel: 50, maxVel: 127, enabled: true },
+      { id: 2, name: "Warm Soft Strings", inst: "string_ensemble_1", fx: "clean", gain: 0.35, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Pocket Bass", inst: "synth_bass_1", fx: "clean", gain: 0.65, pan: -0.05, oct: -1, minVel: 1, maxVel: 127, maxNote: 59, enabled: true },
+    ],
+  },
   smooth_rnb: {
     id: "smooth_rnb",
     name: "★ Smooth R&B Soul (Stage EP + Breathy Sax + Strings)",

@@ -5,6 +5,7 @@
  */
 
 import { DEMO_SONGS } from "../audio/demo-songs/index.js";
+import { MidiConverterEngine } from "../audio/midi-converter-engine.js";
 import { multiLayerEngine } from "../audio/multi-layer-engine.js";
 import { audioCore } from "../audio/audio-core.js";
 import { noteScheduler } from "../audio/lookahead-scheduler.js";
@@ -19,26 +20,62 @@ export class DemoStationUI {
     this.progressInterval = null;
     this.activeMidiNotes = new Set();
     this.searchQuery = "";
+    this.volume = 0.70;
+    this.customSongs = this.loadCustomSongs();
 
     this.render();
     this.renderList();
     this.bindEvents();
   }
 
+  loadCustomSongs() {
+    try {
+      const saved = localStorage.getItem("wilsonix_custom_demo_songs");
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  saveCustomSongs() {
+    try {
+      localStorage.setItem("wilsonix_custom_demo_songs", JSON.stringify(this.customSongs));
+    } catch (e) {}
+  }
+
+  get allSongs() {
+    return [...this.customSongs, ...DEMO_SONGS];
+  }
+
   render() {
     if (!this.container) return;
 
     this.container.innerHTML = `
-      <div class="demo-station-card">
+      <div class="demo-station-card" id="demo-station-card">
         <div class="demo-station-header">
           <div class="station-title-group">
             <span class="station-badge">🎬 DEMO STATION</span>
-            <span class="genre-tag">30s INTERACTIVE SONG CLIPS</span>
+            <span class="genre-tag">INTERACTIVE SONG CLIPS</span>
           </div>
           <span class="demo-hint">Clips play live on the current stage rig — watch the keys!</span>
         </div>
-        <div class="demo-search-wrap">
-          <input type="text" class="demo-search-input" id="demo-search" placeholder="Search songs..." value="" autocomplete="off" />
+        <div class="demo-toolbar">
+          <div class="demo-search-wrap">
+            <input type="text" class="demo-search-input" id="demo-search" placeholder="Search songs..." value="" autocomplete="off" />
+            <div class="demo-volume-control">
+              <span class="demo-vol-icon">🔉</span>
+              <span class="demo-vol-label">VOL</span>
+              <input type="range" class="demo-vol-slider" id="demo-volume-slider" min="15" max="100" value="70" title="Demo playback volume" />
+              <span class="demo-vol-pct" id="demo-vol-pct">70%</span>
+            </div>
+          </div>
+          <div class="demo-actions-bar">
+            <button class="demo-import-btn" id="demo-import-midi-btn" title="Convert and play any standard .mid or .midi file">
+              ➕ IMPORT MIDI FILE
+            </button>
+            <input type="file" id="demo-midi-file-input" accept=".mid,.midi" style="display:none" />
+            <span class="demo-drop-hint">or drop any .mid here</span>
+          </div>
         </div>
         <div class="demo-song-list" id="demo-song-list"></div>
       </div>
@@ -50,36 +87,45 @@ export class DemoStationUI {
     if (!list) return;
 
     const q = this.searchQuery.toLowerCase().trim();
+    const songs = this.allSongs;
     const filtered = q
-      ? DEMO_SONGS.filter(
+      ? songs.filter(
           (s) =>
             s.title.toLowerCase().includes(q) ||
             s.subtitle.toLowerCase().includes(q),
         )
-      : DEMO_SONGS;
+      : songs;
 
     list.innerHTML = filtered
       .map(
         (song) => `
-      <div class="demo-song-row" data-song="${song.id}">
+      <div class="demo-song-row ${song.isCustom ? "demo-custom-row" : ""}" data-song="${song.id}">
         <div class="demo-song-label">
-          <span class="demo-song-title">${song.title}</span>
+          <div class="demo-title-line">
+            <span class="demo-song-title">${song.title}</span>
+            ${song.isCustom ? '<span class="demo-custom-badge">USER MIDI</span>' : ""}
+          </div>
           <span class="demo-song-subtitle">${song.subtitle}</span>
         </div>
         <div class="demo-song-controls">
           <div class="demo-progress-track">
             <div class="demo-progress-fill" id="demo-progress-${song.id}"></div>
           </div>
-          <button class="demo-station-play-btn" id="demo-play-${song.id}" title="Play 30s demo">
+          <button class="demo-station-play-btn" id="demo-play-${song.id}" title="Play demo clip">
             ▶ PLAY
           </button>
+          ${
+            song.isCustom
+              ? `<button class="demo-song-delete-btn" data-delete-id="${song.id}" title="Remove custom song">✕</button>`
+              : ""
+          }
         </div>
       </div>
     `,
       )
       .join("");
 
-    // Fresh button nodes each render — bind once, no duplicate listeners
+    // Bind play buttons
     filtered.forEach((song) => {
       const btn = list.querySelector(`#demo-play-${song.id}`);
       btn?.addEventListener("click", () => {
@@ -90,6 +136,24 @@ export class DemoStationUI {
         }
       });
     });
+
+    // Bind delete buttons for custom songs
+    list.querySelectorAll(".demo-song-delete-btn").forEach((delBtn) => {
+      delBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const id = delBtn.getAttribute("data-delete-id");
+        if (id) this.deleteCustomSong(id);
+      });
+    });
+  }
+
+  deleteCustomSong(id) {
+    if (this.isPlaying && this.currentSong === id) {
+      this.stop();
+    }
+    this.customSongs = this.customSongs.filter((s) => s.id !== id);
+    this.saveCustomSongs();
+    this.renderList();
   }
 
   bindEvents() {
@@ -99,6 +163,76 @@ export class DemoStationUI {
         this.searchQuery = e.target.value;
         this.renderList();
       });
+    }
+
+    const volSlider = this.container.querySelector("#demo-volume-slider");
+    const volPct = this.container.querySelector("#demo-vol-pct");
+    if (volSlider) {
+      volSlider.addEventListener("input", (e) => {
+        const val = parseInt(e.target.value, 10) || 70;
+        this.volume = val / 100;
+        if (volPct) volPct.textContent = `${val}%`;
+      });
+    }
+
+    const importBtn = this.container.querySelector("#demo-import-midi-btn");
+    const fileInput = this.container.querySelector("#demo-midi-file-input");
+    if (importBtn && fileInput) {
+      importBtn.addEventListener("click", () => fileInput.click());
+      fileInput.addEventListener("change", (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) {
+          this.handleMidiFile(file);
+          fileInput.value = "";
+        }
+      });
+    }
+
+    // Drag-and-drop MIDI file onto card
+    const card = this.container.querySelector("#demo-station-card");
+    if (card) {
+      ["dragenter", "dragover"].forEach((eventName) => {
+        card.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          card.classList.add("drag-over");
+        });
+      });
+      ["dragleave", "drop"].forEach((eventName) => {
+        card.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          card.classList.remove("drag-over");
+        });
+      });
+      card.addEventListener("drop", (e) => {
+        const file = e.dataTransfer?.files?.[0];
+        if (file) this.handleMidiFile(file);
+      });
+    }
+  }
+
+  async handleMidiFile(file) {
+    if (!file || !file.name.match(/\.(mid|midi)$/i)) {
+      alert("Please choose or drop a valid .mid or .midi file.");
+      return;
+    }
+
+    try {
+      const song = await MidiConverterEngine.fromFile(file, {
+        combi: "clean_electric_piano",
+        mode: "30s",
+        velocityScale: 0.80,
+        stripPedal: true,
+      });
+
+      this.customSongs.unshift(song);
+      this.saveCustomSongs();
+      this.renderList();
+      this.play(song);
+    } catch (err) {
+      console.error("MIDI conversion error:", err);
+      alert(`Could not convert MIDI file: ${err.message}`);
     }
   }
 
@@ -150,13 +284,16 @@ export class DemoStationUI {
     this.clearTimers();
     this.updateButtons();
 
+    const volRatio = typeof this.volume === "number" ? this.volume : 0.70;
+
     song.events.forEach((ev) => {
       if (ev.type === "pedal") {
         const at = songStart + ev.time / 1000;
         noteScheduler.pedal(ev.down, at, "demo-" + song.id);
       } else if (ev.note) {
         const at = songStart + ev.time / 1000;
-        noteScheduler.noteOn(ev.note, ev.vel, at, "demo-" + song.id);
+        const scaledVel = Math.max(1, Math.min(127, Math.round((ev.vel || 80) * volRatio)));
+        noteScheduler.noteOn(ev.note, scaledVel, at, "demo-" + song.id);
         this.activeMidiNotes.add(ev.note);
         const offAt = songStart + (ev.time + (ev.dur || 600)) / 1000;
         noteScheduler.noteOff(ev.note, offAt, "demo-" + song.id);
@@ -166,7 +303,7 @@ export class DemoStationUI {
         const visTimer = setTimeout(
           () => {
             if (!this.isPlaying || this.currentSong !== song.id) return;
-            this.emitKeyVisual([ev.note], true, ev.vel);
+            this.emitKeyVisual([ev.note], true, scaledVel);
           },
           Math.max(0, onDelay - 12),
         );
@@ -235,7 +372,7 @@ export class DemoStationUI {
   }
 
   updateButtons() {
-    DEMO_SONGS.forEach((song) => {
+    this.allSongs.forEach((song) => {
       const btn = this.container.querySelector(`#demo-play-${song.id}`);
       if (!btn) return;
       const isThisSong = this.isPlaying && this.currentSong === song.id;

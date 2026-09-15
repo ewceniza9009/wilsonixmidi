@@ -2159,6 +2159,113 @@ body.mobile-stage-keys .studio-keyboard-deck {
   border-color: var(--accent-cyan);
   box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.15);
 }
+.demo-volume-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 6px 12px;
+  margin-left: 10px;
+  flex-shrink: 0;
+}
+.demo-vol-icon {
+  font-size: 0.85rem;
+}
+.demo-vol-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+.demo-vol-slider {
+  width: 90px;
+  height: 4px;
+  cursor: pointer;
+  accent-color: var(--accent-cyan);
+}
+.demo-vol-pct {
+  font-size: 0.75rem;
+  font-family: monospace;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  min-width: 34px;
+  text-align: right;
+}
+.demo-station-card.drag-over {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.25);
+  background: rgba(0, 229, 255, 0.03);
+}
+.demo-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.demo-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.demo-import-btn {
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.15), rgba(0, 229, 255, 0.05));
+  border: 1px solid var(--accent-cyan);
+  border-radius: 8px;
+  color: var(--accent-cyan);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.demo-import-btn:hover {
+  background: var(--accent-cyan);
+  color: #0d1117;
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.4);
+}
+.demo-drop-hint {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-style: italic;
+  white-space: nowrap;
+}
+.demo-title-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.demo-custom-badge {
+  font-size: 0.60rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.demo-custom-row {
+  border-color: rgba(16, 185, 129, 0.3);
+}
+.demo-song-delete-btn {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.demo-song-delete-btn:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
 .demo-song-list {
   display: flex;
   flex-direction: column;
