@@ -33,16 +33,23 @@ export class AudioCore {
     this.analyser = null;
     this.isUnlocked = false;
 
-    // Latency Profile — mobile gets "safe" (512 frames / playback hint) by
-    // default because Android WebViews / Capacitor WebViews have 2-4× higher
-    // inherent audio latency than desktop; a 256-frame buffer on mobile causes
-    // frequent xrun glitches that manifest as buzzing / stuttering.  Desktop
-    // stays at "balanced" (256 frames).  User's explicit localStorage pick still
-    // takes precedence if they manually chose a profile.
-    this.currentLatencyProfile = _isMobileDevice() ? "safe" : "balanced";
+    // Latency Profile — mobile defaults to "balanced" (256 frames) for live
+    // touch response. The "safe" profile (512 frames) adds ~23ms extra round-trip
+    // latency that kills gig playability. Voice stealing + node pooling fixes
+    // handle the buzzing that previously required larger buffers on mobile.
+    this.currentLatencyProfile = "balanced";
     try {
       const saved = localStorage.getItem("midikey_latency_profile");
-      if (saved && LATENCY_PROFILES[saved]) this.currentLatencyProfile = saved;
+      if (saved && LATENCY_PROFILES[saved]) {
+        // On mobile, ignore "safe" if user never explicitly chose it — it was
+        // auto-selected before and caused unplayable touch latency.  If they
+        // pick "safe" again from the profile picker it will be respected.
+        if (_isMobileDevice() && saved === "safe" && !localStorage.getItem("midikey_latency_profile_chosen")) {
+          localStorage.removeItem("midikey_latency_profile");
+        } else {
+          this.currentLatencyProfile = saved;
+        }
+      }
     } catch (e) {}
     this.profileListeners = [];
 
@@ -237,6 +244,7 @@ export class AudioCore {
     const prevSpatialEnv = this.spatialEngine?.currentEnv || "off";
     try {
       localStorage.setItem("midikey_latency_profile", profileId);
+      localStorage.setItem("midikey_latency_profile_chosen", "1");
     } catch (e) {}
 
     if (this.ctx) {
