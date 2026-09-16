@@ -45,23 +45,41 @@ _For the full deep-dive, see the [Master Feature Catalog](#-master-feature-catal
 
 ## 📑 Granular Changelog & Release Notes (v2.0.2 • Build 21)
 
-### 1. ☀️ Light Theme — Keyboard Deck Strip
+### 1. 🎨 Pro Activation & Access Modal Redesign
 
-- **Full Light-Mode Keyboard HUD**: New `light-app.css` (400 lines) provides complete light-theme coverage for the keyboard deck strip — pitch bend / mod / air wheels, octave mini-picker, velocity accent pills, curve accent strip, hide-keys toggle, and the sustain latch + pedal LED. All styles are 100% scoped to `[data-theme="light"]` with zero runtime cost in dark mode.
+- **Glassmorphic Hardware Dialog**: Replaced plain modal with a glassmorphic container featuring gradient borders, backdrop blur, and depth drop-shadows.
+- **Illuminated Status & Hardware ID**: Monospace terminal capsule (`HWID: DEV_...`) with cyan glow and animated copy feedback; pulsing amber/green status LEDs for Evaluation and Pro tiers.
+- **2-Column Feature Comparison**: Replaced raw bullet points with structured standard vs pro feature cards with custom icon badges.
+- **Responsive Stacking**: Seamlessly scales and stacks on mobile/tablets without clipping soft keyboards.
 
-### 2. 🔊 Session Clip Looper Volume Control
+### 2. 🎹 Keyboard Controls HUD Strip Overhaul
+
+- **Unified DAW Hardware Dock**: Replaced mismatched white button boxes with a unified DAW top bar with segmented control bays.
+- **Modular Grouping**: Expression wheels bay, Octave segment (`- OCT` | `C4` | `+ OCT` | `C3-C5`), Scale lock & performance tools, Dynamics & velocity presets (`PP` · `MP` · `MF` · `FF` · `SFZ`), and illuminated Sustain latch LED.
+- **Clean Scale Selectors**: Borderless transparent dropdowns for Root and Scale modes that blend directly into the module pill.
+
+### 3. 🌓 Split Keyboard Console Theme Harmonization
+
+- **Dark Studio Console Integrity**: Scoped `.split-console-view` and `.split-keyboard-console` under `[data-theme="light"]` so all labels, hints, and subtexts retain high-contrast readability (`#cbd5e1` / `#94a3b8`) over dark hardware surfaces.
+- **High-Visibility Controls**: Inset search inputs, effect selectors, and octave buttons (`-12`, `+12`) styled for maximum stage visibility.
+
+### 4. ☀️ Light Theme — Keyboard Deck Strip
+
+- **Full Light-Mode Keyboard HUD**: New `light-app.css` provides complete light-theme coverage for the keyboard deck strip — pitch bend / mod / air wheels, octave mini-picker, velocity accent pills, curve accent strip, hide-keys toggle, and the sustain latch + pedal LED. All styles are 100% scoped to `[data-theme="light"]` with zero runtime cost in dark mode.
+
+### 5. 🔊 Session Clip Looper Volume Control
 
 - **Dedicated Loop Volume Slider**: New **LOOP VOL** fader (10–100%, default 55%) in the looper header lets performers ride the clip playback level under their live preset without affecting the master mix or individual layer gains.
 - **Per-Note Gain Scaling**: The looper gain multiplier is applied at the note-scheduling layer (`L.gain * this.looperGain`), keeping the audio worklet sample loop untouched for zero added latency.
 
-### 3. 🎛️ New Live SFX Instruments
+### 6. 🎛️ New Live SFX Instruments
 
 - **⚡ Sound System Laser Zap** (`laser_zap`): Punchy electronic laser sweep for DJ transitions and drops.
 - **🎺 Dancehall Stage Airhorn Blast** (`dub_horn`): Classic dancehall/reggae airhorn one-shot for live hype.
 - **💣 Heavy 808 Sub-Boom / Bass Drop** (`sub_boom`): Deep 808-style sub-bass boom for trap and EDM drops.
 - **🌊 White Noise Sweep & Transition Riser** (`noise_riser`): Building white noise riser for tension and transitions.
 
-### 4. 🧹 Codebase Formatting & Hygiene
+### 7. 🧹 Codebase Formatting & Hygiene
 
 - **Prettier Standardization**: Applied consistent code formatting across `gig-hud.js` — object literals expanded to multi-line, arrow function parentheses normalized, string quotes standardized to double-quotes. Zero logic changes.
 

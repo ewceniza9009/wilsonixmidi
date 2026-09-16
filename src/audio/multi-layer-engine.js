@@ -863,7 +863,7 @@ export class MultiLayerEngine {
       sustainDecayTau: 2.4,   // pedal held: decay rate (0.5–8s)
       heldNoteSec: 15,        // NO pedal, key held: rings for this long, then fades (2–60s)
       // Audio
-      polyphonyCap: 64,       // max simultaneous voices (16–128)
+      polyphonyCap: 128,       // max simultaneous voices (16–128)
       masterVolumePct: 50,    // default master volume on load (0–100)
       // Keyboard
       defaultOctave: 4,       // starting octave (1–7)
@@ -1655,10 +1655,21 @@ export class MultiLayerEngine {
         }
       }
 
-      // Pro Combi Mixer Auto-Headroom: scale each layer by equal-power (1 / sqrt(N))
-      // so 4-layer stacked chords sum cleanly to 0dBFS studio nominal without smashing the master limiter
-      const enabledLayers = this.layers.filter(l => l.enabled);
-      const combiScale = enabledLayers.length > 1 ? (1.0 / Math.sqrt(enabledLayers.length)) : 1.0;
+      // Pro Combi Mixer Auto-Headroom: scale each layer so the summed output
+      // matches single-instrument reference level regardless of how many layers
+      // are active or what their individual gains are.  The old 1/sqrt(N) formula
+      // didn't account for layer gains — a 4-layer preset with gains [1, .85, .85, .7]
+      // summed to 1.7× single-instrument level (too loud), while a single-layer preset
+      // at gain 0.65 summed to 0.65× (whisper).  New formula: combiScale = 1/Σgains,
+      // preserving each layer's relative mix while normalising total to 1.0.
+      let totalLayerGain = 0;
+      for (let i = 0; i < this.layers.length; i++) {
+        const layer = this.layers[i];
+        if (!layer.enabled) continue;
+        if (velocity < layer.minVel || velocity > layer.maxVel) continue;
+        totalLayerGain += (layer.gain ?? 1.0);
+      }
+      const combiScale = totalLayerGain > 0 ? (1.0 / totalLayerGain) : 1.0;
 
       // COMBI MODE: Synchronous sample-0 trigger on all enabled PCM layers
       for (let i = 0; i < this.layers.length; i++) {

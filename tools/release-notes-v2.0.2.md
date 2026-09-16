@@ -1,8 +1,23 @@
 ## 🚀 WILSONIX MIDIKEY v2.0.2 (Build 21 Production Release)
 
-**Looper sustain bugfix, light theme keyboard deck, session looper volume control, 4 new live SFX instruments, and tablet touch-target overhaul.**
+**Activation modal redesign, keyboard controls HUD strip overhaul, split console theme fix, looper sustain bugfix, session looper volume control, 4 new live SFX instruments, and tablet touch-target overhaul.**
 
 ### What's New / Fixed
+
+#### 🎨 Pro Activation & Access Modal Redesign
+- **Glassmorphic Hardware Dialog**: Replaced plain modal with a glassmorphic container featuring gradient borders, backdrop blur, and depth drop-shadows.
+- **Illuminated Status & Hardware ID**: Monospace terminal capsule (`HWID: DEV_...`) with cyan glow and animated copy feedback; pulsing amber/green status LEDs for Evaluation and Pro tiers.
+- **2-Column Feature Comparison**: Replaced raw bullet points with structured standard vs pro feature cards with custom icon badges.
+- **Responsive Stacking**: Seamlessly scales and stacks on mobile/tablets without clipping soft keyboards.
+
+#### 🎹 Keyboard Controls HUD Strip Overhaul
+- **Unified DAW Hardware Dock**: Replaced mismatched white button boxes with a unified DAW top bar with segmented control bays.
+- **Modular Grouping**: Expression wheels bay, Octave segment (`- OCT` | `C4` | `+ OCT` | `C3-C5`), Scale lock & performance tools, Dynamics & velocity presets (`PP` · `MP` · `MF` · `FF` · `SFZ`), and illuminated Sustain latch LED.
+- **Clean Scale Selectors**: Borderless transparent dropdowns for Root and Scale modes that blend directly into the module pill.
+
+#### 🌓 Split Keyboard Console Theme Harmonization
+- **Dark Studio Console Integrity**: Scoped `.split-console-view` and `.split-keyboard-console` under `[data-theme="light"]` so all labels, hints, and subtexts retain high-contrast readability (`#cbd5e1` / `#94a3b8`) over dark hardware surfaces.
+- **High-Visibility Controls**: Inset search inputs, effect selectors, and octave buttons (`-12`, `+12`) styled for maximum stage visibility.
 
 #### 🔁 Clip Looper Sustain-Playback Fix
 - **Sticky sustain flag eliminated**: Looper buses now reset to the recorded initial-sustain state at every loop iteration and on playback start/stop, so clips always faithfully reproduce exactly what was played during recording.

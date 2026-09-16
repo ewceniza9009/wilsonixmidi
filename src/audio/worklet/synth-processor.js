@@ -113,6 +113,7 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
     this.waveType1 = 0; // 0=Saw, 1=Square, 2=Triangle, 3=Sine
     this.waveType2 = 1;
     this.detune2 = 0.05; // Semitones
+    this.detune2Ratio = Math.pow(2.0, this.detune2 / 12.0); // Precomputed
     this.subLevel = 0.20;
     this.pulseWidth = 0.50;
 
@@ -155,6 +156,7 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
       else if (data.name === "subLevel") this.subLevel = data.value;
       else if (data.name === "wave1") this.waveType1 = data.value;
       else if (data.name === "wave2") this.waveType2 = data.value;
+      else if (data.name === "detune2") { this.detune2 = data.value; this.detune2Ratio = Math.pow(2.0, data.value / 12.0); }
       else if (data.name === "sustainTau") this.sustainTau = data.value;
     } else if (data.type === "sustain") {
       // Sustain pedal: down = keep ringing (decay via sustainTau), up = release
@@ -298,7 +300,7 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
       if (!voice.active) continue;
 
       const dt1 = voice.freq * this.invSampleRate;
-      const dt2 = (voice.freq * Math.pow(2.0, this.detune2 / 12.0)) * this.invSampleRate;
+      const dt2 = (voice.freq * this.detune2Ratio) * this.invSampleRate;
       const dtSub = (voice.freq * 0.5) * this.invSampleRate;
 
       for (let i = 0; i < numFrames; i++) {

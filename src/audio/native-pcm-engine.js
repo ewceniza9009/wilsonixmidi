@@ -198,20 +198,20 @@ const INST_TRIM_GAINS = {
   abletunes_fm_piano: 1.0,
   string_ensemble_1: 1.0,
   m1_universe: 1.0,
-  m1_choir: 1.15,
-  choir_aahs: 1.15,
-  acoustic_guitar_nylon: 1.25,
-  electric_guitar_clean: 1.3,
-  alto_sax: 1.05,
+  m1_choir: 1.0,
+  choir_aahs: 1.0,
+  acoustic_guitar_nylon: 1.0,
+  electric_guitar_clean: 1.0,
+  alto_sax: 1.0,
   brass_section: 1.0,
   drawbar_organ: 1.0,
-  synth_bass_1: 1.05,
-  m1_slap_bass: 1.05,
-  distortion_guitar: 1.35,
-  overdriven_guitar: 1.35,
-  trumpet: 1.05,
-  trombone: 1.05,
-  tenor_sax: 1.05,
+  synth_bass_1: 1.0,
+  m1_slap_bass: 1.0,
+  distortion_guitar: 1.0,
+  overdriven_guitar: 1.0,
+  trumpet: 1.0,
+  trombone: 1.0,
+  tenor_sax: 1.0,
   flute: 1.0,
   clarinet: 1.0,
   violin: 1.0,
@@ -219,11 +219,11 @@ const INST_TRIM_GAINS = {
   church_organ: 1.0,
   vibraphone: 1.0,
   electric_piano_2: 1.0,
-  acoustic_bass: 1.05,
-  soprano_sax: 1.05,
+  acoustic_bass: 1.0,
+  soprano_sax: 1.0,
   muted_trumpet: 1.0,
-  acoustic_guitar_steel: 1.25,
-  slap_bass_1: 1.05,
+  acoustic_guitar_steel: 1.0,
+  slap_bass_1: 1.0,
   rock_organ: 1.0,
   harpsichord: 1.0,
 };
@@ -1265,8 +1265,10 @@ export class NativePcmEngine {
     this.modWheelAmount = 0;
 
     this.voiceQueue = [];
-    this.MAX_VOICES = 64;
+    this.MAX_VOICES = 128;
     this.heldNotes = new Set();
+
+    this._voiceNodePool = [];
 
     this._spinePools = new Map();
     this._hammerPools = new Map();
@@ -1485,7 +1487,16 @@ export class NativePcmEngine {
         instId.includes("choir") ||
         instId.includes("organ") ||
         instId.includes("voice") ||
-        instId.includes("universe"));
+        instId.includes("universe") ||
+        instId.includes("sax") ||
+        instId.includes("bass") ||
+        instId.includes("flute") ||
+        instId.includes("clarinet") ||
+        instId.includes("trumpet") ||
+        instId.includes("trombone") ||
+        instId.includes("violin") ||
+        instId.includes("cello") ||
+        instId.includes("brass"));
     if (!isDroneInstrument || originalBuf.duration < 0.8)
       return this.fadeBufferEnd(originalBuf, 0.4);
     const numChannels = Math.max(2, originalBuf.numberOfChannels);
@@ -2048,8 +2059,8 @@ export class NativePcmEngine {
                 oldV.voiceGain.gain.value || 0.0,
                 now,
               );
-              oldV.voiceGain.gain.linearRampToValueAtTime(0.0, now + 0.025);
-              if (oldV.src) oldV.src.stop(now + 0.03);
+                oldV.voiceGain.gain.linearRampToValueAtTime(0.0, now + 0.05);
+              if (oldV.src) oldV.src.stop(now + 0.06);
             } catch (e) {}
             this.removeVoice(midiNote, oldV);
           } else {
@@ -2072,8 +2083,12 @@ export class NativePcmEngine {
               oldV.voiceGain.gain.value || 0.0,
               now,
             );
-            oldV.voiceGain.gain.linearRampToValueAtTime(0.0, now + 0.025);
-            if (oldV.src) oldV.src.stop(now + 0.03);
+            // Aligned with the smart-steal fade: a 50ms low-slope ramp means
+            // re-striking a still-ringing SUSTAINED note (sustain pedal down)
+            // fades the old ringing tail cleanly instead of the sharp 25ms chop
+            // that punched through the limiter as the sustaining "crackle".
+            oldV.voiceGain.gain.linearRampToValueAtTime(0.0, now + 0.05);
+            if (oldV.src) oldV.src.stop(now + 0.06);
           } catch (e) {}
           this.removeVoice(midiNote, oldV);
         });
@@ -2094,14 +2109,27 @@ export class NativePcmEngine {
     }
 
     const [isSax, isChoir, isHashy] = this._instTimbre(instId);
-    const filter = ctx.createBiquadFilter();
-    filter.type = "lowpass";
-    const voiceGain = ctx.createGain();
-    voiceGain.channelCount = 2;
-    voiceGain.channelCountMode = "explicit";
-    voiceGain.channelInterpretation = "speakers";
-    filter.connect(voiceGain);
-    voiceGain.connect(dest);
+    let filter, voiceGain;
+    const pooled = this._voiceNodePool.pop();
+    if (pooled) {
+      filter = pooled.filter;
+      voiceGain = pooled.voiceGain;
+      filter.connect(voiceGain);
+      voiceGain.connect(dest);
+      voiceGain.gain.cancelScheduledValues(now);
+      voiceGain.gain.setValueAtTime(0.0, now);
+      filter.frequency.cancelScheduledValues(now);
+      filter.Q.cancelScheduledValues(now);
+    } else {
+      filter = ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      voiceGain = ctx.createGain();
+      voiceGain.channelCount = 2;
+      voiceGain.channelCountMode = "explicit";
+      voiceGain.channelInterpretation = "speakers";
+      filter.connect(voiceGain);
+      voiceGain.connect(dest);
+    }
 
     const minCutoff = isSax ? 4000 : isChoir ? 1000 : isHashy ? 3000 : 3500;
     const maxCutoff = isSax ? 16000 : isChoir ? 8500 : isHashy ? 16000 : 20000;
@@ -2153,27 +2181,31 @@ export class NativePcmEngine {
     };
 
     while (this.voiceQueue.length >= this.MAX_VOICES) {
-      const stealable = this.voiceQueue.filter(
-        (v) => v && !this.heldNotes.has(v.midiNote),
-      );
-      let oldest = stealable[0];
-      for (let i = 1; i < stealable.length; i++) {
-        if (!oldest) {
-          oldest = stealable[i];
-          continue;
-        }
-        if ((stealable[i].startTime || 0) < (oldest.startTime || 0))
-          oldest = stealable[i];
+      // Smart voice stealing — never chop a still-held sustained note if a
+      // released tail (a note released but still ringing out) is available.
+      // Stealing a held chord note mid-sustain is what produced the audible
+      // "null/choppy dropped note" + burning-crackle: the sustain is abruptly
+      // sliced and the cut punches straight into the master limiter.
+      // Released tails are already decaying to silence, so stealing one is
+      // essentially inaudible — preference order:
+      //   1. a released tail (not in heldNotes): steal the deepest into release
+      //      (oldest start). Cutting these costs nothing perceptible.
+      //   2. only if EVERY voice is held: steal the oldest as a last resort.
+      // Single O(n) pass — no temporary array allocation, no GC churn during
+      // sustained dense playing (organs/pads love doing this).
+      let target = null;
+      let targetTime = Infinity;
+      let oldest = null;
+      let oldestTime = Infinity;
+      for (let i = 0; i < this.voiceQueue.length; i++) {
+        const v = this.voiceQueue[i];
+        if (!v) continue;
+        const t = v.startTime || 0;
+        if (t < oldestTime) { oldest = v; oldestTime = t; }
+        if (!this.heldNotes.has(v.midiNote) && t < targetTime) { target = v; targetTime = t; }
       }
-      if (!oldest) {
-        oldest = this.voiceQueue[0];
-        for (let i = 1; i < this.voiceQueue.length; i++) {
-          if (this.voiceQueue[i].startTime < oldest.startTime)
-            oldest = this.voiceQueue[i];
-        }
-      }
-      if (!oldest) break;
-      const target = oldest;
+      if (!target) target = oldest;
+      if (!target) break;
       try {
         if (target.src) target.src.onended = null;
         target.voiceGain.gain.cancelScheduledValues(now);
@@ -2181,8 +2213,11 @@ export class NativePcmEngine {
           target.voiceGain.gain.value || 0.0,
           now,
         );
-        target.voiceGain.gain.linearRampToValueAtTime(0.0, now + 0.025);
-        if (target.src) target.src.stop(now + 0.03);
+        // Longer 50ms steal fade (was 25ms): a slow, low-slope fade makes even
+        // the unavoidable "all voices held" steal click-free instead of the
+        // sharp 25ms chop that buzzed against the limiter.
+        target.voiceGain.gain.linearRampToValueAtTime(0.0, now + 0.05);
+        if (target.src) target.src.stop(now + 0.06);
       } catch (e) {}
       this.removeVoice(target.midiNote, target);
     }
@@ -2220,9 +2255,17 @@ export class NativePcmEngine {
       if (susList.length === 0) this.sustainedVoices.delete(midiNote);
     }
     try {
-      if (voiceRecord.voiceGain) voiceRecord.voiceGain.disconnect();
+      if (voiceRecord.src) {
+        voiceRecord.src.disconnect();
+      }
       if (voiceRecord.filter) voiceRecord.filter.disconnect();
-      if (voiceRecord.src) voiceRecord.src.disconnect();
+      if (voiceRecord.voiceGain) voiceRecord.voiceGain.disconnect();
+      if (this._voiceNodePool.length < this.MAX_VOICES) {
+        this._voiceNodePool.push({
+          filter: voiceRecord.filter,
+          voiceGain: voiceRecord.voiceGain,
+        });
+      }
     } catch (e) {}
   }
 
@@ -2361,7 +2404,7 @@ export class NativePcmEngine {
             this.sustainedVoices.forEach((list) => {
               totalSus += list.length;
             });
-            while (totalSus > 48) {
+            while (totalSus > 96) {
               let oldest = null;
               let oldestKey = null;
               for (const [key, list] of this.sustainedVoices) {
@@ -2372,9 +2415,14 @@ export class NativePcmEngine {
                 }
               }
               if (!oldest) break;
-              oldest.voiceGain.gain.cancelScheduledValues(now);
-              oldest.voiceGain.gain.setTargetAtTime(0, now, 0.025);
-              oldest.src.stop(now + 0.15);
+            oldest.voiceGain.gain.cancelScheduledValues(now);
+            // Moved off the 25ms tau to the same 50ms low-slope family used by
+            // smart stealing: when sustain is ON and fast chords overflow the
+            // 48-voice sustained pool, the deepest tail is trimmed on a slow
+            // 50ms exponential instead of the sharp 25ms chop that punched
+            // against the limiter as the residual sustain-pedal "burn/crackle".
+            oldest.voiceGain.gain.setTargetAtTime(0, now, 0.05);
+            oldest.src.stop(now + 0.18);
               if (oldest.vibLfo) {
                 try {
                   oldest.vibLfo.stop(now + 0.16);
@@ -2521,9 +2569,12 @@ export class NativePcmEngine {
         }
         setTimeout(() => {
           try {
-            if (v.voiceGain) v.voiceGain.disconnect();
-            if (v.filter) v.filter.disconnect();
             if (v.src) v.src.disconnect();
+            if (v.filter) v.filter.disconnect();
+            if (v.voiceGain) v.voiceGain.disconnect();
+            if (this._voiceNodePool.length < this.MAX_VOICES) {
+              this._voiceNodePool.push({ filter: v.filter, voiceGain: v.voiceGain });
+            }
           } catch (e) {}
         }, 10);
       } catch (e) {}
