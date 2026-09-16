@@ -12,6 +12,19 @@ export const LATENCY_PROFILES = {
   "safe": { id: "safe", latencyHint: "playback", label: "Safe Stage", targetMs: 11.6, frames: 512, description: "512 frames / Maximum glitch-free headroom for heavy polyphony" },
 };
 
+function _isMobileDevice() {
+  try {
+    const ua = (navigator.userAgent || "").toLowerCase();
+    const isAndroid = ua.includes("android");
+    const isIOS = ua.includes("iphone") || ua.includes("ipad");
+    const isCapacitor = typeof window !== "undefined" && window.Capacitor?.isNativePlatform?.();
+    const isTouchOnly = typeof window !== "undefined" && window.matchMedia?.("(hover: none) and (pointer: coarse)").matches;
+    return isAndroid || isIOS || isCapacitor || isTouchOnly;
+  } catch (e) {
+    return false;
+  }
+}
+
 export class AudioCore {
   constructor() {
     this.ctx = null;
@@ -20,8 +33,13 @@ export class AudioCore {
     this.analyser = null;
     this.isUnlocked = false;
 
-    // Latency Profile
-    this.currentLatencyProfile = "balanced";
+    // Latency Profile — mobile gets "safe" (512 frames / playback hint) by
+    // default because Android WebViews / Capacitor WebViews have 2-4× higher
+    // inherent audio latency than desktop; a 256-frame buffer on mobile causes
+    // frequent xrun glitches that manifest as buzzing / stuttering.  Desktop
+    // stays at "balanced" (256 frames).  User's explicit localStorage pick still
+    // takes precedence if they manually chose a profile.
+    this.currentLatencyProfile = _isMobileDevice() ? "safe" : "balanced";
     try {
       const saved = localStorage.getItem("midikey_latency_profile");
       if (saved && LATENCY_PROFILES[saved]) this.currentLatencyProfile = saved;
