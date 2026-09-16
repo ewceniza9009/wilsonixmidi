@@ -11,6 +11,7 @@ import { synthEngine, INSTRUMENT_PATCHES } from "./synth-engine.js";
 import { tritonVaEngine, TritonVirtualAnalogEngine } from "./triton-va-engine.js";
 import { getTritonProgramById, getTritonBankName, getTritonPcmEntries, getTritonVaPrograms } from "../triton/combi-timbres.js";
 import { SynthWorkletNode } from "./worklet/synth-worklet-node.js";
+import { PcmWorkletNode } from "./worklet/pcm-worklet-node.js";
 
 export const HD_SOUNDBANKS = {
   acoustic_grand_piano: { id: "acoustic_grand_piano", name: "Velo Piano Concert Grand", category: "Acoustic Piano" },
@@ -840,6 +841,10 @@ export class MultiLayerEngine {
     this._workletNode = null;
     this._workletReady = false;
 
+    // PCM AudioWorklet: sample playback on the audio thread
+    this._pcmWorkletNode = null;
+    this._pcmWorkletReady = false;
+
     // Held-note max sustain (no pedal): notes ring while keys are held, then
     // fade after heldNoteSec. Sustain pedal state tracked here for the timers.
     this.sustainPedalActive = false;
@@ -1142,7 +1147,50 @@ export class MultiLayerEngine {
       console.warn("[MLE] Worklet init failed:", e);
       this._workletNode = null;
     }
+
+    // PCM AudioWorklet: routes sample playback to the audio thread
+    try {
+      const pcmDest =
+        (audioCore.fxRack && audioCore.fxRack.input) ||
+        audioCore.dcBlocker ||
+        audioCore.masterGain ||
+        (audioCore.ctx && audioCore.ctx.destination);
+      this._pcmWorkletNode = new PcmWorkletNode(audioCore.ctx, pcmDest);
+      const pcmOk = await this._pcmWorkletNode.init();
+      if (pcmOk) {
+        this._pcmWorkletReady = true;
+        // Connect to NativePcmEngine so playNote routes to worklet
+        if (this.pcmEngine) {
+          this.pcmEngine.pcmWorkletNode = this._pcmWorkletNode;
+        }
+        // Pre-load decoded sample buffers into worklet
+        this._loadBuffersToWorklet();
+      } else {
+        this._pcmWorkletNode = null;
+      }
+    } catch (e) {
+      console.warn("[MLE] PCM Worklet init failed:", e);
+      this._pcmWorkletNode = null;
+    }
+
     return this._workletNode;
+  }
+
+  _loadBuffersToWorklet() {
+    if (!this._pcmWorkletReady || !this._pcmWorkletNode || !this.pcmEngine) return;
+    try {
+      const decodedBuffers = this.pcmEngine.decodedBuffers;
+      if (!decodedBuffers) return;
+      decodedBuffers.forEach((instMap, instId) => {
+        instMap.forEach((buf, anchorMidi) => {
+          if (buf && buf.length > 0) {
+            this._pcmWorkletNode.loadBuffer(instId, anchorMidi, buf);
+          }
+        });
+      });
+    } catch (e) {
+      console.warn("[MLE] Failed to load buffers to PCM worklet:", e);
+    }
   }
 
   _syncWorkletParams(prog) {

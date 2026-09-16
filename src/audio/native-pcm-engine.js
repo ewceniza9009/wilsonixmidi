@@ -1270,6 +1270,10 @@ export class NativePcmEngine {
 
     this._voiceNodePool = [];
 
+    // PCM AudioWorklet: routes voice playback to the audio thread when available.
+    // Set by multi-layer-engine._initWorklet(); null means fallback to main-thread.
+    this.pcmWorkletNode = null;
+
     this._spinePools = new Map();
     this._hammerPools = new Map();
     this._chiffPools = new Map();
@@ -2041,6 +2045,49 @@ export class NativePcmEngine {
     const bentPlaybackRate =
       basePlaybackRate * Math.pow(2, this.pitchBendSemitones / 12);
 
+    // === AudioWorklet path: route voice to audio thread (zero main-thread jank) ===
+    if (this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
+      const buf = anchorData.buffer;
+
+      // On-demand buffer transfer: if a soundfont loaded after worklet init,
+      // push the buffer now so the worklet can play it.
+      const bufKey = instId + ":" + anchorData.anchorMidi;
+      if (!this.pcmWorkletNode._loadedBuffers.has(bufKey)) {
+        this.pcmWorkletNode.loadBuffer(instId, anchorData.anchorMidi, buf);
+        this.pcmWorkletNode._loadedBuffers.add(bufKey);
+      }
+
+      const trim = INST_TRIM_GAINS[instId] || 1.0;
+      const dynamicAmp = Math.pow(velNorm, 1.25);
+      const peakGain = (0.1 + dynamicAmp * 0.9) * customGain * trim;
+      const [isSax, isChoir] = this._instTimbre(instId);
+      const minCutoff = isSax ? 4000 : isChoir ? 1000 : 3500;
+      const maxCutoff = isSax ? 16000 : isChoir ? 8500 : 20000;
+      const noteFreq = 440 * Math.pow(2, (midiNote - 69) / 12);
+      const filterNorm = Math.min(1.0, (minCutoff + Math.pow(velNorm, 1.35) * (maxCutoff - minCutoff)) / 20000);
+
+      this.pcmWorkletNode.noteOn({
+        instId,
+        midiNote,
+        velocity: velNorm,
+        gain: peakGain,
+        layerIndex,
+        anchorMidi: anchorData.anchorMidi,
+        playbackRate: bentPlaybackRate,
+        isLoopable: !!buf._isLoopable,
+        loopStart: buf._isLoopStartSec || 0,
+        loopEnd: buf._isLoopEndSec || 0,
+        attackTime: isChoir ? 0.04 : 0.003,
+        decayTime: 0.25,
+        sustainLevel: 0.65,
+        releaseTime: isChoir ? 0.2 : isSax ? 0.12 : 0.06,
+        filterCutoff: filterNorm,
+        maxLife: buf._isLoopable ? 60.0 : Math.min(8.0, (buf.duration || 4.0) + 0.1),
+      });
+      return null; // voice managed by worklet, no main-thread record
+    }
+
+    // === Main-thread fallback (when AudioWorklet unavailable) ===
     if (this.activeVoices.has(midiNote)) {
       const oldList = this.activeVoices.get(midiNote);
       if (oldList && oldList.length > 0) {
@@ -2325,6 +2372,13 @@ export class NativePcmEngine {
   setSustainPedal(isDown, when = 0) {
     const wasDown = this.sustainPedal;
     this.sustainPedal = !!isDown;
+
+    // AudioWorklet path
+    if (this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
+      this.pcmWorkletNode.setSustainPedal(!!isDown);
+      return;
+    }
+
     const ctx = this.ctx;
     const now = when > 0 ? Math.max(when, ctx.currentTime) : ctx.currentTime;
 
@@ -2380,6 +2434,13 @@ export class NativePcmEngine {
 
   stopNote(instId, midiNote, when = 0) {
     this.heldNotes.delete(midiNote);
+
+    // AudioWorklet path: forward to audio thread
+    if (this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
+      this.pcmWorkletNode.noteOff(midiNote);
+      return;
+    }
+
     const voices = this.activeVoices.get(midiNote);
     if (!voices || voices.length === 0) return;
 
@@ -2545,6 +2606,13 @@ export class NativePcmEngine {
 
   allNotesOff() {
     this.sustainPedal = false;
+
+    // AudioWorklet path
+    if (this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
+      this.pcmWorkletNode.allNotesOff();
+      return;
+    }
+
     const now = this.ctx.currentTime;
 
     const killVoice = (v) => {
