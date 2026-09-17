@@ -6,7 +6,6 @@
  */
 
 import { TRITON_BANKS } from "../triton/triton-soundbanks.js";
-import { TRITON_ALGORITHMS } from "../triton/triton-effects-matrix.js";
 import { synthEngine } from "../audio/synth-engine.js";
 import { audioCore } from "../audio/audio-core.js";
 import { multiLayerEngine, COMBI_PRESETS } from "../audio/multi-layer-engine.js";
@@ -742,7 +741,7 @@ export class TritonWorkstationUI {
     }
   }
 
-  applyTritonProgram(prog, isUserExplicit = false) {
+  applyTritonProgram(prog, _isUserExplicit = false) {
     if (!prog) return;
 
     if (prog.m1Type) {
@@ -754,13 +753,6 @@ export class TritonWorkstationUI {
       this.applyYamahaEosProgram(prog);
       return;
     }
-
-    const cat = (prog.category || "").toLowerCase();
-    const name = (prog.name || "").toLowerCase();
-
-    // Determine if this program is an acoustic/electric PCM bank instrument
-    const isGuitar = cat.includes("guitar") || name.includes("guitar");
-    const isBass = cat.includes("bass") || name.includes("bass");
 
     const isDedicatedPcm =
       prog.instId ||

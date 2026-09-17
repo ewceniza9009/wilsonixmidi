@@ -51,6 +51,7 @@ export class VirtualKeyboardUI {
     this.activeMouseChord = null;
     this.xyPad = null;
     this.isXyVisible = false;
+    this._windowHandlers = [];
 
     const savedZoom = typeof localStorage !== "undefined" ? localStorage.getItem("midikey_zoom_mode") : null;
     const isTouchPlatform = detectTabletOrTouch();
@@ -78,7 +79,7 @@ export class VirtualKeyboardUI {
       }
     }, 60);
 
-    window.addEventListener("resize", () => {
+    this._onWindow(window, "resize", () => {
       const rollContainer = document.getElementById("piano-roll-container");
       if (rollContainer && !rollContainer.classList.contains("zoom-full")) {
         if (this.currentZoomMode === "touch") {
@@ -127,11 +128,29 @@ export class VirtualKeyboardUI {
     };
 
     // Chord pads -> virtual key highlight bridge
-    window.addEventListener("wilsonix-keys-visual", e => {
+    this._onWindow(window, "wilsonix-keys-visual", e => {
       const { notes, pressed, velocity } = e.detail || {};
       if (!Array.isArray(notes)) return;
       notes.forEach(m => this.setKeyVisualState(m, !!pressed, velocity || 95));
     });
+  }
+
+  // Registers a global (window/document) listener and remembers it so dispose()
+  // can tear them all down. Prevents leaks when the keyboard view is re-created.
+  _onWindow(target, type, handler, options) {
+    target.addEventListener(type, handler, options);
+    this._windowHandlers.push({ target, type, handler, options });
+    return handler;
+  }
+
+  dispose() {
+    this._windowHandlers.forEach(({ target, type, handler, options }) => {
+      target.removeEventListener(type, handler, options);
+    });
+    this._windowHandlers = [];
+    synthEngine.onNoteChangeCallback = null;
+    arpeggiator.onNoteTriggerCallback = null;
+    qwertyKeyboard.onChordVisualCallback = null;
   }
 
   render() {
@@ -377,7 +396,7 @@ export class VirtualKeyboardUI {
       }
     });
 
-    window.addEventListener("mousemove", e => {
+    this._onWindow(window, "mousemove", e => {
       if (!isMouseDown) return;
       if (performance.now() - lastTouchTime < 800) return;
       const key = getKeyFromPoint(e.clientX, e.clientY);
@@ -416,7 +435,7 @@ export class VirtualKeyboardUI {
       }
     });
 
-    window.addEventListener("mouseup", () => {
+    this._onWindow(window, "mouseup", () => {
       if (performance.now() - lastTouchTime < 800) { isMouseDown = false; return; }
       if (isMouseDown && this.activeMouseChord) {
         this.activeMouseChord.forEach(n => {
@@ -526,7 +545,7 @@ export class VirtualKeyboardUI {
     };
 
     track.addEventListener("touchmove", handleTouchMove, { passive: false });
-    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    this._onWindow(window, "touchmove", handleTouchMove, { passive: false });
 
     const handleTouchRelease = e => {
       const isPianoTouch = e.target && (e.target.closest("#piano-keys-track") || e.target.closest(".piano-key"));
@@ -630,8 +649,8 @@ export class VirtualKeyboardUI {
 
     track.addEventListener("touchend", handleTouchRelease, { passive: false });
     track.addEventListener("touchcancel", handleTouchRelease, { passive: false });
-    window.addEventListener("touchend", handleTouchRelease, { passive: false });
-    window.addEventListener("touchcancel", handleTouchRelease, { passive: false });
+    this._onWindow(window, "touchend", handleTouchRelease, { passive: false });
+    this._onWindow(window, "touchcancel", handleTouchRelease, { passive: false });
   }
 
   bindWheels() {
@@ -667,11 +686,12 @@ export class VirtualKeyboardUI {
         { passive: false }
       );
 
-      window.addEventListener("mousemove", e => {
+      this._onWindow(window, "mousemove", e => {
         if (isDragging) setPitchFromY(e.clientY);
       });
 
-      window.addEventListener(
+      this._onWindow(
+        window,
         "touchmove",
         e => {
           if (isDragging && e.touches[0]) {
@@ -682,7 +702,7 @@ export class VirtualKeyboardUI {
         { passive: false }
       );
 
-      window.addEventListener("mouseup", () => {
+      this._onWindow(window, "mouseup", () => {
         if (isDragging) {
           isDragging = false;
           // Spring back to center
@@ -692,7 +712,7 @@ export class VirtualKeyboardUI {
         }
       });
 
-      window.addEventListener("touchend", () => {
+      this._onWindow(window, "touchend", () => {
         if (isDragging) {
           isDragging = false;
           pitchThumb.style.top = "50%";
@@ -729,11 +749,12 @@ export class VirtualKeyboardUI {
         { passive: false }
       );
 
-      window.addEventListener("mousemove", e => {
+      this._onWindow(window, "mousemove", e => {
         if (isModDragging) setModFromY(e.clientY);
       });
 
-      window.addEventListener(
+      this._onWindow(
+        window,
         "touchmove",
         e => {
           if (isModDragging && e.touches[0]) {
@@ -744,11 +765,11 @@ export class VirtualKeyboardUI {
         { passive: false }
       );
 
-      window.addEventListener("mouseup", () => {
+      this._onWindow(window, "mouseup", () => {
         isModDragging = false;
       });
 
-      window.addEventListener("touchend", () => {
+      this._onWindow(window, "touchend", () => {
         isModDragging = false;
       });
     }
@@ -941,12 +962,12 @@ export class VirtualKeyboardUI {
     collapseBtn?.addEventListener("click", () => toggleCollapse());
 
     // Listen for custom toggle events (from top HUD, hotkey, or outside)
-    window.addEventListener("wilsonix-toggle-piano-collapse", (e) => {
+    this._onWindow(window, "wilsonix-toggle-piano-collapse", (e) => {
       toggleCollapse(e.detail?.collapsed ?? null);
     });
 
     // Ctrl+F4 toggles piano collapse (plain F1-F8 are rig-slot recalls)
-    window.addEventListener("keydown", e => {
+    this._onWindow(window, "keydown", e => {
       if (e.key === "F4" && e.ctrlKey && !e.altKey && !e.metaKey) {
         e.preventDefault();
         toggleCollapse();

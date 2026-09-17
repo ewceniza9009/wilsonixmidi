@@ -6,7 +6,6 @@
 import { audioCore } from "./audio/audio-core.js";
 import { synthEngine } from "./audio/synth-engine.js";
 import { midiManager } from "./midi/midi-manager.js";
-import { qwertyKeyboard } from "./midi/qwerty-keyboard.js";
 import { GigHudUI } from "./components/gig-hud.js";
 import { FxRackUI } from "./components/fx-rack-ui.js";
 import { ChordPadsUI } from "./components/chord-pads.js";
@@ -164,7 +163,7 @@ class MidiKeyEliteApp {
         };
 
         pill.addEventListener("pointerdown", onPointerDown);
-        pill.addEventListener("click", (e) => {
+        pill.addEventListener("click", () => {
           if (!didDrag) this.licenseModal?.open();
         });
       }

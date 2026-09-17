@@ -261,7 +261,7 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
     }
   }
 
-  process(inputs, outputs, parameters) {
+  process(inputs, outputs, _parameters) {
     const output = outputs[0];
     if (!output || output.length < 2) return true;
 

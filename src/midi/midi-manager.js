@@ -34,7 +34,7 @@ export class MidiManager {
       this.updateDeviceList();
 
       // Listen for hotplug connect / disconnect
-      this.midiAccess.onstatechange = e => {
+      this.midiAccess.onstatechange = () => {
         this.updateDeviceList();
         if (this.onDeviceChangeCallback) {
           this.onDeviceChangeCallback(this.connectedDevices);
@@ -108,7 +108,7 @@ export class MidiManager {
         }
         break;
 
-      case 0x8: // Note Off
+      case 0x8: { // Note Off
         const snappedOff = scaleLock.isLocked ? scaleLock.snapToScale(note) : note;
         if (snappedOff !== null) {
           if (arpeggiator.enabled) {
@@ -118,8 +118,9 @@ export class MidiManager {
           }
         }
         break;
+      }
 
-      case 0xb: // Control Change (CC)
+      case 0xb: { // Control Change (CC)
         const ccNumber = note;
         const ccValue = velocity;
 
@@ -148,8 +149,9 @@ export class MidiManager {
           if (audioCore.fxRack?.delay) audioCore.fxRack.delay.flush();
         }
         break;
+      }
 
-      case 0xc: // Program Change (PC 0-127) for stage foot controllers
+      case 0xc: { // Program Change (PC 0-127) for stage foot controllers
         try {
           const slotNum = (note % 8) + 1;
           const bankLetters = ["A", "B", "C", "D"];
@@ -157,14 +159,16 @@ export class MidiManager {
           registrationManager.recallSlot(bankLetters[bankIdx], slotNum);
         } catch (e) {}
         break;
+      }
 
-      case 0xe: // Pitch Bend (14-bit precision)
+      case 0xe: { // Pitch Bend (14-bit precision)
         const lsb = data[1];
         const msb = data[2];
         const bendValue = (msb << 7) | lsb; // 0 to 16383, 8192 is center
         const semitones = ((bendValue - 8192) / 8192) * 2; // +/- 2 semitones standard
         synthEngine.setPitchBend(semitones);
         break;
+      }
     }
   }
 }

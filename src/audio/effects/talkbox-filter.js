@@ -212,7 +212,7 @@ export class TalkboxFormantFilter {
     }
   }
 
-  setSensitivity(val) {
+  setSensitivity(_val) {
     // Retained for API compatibility
   }
 }

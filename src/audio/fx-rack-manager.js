@@ -3,7 +3,6 @@
  * Chains: Tube Drive -> Phaser -> Korg Chorus -> Rotary -> Ping-Pong Delay -> Algorithmic Reverb -> EQ & Limiter
  */
 
-import { audioCore } from "./audio-core.js";
 import { GrandPianoAcoustics } from "./effects/piano-acoustics.js";
 import { TubeDrive } from "./effects/tube-drive.js";
 import { AutoPan } from "./effects/auto-pan.js";

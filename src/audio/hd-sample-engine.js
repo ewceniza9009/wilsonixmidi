@@ -6,66 +6,32 @@
  */
 
 import Soundfont from "soundfont-player";
+import { HD_SOUNDBANKS as HD_SOUNDBANKS_MASTER } from "./soundbanks.js";
 
-// SoundFont Instrument Map (High-Definition SoundBanks from MusyngKite / FluidR3)
-export const HD_SOUNDBANKS = {
-  acoustic_grand_piano: {
-    id: "acoustic_grand_piano",
-    name: "Velo Piano Concert Grand",
-    category: "Acoustic Piano",
-    sfName: "acoustic_grand_piano",
-    gain: 1.2,
-  },
-  electric_piano_1: {
-    id: "electric_piano_1",
-    name: "Triton Suit. & Stage EP",
-    category: "Electric Piano",
-    sfName: "electric_piano_1",
-    gain: 1.1,
-  },
-  string_ensemble_1: {
-    id: "string_ensemble_1",
-    name: "Triton Stereo Strings",
-    category: "Strings & Choir",
-    sfName: "string_ensemble_1",
-    gain: 0.9,
-  },
-  drawbar_organ: {
-    id: "drawbar_organ",
-    name: "M1 / B3 Rock Organ",
-    category: "Organ",
-    sfName: "drawbar_organ",
-    gain: 1.0,
-  },
-  alto_sax: {
-    id: "alto_sax",
-    name: "Breathy Alto Saxophone",
-    category: "Woodwind",
-    sfName: "alto_sax",
-    gain: 1.05,
-  },
-  acoustic_guitar_nylon: {
-    id: "acoustic_guitar_nylon",
-    name: "Fantom Acoustic Nylon",
-    category: "Guitar",
-    sfName: "acoustic_guitar_nylon",
-    gain: 1.1,
-  },
-  synth_bass_1: {
-    id: "synth_bass_1",
-    name: "Moog Prodigy Punch Bass",
-    category: "Bass & Sub",
-    sfName: "synth_bass_1",
-    gain: 1.15,
-  },
-  brass_section: {
-    id: "brass_section",
-    name: "Triton Fat Brass Section",
-    category: "Brass",
-    sfName: "brass_section",
-    gain: 1.0,
-  },
+// Per-instrument SoundFont + gain metadata used by HdSampleEngine. Kept apart
+// from the master catalog (single source of truth in soundbanks.js) because the
+// rest of the app reads only id/name/category from HD_SOUNDBANKS.
+const HD_SOUNDBANK_META = {
+  acoustic_grand_piano: { sfName: "acoustic_grand_piano", gain: 1.2 },
+  electric_piano_1: { sfName: "electric_piano_1", gain: 1.1 },
+  string_ensemble_1: { sfName: "string_ensemble_1", gain: 0.9 },
+  drawbar_organ: { sfName: "drawbar_organ", gain: 1.0 },
+  alto_sax: { sfName: "alto_sax", gain: 1.05 },
+  acoustic_guitar_nylon: { sfName: "acoustic_guitar_nylon", gain: 1.1 },
+  synth_bass_1: { sfName: "synth_bass_1", gain: 1.15 },
+  brass_section: { sfName: "brass_section", gain: 1.0 },
 };
+
+const buildSoundbanks = () => {
+  const out = {};
+  Object.entries(HD_SOUNDBANKS_MASTER).forEach(([id, entry]) => {
+    const meta = HD_SOUNDBANK_META[id];
+    out[id] = meta ? { ...entry, ...meta } : { ...entry };
+  });
+  return out;
+};
+
+export const HD_SOUNDBANKS = buildSoundbanks();
 
 export class HdSampleEngine {
   constructor(ctx, destinationNode) {

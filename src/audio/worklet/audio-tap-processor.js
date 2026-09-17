@@ -21,7 +21,7 @@ class WilsonixAudioTapProcessor extends AudioWorkletProcessor {
     }
   }
 
-  process(inputs, outputs) {
+  process(inputs, _outputs) {
     if (!this.hasSAB) return true;
     const input = inputs[0];
     if (!input || input.length < 2) return true;

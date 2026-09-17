@@ -26,9 +26,6 @@ function formatKnobValue(v, unit) {
 export class FxRackUI {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
-    if (typeof window !== "undefined") {
-      Object.defineProperty(window, "__midikeyAudioCore", { get: () => audioCore });
-    }
     this.render();
     this.bindKnobs();
     this.bindToggles();
@@ -851,23 +848,17 @@ export class FxRackUI {
     const devMap = {
       "piano-acoustics": fx.pianoAcoustics?.enabled,
       compressor: fx.compressor?.enabled,
-      "auto-wah": fx.autoWah?.enabled,
-      talkbox: fx.talkbox?.enabled,
       tube: fx.tube?.enabled,
       bitcrusher: fx.bitcrusher?.enabled,
-      "vinyl-lofi": fx.vinylLoFi?.enabled,
       "stereo-widener": fx.stereoWidener?.enabled,
       autopan: fx.autopan?.enabled,
       phaser: fx.phaser?.enabled,
-      flanger: fx.flanger?.enabled,
       chorus: fx.chorus?.enabled,
       rotary: fx.rotary?.enabled,
       tremolo: fx.tremolo?.enabled,
       slapback: fx.slapback?.enabled,
-      "dub-echo": fx.dubEcho?.enabled,
       delay: fx.delay?.enabled,
       "spring-reverb": fx.springReverb?.enabled,
-      "shimmer-reverb": fx.shimmerReverb?.enabled,
       "gated-reverb": fx.gatedReverb?.enabled,
       reverb: fx.reverb?.enabled,
       "tape-sat": fx.tapeSat?.enabled,

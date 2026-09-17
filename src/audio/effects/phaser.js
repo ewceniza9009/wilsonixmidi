@@ -127,7 +127,7 @@ export class StereoPhaser {
     }
   }
 
-  setFeedback(val) {}
+  setFeedback(_val) {}
 
   setMix(val) {
     this.mix = Math.max(0, Math.min(1.0, val));

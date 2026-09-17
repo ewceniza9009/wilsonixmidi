@@ -304,7 +304,7 @@ export class GroovePlayerUI {
 
     // 2. Track selection cards
     this.container.querySelectorAll(".groove-track-card, .track-card-select-btn").forEach(elem => {
-      elem.addEventListener("click", (e) => {
+      elem.addEventListener("click", () => {
         const idx = parseInt(elem.getAttribute("data-track-index"), 10);
         if (!isNaN(idx)) {
           audioCore.ensureRunning();

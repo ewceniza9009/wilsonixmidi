@@ -73,7 +73,7 @@ export class GrandPianoAcoustics {
   }
 
   // Realistic Damper Pedal Action
-  triggerDamperPedalSound(isDown) {
+  triggerDamperPedalSound(_isDown) {
     // Completely silenced to guarantee 100% pristine, static-free, crackle-free audio
     return;
   }

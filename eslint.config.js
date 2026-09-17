@@ -31,10 +31,24 @@ export default [
       "no-duplicate-imports": "error",
       "no-unreachable": "error",
       "no-undef": "warn",
-      "no-empty": "warn",
+      // Graceful-degradation catch blocks (`try { ... } catch (e) {}`) are used
+      // intentionally throughout the audio engine when optional browser APIs
+      // are unavailable. Allow them, but keep flagging empty blocks elsewhere.
+      "no-empty": ["warn", { allowEmptyCatch: true }],
       "no-case-declarations": "warn",
-      "no-unused-vars": "warn",
+      "no-unused-vars": ["warn", { caughtErrors: "none", argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
       "no-self-assign": "warn",
+    },
+  },
+  {
+    // AudioWorklet modules execute in AudioWorkletGlobalScope, which exposes
+    // AudioWorkletProcessor / registerProcessor rather than the DOM globals.
+    files: ["src/audio/worklet/**/*.js"],
+    languageOptions: {
+      globals: {
+        AudioWorkletProcessor: "readonly",
+        registerProcessor: "readonly",
+      },
     },
   },
 ];

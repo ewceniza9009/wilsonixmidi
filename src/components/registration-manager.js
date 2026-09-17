@@ -9,7 +9,7 @@ import { multiLayerEngine, COMBI_PRESETS, HD_SOUNDBANKS } from "../audio/multi-l
 import { audioCore } from "../audio/audio-core.js";
 import { getTritonProgramById } from "../triton/combi-timbres.js";
 import { licenseManager } from "../security/license-manager.js";
-import { BANK_KEYS, isValidBanksShape } from "../security/setlist-validation.js";
+import { isValidBanksShape } from "../security/setlist-validation.js";
 import { getComponent } from "./component-registry.js";
 
 export class RegistrationManager {
@@ -199,7 +199,9 @@ export class RegistrationManager {
     try {
       localStorage.setItem("wilsonix_current_reg_bank", bank);
       localStorage.setItem("wilsonix_current_reg_slot", String(slotNumber));
-    } catch (e) {}
+    } catch (e) {
+      console.warn("Could not persist current registration slot:", e);
+    }
 
     try {
       // 1. Triton VA Program (e.g. Brian's Sync A017, Smooth Sine A010)

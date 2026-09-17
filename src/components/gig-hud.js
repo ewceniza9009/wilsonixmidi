@@ -4,18 +4,16 @@
  * GIG mode, sound & layer selectors, Rig snapshots, WAV recorder, and workspace tabs.
  */
 
-import { synthEngine, INSTRUMENT_PATCHES } from "../audio/synth-engine.js";
+import { synthEngine } from "../audio/synth-engine.js";
 import {
   multiLayerEngine,
   HD_SOUNDBANKS,
   COMBI_PRESETS,
 } from "../audio/multi-layer-engine.js";
 import { audioCore } from "../audio/audio-core.js";
-import { midiManager } from "../midi/midi-manager.js";
 import { licenseManager } from "../security/license-manager.js";
 import { masterRecorder } from "../audio/master-recorder.js";
 import { registrationManager } from "./registration-manager.js";
-import { TRITON_BANKS } from "../triton/triton-soundbanks.js";
 import { getTritonProgramById } from "../triton/combi-timbres.js";
 import { arpeggiator } from "../audio/arpeggiator.js";
 import {
@@ -484,7 +482,6 @@ export class GigHudUI {
   render() {
     if (!this.container) return;
 
-    const access = licenseManager.getAccessStatus();
     const presetGroups = this.getPerformancePresetGroups();
     const soundbanksList = Object.values(HD_SOUNDBANKS);
     const activeSoundId = this.getActiveSoundId();

@@ -4,6 +4,8 @@
  * Reduces cold startup time and memory heap consumption.
  */
 
+import { logger } from "../utils/logger.js";
+
 const DB_NAME = "midikey_sample_cache_v1";
 const DB_VERSION = 1;
 const STORE_NAME = "samples";
@@ -38,6 +40,7 @@ export class SampleCache {
           resolve(null);
         };
       } catch (err) {
+        logger.warn("SAMPLE_CACHE", "IndexedDB unavailable; running without persistent sample cache", err);
         this.db = null;
         resolve(null);
       }
@@ -155,7 +158,9 @@ export class SampleCache {
           quotaBytes: estimate.quota || 0,
           cachedItems: this.memoryCache.size,
         };
-      } catch (e) {}
+      } catch (e) {
+        logger.warn("SAMPLE_CACHE", "Failed to read storage estimate", e);
+      }
     }
     return { usageBytes: 0, quotaBytes: 0, cachedItems: this.memoryCache.size };
   }

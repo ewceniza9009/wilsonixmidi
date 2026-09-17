@@ -3,7 +3,7 @@
  * Two-column assignment with searchable instrument combo boxes.
  */
 
-import { multiLayerEngine, COMBI_PRESETS, COMBI_TIMBRES } from "../audio/multi-layer-engine.js";
+import { multiLayerEngine, COMBI_TIMBRES } from "../audio/multi-layer-engine.js";
 import { LAYER_FX_OPTIONS } from "../audio/native-pcm-engine.js";
 
 const esc = s => String(s).replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
@@ -15,9 +15,36 @@ export class SplitConsoleUI {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
     this.render();
+    this._bindDocClickOutside();
     this.bindCombos();
     this.bindEvents();
-    multiLayerEngine.addSplitChangeListener(() => this.syncFromEngine());
+    this._splitListener = () => this.syncFromEngine();
+    multiLayerEngine.addSplitChangeListener(this._splitListener);
+  }
+
+  // Bound once — see MultiLayerUI._bindDocClickOutside. Kept here so re-creating
+  // the view never stacks duplicate document listeners.
+  _bindDocClickOutside() {
+    if (this._outsideClickHandler) return;
+    this._outsideClickHandler = (e) => {
+      if (!this.container) return;
+      this.container.querySelectorAll(".timbre-combo-list.open").forEach(list => {
+        const combo = list.closest(".timbre-combo");
+        if (combo && !combo.contains(e.target)) list.classList.remove("open");
+      });
+    };
+    document.addEventListener("click", this._outsideClickHandler);
+  }
+
+  dispose() {
+    if (this._outsideClickHandler) {
+      document.removeEventListener("click", this._outsideClickHandler);
+      this._outsideClickHandler = null;
+    }
+    if (this._splitListener) {
+      multiLayerEngine.removeSplitChangeListener(this._splitListener);
+      this._splitListener = null;
+    }
   }
 
   displayForZone(z) {
@@ -33,7 +60,6 @@ export class SplitConsoleUI {
 
     const zoneCard = (zk, z) => {
       const isLower = zk === "lower";
-      const isStack = !z.inst || z.inst === "current_stack";
       return `
         <div class="split-card ${isLower ? "split-card-lower" : "split-card-upper"}">
           <div class="split-card-side">
@@ -237,10 +263,6 @@ export class SplitConsoleUI {
       list.addEventListener("click", e => {
         const opt = e.target.closest(".timbre-opt");
         if (opt) selectOption(opt);
-      });
-
-      document.addEventListener("click", e => {
-        if (!combo.contains(e.target)) close();
       });
     });
   }

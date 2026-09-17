@@ -35,6 +35,7 @@ export class MultiLayerUI {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
     this.combiSearchQuery = "";
+    this._bindDocClickOutside();
     this.render();
     this.bindEvents();
 
@@ -42,7 +43,7 @@ export class MultiLayerUI {
       this.updateLayerFaders();
     };
 
-    multiLayerEngine.addSplitChangeListener(() => {
+    this._splitListener = () => {
       const consoleEl = document.getElementById("split-keyboard-console");
       if (consoleEl) consoleEl.classList.toggle("active", !!multiLayerEngine.isSplitMode);
       const powerBtn = document.getElementById("split-power-btn");
@@ -63,7 +64,37 @@ export class MultiLayerUI {
         nameUpper.title = nm;
         nameUpper.closest(".split-zone-strip")?.classList.toggle("stack", !z.inst || z.inst === "current_stack");
       }
-    });
+    };
+    multiLayerEngine.addSplitChangeListener(this._splitListener);
+  }
+
+  // Bound ONCE here (not per timbre combo) — bindTimbreCombos() runs on every
+  // render()/bindEvents(), so attaching a document listener inside it leaked a
+  // new handler on each pass.
+  _bindDocClickOutside() {
+    if (this._outsideClickHandler) return;
+    this._outsideClickHandler = (e) => {
+      if (!this.container) return;
+      this.container.querySelectorAll(".timbre-combo-list.open").forEach(list => {
+        const combo = list.closest(".timbre-combo");
+        if (combo && !combo.contains(e.target)) list.classList.remove("open");
+      });
+    };
+    document.addEventListener("click", this._outsideClickHandler);
+  }
+
+  dispose() {
+    if (this._outsideClickHandler) {
+      document.removeEventListener("click", this._outsideClickHandler);
+      this._outsideClickHandler = null;
+    }
+    if (this._splitListener) {
+      multiLayerEngine.removeSplitChangeListener(this._splitListener);
+      this._splitListener = null;
+    }
+    if (multiLayerEngine.onLayerChangeCallback) {
+      multiLayerEngine.onLayerChangeCallback = null;
+    }
   }
 
   render() {
@@ -607,10 +638,6 @@ export class MultiLayerUI {
       list.addEventListener("click", e => {
         const opt = e.target.closest(".timbre-opt");
         if (opt) selectOption(opt);
-      });
-
-      document.addEventListener("click", e => {
-        if (!combo.contains(e.target)) close();
       });
     });
   }

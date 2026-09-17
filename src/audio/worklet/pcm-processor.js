@@ -325,7 +325,6 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
     const outL = output[0];
     const outR = output[1];
     const numFrames = outL.length;
-    const now = this.currentTime;
 
     this.readRingBuffer();
 

@@ -43,8 +43,6 @@ export class ClipLooper {
     this.render();
     this.bindEvents();
     this.hookSynthEngine();
-
-    window.clipLooper = this;
   }
 
   _blankTrack(id) {

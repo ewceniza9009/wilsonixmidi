@@ -387,7 +387,7 @@ export class MediaPlayerUI {
     }
 
     list.innerHTML = "";
-    visible.forEach((t, i) => {
+    visible.forEach((t) => {
       const meta = extMeta(t.ext);
       const realIdx = mediaPlayer.playlist.indexOf(t);
       const row = document.createElement("div");

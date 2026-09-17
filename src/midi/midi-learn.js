@@ -4,8 +4,7 @@
  */
 
 import { multiLayerEngine } from "../audio/multi-layer-engine.js";
-import { synthEngine } from "../audio/synth-engine.js";
-import { audioCore } from "../audio/audio-core.js";
+import { DEFAULT_MIDI_MAPPINGS } from "./default-midi-mappings.js";
 
 export class MidiLearnManager {
   constructor() {
@@ -21,24 +20,20 @@ export class MidiLearnManager {
     try {
       const stored = localStorage.getItem(this.storageKey);
       if (stored) return JSON.parse(stored);
-    } catch (e) {}
+    } catch (e) {
+      console.warn("[WILSONIX MIDI] Could not parse saved MIDI mappings:", e);
+    }
 
-    // Default factory mappings (General MIDI standard CCs)
-    return {
-      master_vol: { cc: 7, channel: 0, min: 0, max: 100 },
-      layer_1_vol: { cc: 71, channel: 0, min: 0, max: 100 },
-      layer_2_vol: { cc: 72, channel: 0, min: 0, max: 100 },
-      layer_3_vol: { cc: 73, channel: 0, min: 0, max: 100 },
-      layer_4_vol: { cc: 74, channel: 0, min: 0, max: 100 },
-      fx_cutoff: { cc: 74, channel: 0, min: 20, max: 20000 },
-      fx_resonance: { cc: 71, channel: 0, min: 0, max: 20 },
-    };
+    // Default factory mappings (see default-midi-mappings.js).
+    return { ...DEFAULT_MIDI_MAPPINGS };
   }
 
   saveMappings() {
     try {
       localStorage.setItem(this.storageKey, JSON.stringify(this.mappings));
-    } catch (e) {}
+    } catch (e) {
+      console.warn("[WILSONIX MIDI] Could not persist MIDI mappings:", e);
+    }
   }
 
   startLearning(paramId, element) {

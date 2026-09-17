@@ -8,6 +8,7 @@ import { YAMAHA_EOS_PCM_BANKS } from "./yamaha-eos-pcm-data.js";
 import { ABLETUNES_BANKS } from "./abletunes-manifest.js";
 import { SfxSoundGenerator } from "./sfx-sound-generator.js";
 import { sampleCache } from "./sample-cache.js";
+import { logger } from "../utils/logger.js";
 
 const NOTE_MAP = {
   C: 0,
@@ -1506,7 +1507,7 @@ export class NativePcmEngine {
     }
   }
 
-  setLooperTrackSustain(trackIndex, isDown, when = 0) {
+  setLooperTrackSustain(trackIndex, isDown, _when = 0) {
     if (trackIndex < 0 || trackIndex > 3) return;
     const buses = this.looperInserts[trackIndex];
     if (!buses) return;
@@ -1614,11 +1615,12 @@ export class NativePcmEngine {
           } catch (e) {}
           resolve(buf);
         };
-        const res = ctx.decodeAudioData(arrayBuf, handleDecoded, (err) =>
-          reject(err),
-        );
-        if (res && typeof res.then === "function")
-          res.then(handleDecoded).catch(reject);
+        // decodeAudioData returns a Promise in all modern browsers; passing a
+        // success callback AND chaining .then() used to run handleDecoded twice
+        // (double peak normalization / gain scaling). Use the Promise form only.
+        ctx.decodeAudioData(arrayBuf)
+          .then(handleDecoded)
+          .catch(reject);
       } catch (err) {
         reject(err);
       }
@@ -1854,10 +1856,7 @@ export class NativePcmEngine {
       if (contentType.includes("text/html")) return;
       const text = await resp.text();
       if (!text || text.trim().startsWith("<")) return;
-      const fn = new Function("MIDI", text);
-      const MIDI = { Soundfont: {} };
-      fn(MIDI);
-      const samples = MIDI.Soundfont[instId];
+      const samples = this.parseSoundfontJsonp(text);
       if (!samples) return;
       if (!this.decodedBuffers.has(instId))
         this.decodedBuffers.set(instId, new Map());
@@ -1890,16 +1889,51 @@ export class NativePcmEngine {
                 instId,
               );
               instMap.set(midi, processedBuf);
-            } catch (err) {}
+            } catch (err) {
+              logger.warn(
+                "PCM",
+                `Failed to decode soundfont sample ${noteName} for "${instId}"`,
+                err,
+              );
+            }
           }),
         );
       }
     } catch (err) {
-      console.warn(
-        `[Native PCM Rompler] Failed to load soundfont: ${instId}`,
-        err,
-      );
+      logger.warn("PCM", `Failed to load soundfont: ${instId}`, err);
     }
+  }
+
+  /**
+   * Safely parses the MusyngKite/FluidR3 JSONP soundfont files
+   * (`MIDI.Soundfont.<id> = { note: "data:..." }`).
+   *
+   * The previous implementation executed the fetched text via `new Function`,
+   * which would run arbitrary script if a static asset was ever tampered with
+   * or served by a compromised host. We now extract the object literal and
+   * parse it as strict JSON instead.
+   */
+  parseSoundfontJsonp(text) {
+    if (typeof text !== "string" || !text.includes("MIDI.Soundfont")) return null;
+    const markerIdx = text.lastIndexOf("MIDI.Soundfont");
+    const eqIdx = text.indexOf("= {", markerIdx);
+    if (eqIdx < 0) return null;
+    const start = text.indexOf("{", eqIdx);
+    const end = text.lastIndexOf("}");
+    if (start < 0 || end <= start) return null;
+    let json = text.slice(start, end + 1);
+    // JSONP object literals end with a trailing comma before the closing brace —
+    // legal in JS, illegal in JSON. Strip them so JSON.parse accepts the payload.
+    json = json.replace(/,(\s*})/g, "$1");
+    try {
+      const parsed = JSON.parse(json);
+      if (parsed && typeof parsed === "object" && Object.keys(parsed).length > 0) {
+        return parsed;
+      }
+    } catch (err) {
+      logger.warn("PCM", "Failed to parse soundfont JSONP payload", err);
+    }
+    return null;
   }
 
   async loadAbletunesInstrument(bankKey) {
@@ -2095,7 +2129,7 @@ export class NativePcmEngine {
         instMap = this.decodedBuffers.get("acoustic_grand_piano");
     }
     if (!instMap || instMap.size === 0) {
-      for (const [id, map] of this.decodedBuffers.entries()) {
+      for (const map of this.decodedBuffers.values()) {
         if (map && map.size > 0) {
           instMap = map;
           break;

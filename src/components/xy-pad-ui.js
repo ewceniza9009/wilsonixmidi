@@ -209,7 +209,7 @@ export class XyPadUI {
     multiLayerEngine.setSpaceSend(this.yVal);
   }
 
-  reset(smooth = true) {
+  reset(_smooth = true) {
     this.xVal = 0.5;
     this.yVal = 0.5;
     this.updatePuckVisual();
