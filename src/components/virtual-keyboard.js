@@ -90,6 +90,20 @@ export class VirtualKeyboardUI {
       }
     }, { passive: true });
 
+    // Subscribe to multiLayerEngine note triggers for instant visual response (0ms latency)
+    multiLayerEngine.onNoteChangeCallback = (midiNote, isPressed, velocity) => {
+      this.setKeyVisualState(midiNote, isPressed, velocity);
+    };
+
+    multiLayerEngine.onPanicCallback = () => {
+      this.activeTouches.clear();
+      this.activeMouseChord = null;
+      this.keyStates.fill(0);
+      for (const el of this.keyElements.values()) {
+        el.classList.remove("active");
+      }
+    };
+
     // Subscribe to engine note triggers for bidirectional feedback
     synthEngine.onNoteChangeCallback = (midiNote, isPressed, velocity) => {
       this.setKeyVisualState(midiNote, isPressed, velocity);
@@ -148,6 +162,8 @@ export class VirtualKeyboardUI {
       target.removeEventListener(type, handler, options);
     });
     this._windowHandlers = [];
+    multiLayerEngine.onNoteChangeCallback = null;
+    multiLayerEngine.onPanicCallback = null;
     synthEngine.onNoteChangeCallback = null;
     arpeggiator.onNoteTriggerCallback = null;
     qwertyKeyboard.onChordVisualCallback = null;

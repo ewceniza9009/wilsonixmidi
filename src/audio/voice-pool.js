@@ -226,9 +226,8 @@ export class PolyphonicVoice {
       const holdMs = (sustainSettings?.sustainHoldSec ?? 7) * 1000;
       try {
         this.voiceGain.gain.cancelScheduledValues(now);
+        this.voiceGain.gain.setValueAtTime(this.voiceGain.gain.value || 0.0, now);
         this.voiceGain.gain.setTargetAtTime(0.0, now, decayTau);
-        const fadeSec = Math.max(0.08, Math.min(1.5, decayTau * 0.6));
-        this.voiceGain.gain.setValueAtTime(0.0, now + fadeSec);
       } catch (e) {}
 
       setTimeout(() => {
@@ -248,9 +247,8 @@ export class PolyphonicVoice {
     // Smooth exponential decay to silence
     try {
       this.voiceGain.gain.cancelScheduledValues(now);
+      this.voiceGain.gain.setValueAtTime(this.voiceGain.gain.value || 0.0, now);
       this.voiceGain.gain.setTargetAtTime(0.0, now, tau);
-      const fadeSec = Math.max(0.08, tau * 6);
-      this.voiceGain.gain.setValueAtTime(0.0, now + fadeSec);
 
       setTimeout(() => {
         if (gen === this._gen && !this.isSustained) {
@@ -268,16 +266,15 @@ export class PolyphonicVoice {
     this.isBusy = false;
     this.isSustained = false;
     this.activeMidiNote = null;
-    const fadeSec = 0.06;
     try {
       this.voiceGain.gain.cancelScheduledValues(now);
-      this.voiceGain.gain.setTargetAtTime(0.0, now, 0.012);
-      this.voiceGain.gain.setValueAtTime(0.0, now + fadeSec);
+      this.voiceGain.gain.setValueAtTime(this.voiceGain.gain.value || 0.0, now);
+      this.voiceGain.gain.setTargetAtTime(0.0, now, 0.03);
     } catch (e) {}
     setTimeout(() => {
       if (gen !== this._gen) return;
       this.isBusy = false;
-    }, (fadeSec + 0.02) * 1000);
+    }, 80);
   }
 
   // Permanently silence this voice's oscillators. Only safe for pools whose

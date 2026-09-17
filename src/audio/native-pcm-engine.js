@@ -675,6 +675,7 @@ export class LayerInsertProcessor {
       this.sustainedVoices.forEach((v) => {
         try {
           v.voiceGain.gain.cancelScheduledValues(now);
+          v.voiceGain.gain.setValueAtTime(v.voiceGain.gain.value || 0.0, now);
           v.voiceGain.gain.setTargetAtTime(0, now, 0.06);
           v.src.stop(now + 0.25);
         } catch (e) {}
@@ -690,19 +691,22 @@ export class LayerInsertProcessor {
       this.sustainedVoices?.forEach((v) => {
         try {
           v.voiceGain.gain.cancelScheduledValues(now);
-          v.voiceGain.gain.setTargetAtTime(0, now, 0.01);
-          v.src.stop(now + 0.05);
+          v.voiceGain.gain.setValueAtTime(v.voiceGain.gain.value || 0.0, now);
+          v.voiceGain.gain.setTargetAtTime(0, now, 0.03);
+          v.src.stop(now + 0.1);
         } catch (e) {}
       });
       this.sustainedVoices?.clear();
 
-      this.wetGain.gain.cancelScheduledValues(this.ctx.currentTime);
-      this.wetGain.gain.setValueAtTime(0, this.ctx.currentTime);
+      this.wetGain.gain.cancelScheduledValues(now);
+      this.wetGain.gain.setValueAtTime(this.wetGain.gain.value || 0.0, now);
+      this.wetGain.gain.setTargetAtTime(0, now, 0.06);
       this.activeFxNodes.forEach((node) => {
         try {
           if (node.gain && node.gain.cancelScheduledValues) {
-            node.gain.cancelScheduledValues(this.ctx.currentTime);
-            node.gain.setValueAtTime(0, this.ctx.currentTime);
+            node.gain.cancelScheduledValues(now);
+            node.gain.setValueAtTime(node.gain.value || 0.0, now);
+            node.gain.setTargetAtTime(0, now, 0.06);
           }
         } catch (e) {}
       });
@@ -713,8 +717,10 @@ export class LayerInsertProcessor {
     this.currentFx = fxType || "clean";
     const ctx = this.ctx;
 
-    this.wetGain.gain.cancelScheduledValues(ctx.currentTime);
-    this.wetGain.gain.setValueAtTime(0, ctx.currentTime);
+    const now = ctx.currentTime;
+    this.wetGain.gain.cancelScheduledValues(now);
+    this.wetGain.gain.setValueAtTime(this.wetGain.gain.value || 0.0, now);
+    this.wetGain.gain.setTargetAtTime(0, now, 0.02);
 
     try {
       this.effectChainInput.disconnect();
@@ -2470,16 +2476,24 @@ export class NativePcmEngine {
           const isSameInst = oldV.instId === instId;
           if (isSameLayer || (layerIndex === null && isSameInst)) {
             try {
-              if (oldV.src) oldV.src.onended = null;
               oldV.voiceGain.gain.cancelScheduledValues(now);
               oldV.voiceGain.gain.setValueAtTime(
                 oldV.voiceGain.gain.value || 0.0,
                 now,
               );
-                oldV.voiceGain.gain.linearRampToValueAtTime(0.0, now + 0.05);
-              if (oldV.src) oldV.src.stop(now + 0.06);
+              oldV.voiceGain.gain.setTargetAtTime(0.0, now, 0.025);
+              if (oldV.src) oldV.src.stop(now + 0.12);
             } catch (e) {}
-            this.removeVoice(midiNote, oldV);
+            this._removeFromTracking(midiNote, oldV);
+            const rn = midiNote;
+            const rv = oldV;
+            if (rv.src) {
+              rv.src.onended = () => {
+                this._disconnectAndRecycle(rn, rv);
+              };
+            } else {
+              this._disconnectAndRecycle(rn, rv);
+            }
           } else {
             remaining.push(oldV);
           }
@@ -2494,20 +2508,24 @@ export class NativePcmEngine {
       if (susList && susList.length > 0) {
         susList.forEach((oldV) => {
           try {
-            if (oldV.src) oldV.src.onended = null;
             oldV.voiceGain.gain.cancelScheduledValues(now);
             oldV.voiceGain.gain.setValueAtTime(
               oldV.voiceGain.gain.value || 0.0,
               now,
             );
-            // Aligned with the smart-steal fade: a 50ms low-slope ramp means
-            // re-striking a still-ringing SUSTAINED note (sustain pedal down)
-            // fades the old ringing tail cleanly instead of the sharp 25ms chop
-            // that punched through the limiter as the sustaining "crackle".
-            oldV.voiceGain.gain.linearRampToValueAtTime(0.0, now + 0.05);
-            if (oldV.src) oldV.src.stop(now + 0.06);
+            oldV.voiceGain.gain.setTargetAtTime(0.0, now, 0.04);
+            if (oldV.src) oldV.src.stop(now + 0.15);
           } catch (e) {}
-          this.removeVoice(midiNote, oldV);
+          this._removeFromTracking(midiNote, oldV);
+          const rn = midiNote;
+          const rv = oldV;
+          if (rv.src) {
+            rv.src.onended = () => {
+              this._disconnectAndRecycle(rn, rv);
+            };
+          } else {
+            this._disconnectAndRecycle(rn, rv);
+          }
         });
         this.sustainedVoices.delete(midiNote);
       }
@@ -2567,9 +2585,8 @@ export class NativePcmEngine {
 
     voiceGain.gain.setValueAtTime(0.0, now);
     if (isChoir) voiceGain.gain.setTargetAtTime(peakGain, now, 0.04);
-    else voiceGain.gain.linearRampToValueAtTime(peakGain, now + 0.0035);
+    else voiceGain.gain.setTargetAtTime(peakGain, now, 0.008);
 
-    voiceGain.gain.setTargetAtTime(0.0, now + 32.0, 3.5);
     const maxLife =
       anchorData.buffer && anchorData.buffer._isLoopable
         ? 60.0
@@ -2624,19 +2641,24 @@ export class NativePcmEngine {
       if (!target) target = oldest;
       if (!target) break;
       try {
-        if (target.src) target.src.onended = null;
         target.voiceGain.gain.cancelScheduledValues(now);
         target.voiceGain.gain.setValueAtTime(
           target.voiceGain.gain.value || 0.0,
           now,
         );
-        // Longer 50ms steal fade (was 25ms): a slow, low-slope fade makes even
-        // the unavoidable "all voices held" steal click-free instead of the
-        // sharp 25ms chop that buzzed against the limiter.
-        target.voiceGain.gain.linearRampToValueAtTime(0.0, now + 0.05);
-        if (target.src) target.src.stop(now + 0.06);
+        target.voiceGain.gain.setTargetAtTime(0.0, now, 0.02);
+        if (target.src) target.src.stop(now + 0.12);
       } catch (e) {}
-      this.removeVoice(target.midiNote, target);
+      this._removeFromTracking(target.midiNote, target);
+      const stlMidiNote = target.midiNote;
+      const stlRecord = target;
+      if (stlRecord.src) {
+        stlRecord.src.onended = () => {
+          this._disconnectAndRecycle(stlMidiNote, stlRecord);
+        };
+      } else {
+        this._disconnectAndRecycle(stlMidiNote, stlRecord);
+      }
     }
 
     if (!this.activeVoices.has(midiNote)) this.activeVoices.set(midiNote, []);
@@ -2675,6 +2697,40 @@ export class NativePcmEngine {
       if (voiceRecord.src) {
         voiceRecord.src.disconnect();
       }
+      if (voiceRecord.filter) voiceRecord.filter.disconnect();
+      if (voiceRecord.voiceGain) voiceRecord.voiceGain.disconnect();
+      if (this._voiceNodePool.length < this.MAX_VOICES) {
+        this._voiceNodePool.push({
+          filter: voiceRecord.filter,
+          voiceGain: voiceRecord.voiceGain,
+        });
+      }
+    } catch (e) {}
+  }
+
+  _removeFromTracking(midiNote, voiceRecord) {
+    if (!voiceRecord) return;
+    const qi = this.voiceQueue.indexOf(voiceRecord);
+    if (qi !== -1) this.voiceQueue.splice(qi, 1);
+    const list = this.activeVoices.get(midiNote);
+    if (list) {
+      const idx = list.indexOf(voiceRecord);
+      if (idx !== -1) list.splice(idx, 1);
+      if (list.length === 0) this.activeVoices.delete(midiNote);
+    }
+    const susList = this.sustainedVoices.get(midiNote);
+    if (susList) {
+      const idx = susList.indexOf(voiceRecord);
+      if (idx !== -1) susList.splice(idx, 1);
+      if (susList.length === 0) this.sustainedVoices.delete(midiNote);
+    }
+  }
+
+  _disconnectAndRecycle(midiNote, voiceRecord) {
+    if (!voiceRecord || voiceRecord._isRecycled) return;
+    voiceRecord._isRecycled = true;
+    try {
+      if (voiceRecord.src) voiceRecord.src.disconnect();
       if (voiceRecord.filter) voiceRecord.filter.disconnect();
       if (voiceRecord.voiceGain) voiceRecord.voiceGain.disconnect();
       if (this._voiceNodePool.length < this.MAX_VOICES) {
@@ -2761,6 +2817,7 @@ export class NativePcmEngine {
     }
 
     if (!this.sustainPedal) {
+      let voiceIdx = 0;
       this.sustainedVoices.forEach((voices) => {
         voices.forEach((v) => {
           try {
@@ -2818,17 +2875,25 @@ export class NativePcmEngine {
                     : isPiano
                       ? 0.45
                       : 0.35;
-            v.voiceGain.gain.cancelScheduledValues(now);
-            v.voiceGain.gain.setTargetAtTime(0, now, tau);
-            v.src.stop(now + stopTime);
+            // Micro-stagger: offset each voice's release by 0.3ms so 48+
+            // simultaneous voices don't all drop at the exact same sample.
+            // Spreads the collective volume step over ~15ms, eliminating the
+            // audible "bump" when the pedal lifts during a dense combi chord.
+            const stagger = Math.min(voiceIdx * 0.0003, 0.015);
+            voiceIdx++;
+            const t = now + stagger;
+            v.voiceGain.gain.cancelScheduledValues(t);
+            v.voiceGain.gain.setValueAtTime(v.voiceGain.gain.value || 0.0, t);
+            v.voiceGain.gain.setTargetAtTime(0, t, tau);
+            v.src.stop(t + stopTime);
             if (v.vibLfo) {
               try {
-                v.vibLfo.stop(now + stopTime + 0.1);
+                v.vibLfo.stop(t + stopTime + 0.1);
               } catch (e) {}
             }
             if (v.growlLfo) {
               try {
-                v.growlLfo.stop(now + stopTime + 0.1);
+                v.growlLfo.stop(t + stopTime + 0.1);
               } catch (e) {}
             }
           } catch (e) {}
@@ -2882,9 +2947,10 @@ export class NativePcmEngine {
                 }
               }
               if (!oldest) break;
-            oldest.voiceGain.gain.cancelScheduledValues(now);
-            oldest.voiceGain.gain.setTargetAtTime(0, now, 0.05);
-            oldest.src.stop(now + 0.18);
+              oldest.voiceGain.gain.cancelScheduledValues(now);
+              oldest.voiceGain.gain.setValueAtTime(oldest.voiceGain.gain.value || 0.0, now);
+              oldest.voiceGain.gain.setTargetAtTime(0, now, 0.05);
+              oldest.src.stop(now + 0.18);
               if (oldest.vibLfo) {
                 try {
                   oldest.vibLfo.stop(now + 0.16);
@@ -2895,7 +2961,16 @@ export class NativePcmEngine {
                   oldest.growlLfo.stop(now + 0.16);
                 } catch (e) {}
               }
-              this.removeVoice(oldestKey, oldest);
+              this._removeFromTracking(oldestKey, oldest);
+              const ok = oldestKey;
+              const ov = oldest;
+              if (ov.src) {
+                ov.src.onended = () => {
+                  this._disconnectAndRecycle(ok, ov);
+                };
+              } else {
+                this._disconnectAndRecycle(ok, ov);
+              }
               totalSus--;
             }
           } catch (e) {}
@@ -2961,6 +3036,7 @@ export class NativePcmEngine {
                       ? 0.35
                       : 0.45;
             v.voiceGain.gain.cancelScheduledValues(now);
+            v.voiceGain.gain.setValueAtTime(v.voiceGain.gain.value || 0.0, now);
             v.voiceGain.gain.setTargetAtTime(0, now, tau);
             v.src.stop(now + stopTime);
             if (v.vibLfo) {
@@ -3024,8 +3100,9 @@ export class NativePcmEngine {
           if (matches(v)) {
             try {
               v.voiceGain.gain.cancelScheduledValues(now);
-              v.voiceGain.gain.setTargetAtTime(0, now, 0.01);
-              v.src.stop(now + 0.05);
+              v.voiceGain.gain.setValueAtTime(v.voiceGain.gain.value || 0.0, now);
+              v.voiceGain.gain.setTargetAtTime(0, now, 0.02);
+              v.src.stop(now + 0.1);
               const qi = this.voiceQueue.indexOf(v);
               if (qi !== -1) this.voiceQueue.splice(qi, 1);
             } catch (e) {}
@@ -3060,17 +3137,17 @@ export class NativePcmEngine {
         if (v.voiceGain) {
           v.voiceGain.gain.cancelScheduledValues(now);
           v.voiceGain.gain.setValueAtTime(v.voiceGain.gain.value || 0.0, now);
-          v.voiceGain.gain.linearRampToValueAtTime(0.0, now + 0.003);
+          v.voiceGain.gain.setTargetAtTime(0.0, now, 0.02);
         }
-        if (v.src) v.src.stop(now + 0.004);
+        if (v.src) v.src.stop(now + 0.08);
         if (v.vibLfo) {
           try {
-            v.vibLfo.stop(now + 0.005);
+            v.vibLfo.stop(now + 0.1);
           } catch (e) {}
         }
         if (v.growlLfo) {
           try {
-            v.growlLfo.stop(now + 0.005);
+            v.growlLfo.stop(now + 0.1);
           } catch (e) {}
         }
         setTimeout(() => {
@@ -3082,7 +3159,7 @@ export class NativePcmEngine {
               this._voiceNodePool.push({ filter: v.filter, voiceGain: v.voiceGain });
             }
           } catch (e) {}
-        }, 10);
+        }, 30);
       } catch (e) {}
     };
 

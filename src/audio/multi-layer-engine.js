@@ -683,6 +683,9 @@ export class MultiLayerEngine {
     this.onSplitChangeCallback = null;
     this.splitChangeListeners = new Set();
 
+    this.onNoteChangeCallback = null;
+    this.onPanicCallback = null;
+
     this.onLayerChangeCallback = null;
     this.layerChangeListeners = new Set();
     this._vaEngines = new Map(); // VA oscillator engine per combi layer program
@@ -980,12 +983,9 @@ export class MultiLayerEngine {
         audioCore.masterGain ||
         ctx.destination;
       this._workletNode = new SynthWorkletNode(ctx, dest);
-      // Bridge worklet visual callbacks → synthEngine.onNoteChangeCallback → virtual keyboard highlighting
-      this._workletNode.onVisualCallback = (midi, isPressed, vel) => {
-        if (synthEngine.onNoteChangeCallback) {
-          try { synthEngine.onNoteChangeCallback(midi, isPressed, vel); } catch (e) {}
-        }
-      };
+      // Synchronous visual feedback is dispatched directly from noteOn/noteOff with 0.00ms latency.
+      // We explicitly avoid queuing asynchronous postMessage visual callbacks across threads to prevent visual lag.
+      this._workletNode.onVisualCallback = null;
       const ok = await this._workletNode.init();
       if (ok) {
         this._workletReady = true;
@@ -1491,6 +1491,28 @@ export class MultiLayerEngine {
     if (!this.pcmEngine) this.init();
     audioCore.ensureRunning();
 
+    // 1:1 Instant Synchronous Visual Key Trigger (True 0.00ms touch-to-visual response)
+    if (this.onNoteChangeCallback) {
+      if (when === 0) {
+        try { this.onNoteChangeCallback(midiNote, true, velocity); } catch (e) {}
+      } else {
+        const delayMs = Math.max(0, (when - (audioCore.ctx ? audioCore.ctx.currentTime : 0)) * 1000);
+        setTimeout(() => {
+          try { this.onNoteChangeCallback(midiNote, true, velocity); } catch (e) {}
+        }, delayMs);
+      }
+    }
+    if (synthEngine.onNoteChangeCallback && synthEngine.onNoteChangeCallback !== this.onNoteChangeCallback) {
+      if (when === 0) {
+        try { synthEngine.onNoteChangeCallback(midiNote, true, velocity); } catch (e) {}
+      } else {
+        const delayMs = Math.max(0, (when - (audioCore.ctx ? audioCore.ctx.currentTime : 0)) * 1000);
+        setTimeout(() => {
+          try { synthEngine.onNoteChangeCallback(midiNote, true, velocity); } catch (e) {}
+        }, delayMs);
+      }
+    }
+
     const now = when > 0 ? when : (audioCore.ctx ? audioCore.ctx.currentTime : 0);
 
     // Live held-note tracking: a key held with no sustain pedal rings for
@@ -1598,6 +1620,28 @@ export class MultiLayerEngine {
 
   noteOff(midiNote, when = 0) {
     audioCore.ensureRunning();
+
+    // 1:1 Instant Synchronous Visual Key Release
+    if (this.onNoteChangeCallback) {
+      if (when === 0) {
+        try { this.onNoteChangeCallback(midiNote, false, 0); } catch (e) {}
+      } else {
+        const delayMs = Math.max(0, (when - (audioCore.ctx ? audioCore.ctx.currentTime : 0)) * 1000);
+        setTimeout(() => {
+          try { this.onNoteChangeCallback(midiNote, false, 0); } catch (e) {}
+        }, delayMs);
+      }
+    }
+    if (synthEngine.onNoteChangeCallback && synthEngine.onNoteChangeCallback !== this.onNoteChangeCallback) {
+      if (when === 0) {
+        try { synthEngine.onNoteChangeCallback(midiNote, false, 0); } catch (e) {}
+      } else {
+        const delayMs = Math.max(0, (when - (audioCore.ctx ? audioCore.ctx.currentTime : 0)) * 1000);
+        setTimeout(() => {
+          try { synthEngine.onNoteChangeCallback(midiNote, false, 0); } catch (e) {}
+        }, delayMs);
+      }
+    }
 
     // Key lifted: stop the held-note timer; the note's tail is now governed by
     // the normal release / sustain-pedal path.
@@ -1836,6 +1880,15 @@ export class MultiLayerEngine {
   panic() {
     this.activeLeadNotes = 0;
     this.setSustainPedal(false);
+
+    if (this.onPanicCallback) {
+      try { this.onPanicCallback(); } catch (e) {}
+    }
+    if (this.onNoteChangeCallback) {
+      this.heldNotes.forEach(note => {
+        try { this.onNoteChangeCallback(note, false, 0); } catch (e) {}
+      });
+    }
 
     if (this.pcmEngine) {
       this.pcmEngine.allNotesOff();
