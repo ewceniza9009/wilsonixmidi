@@ -421,12 +421,14 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
         } else if (nextPos >= bufLen) {
           sampleEnded = true;
           if (voice.held || voice.pedalHeld) {
-            nextPos = pos;
-            voice.envLevel *= 0.5;
-            if (voice.envLevel < 0.001) {
-              voice.forceStop();
-              break;
+            // Sample finished but note is still held/sustained: gracefully release
+            // the envelope instead of repeating the last sample with aggressive gain drop.
+            // This prevents rapid 0.5 gain steps that create hissing/click artifacts.
+            if (voice.envStage !== 4) {
+              voice.envStage = 4;
+              voice.held = false;
             }
+            nextPos = pos;
           } else {
             voice.forceStop();
             break;
