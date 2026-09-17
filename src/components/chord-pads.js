@@ -375,23 +375,16 @@ export class ChordPadsUI {
       if (forceKill && multiLayerEngine) {
         // Temporarily disable sustain on all engines so old chord voices release
         // immediately instead of accumulating in sustained pools during fast switching
-        const saved = { pcm: null, va: [] };
+        const wasSustain = !!multiLayerEngine.sustainPedalActive;
         try {
-          if (multiLayerEngine.pcmEngine) {
-            saved.pcm = multiLayerEngine.pcmEngine.sustainPedal;
-            multiLayerEngine.pcmEngine.sustainPedal = false;
-          }
-          if (multiLayerEngine._vaEngines) {
-            multiLayerEngine._vaEngines.forEach(eng => {
-              saved.va.push({ eng, was: eng.sustainPedal });
-              eng.sustainPedal = false;
-            });
-          }
+          multiLayerEngine.setSustainPedal(false);
         } catch (e) {}
-        notes.forEach(m => multiLayerEngine.noteOff(m));
+        const baseTime = audioCore.ctx ? audioCore.ctx.currentTime + 0.001 : 0;
+        notes.forEach((m, i) => {
+          multiLayerEngine.noteOff(m, baseTime > 0 ? baseTime + i * 0.001 : 0);
+        });
         try {
-          if (saved.pcm !== null) multiLayerEngine.pcmEngine.sustainPedal = saved.pcm;
-          saved.va.forEach(({ eng, was }) => { eng.sustainPedal = was; });
+          multiLayerEngine.setSustainPedal(wasSustain);
         } catch (e) {}
       } else {
         notes.forEach(m => multiLayerEngine.noteOff(m));
