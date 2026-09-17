@@ -924,32 +924,32 @@ export class TritonWorkstationUI {
         fx.compressor?.setRatio(6.0);
         fx.compressor?.setAttack(0.008);
         fx.compressor?.setRelease(0.12);
-        fx.compressor?.setMakeup(4.0);
-        fx.compressor?.setMix(0.90);
+        fx.compressor?.setMakeup(1.45);
+        fx.compressor?.setMix(0.85);
       } else if (name.includes("bass") || cat.includes("bass")) {
         // Tight, leveled bass control
         fx.compressor?.setThreshold(-24);
         fx.compressor?.setRatio(4.5);
         fx.compressor?.setAttack(0.015);
         fx.compressor?.setRelease(0.18);
-        fx.compressor?.setMakeup(3.5);
-        fx.compressor?.setMix(0.85);
+        fx.compressor?.setMakeup(1.35);
+        fx.compressor?.setMix(0.80);
       } else if (name.includes("piano") || cat.includes("keyboard")) {
         // Transparent acoustic piano sustain and peak leveling
         fx.compressor?.setThreshold(-18);
         fx.compressor?.setRatio(3.0);
         fx.compressor?.setAttack(0.025);
         fx.compressor?.setRelease(0.25);
-        fx.compressor?.setMakeup(2.5);
-        fx.compressor?.setMix(0.80);
+        fx.compressor?.setMakeup(1.25);
+        fx.compressor?.setMix(0.75);
       } else {
         // Bold brass and lead dynamics
         fx.compressor?.setThreshold(-22);
         fx.compressor?.setRatio(4.0);
         fx.compressor?.setAttack(0.012);
         fx.compressor?.setRelease(0.20);
-        fx.compressor?.setMakeup(3.0);
-        fx.compressor?.setMix(0.85);
+        fx.compressor?.setMakeup(1.30);
+        fx.compressor?.setMix(0.80);
       }
     }
 

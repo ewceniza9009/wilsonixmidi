@@ -60,6 +60,16 @@ export class FxRackManager {
     this.presetTrimNode = ctx.createGain();
     this.presetTrimNode.gain.value = 1.0;
 
+    // Studio Perceptual Loudness Equalizer (Transparent AGC):
+    // Smoothly balances perceived loudness between disparate acoustic and EDM presets,
+    // preserving dynamic playing expression and crisp transients.
+    this.loudnessLeveler = ctx.createDynamicsCompressor();
+    this.loudnessLeveler.threshold.value = -19.0;
+    this.loudnessLeveler.knee.value = 14.0;
+    this.loudnessLeveler.ratio.value = 2.2;
+    this.loudnessLeveler.attack.value = 0.015;
+    this.loudnessLeveler.release.value = 0.220;
+
     this.masterEq = new StudioEqLimiter(ctx);
     this.onPresetChangeCallback = null;
 
@@ -118,7 +128,8 @@ export class FxRackManager {
     this.fastPathGain.gain.value = 1.0;
     this.input.connect(this.fastPathGain);
     this.fastPathGain.connect(this.presetTrimNode);
-    this.presetTrimNode.connect(this.masterEq.input);
+    this.presetTrimNode.connect(this.loudnessLeveler);
+    this.loudnessLeveler.connect(this.masterEq.input);
     this.masterEq.output.connect(this.output);
 
     const chain = [

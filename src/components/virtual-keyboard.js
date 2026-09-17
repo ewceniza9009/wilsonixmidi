@@ -412,6 +412,7 @@ export class VirtualKeyboardUI {
       }
     });
 
+    let lastGlissandoTime = 0;
     this._onWindow(window, "mousemove", e => {
       if (!isMouseDown) return;
       if (performance.now() - lastTouchTime < 800) return;
@@ -420,12 +421,22 @@ export class VirtualKeyboardUI {
         const snappedMidi = scaleLock.isLocked ? scaleLock.snapToScale(key.midi) : key.midi;
         const primaryNote = this.activeMouseChord ? this.activeMouseChord[0] : null;
         if (snappedMidi !== null && snappedMidi !== primaryNote) {
+          const now = performance.now();
+          // Rate-limit sweep transitions to max 30 notes/sec (~33ms minimum key dwell during sweeps)
+          // to eliminate audio thread event queue flooding and voice stacking
+          if (now - lastGlissandoTime < 30) return;
+          lastGlissandoTime = now;
+
           // Horizontal Glissando / Legato Slide to adjacent note
           if (this.activeMouseChord) {
             this.activeMouseChord.forEach(n => {
               this.setKeyVisualState(n, false);
               if (arpeggiator.enabled) {
                 arpeggiator.handleNoteOff(n);
+              } else if (multiLayerEngine.sustainPedalActive || qwertyKeyboard.sustainPedal || qwertyKeyboard.sustainLatched) {
+                multiLayerEngine.noteOff(n);
+              } else if (typeof multiLayerEngine.fastNoteOff === "function") {
+                multiLayerEngine.fastNoteOff(n);
               } else {
                 multiLayerEngine.noteOff(n);
               }

@@ -80,6 +80,11 @@ export class TritonVirtualAnalogEngine {
       gain3 = 0.26;
     }
 
+    // Calibrate square waves to match sawtooth/triangle perceived loudness
+    if (osc1 === "square") gain1 *= 0.65;
+    if (osc2 === "square") gain2 *= 0.65;
+    if (osc3Type === "square") gain3 *= 0.65;
+
     const isPercussive = /(stab|hit|pluck|slap|tine|ep|wurly|rhodes|clav|harp|kalimba|mallet|vibes|vibe|bell(?!\s*pad)|piano(?!\s*pad))/i.test((prog.category || "") + " " + (prog.name || ""));
 
     // HARD SYNC: programs named "sync" (Brian's Sync, Octa Sync, sync pads/leads)

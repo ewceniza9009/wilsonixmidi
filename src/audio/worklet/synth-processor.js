@@ -136,10 +136,10 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
     // a 16-note chord can't stack to 7× full-scale and slam the master bus.
     this.polyScale = 1.0;
 
-    // Sustain-pedal behavior: pedalHeld voices decay with this tau while the
-    // pedal is down and force-release when it lifts.
+    // Sustain-pedal behavior: pedalHeld voices stay ringing while the
+    // pedal is down and force-release when it lifts (45s safety decay ceiling).
     this.pedalDown = false;
-    this.sustainTau = 2.4;
+    this.sustainTau = 45.0;
 
     // Held notes tracking for voice stealing
     this.heldNotes = new Set();
@@ -279,11 +279,11 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
     switch (type) {
       case 0: // Anti-Aliased PolyBLEP Sawtooth
         return 2.0 * phase - 1.0 - polyBlep(phase, dt);
-      case 1: { // Anti-Aliased PolyBLEP Square / Pulse
+      case 1: { // Anti-Aliased PolyBLEP Square / Pulse (calibrated to match Saw/Tri RMS)
         let val = phase < pw ? 1.0 : -1.0;
         val += polyBlep(phase, dt);
         val -= polyBlep((phase + 1.0 - pw) % 1.0, dt);
-        return val;
+        return val * 0.65;
       }
       case 2: // Triangle
         return phase < 0.5 ? 4.0 * phase - 1.0 : 3.0 - 4.0 * phase;

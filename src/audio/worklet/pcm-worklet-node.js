@@ -17,6 +17,7 @@ export class PcmWorkletNode {
     this.sharedBuffer = null;
     this._pendingBuffers = [];
     this._loadedBuffers = new Set();
+    this._sustainSettings = null;
   }
 
   async init() {
@@ -55,6 +56,14 @@ export class PcmWorkletNode {
 
       this.node.connect(this.destination);
       this.isReady = true;
+
+      if (this._sustainSettings) {
+        this.setSustainSettings(
+          this._sustainSettings.sustainHoldSec,
+          this._sustainSettings.sustainDecayTau,
+          this._sustainSettings.heldNoteSec
+        );
+      }
 
       // Flush any buffers that were loaded before init completed
       for (const buf of this._pendingBuffers) {
@@ -123,6 +132,17 @@ export class PcmWorkletNode {
   setSustainPedal(down) {
     if (!this.isReady || !this.node) return;
     this.node.port.postMessage({ type: "sustain", down });
+  }
+
+  setSustainSettings(sustainHoldSec, sustainDecayTau, heldNoteSec) {
+    this._sustainSettings = { sustainHoldSec, sustainDecayTau, heldNoteSec };
+    if (!this.isReady || !this.node) return;
+    this.node.port.postMessage({
+      type: "sustainSettings",
+      sustainHoldSec,
+      sustainDecayTau,
+      heldNoteSec,
+    });
   }
 
   allNotesOff() {

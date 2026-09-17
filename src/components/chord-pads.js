@@ -373,19 +373,15 @@ export class ChordPadsUI {
   releaseAllChords(forceKill = false) {
     this.activeNotesMap.forEach((notes, idx) => {
       if (forceKill && multiLayerEngine) {
-        // Temporarily disable sustain on all engines so old chord voices release
-        // immediately instead of accumulating in sustained pools during fast switching
-        const wasSustain = !!multiLayerEngine.sustainPedalActive;
-        try {
-          multiLayerEngine.setSustainPedal(false);
-        } catch (e) {}
-        const baseTime = audioCore.ctx ? audioCore.ctx.currentTime + 0.001 : 0;
-        notes.forEach((m, i) => {
-          multiLayerEngine.noteOff(m, baseTime > 0 ? baseTime + i * 0.001 : 0);
+        // Fast-choke old chord voices immediately so previous chord does not pile up
+        // during fast chord switching, while preserving the user's sustain latch state
+        notes.forEach(m => {
+          if (typeof multiLayerEngine.fastNoteOff === "function") {
+            multiLayerEngine.fastNoteOff(m);
+          } else {
+            multiLayerEngine.noteOff(m);
+          }
         });
-        try {
-          multiLayerEngine.setSustainPedal(wasSustain);
-        } catch (e) {}
       } else {
         notes.forEach(m => multiLayerEngine.noteOff(m));
       }

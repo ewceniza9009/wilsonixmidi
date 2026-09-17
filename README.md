@@ -8,15 +8,15 @@
 [![Audio: Web Audio API](https://img.shields.io/badge/Audio-Direct%20PCM%20%2B%20VA%20Engine-FF6F00?style=for-the-badge&logo=audio)](https://github.com/ewceniza9009/wilsonixmidi)
 [![Framework: Tauri v2 + Vite](https://img.shields.io/badge/Framework-Tauri%20v2%20%7C%20Rust-673AB7?style=for-the-badge)](https://tauri.app/)
 [![License: Proprietary](https://img.shields.io/badge/License-WILSONIX%20Commercial-red?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi)
-[![Version: v2.0.2](https://img.shields.io/badge/Version-v2.0.2%20Build%2021%20Production-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
+[![Version: v2.0.3](https://img.shields.io/badge/Version-v2.0.3%20Build%2022%20Production-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
 
 ---
 
-## 🚀 Official Production Downloads (v2.0.2 Build 21 Latest Release)
+## 🚀 Official Production Downloads (v2.0.3 Build 22 Latest Release)
 
 | Package / Distribution        | Target Operating System           |  Architecture  |                                                             Direct Download Link                                                              |
 | :---------------------------- | :-------------------------------- | :------------: | :-------------------------------------------------------------------------------------------------------------------------------------------: |
-| **Windows Desktop Installer** | Windows 10 / 11                   |      x64       | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX.MIDIKEY_2.0.2_x64-setup.exe) |
+| **Windows Desktop Installer** | Windows 10 / 11                   |      x64       | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX.MIDIKEY_2.0.3_x64-setup.exe) |
 | **Android Package (APK)**     | Android 8.0+ (Oreo to Android 15) | ARM64 / x86_64 |        [⬇️ Download Android APK (`.apk`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/wilsonix-midikey.apk)         |
 
 _Official binaries and checksums are verified and hosted on the [GitHub Releases page](https://github.com/ewceniza9009/wilsonixmidi/releases)._
@@ -43,7 +43,35 @@ _For the full deep-dive, see the [Master Feature Catalog](#-master-feature-catal
 
 ---
 
-## 📑 Granular Changelog & Release Notes (v2.0.2 • Build 21)
+## 📑 Granular Changelog & Release Notes (v2.0.3 • Build 22)
+
+### 1. 🎚️ Universal Equal Volume & Loudness Normalization Across ALL Presets
+
+- **Hardware-Accurate Trim Gain Matrix**: Calibrated empirical trim gains across all soundbank categories in `native-pcm-engine.js`: Stickz Bloom EDM (`0.50–0.55`), Stickz Animal EDM (`0.50–0.65`), Abletunes Modern EDM (`0.60–0.68`), Synthesizer You leads (`0.65–0.78`), and SoundFonts (`0.85–1.0`).
+- **Dynamic Category Fallback**: `getInstrumentTrimGain(instId)` automatically applies safe category trims (leads/saws capped at `0.58`, pads at `0.65`, acoustic at `0.90`), guaranteeing newly registered or unlisted soundbanks never blast at raw 1.0 gain.
+- **Psychoacoustic Combi Layer Scaling**: Replaced linear $1/\sum\text{gain}$ with equal-power scaling $\min\left(1.0, \frac{1.35}{\sqrt{\sum\text{gain}}}\right)$ in `multi-layer-engine.js`. Multi-layer Combi stacks now match single-timbre presets within $\pm1.2\text{ dB}$ RMS without squashing.
+- **Transparent Studio AGC & Compressor Rebalancing**: Wired a non-linear studio loudness leveler directly preceding the master EQ in `fx-rack-manager.js` for artifact-free dynamic leveling. Rebalanced Triton workstation compressor auto make-up gain from excessive $+12\text{ dB}$ down to transparent unity restoration ($1.25$–$1.45$).
+- **Subtractive Synth Oscillator RMS Matching**: Calibrated square wave oscillators by $0.65$ in `synth-processor.js` and `triton-va-engine.js` to match sawtooth/triangle power density.
+
+### 2. 🔁 Studio-Grade Pitch-Synchronous Loop Sustain Engine
+
+- **Seamless Infinite Sustain on EDM Leads & Pads**: High-energy EDM samples (Bloom & Animal EDM leads, saws, plucks, and vocal chops) now loop smoothly without audible seams, clicks, or abrupt cutoffs while keys or sustain are held.
+- **Autocorrelation & Zero-Crossing Phase Locking**: `sample-loop-helper.js` detects the fundamental frequency period ($\tau$) in the sustain region and locks loop points to rising zero crossings aligned to whole period cycles.
+- **Equal-Power Crossfading**: $\cos/\sin$ crossfade envelope preserves constant RMS power through the turnaround, preventing volume dips or phase cancellation pops.
+
+### 3. ⏱️ Latency Popover Modal Sustain Controls Integration
+
+- **Live Duration Controls**: The Latency Popover modal sliders (`sustainHoldSec`, `sustainDecayTau`, `heldNoteSec`) are now dynamically piped through `pcm-worklet-node.js`, `pcm-processor.js`, and `native-pcm-engine.js`.
+- **Custom Sustain Tail Sculpting**: Performers can configure loop sustain hold time, exponential decay time constant, and maximum held note safety ceiling in real time.
+
+### 4. 🎹 Chord Pads & Rapid Glissando Voice Stability
+
+- **Glissando & Rapid Strum Protection**: Fixed rapid chord pad voice choking and fast keyboard sweeps so note-offs never unlatch `qwertyKeyboard.sustainLatched` or corrupt active sustain states.
+- **Limiter Pumping Prevention**: Eliminated ducking and pumping artifacts on dense 16-voice polyphonic chords.
+
+---
+
+## 📑 Prior Release Notes (v2.0.2 • Build 21)
 
 ### 1. 🎨 Pro Activation & Access Modal Redesign
 

@@ -270,6 +270,7 @@ const INST_TRIM_GAINS = {
   electric_piano_1: 0.85,
   abletunes_fm_piano: 0.85,
   electric_piano_2: 0.85,
+  rhodes_stage_mp3: 0.85,
   tri_stage_ep: 0.85,
   dx7_ep1: 0.85,
   triton_dyno_ep: 0.85,
@@ -352,6 +353,7 @@ const INST_TRIM_GAINS = {
   m1_bottle_bell: 0.95,
   m1_bell_ring: 0.95,
   m1_koto: 0.95,
+  m1_fresh_air: 0.70,
 
   // Hits & Stabs — transient, punchy
   tekk_hit1: 0.95,
@@ -365,21 +367,101 @@ const INST_TRIM_GAINS = {
   drum_hhclosed_r: 0.75,
   drum_hhopen_r: 0.78,
   drum_crash_r: 0.82,
+  tr808_kit: 0.85,
 
-  // SFX — moderate
+  // SFX & Nature Sounds
   applause: 0.70,
   concert_applause: 0.70,
   stadium_roar: 0.70,
   crowd_cheer: 0.70,
   ovation: 0.70,
-  breath_noise: 0.60,
+  breath_noise: 0.65,
   tubular_bells: 0.85,
   wind_chimes: 0.80,
   crystal_chimes: 0.80,
   gunshot: 0.90,
   taiko_drum: 0.90,
+  nature_thunder: 0.80,
+  nature_rain: 0.85,
+  nature_ocean: 0.85,
+  nature_birds: 0.85,
+  nature_wind: 0.85,
 
-  // Yamaha EOS instruments — pull sustained sounds back
+  // Human Voices & Vocal Chants
+  vox_yeah: 0.75,
+  vox_whoa: 0.75,
+  vox_hey: 0.75,
+  vox_beatbox: 0.78,
+
+  // Weird & Sci-Fi & Reggae/Dub SFX
+  fx_laser: 0.80,
+  fx_alien: 0.75,
+  fx_bionic: 0.75,
+  fx_scratch: 0.80,
+  fx_tapestop: 0.80,
+  fx_subboom: 0.75,
+  fx_airhorn: 0.75,
+  dub_siren: 0.75,
+  spring_splash: 0.80,
+  laser_zap: 0.80,
+  dub_horn: 0.75,
+  sub_boom: 0.75,
+  noise_riser: 0.75,
+
+  // Synthesizer You Signature Samples
+  analog_synth_bass_c2_sample: 0.65,
+  analog_synth_bass_riff: 0.65,
+  gated_snare_cannon_1: 0.80,
+  gated_snare_cannon_2: 0.75,
+  punchy_80s_kick_hit: 0.75,
+  slapback_vox_chop_1: 0.70,
+  slapback_vox_chop_2: 0.70,
+  slapback_vox_chop_3: 0.70,
+  slapback_vox_chop_4: 0.70,
+  slapback_vox_chop_10: 0.70,
+
+  // Stickz "Bloom" EDM Samples — hot 0dB mastered club samples trimmed to match acoustic reference
+  bloom_closer_lead: 0.52,
+  bloom_roses_lead: 0.52,
+  bloom_inside_out_lead: 0.52,
+  bloom_let_you_go_lead: 0.52,
+  bloom_wise_lead: 0.52,
+  bloom_paris_pad: 0.55,
+  bloom_knowledge_pad: 0.55,
+  bloom_breakdown_bass: 0.60,
+  bloom_all_we_know_pluck: 0.65,
+  bloom_flume_chord: 0.54,
+  bloom_chord_swell: 0.54,
+  bloom_drop_saw: 0.50,
+  bloom_glassy_pluck: 0.65,
+  bloom_punch_bass: 0.60,
+  bloom_vocal_stab: 0.62,
+  bloom_fm_pluck_bass: 0.60,
+
+  // Stickz "Animal" Festival EDM Samples
+  animal_drop_pluck_1: 0.62,
+  animal_festival_lead_1: 0.52,
+  animal_dutch_pluck: 0.62,
+  animal_anthem_drone: 0.50,
+  animal_punch_bass_1: 0.58,
+  animal_bounce_lead: 0.52,
+  animal_sub_drop_bass_1: 0.65,
+  animal_pluck_arp: 0.62,
+  animal_super_saw: 0.50,
+  animal_lead_stab: 0.54,
+  animal_bass_stab: 0.58,
+  animal_growl_bass: 0.55,
+  animal_dutch_synth: 0.52,
+  animal_chords_lead: 0.52,
+  animal_fx_downlifter_1: 0.75,
+  animal_fx_impact_1: 0.85,
+  animal_fx_riser_1: 0.75,
+
+  // Abletunes EDM Samples
+  abletunes_future_bass: 0.60,
+  abletunes_pluck: 0.68,
+
+  // Yamaha EOS instruments
   eos_dreamn: 0.60,
   eos_deeproads: 0.65,
   eos_oldroads: 0.65,
@@ -417,6 +499,8 @@ const INST_TRIM_GAINS = {
   eos_mg_square: 0.72,
   eos_slow_strings: 0.58,
   eos_oct_brass: 0.70,
+
+  // EDM Club Bank instruments
   edm_house_piano: 0.85,
   korg_techno_organ: 0.75,
   edm_river_bass1: 0.85,
@@ -442,6 +526,38 @@ const INST_TRIM_GAINS = {
   omega_saw_gs: 0.75,
   omega_doctor_solo: 0.75,
 };
+
+/**
+ * Universal instrument loudness trim resolver.
+ * Ensures every instrument (preset or soundfont) receives a calibrated trim gain
+ * with an intelligent category fallback so no sound ever falls through to uncalibrated 1.0.
+ */
+export function getInstrumentTrimGain(instId) {
+  if (!instId) return 0.85;
+  const id = String(instId).toLowerCase();
+  if (INST_TRIM_GAINS[id] !== undefined) return INST_TRIM_GAINS[id];
+  if (INST_TRIM_GAINS[instId] !== undefined) return INST_TRIM_GAINS[instId];
+
+  // Smart category-based fallback
+  if (id.startsWith("bloom_") || id.startsWith("animal_") || id.startsWith("edm_") || id.startsWith("omega_")) {
+    if (id.includes("pluck") || id.includes("arp")) return 0.64;
+    if (id.includes("bass") || id.includes("sub")) return 0.62;
+    if (id.includes("pad") || id.includes("chord") || id.includes("swell")) return 0.56;
+    if (id.includes("fx") || id.includes("impact") || id.includes("riser") || id.includes("downlifter")) return 0.78;
+    return 0.54; // Hot-mastered EDM leads & saws
+  }
+  if (id.includes("piano") || id.includes("rhodes") || id.includes("roads") || id.includes("cp80") || id.includes("ep")) return 0.85;
+  if (id.includes("string") || id.includes("pad") || id.includes("choir") || id.includes("voice") || id.includes("ooh") || id.includes("vox")) return 0.56;
+  if (id.includes("organ")) return 0.60;
+  if (id.includes("brass") || id.includes("horn")) return 0.72;
+  if (id.includes("sax") || id.includes("reed")) return 0.76;
+  if (id.includes("guitar")) return 0.88;
+  if (id.includes("bass")) return 0.82;
+  if (id.includes("bell") || id.includes("chime") || id.includes("vib") || id.includes("kalimba") || id.includes("koto")) return 0.95;
+  if (id.includes("drum") || id.includes("kit") || id.includes("hit") || id.includes("percussion")) return 0.88;
+  if (id.includes("flute") || id.includes("clarinet")) return 0.88;
+  return 0.80; // Safe workstation reference
+}
 
 export function noteNameToMidi(noteStr) {
   const match = noteStr.match(/^([A-G][b#]?)([0-9])$/);
@@ -1482,6 +1598,9 @@ export class NativePcmEngine {
     this.sustainedVoices = new Map();
 
     this.sustainPedal = false;
+    this.sustainHoldSec = 7.0;
+    this.sustainDecayTau = 2.4;
+    this.heldNoteSec = 15.0;
     this.pitchBendSemitones = 0;
     this.modWheelAmount = 0;
 
@@ -2430,7 +2549,7 @@ export class NativePcmEngine {
         this.pcmWorkletNode._loadedBuffers.add(bufKey);
       }
 
-      const trim = INST_TRIM_GAINS[instId] || 1.0;
+      const trim = getInstrumentTrimGain(instId);
       const dynamicAmp = Math.pow(velNorm, 1.25);
       const peakGain = (0.1 + dynamicAmp * 0.9) * customGain * trim;
       const [isSax, isChoirTimbre] = this._instTimbre(instId);
@@ -2727,7 +2846,7 @@ export class NativePcmEngine {
     filter.frequency.setValueAtTime(keyTrackedCutoff, now);
     filter.Q.setValueAtTime(0.35, now);
 
-    const trim = INST_TRIM_GAINS[instId] || 1.0;
+    const trim = getInstrumentTrimGain(instId);
     const dynamicAmp = Math.pow(velNorm, 1.25);
     const peakGain = (0.1 + dynamicAmp * 0.9) * customGain * trim;
 
@@ -2739,6 +2858,15 @@ export class NativePcmEngine {
       anchorData.buffer && anchorData.buffer._isLoopable
         ? 60.0
         : Math.min(8.0, (anchorData.buffer?.duration || 4.0) + 0.1);
+
+    // Natural decay for non-loopable samples: fade out smoothly over the last 120ms
+    // to prevent abrupt brickwall cutoffs and clicks when holding keys
+    if (!anchorData.buffer?._isLoopable && maxLife > 0.2) {
+      const fadeStart = Math.max(now + 0.05, now + maxLife - 0.12);
+      voiceGain.gain.setValueAtTime(peakGain, fadeStart);
+      voiceGain.gain.setTargetAtTime(0.0, fadeStart, 0.035);
+    }
+
     try {
       src.stop(now + maxLife);
     } catch (e) {}
@@ -2760,21 +2888,11 @@ export class NativePcmEngine {
       velNorm,
       startTime: now,
       _isRemoved: false,
+      _isRecycled: false,
     };
 
     while (this.voiceQueue.length >= this.MAX_VOICES) {
-      // Smart voice stealing — never chop a still-held sustained note if a
-      // released tail (a note released but still ringing out) is available.
-      // Stealing a held chord note mid-sustain is what produced the audible
-      // "null/choppy dropped note" + burning-crackle: the sustain is abruptly
-      // sliced and the cut punches straight into the master limiter.
-      // Released tails are already decaying to silence, so stealing one is
-      // essentially inaudible — preference order:
-      //   1. a released tail (not in heldNotes): steal the deepest into release
-      //      (oldest start). Cutting these costs nothing perceptible.
-      //   2. only if EVERY voice is held: steal the oldest as a last resort.
-      // Single O(n) pass — no temporary array allocation, no GC churn during
-      // sustained dense playing (organs/pads love doing this).
+      // Smart voice stealing — prioritize released tails first
       let target = null;
       let bestScore = Infinity;
       let oldest = null;
@@ -2801,44 +2919,14 @@ export class NativePcmEngine {
       if (!target) target = oldest;
       if (!target) break;
       try {
-        const tIsChoir =
-          target.instId === "choir_aahs" ||
-          target.instId === "m1_choir" ||
-          target.instId === "m1_ooh_ahh" ||
-          target.instId?.includes("choir") ||
-          target.instId?.includes("voice") ||
-          target.instId?.includes("vox");
-        const tIsString =
-          target.instId === "string_ensemble_1" ||
-          target.instId?.includes("string") ||
-          target.instId?.includes("pad") ||
-          target.instId?.includes("saw") ||
-          target.instId?.includes("extacy") ||
-          target.instId?.includes("vocoder") ||
-          target.instId?.includes("dreamn") ||
-          target.instId?.includes("synth") ||
-          target.instId?.includes("lead");
-        const tIsSax =
-          target.instId === "alto_sax" ||
-          target.instId?.includes("sax") ||
-          target.instId?.includes("reed") ||
-          target.instId?.includes("flute");
-        const tIsPiano =
-          target.instId?.includes("piano") ||
-          target.instId?.includes("roads") ||
-          target.instId?.includes("cp80") ||
-          target.instId?.includes("grand") ||
-          target.instId?.includes("clavi") ||
-          target.instId?.includes("ep");
-        const tTau = tIsChoir ? 0.15 : tIsString ? 0.18 : tIsSax ? 0.10 : tIsPiano ? 0.06 : 0.08;
-        const tStop = tIsChoir ? 0.6 : tIsString ? 0.8 : tIsSax ? 0.35 : tIsPiano ? 0.25 : 0.3;
+        // Quick 5ms clickless ramp down before stopping stolen voice
         target.voiceGain.gain.cancelScheduledValues(now);
         target.voiceGain.gain.setValueAtTime(
           target.voiceGain.gain.value || 0.0,
           now,
         );
-        target.voiceGain.gain.setTargetAtTime(0.0, now, tTau);
-        if (target.src) target.src.stop(now + tStop);
+        target.voiceGain.gain.setTargetAtTime(0.0, now, 0.005);
+        if (target.src) target.src.stop(now + 0.025);
       } catch (e) {}
       this._removeFromTracking(target.midiNote, target);
       const stlMidiNote = target.midiNote;
@@ -2865,6 +2953,7 @@ export class NativePcmEngine {
   removeVoice(midiNote, voiceRecord) {
     if (!voiceRecord || voiceRecord._isRemoved) return;
     voiceRecord._isRemoved = true;
+    voiceRecord._isRecycled = true;
     if (voiceRecord.src) {
       try {
         voiceRecord.src.onended = null;
@@ -2891,10 +2980,15 @@ export class NativePcmEngine {
       if (voiceRecord.filter) voiceRecord.filter.disconnect();
       if (voiceRecord.voiceGain) voiceRecord.voiceGain.disconnect();
       if (this._voiceNodePool.length < this.MAX_VOICES) {
-        this._voiceNodePool.push({
-          filter: voiceRecord.filter,
-          voiceGain: voiceRecord.voiceGain,
-        });
+        const isDuplicate = this._voiceNodePool.some(
+          p => p.filter === voiceRecord.filter || p.voiceGain === voiceRecord.voiceGain
+        );
+        if (!isDuplicate) {
+          this._voiceNodePool.push({
+            filter: voiceRecord.filter,
+            voiceGain: voiceRecord.voiceGain,
+          });
+        }
       }
     } catch (e) {}
   }
@@ -2920,15 +3014,24 @@ export class NativePcmEngine {
   _disconnectAndRecycle(midiNote, voiceRecord) {
     if (!voiceRecord || voiceRecord._isRecycled) return;
     voiceRecord._isRecycled = true;
+    voiceRecord._isRemoved = true;
     try {
-      if (voiceRecord.src) voiceRecord.src.disconnect();
+      if (voiceRecord.src) {
+        voiceRecord.src.onended = null;
+        voiceRecord.src.disconnect();
+      }
       if (voiceRecord.filter) voiceRecord.filter.disconnect();
       if (voiceRecord.voiceGain) voiceRecord.voiceGain.disconnect();
       if (this._voiceNodePool.length < this.MAX_VOICES) {
-        this._voiceNodePool.push({
-          filter: voiceRecord.filter,
-          voiceGain: voiceRecord.voiceGain,
-        });
+        const isDuplicate = this._voiceNodePool.some(
+          p => p.filter === voiceRecord.filter || p.voiceGain === voiceRecord.voiceGain
+        );
+        if (!isDuplicate) {
+          this._voiceNodePool.push({
+            filter: voiceRecord.filter,
+            voiceGain: voiceRecord.voiceGain,
+          });
+        }
       }
     } catch (e) {}
   }
@@ -2984,6 +3087,19 @@ export class NativePcmEngine {
         } catch (e) {}
       });
     });
+  }
+
+  updateSustainSettings(sustainHoldSec, sustainDecayTau, heldNoteSec) {
+    if (Number.isFinite(sustainHoldSec)) this.sustainHoldSec = sustainHoldSec;
+    if (Number.isFinite(sustainDecayTau)) this.sustainDecayTau = sustainDecayTau;
+    if (Number.isFinite(heldNoteSec)) this.heldNoteSec = heldNoteSec;
+    if (this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
+      this.pcmWorkletNode.setSustainSettings(
+        this.sustainHoldSec,
+        this.sustainDecayTau,
+        this.heldNoteSec
+      );
+    }
   }
 
   setSustainPedal(isDown, when = 0) {
@@ -3122,12 +3238,24 @@ export class NativePcmEngine {
           if (!this.sustainedVoices.has(midiNote))
             this.sustainedVoices.set(midiNote, []);
           this.sustainedVoices.get(midiNote).push(v);
+
+          // Auto-release timeout governed by sustainHoldSec from latency popover modal
+          const holdSec = this.sustainHoldSec || 7.0;
+          const releaseTau = Math.min(0.8, (this.sustainDecayTau || 2.4) * 0.25);
+          const stopAt = now + holdSec;
+          try {
+            v.voiceGain.gain.setValueAtTime(v.voiceGain.gain.value || 0.0, stopAt);
+            v.voiceGain.gain.setTargetAtTime(0, stopAt, releaseTau);
+            v.src.stop(stopAt + releaseTau * 4);
+          } catch (e) {}
+
           try {
             let totalSus = 0;
             this.sustainedVoices.forEach((list) => {
               totalSus += list.length;
             });
-            while (totalSus > 96) {
+            const maxSus = 32;
+            while (totalSus > maxSus) {
               let oldest = null;
               let oldestKey = null;
               for (const [key, list] of this.sustainedVoices) {
@@ -3140,16 +3268,16 @@ export class NativePcmEngine {
               if (!oldest) break;
               oldest.voiceGain.gain.cancelScheduledValues(now);
               oldest.voiceGain.gain.setValueAtTime(oldest.voiceGain.gain.value || 0.0, now);
-              oldest.voiceGain.gain.setTargetAtTime(0, now, 0.05);
-              oldest.src.stop(now + 0.18);
+              oldest.voiceGain.gain.setTargetAtTime(0, now, 0.015);
+              oldest.src.stop(now + 0.05);
               if (oldest.vibLfo) {
                 try {
-                  oldest.vibLfo.stop(now + 0.16);
+                  oldest.vibLfo.stop(now + 0.05);
                 } catch (e) {}
               }
               if (oldest.growlLfo) {
                 try {
-                  oldest.growlLfo.stop(now + 0.16);
+                  oldest.growlLfo.stop(now + 0.05);
                 } catch (e) {}
               }
               this._removeFromTracking(oldestKey, oldest);
@@ -3242,6 +3370,52 @@ export class NativePcmEngine {
             }
           } catch (e) {}
         }
+      } else {
+        remaining.push(v);
+      }
+    });
+
+    if (remaining.length > 0) this.activeVoices.set(midiNote, remaining);
+    else this.activeVoices.delete(midiNote);
+  }
+
+  fastStopNote(instId, midiNote, when = 0) {
+    this.heldNotes.delete(midiNote);
+
+    if (this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
+      this.pcmWorkletNode.noteOff(midiNote);
+      return;
+    }
+
+    const voices = this.activeVoices.get(midiNote);
+    if (!voices || voices.length === 0) return;
+
+    const ctx = this.ctx;
+    const now = when > 0 ? Math.max(when, ctx.currentTime) : ctx.currentTime;
+    const remaining = [];
+
+    voices.forEach((v) => {
+      if (!instId || v.instId === instId || !this.heldNotes.has(v.midiNote)) {
+        if (this.sustainPedal) {
+          if (!this.sustainedVoices.has(midiNote)) {
+            this.sustainedVoices.set(midiNote, []);
+          }
+          this.sustainedVoices.get(midiNote).push(v);
+          return;
+        }
+        try {
+          // Ultra-fast 6ms clickless fade for glissando sweeps & rapid chord transitions
+          v.voiceGain.gain.cancelScheduledValues(now);
+          v.voiceGain.gain.setValueAtTime(v.voiceGain.gain.value || 0.0, now);
+          v.voiceGain.gain.setTargetAtTime(0.0, now, 0.006);
+          v.src.stop(now + 0.025);
+          if (v.vibLfo) {
+            try { v.vibLfo.stop(now + 0.025); } catch (e) {}
+          }
+          if (v.growlLfo) {
+            try { v.growlLfo.stop(now + 0.025); } catch (e) {}
+          }
+        } catch (e) {}
       } else {
         remaining.push(v);
       }

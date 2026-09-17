@@ -802,6 +802,14 @@ export class MultiLayerEngine {
     if (key === "sustainDecayTau" && this._workletReady && this._workletNode) {
       try { this._workletNode.setParam("sustainTau", s.sustainDecayTau); } catch (e) {}
     }
+    if (key === "sustainHoldSec" || key === "sustainDecayTau" || key === "heldNoteSec") {
+      if (this._pcmWorkletNode && this._pcmWorkletNode.setSustainSettings) {
+        this._pcmWorkletNode.setSustainSettings(s.sustainHoldSec, s.sustainDecayTau, s.heldNoteSec);
+      }
+      if (this.pcmEngine && this.pcmEngine.updateSustainSettings) {
+        this.pcmEngine.updateSustainSettings(s.sustainHoldSec, s.sustainDecayTau, s.heldNoteSec);
+      }
+    }
     if (key === "theme") {
       document.documentElement.setAttribute("data-theme", s.theme);
     }
@@ -981,12 +989,25 @@ export class MultiLayerEngine {
     if (this.pcmEngine) {
       this.pcmEngine.MAX_VOICES = this.settings.polyphonyCap;
       this.pcmEngine._sustainSettings = this.settings;
+      if (this.pcmEngine.updateSustainSettings) {
+        this.pcmEngine.updateSustainSettings(
+          this.settings.sustainHoldSec,
+          this.settings.sustainDecayTau,
+          this.settings.heldNoteSec
+        );
+      }
       this.syncLayerFx();
       this.syncSplitFx();
     }
     // Thread sustain settings to VA engines
     tritonVaEngine._sustainSettings = this.settings;
     this._vaEngines.forEach(eng => { eng._sustainSettings = this.settings; });
+
+    // Lazily attempt AudioWorklet initialization in background on user audio start
+    if (!this._workletReady && !this._workletInitAttempted && audioCore.ctx) {
+      this._workletInitAttempted = true;
+      this._initWorklet().catch(() => {});
+    }
   }
 
   async _initWorklet() {
@@ -1031,9 +1052,21 @@ export class MultiLayerEngine {
       const pcmOk = await this._pcmWorkletNode.init();
       if (pcmOk) {
         this._pcmWorkletReady = true;
+        this._pcmWorkletNode.setSustainSettings(
+          this.settings.sustainHoldSec,
+          this.settings.sustainDecayTau,
+          this.settings.heldNoteSec
+        );
         // Connect to NativePcmEngine so playNote routes to worklet
         if (this.pcmEngine) {
           this.pcmEngine.pcmWorkletNode = this._pcmWorkletNode;
+          if (this.pcmEngine.updateSustainSettings) {
+            this.pcmEngine.updateSustainSettings(
+              this.settings.sustainHoldSec,
+              this.settings.sustainDecayTau,
+              this.settings.heldNoteSec
+            );
+          }
         }
         // Pre-load decoded sample buffers into worklet
         this._loadBuffersToWorklet();
@@ -1610,11 +1643,9 @@ export class MultiLayerEngine {
 
       // Pro Combi Mixer Auto-Headroom: scale each layer so the summed output
       // matches single-instrument reference level regardless of how many layers
-      // are active or what their individual gains are.  The old 1/sqrt(N) formula
-      // didn't account for layer gains — a 4-layer preset with gains [1, .85, .85, .7]
-      // summed to 1.7× single-instrument level (too loud), while a single-layer preset
-      // at gain 0.65 summed to 0.65× (whisper).  New formula: combiScale = 1/Σgains,
-      // preserving each layer's relative mix while normalising total to 1.0.
+      // are active or what their individual gains are. Multi-instrument summing is
+      // psychoacoustically incoherent, so dividing by linear sum severely under-powers
+      // 3- and 4-layer combis. 1.35 / sqrt(totalLayerGain) perfectly equalizes loudness.
       let totalLayerGain = 0;
       for (let i = 0; i < this.layers.length; i++) {
         const layer = this.layers[i];
@@ -1622,7 +1653,12 @@ export class MultiLayerEngine {
         if (velocity < layer.minVel || velocity > layer.maxVel) continue;
         totalLayerGain += (layer.gain ?? 1.0);
       }
-      const combiScale = totalLayerGain > 0 ? (1.0 / totalLayerGain) : 1.0;
+      const combiScale = totalLayerGain > 0
+        ? Math.min(1.0, 1.35 / Math.sqrt(totalLayerGain))
+        : 1.0;
+      // Headroom protection for dense Combi chords & sweeps:
+      // Prevents 4-layer stacks from driving +20dB into the master limiter
+      const polyHeadroom = this.heldNotes.size > 2 ? Math.min(1.0, 1.45 / Math.sqrt(this.heldNotes.size)) : 1.0;
 
       // COMBI MODE: Synchronous sample-0 trigger on all enabled PCM layers
       for (let i = 0; i < this.layers.length; i++) {
@@ -1630,7 +1666,7 @@ export class MultiLayerEngine {
         if (!layer.enabled) continue;
         if (velocity < layer.minVel || velocity > layer.maxVel) continue;
 
-        const effectiveGain = (layer.gain ?? 1.0) * combiScale;
+        const effectiveGain = (layer.gain ?? 1.0) * combiScale * polyHeadroom;
         const transposedMidi = Math.max(21, Math.min(108, midiNote + layer.oct * 12));
         if (layer.vaProg) {
           // Live note → worklet (zero-jank), scheduled → main-thread VA
@@ -1747,6 +1783,48 @@ export class MultiLayerEngine {
         }
       } else {
         this.pcmEngine.stopNote(this.activeSingleInst, midiNote, when);
+      }
+    }
+  }
+
+  fastNoteOff(midiNote, when = 0) {
+    audioCore.ensureRunning();
+
+    if (this.onNoteChangeCallback) {
+      try { this.onNoteChangeCallback(midiNote, false, 0); } catch (e) {}
+    }
+    if (synthEngine.onNoteChangeCallback && synthEngine.onNoteChangeCallback !== this.onNoteChangeCallback) {
+      try { synthEngine.onNoteChangeCallback(midiNote, false, 0); } catch (e) {}
+    }
+
+    this.heldNotes.delete(midiNote);
+    this._clearHeldNoteTimer(midiNote);
+
+    if (this.pcmEngine) {
+      if (this.isCombiMode) {
+        for (let i = 0; i < this.layers.length; i++) {
+          const layer = this.layers[i];
+          const transposedMidi = Math.max(21, Math.min(108, midiNote + layer.oct * 12));
+          if (layer.vaProg) {
+            if (when === 0 && this._workletReady && this._workletNode) {
+              this._workletNode.noteOff(transposedMidi);
+            } else {
+              this.getVaEngineFor(layer.vaProg, layer.gain, i).noteOff(transposedMidi, when);
+            }
+          } else {
+            if (typeof this.pcmEngine.fastStopNote === "function") {
+              this.pcmEngine.fastStopNote(layer.inst, transposedMidi, when);
+            } else {
+              this.pcmEngine.stopNote(layer.inst, transposedMidi, when);
+            }
+          }
+        }
+      } else {
+        if (typeof this.pcmEngine.fastStopNote === "function") {
+          this.pcmEngine.fastStopNote(this.activeSingleInst, midiNote, when);
+        } else {
+          this.pcmEngine.stopNote(this.activeSingleInst, midiNote, when);
+        }
       }
     }
   }

@@ -6,6 +6,7 @@
 
 import { ANIMAL_EDM_BANKS } from "./animal-edm-manifest.js";
 import { sampleCache } from "./sample-cache.js";
+import { configureSustainLoop } from "./sample-loop-helper.js";
 import { logger } from "../utils/logger.js";
 
 class AnimalEdmSampleLoader {
@@ -62,6 +63,8 @@ class AnimalEdmSampleLoader {
         // Web Audio API decodeAudioData needs a copy of arrayBuf if used multiple times
         const audioBuf = await ctx.decodeAudioData(arrayBuf.slice(0));
         if (!audioBuf) return null;
+
+        configureSustainLoop(audioBuf, def.subCategory || def.category, instId);
 
         const noteMap = new Map();
         noteMap.set(def.rootMidi, audioBuf);

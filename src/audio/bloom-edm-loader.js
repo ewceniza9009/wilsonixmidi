@@ -6,6 +6,7 @@
 
 import { BLOOM_EDM_BANKS } from "./bloom-edm-manifest.js";
 import { sampleCache } from "./sample-cache.js";
+import { configureSustainLoop } from "./sample-loop-helper.js";
 import { logger } from "../utils/logger.js";
 
 class BloomEdmSampleLoader {
@@ -61,6 +62,8 @@ class BloomEdmSampleLoader {
 
         const audioBuf = await ctx.decodeAudioData(arrayBuf.slice(0));
         if (!audioBuf) return null;
+
+        configureSustainLoop(audioBuf, def.subCategory || def.category, instId);
 
         const noteMap = new Map();
         noteMap.set(def.rootMidi, audioBuf);

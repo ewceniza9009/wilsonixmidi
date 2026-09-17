@@ -46,6 +46,7 @@ class PcmWorkletVoice {
 
     // Pedal
     this.pedalHeld = false;
+    this.sustainStartTime = 0;
     this.sustainDecayRate = 0;
 
     // Low-pass filter (1-pole, cheap)
@@ -72,10 +73,10 @@ class PcmWorkletVoice {
     this.sampleBufferR = sampleBufferR;
     this.isStereo = !!(sampleBufferR);
     this.playbackPosition = 0;
-    this.playbackRate = playbackRate;
+    this.playbackRate = Number.isFinite(playbackRate) && playbackRate > 0 ? playbackRate : 1.0;
     this.startTime = 0;
     this.maxLife = maxLife || 8.0;
-    this.isLoopable = isLoopable;
+    this.isLoopable = !!isLoopable;
     this.loopStart = (loopStart || 0) * this.sampleRate;
     this.loopEnd = (loopEnd || 0) * this.sampleRate;
     this.envStage = 1;
@@ -85,16 +86,19 @@ class PcmWorkletVoice {
     this.sustainLevel = sustainLevel || 0.65;
     this.releaseTime = releaseTime || 0.15;
     this.filterCutoff = filterCutoff || 0.5;
-    this.filterPrevL = 0;
-    this.filterPrevR = 0;
+    // Smooth filter transition if stealing an active voice
+    this.filterPrevL = Number.isFinite(this.filterPrevL) ? this.filterPrevL * 0.15 : 0;
+    this.filterPrevR = Number.isFinite(this.filterPrevR) ? this.filterPrevR * 0.15 : 0;
     this.pedalHeld = false;
     this.held = true;
   }
 
-  noteOff(pedal) {
+  noteOff(pedal, currentTime = 0) {
     if (!this.active || this.envStage === 0) return;
     if (pedal) {
       this.pedalHeld = true;
+      this.held = false;
+      this.sustainStartTime = currentTime;
     } else {
       this.envStage = 4;
       this.held = false;
@@ -107,6 +111,7 @@ class PcmWorkletVoice {
     this.envLevel = 0;
     this.held = false;
     this.pedalHeld = false;
+    this.sustainStartTime = 0;
     this.sampleBufferL = null;
     this.sampleBufferR = null;
     this.filterPrevL = 0;
@@ -114,7 +119,7 @@ class PcmWorkletVoice {
   }
 
   readSample(position) {
-    if (!this.sampleBufferL) return 0;
+    if (!this.sampleBufferL || !Number.isFinite(position)) return 0;
     const len = this.sampleBufferL.length;
     const idx = position | 0;
     const frac = position - idx;
@@ -122,17 +127,20 @@ class PcmWorkletVoice {
       return this.sampleBufferL[len - 1] || 0;
     }
     if (idx < 0) return this.sampleBufferL[0] || 0;
-    return this.sampleBufferL[idx] * (1 - frac) + this.sampleBufferL[idx + 1] * frac;
+    const s = this.sampleBufferL[idx] * (1 - frac) + this.sampleBufferL[idx + 1] * frac;
+    return Number.isFinite(s) ? Math.max(-1.0, Math.min(1.0, s)) : 0;
   }
 
   readSampleR(position) {
     if (!this.isStereo || !this.sampleBufferR) return this.readSample(position);
+    if (!Number.isFinite(position)) return 0;
     const len = this.sampleBufferR.length;
     const idx = position | 0;
     const frac = position - idx;
     if (idx >= len - 1) return this.sampleBufferR[len - 1] || 0;
     if (idx < 0) return this.sampleBufferR[0] || 0;
-    return this.sampleBufferR[idx] * (1 - frac) + this.sampleBufferR[idx + 1] * frac;
+    const s = this.sampleBufferR[idx] * (1 - frac) + this.sampleBufferR[idx + 1] * frac;
+    return Number.isFinite(s) ? Math.max(-1.0, Math.min(1.0, s)) : 0;
   }
 }
 
@@ -163,8 +171,11 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
     // Held notes tracking for voice stealing
     this.heldNotes = new Set();
 
-    // Sustain pedal state
+    // Sustain pedal & voice duration state (configured via Latency/Performance modal)
     this.pedalDown = false;
+    this.sustainHoldSec = 7.0;
+    this.sustainDecayTau = 2.4;
+    this.heldNoteSec = 15.0;
 
     // Poly scale
     this.polyScale = 1.0;
@@ -190,6 +201,17 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
         break;
       case "loadBuffer":
         this.handleLoadBuffer(data);
+        break;
+      case "sustainSettings":
+        if (Number.isFinite(data.sustainHoldSec)) {
+          this.sustainHoldSec = Math.max(2.0, Math.min(60.0, data.sustainHoldSec));
+        }
+        if (Number.isFinite(data.sustainDecayTau)) {
+          this.sustainDecayTau = Math.max(0.5, Math.min(15.0, data.sustainDecayTau));
+        }
+        if (Number.isFinite(data.heldNoteSec)) {
+          this.heldNoteSec = Math.max(2.0, Math.min(60.0, data.heldNoteSec));
+        }
         break;
       case "sustain":
         this.pedalDown = !!data.down;
@@ -306,7 +328,7 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
       const v = this.voices[i];
       if (v.active && v.midiNote === midiNote) {
         if (layerIndex === undefined || layerIndex === null || v.layerIndex === layerIndex) {
-          v.noteOff(this.pedalDown);
+          v.noteOff(this.pedalDown, this.currentTime);
         }
       }
     }
@@ -367,6 +389,12 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
       const bufLen = voice.sampleBufferL ? voice.sampleBufferL.length : 0;
       if (bufLen === 0) { voice.forceStop(); continue; }
 
+      // Maximum voice lifetime guard: release voice after maxLife (60s loop, or duration)
+      if (voice.startTime > 0 && (this.currentTime - voice.startTime > voice.maxLife)) {
+        voice.forceStop();
+        continue;
+      }
+
       const attackRate = 1.0 / Math.max(0.001, voice.attackTime * this.sampleRate);
       const decayRate = 1.0 / Math.max(0.001, voice.decayTime * this.sampleRate);
       const releaseRate = 1.0 / Math.max(0.001, voice.releaseTime * this.sampleRate);
@@ -391,9 +419,20 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
             break;
           case 3: // Sustain
             if (voice.pedalHeld) {
-              voice.envLevel *= (1.0 - 0.0003);
-              if (voice.envLevel <= 0.001) {
-                voice.forceStop();
+              // 1. Auto-release timeout governed by sustainHoldSec from latency popover modal
+              if (voice.sustainStartTime > 0 && (this.currentTime - voice.sustainStartTime >= this.sustainHoldSec)) {
+                voice.pedalHeld = false;
+                voice.envStage = 4; // Smooth release
+                break;
+              }
+              // 2. Gentle natural tone decay governed by sustainDecayTau from latency popover modal
+              const decayPerSample = 1.0 / Math.max(0.001, this.sustainDecayTau * this.sampleRate * 6.0);
+              voice.envLevel = Math.max(0.02, voice.envLevel - decayPerSample);
+            } else if (voice.held) {
+              // 3. Key held without pedal: auto-release after heldNoteSec from latency popover modal
+              if (voice.startTime > 0 && (this.currentTime - voice.startTime >= this.heldNoteSec)) {
+                voice.held = false;
+                voice.envStage = 4; // Smooth release
                 break;
               }
             }
@@ -447,6 +486,17 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
         outL[i] += voice.filterPrevL * amp;
         outR[i] += voice.filterPrevR * amp;
       }
+    }
+
+    // Brickwall NaN / Infinity protection: prevent corrupted audio registers in downstream nodes
+    for (let i = 0; i < numFrames; i++) {
+      if (!Number.isFinite(outL[i])) outL[i] = 0;
+      else if (outL[i] > 1.5) outL[i] = 1.5;
+      else if (outL[i] < -1.5) outL[i] = -1.5;
+
+      if (!Number.isFinite(outR[i])) outR[i] = 0;
+      else if (outR[i] > 1.5) outR[i] = 1.5;
+      else if (outR[i] < -1.5) outR[i] = -1.5;
     }
 
     this.currentTime += numFrames * this.invSampleRate;
