@@ -1003,11 +1003,7 @@ export class MultiLayerEngine {
     tritonVaEngine._sustainSettings = this.settings;
     this._vaEngines.forEach(eng => { eng._sustainSettings = this.settings; });
 
-    // Lazily attempt AudioWorklet initialization in background on user audio start
-    if (!this._workletReady && !this._workletInitAttempted && audioCore.ctx) {
-      this._workletInitAttempted = true;
-      this._initWorklet().catch(() => {});
-    }
+
   }
 
   async _initWorklet() {
@@ -1170,7 +1166,7 @@ export class MultiLayerEngine {
 
   setSingleInstrument(instKey) {
     this.setSustainPedal(false);
-    if (this.pcmEngine) this.pcmEngine.allNotesOff();
+    if (this.pcmEngine) this.pcmEngine.allNotesOff(true);
     tritonVaEngine.allNotesOff();
     this.vaAllNotesOff();
     synthEngine.panic();
@@ -1209,7 +1205,7 @@ export class MultiLayerEngine {
 
   setDualLayerEnabled(enabled) {
     this.setSustainPedal(false);
-    if (this.pcmEngine) this.pcmEngine.allNotesOff();
+    if (this.pcmEngine) this.pcmEngine.allNotesOff(true);
     tritonVaEngine.allNotesOff();
     this.vaAllNotesOff();
     synthEngine.panic();
@@ -1273,7 +1269,7 @@ export class MultiLayerEngine {
 
   setSynthProgram(patchConfig) {
     this.setSustainPedal(false);
-    if (this.pcmEngine) this.pcmEngine.allNotesOff();
+    if (this.pcmEngine) this.pcmEngine.allNotesOff(true);
     tritonVaEngine.allNotesOff();
     this.vaAllNotesOff();
     synthEngine.panic();
@@ -1292,7 +1288,7 @@ export class MultiLayerEngine {
 
   setTritonVaProgram(prog) {
     this.setSustainPedal(false);
-    if (this.pcmEngine) this.pcmEngine.allNotesOff();
+    if (this.pcmEngine) this.pcmEngine.allNotesOff(true);
     tritonVaEngine.allNotesOff();
     this.vaAllNotesOff();
     synthEngine.panic();
@@ -1322,7 +1318,7 @@ export class MultiLayerEngine {
       this.isTritonVaMode = false;
       this.activeTritonVaProg = null;
       this.setSustainPedal(false);
-      if (this.pcmEngine) this.pcmEngine.allNotesOff();
+      if (this.pcmEngine) this.pcmEngine.allNotesOff(true);
       tritonVaEngine.allNotesOff();
       this.vaAllNotesOff();
       synthEngine.panic();
@@ -1347,7 +1343,7 @@ export class MultiLayerEngine {
     if (COMBI_PRESETS[presetId]) {
       // Force-clear sustain pedal first — prevents sustained voices bleeding into new preset
       this.setSustainPedal(false);
-      if (this.pcmEngine) this.pcmEngine.allNotesOff();
+      if (this.pcmEngine) this.pcmEngine.allNotesOff(true);
       tritonVaEngine.allNotesOff();
       this.vaAllNotesOff();
       synthEngine.panic();

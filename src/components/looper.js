@@ -297,6 +297,25 @@ export class ClipLooper {
       }
     };
 
+    if (typeof multiLayerEngine.fastNoteOff === "function") {
+      const origMlFastOff = multiLayerEngine.fastNoteOff.bind(multiLayerEngine);
+      multiLayerEngine.fastNoteOff = (note, when) => {
+        origMlFastOff(note, when);
+        if (this.recordingTrackId !== null && !multiLayerEngine._schedAuthor) {
+          const ctx = audioCore.ctx;
+          if (!ctx) return;
+          const offset = ctx.currentTime - this.recordStartTime;
+          if (offset >= 0) {
+            this.tracks[this.recordingTrackId].events.push({
+              type: "off",
+              note,
+              time: offset,
+            });
+          }
+        }
+      };
+    }
+
     multiLayerEngine.setSustainPedal = (down, when) => {
       origMlSus(down, when);
       if (this.recordingTrackId !== null && !multiLayerEngine._schedAuthor) {

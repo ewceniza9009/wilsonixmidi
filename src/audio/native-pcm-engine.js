@@ -1666,7 +1666,43 @@ export class NativePcmEngine {
 
   stopLooperNote(trackIndex, layerSlot, instId, midiNote, when = 0) {
     if (trackIndex < 0 || trackIndex > 3) return;
-    this.stopNote(instId, midiNote, when);
+    if (layerSlot < 0 || layerSlot > 3) return;
+    const bus = this.looperInserts[trackIndex]?.[layerSlot];
+    if (!bus) return;
+
+    const voices = this.activeVoices.get(midiNote);
+    if (!voices || voices.length === 0) return;
+
+    const ctx = this.ctx;
+    const now = when > 0 ? Math.max(when, ctx.currentTime) : ctx.currentTime;
+    const remaining = [];
+
+    voices.forEach((v) => {
+      // ONLY stop the voice that was played into THIS looper bus!
+      if (v.dest === bus.input && (!instId || v.instId === instId)) {
+        if (bus.sustainActive) {
+          bus.sustainedVoices.add(v);
+          return;
+        }
+        try {
+          v.voiceGain.gain.cancelScheduledValues(now);
+          v.voiceGain.gain.setValueAtTime(v.voiceGain.gain.value || 0.0, now);
+          v.voiceGain.gain.setTargetAtTime(0, now, 0.08);
+          v.src.stop(now + 0.35);
+          if (v.vibLfo) {
+            try { v.vibLfo.stop(now + 0.35); } catch (e) {}
+          }
+          if (v.growlLfo) {
+            try { v.growlLfo.stop(now + 0.35); } catch (e) {}
+          }
+        } catch (e) {}
+      } else {
+        remaining.push(v);
+      }
+    });
+
+    if (remaining.length > 0) this.activeVoices.set(midiNote, remaining);
+    else this.activeVoices.delete(midiNote);
   }
 
   setLooperTrackFx(trackIndex, layerSlot, fxId) {
@@ -2538,7 +2574,8 @@ export class NativePcmEngine {
       basePlaybackRate * Math.pow(2, this.pitchBendSemitones / 12);
 
     // === AudioWorklet path: route voice to audio thread (zero main-thread jank) ===
-    if (this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
+    // MUST NOT intercept when destOverride is set (e.g. looper track sub-buses) or when > 0 (scheduled playback)
+    if (!destOverride && when === 0 && this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
       const buf = anchorData.buffer;
 
       // On-demand buffer transfer: if a soundfont loaded after worklet init,
@@ -2630,11 +2667,13 @@ export class NativePcmEngine {
       if (oldList && oldList.length > 0) {
         const remaining = [];
         oldList.forEach((oldV) => {
+          const isSameDest = (oldV.dest === dest) || (!oldV.dest && !dest);
           const isSameLayer =
             layerIndex !== null &&
             layerIndex !== undefined &&
-            oldV.layerIndex === layerIndex;
-          const isSameInst = oldV.instId === instId;
+            oldV.layerIndex === layerIndex &&
+            isSameDest;
+          const isSameInst = oldV.instId === instId && isSameDest;
           if (isSameLayer || (layerIndex === null && isSameInst)) {
             try {
               const rIsChoir =
@@ -2720,7 +2759,13 @@ export class NativePcmEngine {
     if (this.sustainedVoices.has(midiNote)) {
       const susList = this.sustainedVoices.get(midiNote);
       if (susList && susList.length > 0) {
+        const remainingSus = [];
         susList.forEach((oldV) => {
+          const isSameDest = (oldV.dest === dest) || (!oldV.dest && !dest);
+          if (!isSameDest) {
+            remainingSus.push(oldV);
+            return;
+          }
           try {
               const rsIsChoir =
                 oldV.instId === "choir_aahs" ||
@@ -2794,7 +2839,8 @@ export class NativePcmEngine {
             this._disconnectAndRecycle(rn, rv);
           }
         });
-        this.sustainedVoices.delete(midiNote);
+        if (remainingSus.length > 0) this.sustainedVoices.set(midiNote, remainingSus);
+        else this.sustainedVoices.delete(midiNote);
       }
     }
 
@@ -3214,9 +3260,8 @@ export class NativePcmEngine {
     this.heldNotes.delete(midiNote);
 
     // AudioWorklet path: forward to audio thread
-    if (this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
+    if (this.pcmWorkletNode && this.pcmWorkletNode.isReady && when === 0) {
       this.pcmWorkletNode.noteOff(midiNote);
-      return;
     }
 
     const voices = this.activeVoices.get(midiNote);
@@ -3382,9 +3427,8 @@ export class NativePcmEngine {
   fastStopNote(instId, midiNote, when = 0) {
     this.heldNotes.delete(midiNote);
 
-    if (this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
+    if (this.pcmWorkletNode && this.pcmWorkletNode.isReady && when === 0) {
       this.pcmWorkletNode.noteOff(midiNote);
-      return;
     }
 
     const voices = this.activeVoices.get(midiNote);
@@ -3484,19 +3528,21 @@ export class NativePcmEngine {
     silence(this.sustainedVoices);
   }
 
-  allNotesOff() {
+  allNotesOff(preserveLooper = false) {
     this.sustainPedal = false;
 
     // AudioWorklet path
     if (this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
       this.pcmWorkletNode.allNotesOff();
-      return;
     }
 
     const now = this.ctx.currentTime;
 
     const killVoice = (v) => {
       if (!v) return;
+      if (preserveLooper && this._findLooperBusByDest(v.dest)) {
+        return; // Retain active playing looper voice!
+      }
       try {
         if (v.src) v.src.onended = null;
         if (v.voiceGain) {
@@ -3528,12 +3574,39 @@ export class NativePcmEngine {
       } catch (e) {}
     };
 
-    this.activeVoices.forEach((list) => list.forEach(killVoice));
-    this.sustainedVoices.forEach((list) => list.forEach(killVoice));
-    this.voiceQueue.forEach(killVoice);
+    if (preserveLooper) {
+      this.activeVoices.forEach((list, midi) => {
+        const remaining = [];
+        list.forEach((v) => {
+          if (this._findLooperBusByDest(v.dest)) {
+            remaining.push(v);
+          } else {
+            killVoice(v);
+          }
+        });
+        if (remaining.length > 0) this.activeVoices.set(midi, remaining);
+        else this.activeVoices.delete(midi);
+      });
 
-    this.activeVoices.clear();
-    this.sustainedVoices.clear();
+      this.sustainedVoices.forEach((list, midi) => {
+        const remaining = [];
+        list.forEach((v) => {
+          if (this._findLooperBusByDest(v.dest)) {
+            remaining.push(v);
+          } else {
+            killVoice(v);
+          }
+        });
+        if (remaining.length > 0) this.sustainedVoices.set(midi, remaining);
+        else this.sustainedVoices.delete(midi);
+      });
+    } else {
+      this.activeVoices.forEach((list) => list.forEach(killVoice));
+      this.sustainedVoices.forEach((list) => list.forEach(killVoice));
+      this.activeVoices.clear();
+      this.sustainedVoices.clear();
+    }
+
     this.heldNotes.clear();
     this.voiceQueue.length = 0;
 
@@ -3551,7 +3624,7 @@ export class NativePcmEngine {
         } catch (e) {}
       });
     }
-    if (this.looperInserts) {
+    if (this.looperInserts && !preserveLooper) {
       this.looperInserts.forEach((trackBuses) => {
         trackBuses.forEach((ins) => {
           try {
