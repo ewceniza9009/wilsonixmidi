@@ -248,7 +248,7 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
       }
     }
 
-    // Allocate voice: prefer free, then released, then oldest
+    // Allocate voice: prefer free, then released, then oldest non-held, then oldest
     let voice = null;
     for (let i = 0; i < MAX_VOICES; i++) {
       if (!this.voices[i].active) { voice = this.voices[i]; break; }
@@ -259,14 +259,17 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
       }
     }
     if (!voice) {
-      voice = this.voices[0];
-      let oldest = voice.startTime;
-      for (let i = 1; i < MAX_VOICES; i++) {
-        if (this.voices[i].startTime < oldest) {
-          voice = this.voices[i];
-          oldest = voice.startTime;
-        }
+      let bestTarget = null;
+      let bestTime = Infinity;
+      let oldest = null;
+      let oldestTime = Infinity;
+      for (let i = 0; i < MAX_VOICES; i++) {
+        const v = this.voices[i];
+        const t = v.startTime || 0;
+        if (t < oldestTime) { oldest = v; oldestTime = t; }
+        if (!this.heldNotes.has(v.midiNote) && t < bestTime) { bestTarget = v; bestTime = t; }
       }
+      voice = bestTarget || oldest;
     }
 
     voice.noteOn(instId, midiNote, velocity, gain, layerIndex,

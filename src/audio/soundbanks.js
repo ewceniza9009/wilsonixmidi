@@ -5,7 +5,12 @@
  * module (or re-export via multi-layer-engine.js) instead of re-declaring the map.
  */
 
+import { ANIMAL_EDM_BANKS } from "./animal-edm-manifest.js";
+import { BLOOM_EDM_BANKS } from "./bloom-edm-manifest.js";
+
 export const HD_SOUNDBANKS = {
+  ...ANIMAL_EDM_BANKS,
+  ...BLOOM_EDM_BANKS,
   acoustic_grand_piano: { id: "acoustic_grand_piano", name: "Velo Piano Concert Grand", category: "Acoustic Piano" },
   electric_piano_1: { id: "electric_piano_1", name: "Triton Suit. & Stage EP", category: "Electric Piano" },
   rhodes_stage_mp3: { id: "rhodes_stage_mp3", name: "Stage Rhodes 73 (Vintage Muir)", category: "Electric Piano" },

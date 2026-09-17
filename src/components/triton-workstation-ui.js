@@ -2318,19 +2318,20 @@ export class TritonWorkstationUI {
       fx.compressor?.setRelease(0.12);
       fx.compressor?.setMakeup(3.0);
       fx.masterEq?.setLowGain(2.5);
-    } else if (userType === "club_brass_rave") {
-      // Rave Synth Brass - Punch compression + gated plate
+    } else if (userType === "rave_brass_stab") {
+      // Rave Brass Stab - Heavy overdrive + short gated reverb for punch
       fx.tube?.setBypass(false);
-      fx.tube?.setDrive(0.18);
-      fx.tube?.setMix(0.25);
+      fx.tube?.setDrive(0.35);
+      fx.tube?.setMix(0.40);
       fx.compressor?.setBypass(false);
-      fx.compressor?.setThreshold(-16);
-      fx.compressor?.setRatio(4.0);
-      fx.compressor?.setAttack(0.008);
-      fx.compressor?.setMakeup(2.5);
-      fx.reverb?.setMix(0.22);
-      fx.reverb?.setDecay(1.8);
-      fx.masterEq?.setHighGain(0.8);
+      fx.compressor?.setThreshold(-14);
+      fx.compressor?.setRatio(5.0);
+      fx.compressor?.setAttack(0.004);
+      fx.compressor?.setMakeup(3.0);
+      fx.reverb?.setMix(0.18);
+      fx.reverb?.setDecay(0.8);
+      fx.masterEq?.setMidGain(1.5);
+      fx.masterEq?.setHighGain(0.5);
     } else if (userType === "k2500_oohs") {
       // Kurzweil K-2500 Voice Oohs - Shimmer chorus + deep cathedral
       fx.chorus?.setBypass(false);
@@ -2366,14 +2367,6 @@ export class TritonWorkstationUI {
       fx.reverb?.setMix(0.18);
       fx.reverb?.setDecay(1.4);
       fx.masterEq?.setMidGain(1.5);
-    } else if (userType === "dark_organ") {
-      // Dark Underground Organ - Subtle tube drive + dark studio plate
-      fx.tube?.setBypass(false);
-      fx.tube?.setDrive(0.18);
-      fx.tube?.setMix(0.25);
-      fx.reverb?.setMix(0.20);
-      fx.reverb?.setDecay(1.8);
-      fx.masterEq?.setMidGain(1.0);
     } else if (userType === "trance_synth") {
       // Euro Trance Synth - Stereo flanger + ping-pong delay + concert hall
       fx.flanger?.setBypass(false);
@@ -2558,6 +2551,35 @@ export class TritonWorkstationUI {
       fx.delay?.setFeedback(0.18);
       fx.reverb?.setMix(0.22);
       fx.reverb?.setDecay(1.6);
+
+    // ── DJ Legends: Iconic Presets ──
+    } else if (userType === "animals_pluck") {
+      // Martin Garrix Animals - Aggressive big room pluck + short room
+      fx.compressor?.setBypass(false);
+      fx.compressor?.setThreshold(-14);
+      fx.compressor?.setRatio(6.0);
+      fx.compressor?.setAttack(0.003);
+      fx.compressor?.setMakeup(3.0);
+      fx.tube?.setBypass(false);
+      fx.tube?.setDrive(0.22);
+      fx.tube?.setMix(0.30);
+      fx.reverb?.setMix(0.12);
+      fx.reverb?.setDecay(0.6);
+      fx.masterEq?.setMidGain(2.0);
+      fx.masterEq?.setHighGain(-0.5);
+    } else if (userType === "marshmello_lead") {
+      // Marshmello Happier - Bright future bass + shimmer reverb
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.28);
+      fx.chorus?.setRate(0.60);
+      fx.delay?.setBypass(false);
+      fx.delay?.setMix(0.18);
+      fx.delay?.setDivision(0.5);
+      fx.delay?.setFeedback(0.25);
+      fx.reverb?.setMix(0.30);
+      fx.reverb?.setDecay(2.5);
+      fx.masterEq?.setLowGain(0.5);
+      fx.masterEq?.setHighGain(1.0);
     }
   }
 }

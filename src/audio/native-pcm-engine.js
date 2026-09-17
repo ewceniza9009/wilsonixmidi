@@ -7,6 +7,8 @@ import { KORG_PCM_BANKS } from "./korg-pcm-data.js";
 import { YAMAHA_EOS_PCM_BANKS } from "./yamaha-eos-pcm-data.js";
 import { USER_BANK_PCM_BANKS } from "./user-bank-pcm-data.js";
 import { ABLETUNES_BANKS } from "./abletunes-manifest.js";
+import { animalEdmLoader } from "./animal-edm-loader.js";
+import { bloomEdmLoader } from "./bloom-edm-loader.js";
 import { SfxSoundGenerator } from "./sfx-sound-generator.js";
 import { sampleCache } from "./sample-cache.js";
 import { logger } from "../utils/logger.js";
@@ -1875,6 +1877,8 @@ export class NativePcmEngine {
     this.isReady = true;
     this.loadAbletunesInstrument("fm_piano");
     this.loadAbletunesInstrument("upright_piano");
+    animalEdmLoader.preloadTopShots(this.ctx, this.decodedBuffers);
+    bloomEdmLoader.preloadTopShots(this.ctx, this.decodedBuffers);
     const idlePreload = async () => {
       const coreInstruments = [
         "electric_piano_2",
@@ -1904,6 +1908,20 @@ export class NativePcmEngine {
       window.requestIdleCallback(() => idlePreload());
     } else {
       setTimeout(idlePreload, 1500);
+    }
+  }
+
+  preloadInstrument(instId) {
+    if (!instId || !this.ctx) return;
+    if (instId.startsWith("animal_")) {
+      animalEdmLoader.loadInstrument(instId, this.ctx, this.decodedBuffers);
+    } else if (instId.startsWith("bloom_")) {
+      bloomEdmLoader.loadInstrument(instId, this.ctx, this.decodedBuffers);
+    } else if (instId.startsWith("abletunes_")) {
+      const bankKey = instId === "abletunes_fm_piano" ? "fm_piano" : "upright_piano";
+      this.loadAbletunesInstrument(bankKey);
+    } else if (!this.decodedBuffers.has(instId)) {
+      this.loadSoundfont(instId);
     }
   }
 
@@ -2148,6 +2166,30 @@ export class NativePcmEngine {
       }
       const pianoMap = this.decodedBuffers.get("acoustic_grand_piano");
       return this.findAnchorInMap(pianoMap, targetMidi);
+    }
+
+    if (instId && instId.startsWith("animal_")) {
+      if (
+        !this.decodedBuffers.has(instId) ||
+        this.decodedBuffers.get(instId).size === 0
+      ) {
+        animalEdmLoader.loadInstrument(instId, this.ctx, this.decodedBuffers);
+        return null;
+      }
+      const instMap = this.decodedBuffers.get(instId);
+      return this.findAnchorInMap(instMap, targetMidi);
+    }
+
+    if (instId && instId.startsWith("bloom_")) {
+      if (
+        !this.decodedBuffers.has(instId) ||
+        this.decodedBuffers.get(instId).size === 0
+      ) {
+        bloomEdmLoader.loadInstrument(instId, this.ctx, this.decodedBuffers);
+        return null;
+      }
+      const instMap = this.decodedBuffers.get(instId);
+      return this.findAnchorInMap(instMap, targetMidi);
     }
 
     let instMap = this.decodedBuffers.get(instId);
@@ -2476,13 +2518,66 @@ export class NativePcmEngine {
           const isSameInst = oldV.instId === instId;
           if (isSameLayer || (layerIndex === null && isSameInst)) {
             try {
+              const rIsChoir =
+                oldV.instId === "choir_aahs" ||
+                oldV.instId === "m1_choir" ||
+                oldV.instId === "m1_ooh_ahh" ||
+                oldV.instId?.includes("choir") ||
+                oldV.instId?.includes("voice") ||
+                oldV.instId?.includes("vox");
+              const rIsString =
+                oldV.instId === "string_ensemble_1" ||
+                oldV.instId?.includes("string") ||
+                oldV.instId?.includes("pad") ||
+                oldV.instId?.includes("saw") ||
+                oldV.instId?.includes("extacy") ||
+                oldV.instId?.includes("vocoder") ||
+                oldV.instId?.includes("dreamn") ||
+                oldV.instId?.includes("synth") ||
+                oldV.instId?.includes("lead");
+              const rIsSax =
+                oldV.instId === "alto_sax" ||
+                oldV.instId?.includes("sax") ||
+                oldV.instId?.includes("reed") ||
+                oldV.instId?.includes("flute");
+              const rIsHit = oldV.instId?.includes("hit");
+              const rIsPiano =
+                oldV.instId?.includes("piano") ||
+                oldV.instId?.includes("roads") ||
+                oldV.instId?.includes("cp80") ||
+                oldV.instId?.includes("tx816") ||
+                oldV.instId?.includes("grand") ||
+                oldV.instId?.includes("clavi") ||
+                oldV.instId?.includes("ep");
+              const rTau = rIsChoir
+                ? 0.15
+                : rIsString
+                  ? 0.18
+                  : rIsSax
+                    ? 0.10
+                    : rIsHit
+                      ? 0.4
+                      : rIsPiano
+                        ? 0.06
+                        : 0.08;
+              const rStop = rIsChoir
+                ? 0.6
+                : rIsString
+                  ? 0.8
+                  : rIsSax
+                    ? 0.35
+                    : rIsHit
+                      ? 1.2
+                      : rIsPiano
+                        ? 0.25
+                        : 0.3;
               oldV.voiceGain.gain.cancelScheduledValues(now);
               oldV.voiceGain.gain.setValueAtTime(
                 oldV.voiceGain.gain.value || 0.0,
                 now,
               );
-              oldV.voiceGain.gain.setTargetAtTime(0.0, now, 0.025);
-              if (oldV.src) oldV.src.stop(now + 0.12);
+              oldV.voiceGain.gain.setTargetAtTime(0.0, now, rTau);
+              if (oldV.src) oldV.src.stop(now + rStop);
             } catch (e) {}
             this._removeFromTracking(midiNote, oldV);
             const rn = midiNote;
@@ -2508,13 +2603,66 @@ export class NativePcmEngine {
       if (susList && susList.length > 0) {
         susList.forEach((oldV) => {
           try {
+              const rsIsChoir =
+                oldV.instId === "choir_aahs" ||
+                oldV.instId === "m1_choir" ||
+                oldV.instId === "m1_ooh_ahh" ||
+                oldV.instId?.includes("choir") ||
+                oldV.instId?.includes("voice") ||
+                oldV.instId?.includes("vox");
+              const rsIsString =
+                oldV.instId === "string_ensemble_1" ||
+                oldV.instId?.includes("string") ||
+                oldV.instId?.includes("pad") ||
+                oldV.instId?.includes("saw") ||
+                oldV.instId?.includes("extacy") ||
+                oldV.instId?.includes("vocoder") ||
+                oldV.instId?.includes("dreamn") ||
+                oldV.instId?.includes("synth") ||
+                oldV.instId?.includes("lead");
+              const rsIsSax =
+                oldV.instId === "alto_sax" ||
+                oldV.instId?.includes("sax") ||
+                oldV.instId?.includes("reed") ||
+                oldV.instId?.includes("flute");
+              const rsIsHit = oldV.instId?.includes("hit");
+              const rsIsPiano =
+                oldV.instId?.includes("piano") ||
+                oldV.instId?.includes("roads") ||
+                oldV.instId?.includes("cp80") ||
+                oldV.instId?.includes("tx816") ||
+                oldV.instId?.includes("grand") ||
+                oldV.instId?.includes("clavi") ||
+                oldV.instId?.includes("ep");
+              const rsTau = rsIsChoir
+                ? 0.18
+                : rsIsString
+                  ? 0.22
+                  : rsIsSax
+                    ? 0.12
+                    : rsIsHit
+                      ? 0.5
+                      : rsIsPiano
+                        ? 0.08
+                        : 0.10;
+              const rsStop = rsIsChoir
+                ? 0.85
+                : rsIsString
+                  ? 1.0
+                  : rsIsSax
+                    ? 0.45
+                    : rsIsHit
+                      ? 1.5
+                      : rsIsPiano
+                        ? 0.4
+                        : 0.5;
             oldV.voiceGain.gain.cancelScheduledValues(now);
             oldV.voiceGain.gain.setValueAtTime(
               oldV.voiceGain.gain.value || 0.0,
               now,
             );
-            oldV.voiceGain.gain.setTargetAtTime(0.0, now, 0.04);
-            if (oldV.src) oldV.src.stop(now + 0.15);
+            oldV.voiceGain.gain.setTargetAtTime(0.0, now, rsTau);
+            if (oldV.src) oldV.src.stop(now + rsStop);
           } catch (e) {}
           this._removeFromTracking(midiNote, oldV);
           const rn = midiNote;
@@ -2641,13 +2789,44 @@ export class NativePcmEngine {
       if (!target) target = oldest;
       if (!target) break;
       try {
+        const tIsChoir =
+          target.instId === "choir_aahs" ||
+          target.instId === "m1_choir" ||
+          target.instId === "m1_ooh_ahh" ||
+          target.instId?.includes("choir") ||
+          target.instId?.includes("voice") ||
+          target.instId?.includes("vox");
+        const tIsString =
+          target.instId === "string_ensemble_1" ||
+          target.instId?.includes("string") ||
+          target.instId?.includes("pad") ||
+          target.instId?.includes("saw") ||
+          target.instId?.includes("extacy") ||
+          target.instId?.includes("vocoder") ||
+          target.instId?.includes("dreamn") ||
+          target.instId?.includes("synth") ||
+          target.instId?.includes("lead");
+        const tIsSax =
+          target.instId === "alto_sax" ||
+          target.instId?.includes("sax") ||
+          target.instId?.includes("reed") ||
+          target.instId?.includes("flute");
+        const tIsPiano =
+          target.instId?.includes("piano") ||
+          target.instId?.includes("roads") ||
+          target.instId?.includes("cp80") ||
+          target.instId?.includes("grand") ||
+          target.instId?.includes("clavi") ||
+          target.instId?.includes("ep");
+        const tTau = tIsChoir ? 0.15 : tIsString ? 0.18 : tIsSax ? 0.10 : tIsPiano ? 0.06 : 0.08;
+        const tStop = tIsChoir ? 0.6 : tIsString ? 0.8 : tIsSax ? 0.35 : tIsPiano ? 0.25 : 0.3;
         target.voiceGain.gain.cancelScheduledValues(now);
         target.voiceGain.gain.setValueAtTime(
           target.voiceGain.gain.value || 0.0,
           now,
         );
-        target.voiceGain.gain.setTargetAtTime(0.0, now, 0.02);
-        if (target.src) target.src.stop(now + 0.12);
+        target.voiceGain.gain.setTargetAtTime(0.0, now, tTau);
+        if (target.src) target.src.stop(now + tStop);
       } catch (e) {}
       this._removeFromTracking(target.midiNote, target);
       const stlMidiNote = target.midiNote;

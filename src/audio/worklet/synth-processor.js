@@ -136,6 +136,9 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
     this.pedalDown = false;
     this.sustainTau = 2.4;
 
+    // Held notes tracking for voice stealing
+    this.heldNotes = new Set();
+
     // MessagePort handling
     this.port.onmessage = e => {
       this.handleMessage(e.data);
@@ -178,6 +181,10 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
           this.voices[i].noteOff(this.pedalDown);
         }
       }
+      // Clean up heldNotes if no active voices remain for this note
+      if (!this.voices.some(v => v.active && v.note === data.note)) {
+        this.heldNotes.delete(data.note);
+      }
     } else if (data.type === "allNotesOff") {
       for (let i = 0; i < MAX_VOICES; i++) {
         this.voices[i].forceStop();
@@ -189,6 +196,7 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
     const cmd = status & 0xf0;
     if (cmd === 0x90 && velocity > 0) {
       // Note On
+      this.heldNotes.add(note);
       let voice = this.voices.find(v => v.active && v.note === note);
       if (!voice) {
         voice = this.voices.find(v => !v.active);
@@ -198,20 +206,24 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
         voice = this.voices.find(v => v.envStage === 4);
       }
       if (!voice) {
-        // Steal oldest active voice
-        voice = this.voices[0];
-        let oldest = voice.startTime;
-        for (let i = 1; i < MAX_VOICES; i++) {
-          if (this.voices[i].startTime < oldest) {
-            voice = this.voices[i];
-            oldest = voice.startTime;
-          }
+        // Steal oldest non-held first, then oldest overall
+        let bestTarget = null;
+        let bestTime = Infinity;
+        let oldest = this.voices[0];
+        let oldestTime = oldest.startTime;
+        for (let i = 0; i < MAX_VOICES; i++) {
+          const v = this.voices[i];
+          const t = v.startTime || 0;
+          if (t < oldestTime) { oldest = v; oldestTime = t; }
+          if (!this.heldNotes.has(v.note) && t < bestTime) { bestTarget = v; bestTime = t; }
         }
+        voice = bestTarget || oldest;
       }
       voice.noteOn(note, velocity, this.currentTime);
       this.port.postMessage({ type: "visual", note, on: true, vel: velocity });
     } else if (cmd === 0x80 || (cmd === 0x90 && velocity === 0)) {
       // Note Off
+      this.heldNotes.delete(note);
       for (let i = 0; i < MAX_VOICES; i++) {
         if (this.voices[i].active && this.voices[i].note === note) {
           this.voices[i].noteOff(this.pedalDown);
@@ -223,6 +235,7 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
       for (let i = 0; i < MAX_VOICES; i++) {
         this.voices[i].forceStop();
       }
+      this.heldNotes.clear();
     }
   }
 

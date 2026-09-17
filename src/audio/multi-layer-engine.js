@@ -72,6 +72,28 @@ export const COMBI_PRESETS = {
       { id: 3, name: "Korg M1 Fresh Air Shimmer", inst: "m1_fresh_air", fx: "spring_surf", gain: 0.50, pan: 0, oct: 1, minVel: 60, maxVel: 127, enabled: true },
     ],
   },
+  animal_festival_stack: {
+    id: "animal_festival_stack",
+    name: "🦁 Animal Festival Anthem (Drop Pluck + Festival Lead + Sub)",
+    category: "EDM Festival",
+    layers: [
+      { id: 0, name: "Animal Drop Pluck 1", inst: "animal_drop_pluck_1", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Animal Festival Lead 1", inst: "animal_festival_lead_1", fx: "reverb_hall", gain: 0.70, pan: 0, oct: 0, minVel: 30, maxVel: 127, enabled: true },
+      { id: 2, name: "Animal Sub Drop Bass", inst: "animal_sub_drop_bass_1", fx: "warm_eq", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Animal Bounce Lead", inst: "animal_bounce_lead", fx: "clean", gain: 0.60, pan: 0.05, oct: 1, minVel: 60, maxVel: 127, enabled: false },
+    ],
+  },
+  bloom_future_bass_stack: {
+    id: "bloom_future_bass_stack",
+    name: "🌸 Bloom Chainsmokers Anthem (Closer Lead + Inside Out + Paris Pad + Reese)",
+    category: "EDM Future Bass",
+    layers: [
+      { id: 0, name: "Bloom LEAD - Closer", inst: "bloom_closer_lead", fx: "reverb_hall", gain: 0.95, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 1, name: "Bloom LEAD - Inside Out", inst: "bloom_inside_out_lead", fx: "stereo_chorus", gain: 0.85, pan: 0.05, oct: 0, minVel: 20, maxVel: 127, enabled: true },
+      { id: 2, name: "Bloom PAD - Paris", inst: "bloom_paris_pad", fx: "clean", gain: 0.80, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      { id: 3, name: "Bloom BASS - Breakdown", inst: "bloom_breakdown_bass", fx: "warm_eq", gain: 0.90, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+    ],
+  },
   whitney_ballad: {
     id: "whitney_ballad",
     name: "★ Whitney 1992 - I Have Nothing (Foster Rig)",
@@ -1127,6 +1149,9 @@ export class MultiLayerEngine {
     this.activeTritonVaProg = null;
     const resolved = this.resolveBankKey(instKey);
     this.activeSingleInst = resolved;
+    if (this.pcmEngine) {
+      this.pcmEngine.preloadInstrument(resolved);
+    }
 
     // Synchronize Layer 0 with the active single instrument
     if (this.layers[0]) {
@@ -1205,6 +1230,9 @@ export class MultiLayerEngine {
         this.layers[1].inst = resolved;
         delete this.layers[1].vaProg;
         this.layers[1].name = HD_SOUNDBANKS[resolved]?.name || HD_SOUNDBANKS[instKey]?.name || resolved;
+      }
+      if (this.pcmEngine) {
+        this.pcmEngine.preloadInstrument(resolved);
       }
     }
     this.setDualLayerEnabled(true);
@@ -1305,6 +1333,8 @@ export class MultiLayerEngine {
         if (layer.inst && layer.inst.startsWith("va:")) {
           const prog = getTritonProgramById(layer.inst.slice(3));
           if (prog) layer.vaProg = prog;
+        } else if (layer.inst && this.pcmEngine) {
+          this.pcmEngine.preloadInstrument(this.resolveBankKey(layer.inst));
         }
       });
       this.init();
@@ -1381,6 +1411,9 @@ export class MultiLayerEngine {
         this.layers[layerIndex].inst = resolvedKey;
         delete this.layers[layerIndex].vaProg;
         this.layers[layerIndex].name = HD_SOUNDBANKS[resolvedKey]?.name || HD_SOUNDBANKS[instKey]?.name || instKey;
+        if (this.pcmEngine) {
+          this.pcmEngine.preloadInstrument(resolvedKey);
+        }
       }
       this.isCombiMode = true;
       this.isSynthMode = false;

@@ -16,7 +16,9 @@ export class GroovePlayerUI {
     this.container = document.getElementById(containerId);
     this.groovePlayer = new SampleGroovePlayer();
     this.sfxGen = null;
-    this.activeSfxCategory = "synthesizer_you"; // 'synthesizer_you' | 'crowd' | 'vox' | 'nature' | 'percussion' | 'dj' | 'weird'
+    this.activeSfxCategory = "bloom"; // 'bloom' | 'sax' | 'synthesizer_you' | 'crowd' | 'vox' | 'nature' | 'percussion' | 'dj' | 'weird'
+    this.activeBloomSources = new Map();
+    this.bloomBuffers = new Map();
 
     this.initSfx();
     this.render();
@@ -159,6 +161,7 @@ export class GroovePlayerUI {
 
             <!-- SFX Category Tabs -->
             <div class="sfx-cat-tabs">
+              <button class="sfx-cat-btn ${this.activeSfxCategory === "bloom" ? "active" : ""}" data-sfx-cat="bloom">🌸 BLOOM EDM</button>
               <button class="sfx-cat-btn ${this.activeSfxCategory === "sax" ? "active" : ""}" data-sfx-cat="sax">🎷 GENUINE SAX</button>
               <button class="sfx-cat-btn ${this.activeSfxCategory === "synthesizer_you" ? "active" : ""}" data-sfx-cat="synthesizer_you">🏄 SYNTH YOU FX</button>
               <button class="sfx-cat-btn ${this.activeSfxCategory === "crowd" ? "active" : ""}" data-sfx-cat="crowd">👏 CONCERT CROWD</button>
@@ -182,6 +185,12 @@ export class GroovePlayerUI {
 
   renderSfxPads() {
     const sfxMap = {
+      bloom: [
+        { id: "bloom_stem_vocal_chops", icon: "🎤", name: "Bloom Vocal Chops (100 BPM Dm)", desc: "Stickz Bloom Loop 003: Iconic vocal chop hook" },
+        { id: "bloom_stem_wavy_pad", icon: "🌊", name: "Bloom Wavy Flume Pad (100 BPM Dm)", desc: "Stickz Bloom Loop 003: Pumping wide sidechain synth chords" },
+        { id: "bloom_sfx_drop_002", icon: "🌸", name: "Bloom Drop 002 (95 BPM F#m)", desc: "Stickz Bloom Loop 002: Melodic synth drop with vocal chops" },
+        { id: "bloom_sfx_drop_003", icon: "🔥", name: "Bloom Drop 003 Anthem (100 BPM Dm)", desc: "Stickz Bloom Loop 003: Full Chainsmokers drop with sub punch" },
+      ],
       sax: [
         { id: "sax_genuine_solo", icon: "🎷", name: "Solo Alto Sax", desc: "Genuine expressive solo with natural reed breath & delayed vibrato" },
         { id: "sax_sensual", icon: "💋", name: "Sensual 80s Sax", desc: "80s Careless Whisper style breathy tenor sax with warm plate reverb" },
@@ -373,10 +382,57 @@ export class GroovePlayerUI {
     pcm.playNote(instId, midi, vel, gain);
   }
 
+  async playBloomSfxSample(url, sfxId) {
+    const ctx = audioCore.ctx;
+    if (!ctx) return;
+
+    // Toggle off if currently playing
+    if (this.activeBloomSources.has(sfxId)) {
+      try {
+        const existing = this.activeBloomSources.get(sfxId);
+        existing.stop();
+        existing.disconnect();
+      } catch (e) {}
+      this.activeBloomSources.delete(sfxId);
+      return;
+    }
+
+    try {
+      let buf = this.bloomBuffers.get(sfxId);
+      if (!buf) {
+        const resp = await fetch(url);
+        if (!resp.ok) return;
+        const arrayBuf = await resp.arrayBuffer();
+        buf = await ctx.decodeAudioData(arrayBuf);
+        this.bloomBuffers.set(sfxId, buf);
+      }
+
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(audioCore.masterGain || ctx.destination);
+      src.onended = () => {
+        if (this.activeBloomSources.get(sfxId) === src) {
+          this.activeBloomSources.delete(sfxId);
+        }
+      };
+      src.start();
+      this.activeBloomSources.set(sfxId, src);
+    } catch (e) {
+      console.warn(`Failed to play Bloom SFX ${sfxId}:`, e);
+    }
+  }
+
   cancelLongSfx() {
     multiLayerEngine.pcmEngine?.stopSfxSamples();
     if (this.sfxGen) this.sfxGen.stopAll();
     synthesizerYouEngine.stopAll();
+    for (const [id, src] of this.activeBloomSources) {
+      try {
+        src.stop();
+        src.disconnect();
+      } catch (e) {}
+    }
+    this.activeBloomSources.clear();
   }
 
   bindSfxPads() {
@@ -413,6 +469,20 @@ export class GroovePlayerUI {
     }
 
     switch (sfxId) {
+      // 0. Bloom EDM Stems & Loops
+      case "bloom_stem_vocal_chops":
+        this.playBloomSfxSample("/samples/bloom_edm/bloom_stem_003_vocal_chops.wav", sfxId);
+        break;
+      case "bloom_stem_wavy_pad":
+        this.playBloomSfxSample("/samples/bloom_edm/bloom_stem_003_wavy_pad.wav", sfxId);
+        break;
+      case "bloom_sfx_drop_002":
+        this.playBloomSfxSample("/samples/bloom_edm/bloom_loop_002_95bpm_fsmin.wav", sfxId);
+        break;
+      case "bloom_sfx_drop_003":
+        this.playBloomSfxSample("/samples/bloom_edm/bloom_loop_003_100bpm_dmin.wav", sfxId);
+        break;
+
       // 1. Concert & Crowd (REAL recorded stadium applause & concert crowd)
       case "applause_clapping":
         multiLayerEngine.pcmEngine?.playNote("applause", 60, 115, 1.2);

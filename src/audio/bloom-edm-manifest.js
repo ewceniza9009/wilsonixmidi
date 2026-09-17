@@ -1,0 +1,105 @@
+/**
+ * Wilsonix MIDIKey - Stickz "Bloom" Future Bass & Melodic EDM Soundbanks Manifest
+ * Iconic Chainsmokers & Future Bass Presets from Stickz Bloom
+ * LEAD - Closer, LEAD - Roses, LEAD - Inside Out, LEAD - Let You Go,
+ * PAD - Paris, PLUCK - All We Know, PAD - Knowledge, etc.
+ */
+
+export const BLOOM_EDM_BANKS = {
+  bloom_closer_lead: {
+    id: "bloom_closer_lead",
+    name: "🌸 Bloom LEAD - Closer",
+    category: "EDM Melodic (Bloom)",
+    file: "bloom_shot_026_hyper_saw.wav",
+    rootMidi: 60,
+    subCategory: "Lead & Saw",
+  },
+  bloom_roses_lead: {
+    id: "bloom_roses_lead",
+    name: "🌸 Bloom LEAD - Roses",
+    category: "EDM Melodic (Bloom)",
+    file: "bloom_shot_025_pop_saw.wav",
+    rootMidi: 60,
+    subCategory: "Pop / Lead",
+  },
+  bloom_inside_out_lead: {
+    id: "bloom_inside_out_lead",
+    name: "🌸 Bloom LEAD - Inside Out",
+    category: "EDM Melodic (Bloom)",
+    file: "bloom_shot_032_vocal_lead.wav",
+    rootMidi: 60,
+    subCategory: "Vocal Synth",
+  },
+  bloom_let_you_go_lead: {
+    id: "bloom_let_you_go_lead",
+    name: "🌸 Bloom LEAD - Let You Go",
+    category: "EDM Melodic (Bloom)",
+    file: "bloom_shot_002_soaring_lead.wav",
+    rootMidi: 72,
+    subCategory: "Lead",
+  },
+  bloom_wise_lead: {
+    id: "bloom_wise_lead",
+    name: "🌸 Bloom LEAD - Wise",
+    category: "EDM Melodic (Bloom)",
+    file: "bloom_shot_024_drop_saw.wav",
+    rootMidi: 60,
+    subCategory: "Lead & Saw",
+  },
+  bloom_paris_pad: {
+    id: "bloom_paris_pad",
+    name: "🌸 Bloom PAD - Paris",
+    category: "EDM Melodic (Bloom)",
+    file: "bloom_shot_022_flume_chord.wav",
+    rootMidi: 60,
+    subCategory: "Future Bass / Chords",
+  },
+  bloom_knowledge_pad: {
+    id: "bloom_knowledge_pad",
+    name: "🌸 Bloom PAD - Knowledge",
+    category: "EDM Melodic (Bloom)",
+    file: "bloom_shot_023_chord_swell.wav",
+    rootMidi: 60,
+    subCategory: "Future Bass / Chords",
+  },
+  bloom_outside_in_pad: {
+    id: "bloom_outside_in_pad",
+    name: "🌸 Bloom PAD - Outside In",
+    category: "EDM Melodic (Bloom)",
+    file: "bloom_shot_016_vocal_stab.wav",
+    rootMidi: 72,
+    subCategory: "Vocal Synth",
+  },
+  bloom_all_we_know_pluck: {
+    id: "bloom_all_we_know_pluck",
+    name: "🌸 Bloom PLUCK - All We Know",
+    category: "EDM Melodic (Bloom)",
+    file: "bloom_shot_012_glassy_pluck.wav",
+    rootMidi: 72,
+    subCategory: "Pluck",
+  },
+  bloom_breakdown_bass: {
+    id: "bloom_breakdown_bass",
+    name: "🌸 Bloom BASS - Breakdown",
+    category: "EDM Melodic (Bloom)",
+    file: "bloom_shot_033_gritty_reese.wav",
+    rootMidi: 48,
+    subCategory: "Bass & Sub",
+  },
+  bloom_crushed_sub: {
+    id: "bloom_crushed_sub",
+    name: "🌸 Bloom BASS - Crushed Sub",
+    category: "EDM Melodic (Bloom)",
+    file: "bloom_shot_015_punch_bass.wav",
+    rootMidi: 48,
+    subCategory: "Bass & Sub",
+  },
+  bloom_so_far_pad: {
+    id: "bloom_so_far_pad",
+    name: "🌸 Bloom PAD - So Far",
+    category: "EDM Melodic (Bloom)",
+    file: "bloom_shot_017_fm_pluck_bass.wav",
+    rootMidi: 48,
+    subCategory: "Bass & Sub",
+  },
+};
