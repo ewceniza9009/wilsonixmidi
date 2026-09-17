@@ -51,8 +51,8 @@ export const TRITON_BANKS = {
   },
   KORG_M1: {
     id: "KORG_M1",
-    name: "KORG M1 FAMOUS",
-    category: "Doctor Mix Iconic Hits",
+    name: "KORG M1 & REEDS",
+    category: "M1 Hits & Genuine Sax",
     programs: [
       { id: "M000", num: "00", name: "00 Universe", category: "Synth Pad", m1Type: "universe", ifx: "Stereo Chorus", mfx: "Cathedral Hall", cutoff: 5200, Q: 1.5, attack: 0.35, decay: 3.5, sustain: 0.85, release: 1.6 },
       { id: "M001", num: "01", name: "01 Piano 16'", category: "Acoustic Piano", m1Type: "piano16", ifx: "Mid-Punch EQ & Chorus", mfx: "Concert Hall", cutoff: 8800, Q: 1.2, attack: 0.002, decay: 3.2, sustain: 0.20, release: 0.40 },
@@ -83,12 +83,19 @@ export const TRITON_BANKS = {
       { id: "M038", num: "38", name: "38 Solo Synth", category: "Lead Synth", m1Type: "solo_synth", ifx: "Ping-Pong Delay", mfx: "Concert Hall", cutoff: 8200, Q: 3.5, attack: 0.008, decay: 2.2, sustain: 0.85, release: 0.35 },
       { id: "M039", num: "39", name: "39 Pop (Organ 2)", category: "Organ & Bass", m1Type: "organ2", ifx: "Console Saturation & Comp", mfx: "Plate Reverb", cutoff: 7200, Q: 2.2, attack: 0.001, decay: 0.22, sustain: 0.50, release: 0.08 },
       { id: "M040", num: "40", name: "40 Magician", category: "Motion Synth", m1Type: "magician", ifx: "Stereo Auto-Pan & Delay", mfx: "Cathedral Hall", cutoff: 6200, Q: 2.8, attack: 0.25, decay: 3.8, sustain: 0.80, release: 1.6 },
+      // ── Genuine Sax & Reeds Collection ──
+      { id: "SAX01", num: "41", name: "🎷 Expressive Solo Alto Sax", category: "Woodwind & Sax", instId: "sax_genuine_solo", ifx: "Studio Dimension", mfx: "Plate Reverb" },
+      { id: "SAX02", num: "42", name: "🎷 Sensual 80s Breathy Sax", category: "Woodwind & Sax", instId: "sax_sensual", ifx: "Roland Juno Stereo Chorus", mfx: "Plate Reverb" },
+      { id: "SAX03", num: "43", name: "🎷 Dirty Blues Sax Growl", category: "Woodwind & Sax", instId: "sax_blues_growl", ifx: "Warm EQ", mfx: "Room Reverb" },
+      { id: "SAX04", num: "44", name: "🎷 Funk Brass & Sax Stab", category: "Woodwind & Sax", instId: "sax_funk_stab", ifx: "Punch Limiter", mfx: "Room Reverb" },
+      { id: "SAX05", num: "45", name: "🎷 Big Band Sax Fall", category: "Woodwind & Sax", instId: "sax_fall", ifx: "Presence EQ", mfx: "Room Reverb" },
+      { id: "SAX06", num: "46", name: "🎷 Expressive Pitch Scoop Sax", category: "Woodwind & Sax", instId: "sax_scoop", ifx: "Presence EQ", mfx: "Plate Reverb" },
     ],
   },
   Y_EOS: {
     id: "Y_EOS",
-    name: "⭐ Y-EOS",
-    category: "Yamaha EOS / XG Soundset",
+    name: "⭐ Y-EOS & GM2 ELITE",
+    category: "Yamaha EOS, Omega & Jnsgm2",
     programs: [
       { id: "YEOS00", num: "00", name: "Pf:Dream'n", category: "Keyboard / Pad", eosType: "dreamn", instId: "eos_dreamn", ifx: "Stereo Chorus", mfx: "Cathedral Hall" },
       { id: "YEOS01", num: "01", name: "Pf:DeepRoads", category: "Electric Piano", eosType: "deeproads", instId: "eos_deeproads", ifx: "Deep Stereo Chorus", mfx: "Concert Hall" },
@@ -131,136 +138,61 @@ export const TRITON_BANKS = {
       { id: "YEOS37", num: "37", name: "Ld:MG Square", category: "Lead Synth", eosType: "mg_square", instId: "eos_mg_square", ifx: "Overdrive Stack", mfx: "Ping-Pong Delay" },
       { id: "YEOS38", num: "38", name: "St:Slow Strings", category: "Cinematic / Pad", eosType: "slow_strings", instId: "eos_slow_strings", ifx: "Stereo Ensemble", mfx: "Concert Hall" },
       { id: "YEOS39", num: "39", name: "Br:Octave Brass", category: "Disco / Dance", eosType: "oct_brass", instId: "eos_oct_brass", ifx: "Punch Compressor", mfx: "Studio Plate" },
+      // ── Jnsgm2 Studio GM2 Elite Collection ──
+      { id: "E000", num: "40", name: "Ep:Vintage Mark I Rhodes", category: "Electric Piano", userType: "jns_rhodes", instId: "jns_rhodes", ifx: "Stereo Chorus", mfx: "Studio Plate" },
+      { id: "E001", num: "41", name: "Or:Gospel Hammond B3", category: "House / Organ", userType: "jns_hammond", instId: "jns_hammond", ifx: "Rotary Speaker (Fast)", mfx: "Plate Reverb" },
+      { id: "E002", num: "42", name: "Wd:Bamboo Shakuhachi", category: "Woodwind & Flute", userType: "jns_shakuhachi", instId: "jns_shakuhachi", ifx: "Stereo Delay", mfx: "Cathedral Hall" },
+      { id: "E003", num: "43", name: "Ba:Classic Fingered Bass", category: "Bass & Sub", userType: "jns_fingered_bass", instId: "jns_fingered_bass", ifx: "Warm Bass Limiter", mfx: "Room Reverb" },
+      { id: "E004", num: "44", name: "Ld:Charang Screamer", category: "Lead Synth", userType: "jns_charang", instId: "jns_charang", ifx: "Tape Delay", mfx: "Concert Hall" },
+      { id: "E005", num: "45", name: "Sy:5th Power Saw Lead", category: "Dance / Lead", userType: "jns_5th_saw", instId: "jns_5th_saw", ifx: "Stereo Ensemble", mfx: "Ping-Pong Delay" },
+      { id: "E006", num: "46", name: "Pd:Ethereal Halo Pad", category: "Synth Pad", userType: "jns_halo_pad", instId: "jns_halo_pad", ifx: "Phaser Dreamscape", mfx: "Cathedral Hall" },
+      { id: "E007", num: "47", name: "Pd:Bowed Crystal Glass", category: "Ambient / Pad", userType: "jns_bowed_glass", instId: "jns_bowed_glass", ifx: "Stereo Flanger", mfx: "Cathedral Hall" },
+      { id: "E008", num: "48", name: "Et:Mystic Sitar & Drone", category: "Ethnic / Pluck", userType: "jns_sitar", instId: "jns_sitar", ifx: "Resonant Filter", mfx: "Warm Room Reverb" },
     ],
   },
-  USER_B: {
-    id: "USER_B",
-    name: "USER BANK B",
-    category: "Vintage & Keys",
+  EDM_CLUB: {
+    id: "EDM_CLUB",
+    name: "EDM, HOUSE & TECHNO",
+    category: "Club, Festival & Underground",
     programs: [
-      { id: "B000", num: "000", name: "Dyno Tine EP", category: "Electric Piano", osc1: "sine", osc2: "sine", r1: 1.0, r2: 3.998, cutoff: 7200, Q: 1.8, attack: 0.002, decay: 3.0, sustain: 0.2, release: 0.4, ifx: "Korg Chorus", mfx: "Concert Hall" },
-      { id: "B001", num: "001", name: "B3 Percussion Organ", category: "Organ", osc1: "sine", osc2: "sine", r1: 1.0, r2: 3.0, cutoff: 7500, Q: 1.0, attack: 0.001, decay: 0.15, sustain: 0.95, release: 0.06, ifx: "Rotary Fast", mfx: "Room Reverb" },
-      { id: "B002", num: "002", name: "M1 House Piano", category: "Keyboard", osc1: "triangle", osc2: "sawtooth", r1: 1.0, r2: 2.0, cutoff: 6800, Q: 1.4, attack: 0.002, decay: 2.8, sustain: 0.2, release: 0.3, ifx: "Compressor", mfx: "Plate Reverb" },
-      { id: "B003", num: "003", name: "Analog Warm Pad", category: "Synth Pad", osc1: "sawtooth", osc2: "sawtooth", r1: 1.0, r2: 1.006, cutoff: 3800, Q: 1.1, attack: 0.3, decay: 3.0, sustain: 0.85, release: 1.0, ifx: "Phaser", mfx: "Hall Reverb" },
-      { id: "B004", num: "004", name: "Slap Synth Bass", category: "Bass & Sub", osc1: "sawtooth", osc2: "square", r1: 1.0, r2: 0.5, cutoff: 3500, Q: 4.2, attack: 0.002, decay: 0.8, sustain: 0.1, release: 0.1, ifx: "Decimator", mfx: "Compressor" },
-      { id: "B005", num: "005", name: "Wurly 200A Classic", category: "Electric Piano", osc1: "triangle", osc2: "sine", r1: 1.0, r2: 3.0, cutoff: 5600, Q: 1.5, attack: 0.003, decay: 2.4, sustain: 0.25, release: 0.35, ifx: "Tremolo", mfx: "Spring Reverb" },
-      { id: "B006", num: "006", name: "Clavinet D6 Funk", category: "Keyboard", osc1: "sawtooth", osc2: "square", r1: 1.0, r2: 2.0, cutoff: 6200, Q: 3.5, attack: 0.001, decay: 1.2, sustain: 0.05, release: 0.08, ifx: "Auto-Wah", mfx: "Tape Delay" },
-      { id: "B007", num: "007", name: "Nylon Acoustic Pluck", category: "Guitar", osc1: "triangle", osc2: "sawtooth", r1: 1.0, r2: 2.0, cutoff: 5400, Q: 1.6, attack: 0.002, decay: 2.0, sustain: 0.05, release: 0.25, ifx: "4-Band EQ", mfx: "Hall Reverb" },
-      { id: "B008", num: "008", name: "OCTA SYNC1", category: "Lead Synth", osc1: "sawtooth", osc2: "sawtooth", r1: 1.0, r2: 2.0, cutoff: 9000, Q: 3.0, attack: 0.004, decay: 1.8, sustain: 0.7, release: 0.3, ifx: "Distortion", mfx: "Ping-Pong Delay" },
-    ],
-  },
-  USER_C: {
-    id: "USER_C",
-    name: "USER BANK C",
-    category: "Modern Pro Synth",
-    programs: [
-      { id: "C000", num: "000", name: "Moog Prodigy Sub", category: "Bass & Sub", osc1: "sawtooth", osc2: "square", r1: 0.5, r2: 0.504, cutoff: 1800, Q: 4.5, attack: 0.002, decay: 1.2, sustain: 0.5, release: 0.15, ifx: "Overdrive", mfx: "Compressor" },
-      { id: "C001", num: "001", name: "Hypersaw Lead", category: "Lead Synth", osc1: "sawtooth", osc2: "sawtooth", r1: 1.0, r2: 1.016, cutoff: 9200, Q: 2.2, attack: 0.003, decay: 2.2, sustain: 0.8, release: 0.4, ifx: "Stereo Delay", mfx: "Concert Hall" },
-      { id: "C002", num: "002", name: "Vox Humana 1980", category: "Synth Pad", osc1: "sawtooth", osc2: "sine", r1: 1.0, r2: 2.0, cutoff: 3600, Q: 2.0, attack: 0.2, decay: 2.8, sustain: 0.8, release: 0.9, ifx: "Korg Chorus", mfx: "Cathedral Hall" },
-      { id: "C003", num: "003", name: "Bell Tree & Shimmer", category: "Bells & Metallic", osc1: "sine", osc2: "triangle", r1: 1.0, r2: 7.005, cutoff: 9500, Q: 3.0, attack: 0.001, decay: 3.5, sustain: 0.3, release: 1.2, ifx: "Flanger", mfx: "Hall Reverb" },
-      { id: "C004", num: "004", name: "Orchestral Tubular Chimes", category: "Bells & Mallet", instId: "tubular_bells", ifx: "Studio Dimension", mfx: "Cathedral Hall" },
-      { id: "C005", num: "005", name: "Mark Tree Wind Chimes", category: "Bells & Mallet", instId: "wind_chimes", ifx: "High-Shelf Air", mfx: "Concert Hall" },
-      { id: "C006", num: "006", name: "Crystal Shimmer Chimes", category: "Bells & Mallet", instId: "crystal_chimes", ifx: "Stereo Chorus", mfx: "Cathedral Hall" },
-      { id: "C007", num: "007", name: "Afro-Cuban Congas", category: "Percussion & Drums", instId: "percussion_conga", ifx: "Mid-Warmth EQ", mfx: "Room Reverb" },
-      { id: "C008", num: "008", name: "Analog Synth Drum (Simmons SDSV)", category: "Percussion & Drums", instId: "synth_drum", ifx: "Resonant Filter", mfx: "Plate Reverb" },
-      { id: "C009", num: "009", name: "Real Acoustic Drum Kit", category: "Percussion & Drums", instId: "real_drum_kit", ifx: "Punch Limiter", mfx: "Room Reverb" },
-    ],
-  },
-  USER_D: {
-    id: "USER_D",
-    name: "USER BANK D",
-    category: "Orchestral & Global",
-    programs: [
-      { id: "D000", num: "000", name: "Concert Flute Solo", category: "Woodwind", osc1: "triangle", osc2: "sine", r1: 1.0, r2: 2.0, cutoff: 5200, Q: 1.0, attack: 0.08, decay: 1.8, sustain: 0.85, release: 0.25, ifx: "4-Band EQ", mfx: "Concert Hall" },
-      { id: "D001", num: "001", name: "Pizzicato Section", category: "Strings", osc1: "triangle", osc2: "sawtooth", r1: 1.0, r2: 2.0, cutoff: 6200, Q: 2.2, attack: 0.001, decay: 0.6, sustain: 0.01, release: 0.12, ifx: "Compressor", mfx: "Room Reverb" },
-      { id: "D002", num: "002", name: "French Horn Warm", category: "Brass", osc1: "sawtooth", osc2: "triangle", r1: 1.0, r2: 0.5, cutoff: 3400, Q: 1.8, attack: 0.09, decay: 2.0, sustain: 0.8, release: 0.3, ifx: "Ensemble", mfx: "Concert Hall" },
-      { id: "D003", num: "003", name: "Steel Drums Caribbean", category: "Bells & Mallet", osc1: "sine", osc2: "triangle", r1: 1.0, r2: 3.01, cutoff: 7800, Q: 3.5, attack: 0.001, decay: 1.8, sustain: 0.1, release: 0.3, ifx: "Chorus", mfx: "Plate Reverb" },
-    ],
-  },
-  GENUINE_SAX: {
-    id: "GENUINE_SAX",
-    name: "🎷 GENUINE SAX & REEDS",
-    category: "Solo & Expression",
-    programs: [
-      { id: "SAX01", num: "01", name: "🎷 Expressive Solo Alto Sax", category: "Woodwind & Sax", instId: "sax_genuine_solo", ifx: "Studio Dimension", mfx: "Plate Reverb" },
-      { id: "SAX02", num: "02", name: "🎷 Sensual 80s Breathy Sax", category: "Woodwind & Sax", instId: "sax_sensual", ifx: "Roland Juno Stereo Chorus", mfx: "Plate Reverb" },
-      { id: "SAX03", num: "03", name: "🎷 Dirty Blues Sax Growl", category: "Woodwind & Sax", instId: "sax_blues_growl", ifx: "Warm EQ", mfx: "Room Reverb" },
-      { id: "SAX04", num: "04", name: "🎷 Funk Brass & Sax Stab", category: "Woodwind & Sax", instId: "sax_funk_stab", ifx: "Punch Limiter", mfx: "Room Reverb" },
-      { id: "SAX05", num: "05", name: "🎷 Big Band Sax Fall", category: "Woodwind & Sax", instId: "sax_fall", ifx: "Presence EQ", mfx: "Room Reverb" },
-      { id: "SAX06", num: "06", name: "🎷 Expressive Pitch Scoop Sax", category: "Woodwind & Sax", instId: "sax_scoop", ifx: "Presence EQ", mfx: "Plate Reverb" },
-    ],
-  },
-  NATURE: {
-    id: "NATURE",
-    name: "NATURE AMBIENCE",
-    category: "Elements & Organic",
-    programs: [
-      { id: "NAT01", num: "01", name: "Deep Thunder Strike", category: "Nature Sounds", instId: "nature_thunder", ifx: "Sub Limiter", mfx: "Cathedral Hall" },
-      { id: "NAT02", num: "02", name: "Gentle Rainstorm Ambience", category: "Nature Sounds", instId: "nature_rain", ifx: "Airy High EQ", mfx: "Stereo Chorus" },
-      { id: "NAT03", num: "03", name: "Ocean Surf Waves", category: "Nature Sounds", instId: "nature_ocean", ifx: "Auto-Pan", mfx: "Concert Hall" },
-      { id: "NAT04", num: "04", name: "Forest Bird Chirps", category: "Nature Sounds", instId: "nature_birds", ifx: "Stereo Delay", mfx: "Room Reverb" },
-      { id: "NAT05", num: "05", name: "Howling Wind Gusts", category: "Nature Sounds", instId: "nature_wind", ifx: "Resonant Filter", mfx: "Hall Reverb" },
-      { id: "NAT06", num: "06", name: "Campfire Warm Crackle", category: "Nature Sounds", instId: "nature_fire", ifx: "Warm Saturation", mfx: "Room Reverb" },
-      { id: "NAT07", num: "07", name: "Mountain Stream Water", category: "Nature Sounds", instId: "nature_stream", ifx: "Stereo Auto-Pan", mfx: "Concert Hall" },
-      { id: "NAT08", num: "08", name: "Jungle Night Crickets", category: "Nature Sounds", instId: "nature_crickets", ifx: "High-Shelf Air", mfx: "Cathedral Hall" },
-      { id: "NAT09", num: "09", name: "Roaring Waterfall", category: "Nature Sounds", instId: "nature_waterfall", ifx: "Resonant Filter", mfx: "Cathedral Hall" },
-    ],
-  },
-  HUMAN_VOX: {
-    id: "HUMAN_VOX",
-    name: "HUMAN VOX & CHOIR",
-    category: "Voices & Beatbox",
-    programs: [
-      { id: "VOX01", num: "01", name: "Korg M1 03 Ooh-Ahh", category: "Choir & Vocal", m1Type: "ooh_ahh", ifx: "Dimension Chorus", mfx: "Cathedral Hall", cutoff: 5800, Q: 1.8, attack: 0.18, decay: 2.8, sustain: 0.85, release: 1.4 },
-      { id: "VOX02", num: "02", name: "Cathedral Choir Aahs", category: "Choir & Vocal", instId: "choir_aahs", ifx: "Stereo Ensemble", mfx: "Cathedral Hall" },
-      { id: "VOX03", num: "03", name: "Soul Gospel Vocal Oohs", category: "Human Voices", instId: "voice_oohs", ifx: "Presence EQ", mfx: "Plate Reverb" },
-      { id: "VOX04", num: "04", name: "Soul Vocal 'Yeah!' Shout", category: "Human Voices", instId: "vox_yeah_r", ifx: "Studio Dimension", mfx: "Plate Reverb" },
-      { id: "VOX05", num: "05", name: "Hype Vocal 'Hey!' Shout", category: "Human Voices", instId: "vox_hey_r", ifx: "Presence EQ", mfx: "Plate Reverb" },
-      { id: "VOX06", num: "06", name: "Angelic Worship Choir", category: "Human Voices", instId: "angelic_choir", ifx: "Haas Widener", mfx: "Cathedral Hall" },
-      { id: "VOX07", num: "07", name: "Concert Crowd Roar", category: "Human Voices", instId: "vox_crowd_cheer", ifx: "Presence EQ", mfx: "Cathedral Hall" },
-      { id: "VOX08", num: "08", name: "Stadium Applause", category: "Human Voices", instId: "vox_applause", ifx: "High-Shelf EQ", mfx: "Hall Reverb" },
-      { id: "VOX09", num: "09", name: "Breathy Whisper Vocal", category: "Human Voices", instId: "vox_whisper", ifx: "Stereo Flanger", mfx: "Cathedral Hall" },
-      { id: "VOX10", num: "10", name: "Deep Male Vocal Hum", category: "Human Voices", instId: "vox_hum", ifx: "Warm EQ", mfx: "Concert Hall" },
-      { id: "VOX11", num: "11", name: "Human Beatbox Kit", category: "Human Voices", instId: "vox_beatbox", ifx: "Punch Limiter", mfx: "Studio Plate" },
-    ],
-  },
-  WEIRD_FX: {
-    id: "WEIRD_FX",
-    name: "WEIRD & SCI-FI FX",
-    category: "Glitches & Cyber",
-    programs: [
-      { id: "SFX01", num: "01", name: "Laser Beam Zap", category: "Weird & Sci-Fi FX", instId: "fx_laser", ifx: "Ping-Pong Delay", mfx: "Plate Reverb" },
-      { id: "SFX02", num: "02", name: "Alien Hyperspace Drone", category: "Weird & Sci-Fi FX", instId: "fx_alien", ifx: "Phaser Swirl", mfx: "Cathedral Hall" },
-      { id: "SFX03", num: "03", name: "Bionic Glitch Cascade", category: "Weird & Sci-Fi FX", instId: "fx_bionic", ifx: "Decimator", mfx: "Tape Delay" },
-      { id: "SFX04", num: "04", name: "Warp Drive Whoosh", category: "Weird & Sci-Fi FX", instId: "fx_warpdrive", ifx: "Bandpass Sweep", mfx: "Cathedral Hall" },
-      { id: "SFX05", num: "05", name: "Robot Telemetry Chat", category: "Weird & Sci-Fi FX", instId: "fx_robot", ifx: "Stereo Delay", mfx: "Plate Reverb" },
-      { id: "SFX06", num: "06", name: "Plasma Cannon Blast", category: "Weird & Sci-Fi FX", instId: "fx_plasma", ifx: "Tube Drive", mfx: "Room Reverb" },
-      { id: "SFX07", num: "07", name: "Cyber Matrix Riser", category: "Weird & Sci-Fi FX", instId: "fx_cyber_sweep", ifx: "Phaser Sweep", mfx: "Concert Hall" },
-      { id: "SFX08", num: "08", name: "Sub-Atomic Resonator", category: "Weird & Sci-Fi FX", instId: "fx_sub_resonator", ifx: "Sub Limiter", mfx: "Cathedral Hall" },
-    ],
-  },
-  DJ_CINEMATIC: {
-    id: "DJ_CINEMATIC",
-    name: "DJ & CINEMATIC FX",
-    category: "Hits & Drops",
-    programs: [
-      { id: "DJ01", num: "01", name: "Authentic Vinyl Scratch", category: "DJ & Cinematic FX", instId: "dj_scratch_r", ifx: "Bandpass EQ", mfx: "Room Reverb" },
-      { id: "DJ02", num: "02", name: "Analog Tape Stop", category: "DJ & Cinematic FX", instId: "fx_tapestop", ifx: "Tape Saturation", mfx: "Hall Reverb" },
-      { id: "DJ03", num: "03", name: "Sub Bass Impact Boom", category: "DJ & Cinematic FX", instId: "fx_boom_r", ifx: "Sub Enhancer", mfx: "Concert Hall" },
-      { id: "DJ04", num: "04", name: "Dancehall Reggae Airhorn", category: "DJ & Cinematic FX", instId: "dj_partyhorn_r", ifx: "Echo Delay", mfx: "Plate Reverb" },
-      { id: "DJ05", num: "05", name: "Inception Cinema Braam", category: "DJ & Cinematic FX", instId: "fx_cinema_braam", ifx: "Tape Saturation", mfx: "Cathedral Hall" },
-      { id: "DJ06", num: "06", name: "White Noise Downlifter", category: "DJ & Cinematic FX", instId: "fx_downlifter", ifx: "Lowpass Sweep", mfx: "Hall Reverb" },
-      { id: "DJ07", num: "07", name: "Reverse Cymbal Swell", category: "DJ & Cinematic FX", instId: "drum_crash_r", ifx: "High-Shelf EQ", mfx: "Concert Hall" },
-      { id: "DJ08", num: "08", name: "808 Sub Pitch Dive", category: "DJ & Cinematic FX", instId: "fx_sub_drop", ifx: "Sub Enhancer", mfx: "Room Reverb" },
-      { id: "DJ09", num: "09", name: "Vinyl Crackle & Dust Hiss", category: "DJ & Cinematic FX", instId: "fx_static_r", ifx: "Lo-Fi Vinyl", mfx: "Plate Reverb" },
-      { id: "DJ10", num: "10", name: "Sound System Dub Siren", category: "DJ & Cinematic FX", instId: "dj_siren_r", ifx: "Echo Delay", mfx: "Cathedral Hall" },
-      { id: "DJ11", num: "11", name: "Carnival Club Whistle", category: "DJ & Cinematic FX", instId: "dj_whistle_r", ifx: "Stereo Chorus", mfx: "Room Reverb" },
+      // ── House & Garage Classics ──
+      { id: "B000", num: "000", name: "Hp:90s House Piano", category: "House / Piano", userType: "house_piano", instId: "edm_house_piano", ifx: "Punch Compressor", mfx: "Studio Plate" },
+      { id: "B001", num: "001", name: "Or:Techno Rock Organ", category: "House / Organ", userType: "korg_organ", instId: "korg_techno_organ", ifx: "Rotary Speaker (Fast)", mfx: "Plate Reverb" },
+      { id: "B002", num: "002", name: "Ba:River House Bass", category: "House / Bass", userType: "river_bass1", instId: "edm_river_bass1", ifx: "Punch Compressor", mfx: "Room Reverb" },
+      { id: "B003", num: "003", name: "Ba:DX Funk Slap", category: "Disco / Funk", userType: "dx_funkbass", instId: "edm_dx_funkbass", ifx: "Stereo Chorus", mfx: "Room Reverb" },
+      { id: "B004", num: "004", name: "Ld:Club Saw Lead", category: "House / Lead", userType: "club_saw1", instId: "edm_club_saw1", ifx: "Stereo Ensemble", mfx: "Tape Delay" },
+      { id: "B005", num: "005", name: "Br:Club Brass Lead", category: "Club / Brass", userType: "club_brass", instId: "edm_club_brass", ifx: "Punch Limiter", mfx: "Studio Plate" },
+      { id: "B006", num: "006", name: "Ba:HiQ Deep Bass", category: "House / Bass", userType: "hiq_bass", instId: "edm_hiq_bass", ifx: "Sub Limiter", mfx: "Room Reverb" },
+      { id: "B007", num: "007", name: "Pn:Mika Dance Piano", category: "Dance / Piano", userType: "mika_piano", instId: "edm_mika_piano", ifx: "Punch Limiter", mfx: "Plate Reverb" },
+      { id: "B008", num: "008", name: "Ba:River Sub Bass 2", category: "House / Sub", userType: "river_bass2", instId: "edm_river_bass2", ifx: "Overdrive Limiter", mfx: "Room Reverb" },
+
+      // ── EDM & Festival Anthems ──
+      { id: "C000", num: "010", name: "Ld:Iconic EDM Lead 1", category: "EDM / Festival", userType: "iconic_lead1", instId: "edm_iconic_lead1", ifx: "Stereo Widener", mfx: "Ping-Pong Delay" },
+      { id: "C001", num: "011", name: "Ld:Iconic EDM Lead 2", category: "EDM / Lead", userType: "iconic_lead2", instId: "edm_iconic_lead2", ifx: "Distortion Punch", mfx: "Concert Hall" },
+      { id: "C002", num: "012", name: "Ld:SuperSaw JP-80", category: "Trance / SuperSaw", userType: "supersaw_jp80", instId: "edm_supersaw_jp80", ifx: "SuperSaw Ensemble", mfx: "Tape Delay" },
+      { id: "C003", num: "013", name: "Ld:Big Room Saw", category: "EDM / Lead", userType: "bigroom_saw", instId: "edm_bigroom_saw", ifx: "Punch Limiter", mfx: "Concert Hall" },
+      { id: "C004", num: "014", name: "Sy:Trance Synth Oct", category: "Trance / Arp", userType: "trance_oct", instId: "edm_trance_oct", ifx: "Dimension Chorus", mfx: "Ping-Pong Delay" },
+      { id: "C005", num: "015", name: "Ba:Punch Synth Bass", category: "EDM / Bass", userType: "retro_synthbass1", instId: "edm_retro_synthbass1", ifx: "Sub Limiter", mfx: "Compressor" },
+      { id: "C006", num: "016", name: "Ld:Rave Synth Brass", category: "Rave / Brass", userType: "club_brass_rave", instId: "edm_club_brass", ifx: "Overdrive Stack", mfx: "Gated Reverb" },
+      { id: "C007", num: "017", name: "Pd:K2500 Voice Oohs", category: "Vocal / Pad", userType: "k2500_oohs", instId: "edm_k2500_oohs", ifx: "Stereo Shimmer Chorus", mfx: "Cathedral Hall" },
+      { id: "C008", num: "018", name: "Sy:GUS Synth Voice", category: "Synth Vocal", userType: "gus_voice", instId: "edm_gus_voice", ifx: "Phaser Dreamscape", mfx: "Cathedral Hall" },
+
+      // ── Techno, Trance & Underground ──
+      { id: "D000", num: "020", name: "Ld:Techno Warehouse Saw", category: "Techno / Raw", userType: "warehouse_saw", instId: "edm_warehouse_saw", ifx: "Overdrive Stack", mfx: "Room Reverb" },
+      { id: "D001", num: "021", name: "Or:Dark Rock Organ", category: "Techno / Dark", userType: "dark_organ", instId: "korg_techno_organ", ifx: "Tape Saturation", mfx: "Studio Plate" },
+      { id: "D002", num: "022", name: "Sy:Euro Trance Synth", category: "Trance / Anthem", userType: "trance_synth", instId: "edm_trance_synth", ifx: "Stereo Flanger", mfx: "Ping-Pong Delay" },
+      { id: "D003", num: "023", name: "Ba:Berlin Sub Bass", category: "Techno / Sub", userType: "berlin_sub", instId: "edm_berlin_sub", ifx: "Sub Enhancer", mfx: "Room Reverb" },
+      { id: "D004", num: "024", name: "Ld:Detuned Club Saw 2", category: "Techno / Rave", userType: "club_saw2", instId: "edm_club_saw2", ifx: "Punch Limiter", mfx: "Tape Delay" },
+      { id: "D005", num: "025", name: "Sy:Trance Synth Oct2", category: "Trance / Lead", userType: "trance_oct2", instId: "edm_trance_oct2", ifx: "SuperSaw Ensemble", mfx: "Concert Hall" },
+      { id: "D006", num: "026", name: "Ld:Saw Wave GS", category: "Analog / Lead", userType: "saw_gs", instId: "omega_saw_gs", ifx: "Analog Ensemble", mfx: "Plate Reverb" },
+      { id: "D007", num: "027", name: "Ba:Acid Resonator", category: "Tech / 303 Acid", userType: "acid_resonator", instId: "eos_acid_bass", ifx: "Resonant Filter Sweep", mfx: "Tape Delay" },
+      { id: "D008", num: "028", name: "Ld:Doctor Solo Lead", category: "Lead Synth", userType: "doctor_solo", instId: "omega_doctor_solo", ifx: "Overdrive Stack", mfx: "Ping-Pong Delay" },
     ],
   },
   PERCUSSION: {
     id: "PERCUSSION",
-    name: "DRUMS & PERCUSSION",
-    category: "Kits & World",
+    name: "DRUMS & BEATS",
+    category: "Kits & World Percussion",
     programs: [
       { id: "PRC01", num: "01", name: "TR-808 Analog Drum Kit", category: "Percussion & Drums", instId: "tr808_kit", ifx: "Punch Limiter", mfx: "Plate Reverb" },
       { id: "PRC02", num: "02", name: "TR-909 House Drum Kit", category: "Percussion & Drums", instId: "tr909_kit", ifx: "Punch Limiter", mfx: "Plate Reverb" },
@@ -276,6 +208,70 @@ export const TRITON_BANKS = {
       { id: "PRC12", num: "12", name: "Real Acoustic Drum Kit", category: "Percussion & Drums", instId: "real_drum_kit", ifx: "Punch Limiter", mfx: "Room Reverb" },
     ],
   },
+  CINEMATIC_FX: {
+    id: "CINEMATIC_FX",
+    name: "SFX, VOX & CINEMA",
+    category: "Hits, Drops, Vox & Nature",
+    programs: [
+      // ── DJ & Cinematic FX ──
+      { id: "DJ01", num: "01", name: "Authentic Vinyl Scratch", category: "DJ & Cinematic FX", instId: "dj_scratch_r", ifx: "Bandpass EQ", mfx: "Room Reverb" },
+      { id: "DJ02", num: "02", name: "Analog Tape Stop", category: "DJ & Cinematic FX", instId: "fx_tapestop", ifx: "Tape Saturation", mfx: "Hall Reverb" },
+      { id: "DJ03", num: "03", name: "Sub Bass Impact Boom", category: "DJ & Cinematic FX", instId: "fx_boom_r", ifx: "Sub Enhancer", mfx: "Concert Hall" },
+      { id: "DJ04", num: "04", name: "Dancehall Reggae Airhorn", category: "DJ & Cinematic FX", instId: "dj_partyhorn_r", ifx: "Echo Delay", mfx: "Plate Reverb" },
+      { id: "DJ05", num: "05", name: "Inception Cinema Braam", category: "DJ & Cinematic FX", instId: "fx_cinema_braam", ifx: "Tape Saturation", mfx: "Cathedral Hall" },
+      { id: "DJ06", num: "06", name: "White Noise Downlifter", category: "DJ & Cinematic FX", instId: "fx_downlifter", ifx: "Lowpass Sweep", mfx: "Hall Reverb" },
+      { id: "DJ07", num: "07", name: "Reverse Cymbal Swell", category: "DJ & Cinematic FX", instId: "drum_crash_r", ifx: "High-Shelf EQ", mfx: "Concert Hall" },
+      { id: "DJ08", num: "08", name: "808 Sub Pitch Dive", category: "DJ & Cinematic FX", instId: "fx_sub_drop", ifx: "Sub Enhancer", mfx: "Room Reverb" },
+      { id: "DJ09", num: "09", name: "Vinyl Crackle & Dust Hiss", category: "DJ & Cinematic FX", instId: "fx_static_r", ifx: "Lo-Fi Vinyl", mfx: "Plate Reverb" },
+      { id: "DJ10", num: "10", name: "Sound System Dub Siren", category: "DJ & Cinematic FX", instId: "dj_siren_r", ifx: "Echo Delay", mfx: "Cathedral Hall" },
+      { id: "DJ11", num: "11", name: "Carnival Club Whistle", category: "DJ & Cinematic FX", instId: "dj_whistle_r", ifx: "Stereo Chorus", mfx: "Room Reverb" },
+
+      // ── Human Vox & Choir ──
+      { id: "VOX01", num: "12", name: "Korg M1 03 Ooh-Ahh", category: "Choir & Vocal", m1Type: "ooh_ahh", ifx: "Dimension Chorus", mfx: "Cathedral Hall", cutoff: 5800, Q: 1.8, attack: 0.18, decay: 2.8, sustain: 0.85, release: 1.4 },
+      { id: "VOX02", num: "13", name: "Cathedral Choir Aahs", category: "Choir & Vocal", instId: "choir_aahs", ifx: "Stereo Ensemble", mfx: "Cathedral Hall" },
+      { id: "VOX03", num: "14", name: "Soul Gospel Vocal Oohs", category: "Human Voices", instId: "voice_oohs", ifx: "Presence EQ", mfx: "Plate Reverb" },
+      { id: "VOX04", num: "15", name: "Soul Vocal 'Yeah!' Shout", category: "Human Voices", instId: "vox_yeah_r", ifx: "Studio Dimension", mfx: "Plate Reverb" },
+      { id: "VOX05", num: "16", name: "Hype Vocal 'Hey!' Shout", category: "Human Voices", instId: "vox_hey_r", ifx: "Presence EQ", mfx: "Plate Reverb" },
+      { id: "VOX06", num: "17", name: "Angelic Worship Choir", category: "Human Voices", instId: "angelic_choir", ifx: "Haas Widener", mfx: "Cathedral Hall" },
+      { id: "VOX07", num: "18", name: "Concert Crowd Roar", category: "Human Voices", instId: "vox_crowd_cheer", ifx: "Presence EQ", mfx: "Cathedral Hall" },
+      { id: "VOX08", num: "19", name: "Stadium Applause", category: "Human Voices", instId: "vox_applause", ifx: "High-Shelf EQ", mfx: "Hall Reverb" },
+      { id: "VOX09", num: "20", name: "Breathy Whisper Vocal", category: "Human Voices", instId: "vox_whisper", ifx: "Stereo Flanger", mfx: "Cathedral Hall" },
+      { id: "VOX10", num: "21", name: "Deep Male Vocal Hum", category: "Human Voices", instId: "vox_hum", ifx: "Warm EQ", mfx: "Concert Hall" },
+      { id: "VOX11", num: "22", name: "Human Beatbox Kit", category: "Human Voices", instId: "vox_beatbox", ifx: "Punch Limiter", mfx: "Studio Plate" },
+
+      // ── Weird & Sci-Fi FX ──
+      { id: "SFX01", num: "23", name: "Laser Beam Zap", category: "Weird & Sci-Fi FX", instId: "fx_laser", ifx: "Ping-Pong Delay", mfx: "Plate Reverb" },
+      { id: "SFX02", num: "24", name: "Alien Hyperspace Drone", category: "Weird & Sci-Fi FX", instId: "fx_alien", ifx: "Phaser Swirl", mfx: "Cathedral Hall" },
+      { id: "SFX03", num: "25", name: "Bionic Glitch Cascade", category: "Weird & Sci-Fi FX", instId: "fx_bionic", ifx: "Decimator", mfx: "Tape Delay" },
+      { id: "SFX04", num: "26", name: "Warp Drive Whoosh", category: "Weird & Sci-Fi FX", instId: "fx_warpdrive", ifx: "Bandpass Sweep", mfx: "Cathedral Hall" },
+      { id: "SFX05", num: "27", name: "Robot Telemetry Chat", category: "Weird & Sci-Fi FX", instId: "fx_robot", ifx: "Stereo Delay", mfx: "Plate Reverb" },
+      { id: "SFX06", num: "28", name: "Plasma Cannon Blast", category: "Weird & Sci-Fi FX", instId: "fx_plasma", ifx: "Tube Drive", mfx: "Room Reverb" },
+      { id: "SFX07", num: "29", name: "Cyber Matrix Riser", category: "Weird & Sci-Fi FX", instId: "fx_cyber_sweep", ifx: "Phaser Sweep", mfx: "Concert Hall" },
+      { id: "SFX08", num: "30", name: "Sub-Atomic Resonator", category: "Weird & Sci-Fi FX", instId: "fx_sub_resonator", ifx: "Sub Limiter", mfx: "Cathedral Hall" },
+
+      // ── Nature Ambience ──
+      { id: "NAT01", num: "31", name: "Deep Thunder Strike", category: "Nature Sounds", instId: "nature_thunder", ifx: "Sub Limiter", mfx: "Cathedral Hall" },
+      { id: "NAT02", num: "32", name: "Gentle Rainstorm Ambience", category: "Nature Sounds", instId: "nature_rain", ifx: "Airy High EQ", mfx: "Stereo Chorus" },
+      { id: "NAT03", num: "33", name: "Ocean Surf Waves", category: "Nature Sounds", instId: "nature_ocean", ifx: "Auto-Pan", mfx: "Concert Hall" },
+      { id: "NAT04", num: "34", name: "Forest Bird Chirps", category: "Nature Sounds", instId: "nature_birds", ifx: "Stereo Delay", mfx: "Room Reverb" },
+      { id: "NAT05", num: "35", name: "Howling Wind Gusts", category: "Nature Sounds", instId: "nature_wind", ifx: "Resonant Filter", mfx: "Hall Reverb" },
+      { id: "NAT06", num: "36", name: "Campfire Warm Crackle", category: "Nature Sounds", instId: "nature_fire", ifx: "Warm Saturation", mfx: "Room Reverb" },
+      { id: "NAT07", num: "37", name: "Mountain Stream Water", category: "Nature Sounds", instId: "nature_stream", ifx: "Stereo Auto-Pan", mfx: "Concert Hall" },
+      { id: "NAT08", num: "38", name: "Jungle Night Crickets", category: "Nature Sounds", instId: "nature_crickets", ifx: "High-Shelf Air", mfx: "Cathedral Hall" },
+      { id: "NAT09", num: "39", name: "Roaring Waterfall", category: "Nature Sounds", instId: "nature_waterfall", ifx: "Resonant Filter", mfx: "Cathedral Hall" },
+    ],
+  },
 };
+
+// Legacy bank aliases for seamless backward compatibility
+TRITON_BANKS.USER_B = TRITON_BANKS.EDM_CLUB;
+TRITON_BANKS.USER_C = TRITON_BANKS.EDM_CLUB;
+TRITON_BANKS.USER_D = TRITON_BANKS.EDM_CLUB;
+TRITON_BANKS.USER_E = TRITON_BANKS.Y_EOS;
+TRITON_BANKS.GENUINE_SAX = TRITON_BANKS.KORG_M1;
+TRITON_BANKS.HUMAN_VOX = TRITON_BANKS.CINEMATIC_FX;
+TRITON_BANKS.WEIRD_FX = TRITON_BANKS.CINEMATIC_FX;
+TRITON_BANKS.DJ_CINEMATIC = TRITON_BANKS.CINEMATIC_FX;
+TRITON_BANKS.NATURE = TRITON_BANKS.CINEMATIC_FX;
 
 

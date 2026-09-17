@@ -5,6 +5,7 @@
 
 import { KORG_PCM_BANKS } from "./korg-pcm-data.js";
 import { YAMAHA_EOS_PCM_BANKS } from "./yamaha-eos-pcm-data.js";
+import { USER_BANK_PCM_BANKS } from "./user-bank-pcm-data.js";
 import { ABLETUNES_BANKS } from "./abletunes-manifest.js";
 import { SfxSoundGenerator } from "./sfx-sound-generator.js";
 import { sampleCache } from "./sample-cache.js";
@@ -86,6 +87,31 @@ const INST_ALIASES = {
   eos_mg_square: "eos_mg_square",
   eos_slow_strings: "eos_slow_strings",
   eos_oct_brass: "eos_oct_brass",
+  // USER BANK B, C, D (EDM, House, Techno)
+  edm_house_piano: "edm_house_piano",
+  korg_techno_organ: "korg_techno_organ",
+  edm_river_bass1: "edm_river_bass1",
+  edm_dx_funkbass: "edm_dx_funkbass",
+  edm_club_saw1: "edm_club_saw1",
+  edm_club_brass: "edm_club_brass",
+  edm_hiq_bass: "edm_hiq_bass",
+  edm_mika_piano: "edm_mika_piano",
+  edm_river_bass2: "edm_river_bass2",
+  edm_iconic_lead1: "edm_iconic_lead1",
+  edm_iconic_lead2: "edm_iconic_lead2",
+  edm_supersaw_jp80: "edm_supersaw_jp80",
+  edm_bigroom_saw: "edm_bigroom_saw",
+  edm_trance_oct: "edm_trance_oct",
+  edm_retro_synthbass1: "edm_retro_synthbass1",
+  edm_k2500_oohs: "edm_k2500_oohs",
+  edm_gus_voice: "edm_gus_voice",
+  edm_warehouse_saw: "edm_warehouse_saw",
+  edm_trance_synth: "edm_trance_synth",
+  edm_berlin_sub: "edm_berlin_sub",
+  edm_club_saw2: "edm_club_saw2",
+  edm_trance_oct2: "edm_trance_oct2",
+  omega_saw_gs: "omega_saw_gs",
+  omega_doctor_solo: "omega_doctor_solo",
   distortion_guitar: "distortion_guitar",
   overdriven_guitar: "overdriven_guitar",
   electric_guitar_clean: "electric_guitar_clean",
@@ -389,6 +415,30 @@ const INST_TRIM_GAINS = {
   eos_mg_square: 0.72,
   eos_slow_strings: 0.58,
   eos_oct_brass: 0.70,
+  edm_house_piano: 0.85,
+  korg_techno_organ: 0.75,
+  edm_river_bass1: 0.85,
+  edm_dx_funkbass: 0.85,
+  edm_club_saw1: 0.75,
+  edm_club_brass: 0.80,
+  edm_hiq_bass: 0.85,
+  edm_mika_piano: 0.85,
+  edm_river_bass2: 0.85,
+  edm_iconic_lead1: 0.78,
+  edm_iconic_lead2: 0.78,
+  edm_supersaw_jp80: 0.75,
+  edm_bigroom_saw: 0.75,
+  edm_trance_oct: 0.75,
+  edm_retro_synthbass1: 0.85,
+  edm_k2500_oohs: 0.60,
+  edm_gus_voice: 0.65,
+  edm_warehouse_saw: 0.78,
+  edm_trance_synth: 0.75,
+  edm_berlin_sub: 0.85,
+  edm_club_saw2: 0.75,
+  edm_trance_oct2: 0.75,
+  omega_saw_gs: 0.75,
+  omega_doctor_solo: 0.75,
 };
 
 export function noteNameToMidi(noteStr) {
@@ -1806,6 +1856,12 @@ export class NativePcmEngine {
       this.decodeEmbeddedAnchors("eos_mg_square"),
       this.decodeEmbeddedAnchors("eos_slow_strings"),
       this.decodeEmbeddedAnchors("eos_oct_brass"),
+      // USER BANK B, C, D (Initial Lead Preload)
+      this.decodeEmbeddedAnchors("edm_house_piano"),
+      this.decodeEmbeddedAnchors("korg_techno_organ"),
+      this.decodeEmbeddedAnchors("edm_iconic_lead1"),
+      this.decodeEmbeddedAnchors("edm_supersaw_jp80"),
+      this.decodeEmbeddedAnchors("edm_warehouse_saw"),
       this.loadSoundfont("alto_sax"),
       this.loadSoundfont("tenor_sax"),
     ]);
@@ -1998,7 +2054,7 @@ export class NativePcmEngine {
   }
 
   async decodeEmbeddedAnchors(instId) {
-    const instData = KORG_PCM_BANKS[instId] || YAMAHA_EOS_PCM_BANKS[instId];
+    const instData = KORG_PCM_BANKS[instId] || YAMAHA_EOS_PCM_BANKS[instId] || USER_BANK_PCM_BANKS[instId];
     if (!instData || !instData.anchors) return;
     if (!this.decodedBuffers.has(instId))
       this.decodedBuffers.set(instId, new Map());
@@ -2032,7 +2088,10 @@ export class NativePcmEngine {
       return null;
     if (instId && INST_ALIASES[instId]) instId = INST_ALIASES[instId];
 
-    if (YAMAHA_EOS_PCM_BANKS && YAMAHA_EOS_PCM_BANKS[instId]) {
+    if (
+      (YAMAHA_EOS_PCM_BANKS && YAMAHA_EOS_PCM_BANKS[instId]) ||
+      (USER_BANK_PCM_BANKS && USER_BANK_PCM_BANKS[instId])
+    ) {
       if (
         !this.decodedBuffers.has(instId) ||
         this.decodedBuffers.get(instId).size === 0
@@ -2348,6 +2407,7 @@ export class NativePcmEngine {
       const isHit = instId?.includes("hit");
       const isPiano =
         instId?.includes("piano") ||
+        instId?.includes("rhodes") ||
         instId?.includes("roads") ||
         instId?.includes("cp80") ||
         instId?.includes("tx816") ||

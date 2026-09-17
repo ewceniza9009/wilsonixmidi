@@ -287,42 +287,31 @@
   overflow: hidden;
 }
 
-/* Banks Row - Ultra Compact Single Line Toolbar */
+/* Banks Row - Clean 7-Bank Consolidated Toolbar (Single-Screen Workstation Layout) */
 .triton-banks-row {
-  display: flex;
-  flex-wrap: nowrap;
-  overflow-x: auto;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 6px;
   margin-bottom: 6px;
   flex-shrink: 0;
   padding: 2px 2px 4px 2px;
   position: relative;
   z-index: 5;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(56, 189, 248, 0.4) transparent;
-}
-
-.triton-banks-row::-webkit-scrollbar {
-  height: 3px;
-}
-
-.triton-banks-row::-webkit-scrollbar-thumb {
-  background: rgba(56, 189, 248, 0.4);
-  border-radius: 2px;
 }
 
 .triton-bank-card {
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: flex-start;
+  gap: 6px;
   background: #181e29;
   border: 1px solid #334155;
-  border-radius: 3px;
-  padding: 4px 8px;
+  border-radius: 4px;
+  padding: 4px 6px;
   cursor: pointer;
-  white-space: nowrap;
-  flex-shrink: 0;
-  transition: all 0.12s ease;
+  min-width: 0;
+  overflow: hidden;
+  transition: all 0.15s ease;
   user-select: none;
   touch-action: manipulation;
 }
@@ -339,31 +328,40 @@
 }
 
 .mini-triton-icon {
-  width: 12px;
+  width: 10px;
   height: 8px;
   background: #64748b;
   border-radius: 1px;
   border: 1px solid #475569;
+  flex-shrink: 0;
 }
 
 .bank-meta {
   display: flex;
   flex-direction: column;
   text-align: left;
-  line-height: 1.1;
+  line-height: 1.15;
   pointer-events: none;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .bank-card-title {
   font-size: 0.62rem;
   font-weight: 800;
   color: #f1f5f9;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .bank-card-desc {
-  font-size: 0.46rem;
+  font-size: 0.48rem;
   color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* TouchView 4-Column Program Grid (Scrolls INSIDE its box, NEVER pushes keyboard!) */
@@ -1780,6 +1778,9 @@
 
   /* Banks Row - Smooth Swipe Indicator */
   .triton-banks-row {
+    display: flex;
+    overflow-x: auto;
+    flex-wrap: nowrap;
     mask-image: linear-gradient(to right, black 85%, transparent 100%);
     -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
     scrollbar-width: none !important;
@@ -1788,7 +1789,8 @@
   .triton-banks-row::-webkit-scrollbar { display: none !important; }
 
   .triton-bank-card {
-    min-width: 85px;
+    flex-shrink: 0;
+    min-width: 90px;
     padding: 3px 6px;
   }
 

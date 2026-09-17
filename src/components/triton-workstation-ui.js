@@ -22,6 +22,22 @@ export class TritonWorkstationUI {
       savedProgId = localStorage.getItem("wilsonix_triton_active_prog_id");
     } catch (e) {}
 
+    // Map legacy bank IDs to consolidated 7 workstation bank IDs
+    const LEGACY_BANK_MAP = {
+      USER_B: "EDM_CLUB",
+      USER_C: "EDM_CLUB",
+      USER_D: "EDM_CLUB",
+      USER_E: "Y_EOS",
+      GENUINE_SAX: "KORG_M1",
+      HUMAN_VOX: "CINEMATIC_FX",
+      WEIRD_FX: "CINEMATIC_FX",
+      DJ_CINEMATIC: "CINEMATIC_FX",
+      NATURE: "CINEMATIC_FX",
+    };
+    if (LEGACY_BANK_MAP[savedBank]) {
+      savedBank = LEGACY_BANK_MAP[savedBank];
+    }
+
     // Verify savedBank exists in TRITON_BANKS or is COMBI
     if (savedBank !== "COMBI" && !TRITON_BANKS[savedBank]) {
       savedBank = "USER_A";
@@ -318,8 +334,8 @@ export class TritonWorkstationUI {
           </button>
         `;
 
-    // Bank card display order (Y_EOS sits directly next to KORG_M1; COMBI sits right after GENUINE SAX & REEDS)
-    const bankRowOrder = ["USER_A", "KORG_M1", "Y_EOS", "USER_B", "USER_C", "USER_D", "GENUINE_SAX", "COMBI", "NATURE", "HUMAN_VOX", "WEIRD_FX", "DJ_CINEMATIC", "PERCUSSION"];
+    // Bank card display order (7 consolidated workstation banks: fits on single screen)
+    const bankRowOrder = ["USER_A", "KORG_M1", "Y_EOS", "EDM_CLUB", "COMBI", "PERCUSSION", "CINEMATIC_FX"];
 
     return `
       <!-- Bank Selectors Row -->
@@ -726,8 +742,11 @@ export class TritonWorkstationUI {
       return;
     }
 
-    // Check TRITON_BANKS
-    for (const [bankId, bank] of Object.entries(TRITON_BANKS)) {
+    // Check TRITON_BANKS (prioritize the 7 main bank IDs)
+    const mainBankIds = ["USER_A", "KORG_M1", "Y_EOS", "EDM_CLUB", "COMBI", "PERCUSSION", "CINEMATIC_FX"];
+    for (const bankId of mainBankIds) {
+      const bank = TRITON_BANKS[bankId];
+      if (!bank) continue;
       const prog = (bank.programs || []).find(p => p.id === progId);
       if (prog) {
         this.activeBankId = bankId;
@@ -751,6 +770,11 @@ export class TritonWorkstationUI {
 
     if (prog.eosType) {
       this.applyYamahaEosProgram(prog);
+      return;
+    }
+
+    if (prog.userType) {
+      this.applyUserBankProgram(prog);
       return;
     }
 
@@ -2048,6 +2072,465 @@ export class TritonWorkstationUI {
       fx.reverb?.setDecay(1.8);
       fx.masterEq?.setMidGain(1.0);
       fx.masterEq?.setHighGain(2.0);
+    }
+  }
+
+  applyUserBankProgram(prog) {
+    const fx = audioCore.fxRack;
+    const userType = prog.userType || "";
+    const instId = prog.instId || "edm_house_piano";
+
+    // Route PCM multisample into engine
+    multiLayerEngine.setSingleInstrument(instId);
+
+    // Reset FX rack baseline to clean slate
+    if (fx) {
+      fx.tube?.setBypass(true);
+      fx.autopan?.setBypass(true);
+      fx.chorus?.setBypass(true);
+      fx.phaser?.setBypass(true);
+      fx.flanger?.setBypass(true);
+      fx.rotary?.setBypass(true);
+      fx.tremolo?.setBypass(true);
+      fx.delay?.setBypass(true);
+      fx.compressor?.setBypass(true);
+      fx.bitcrusher?.setBypass(true);
+      fx.reverb?.setBypass(false);
+      fx.reverb?.setMix(0.18);
+      fx.reverb?.setDecay(1.8);
+      fx.masterEq?.setLowGain(0);
+      fx.masterEq?.setMidGain(0);
+      fx.masterEq?.setHighGain(0);
+    }
+
+    if (!fx) return;
+
+    // --- USER BANK B: House & Garage Classics ---
+    if (userType === "house_piano") {
+      // 90s House Piano - Clean punchy compression + stereo plate reverb
+      fx.compressor?.setBypass(false);
+      fx.compressor?.setThreshold(-16);
+      fx.compressor?.setRatio(3.2);
+      fx.compressor?.setAttack(0.015);
+      fx.compressor?.setMakeup(2.2);
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.10);
+      fx.chorus?.setRate(0.8);
+      fx.reverb?.setMix(0.20);
+      fx.reverb?.setDecay(1.8);
+      fx.masterEq?.setLowGain(0.5);
+      fx.masterEq?.setHighGain(0.5);
+    } else if (userType === "korg_organ") {
+      // Genuine Korg Triton Techno Rock Organ - Fast Leslie rotary + subtle tube warmth
+      fx.rotary?.setBypass(false);
+      fx.rotary?.setSpeed("fast");
+      fx.rotary?.setMix(0.48);
+      fx.tube?.setBypass(false);
+      fx.tube?.setDrive(0.18);
+      fx.tube?.setMix(0.25);
+      fx.reverb?.setMix(0.18);
+      fx.reverb?.setDecay(1.6);
+      fx.masterEq?.setMidGain(1.0);
+    } else if (userType === "river_bass1") {
+      // River House Bass 1 - Tight punchy compression + low end warmth
+      fx.compressor?.setBypass(false);
+      fx.compressor?.setThreshold(-22);
+      fx.compressor?.setRatio(4.0);
+      fx.compressor?.setAttack(0.010);
+      fx.compressor?.setRelease(0.12);
+      fx.compressor?.setMakeup(3.0);
+      fx.reverb?.setMix(0.06);
+      fx.reverb?.setDecay(0.8);
+      fx.masterEq?.setLowGain(2.5);
+      fx.masterEq?.setMidGain(-0.5);
+    } else if (userType === "dx_funkbass") {
+      // DX Funk Slap - Snappy slap compression + subtle chorus
+      fx.compressor?.setBypass(false);
+      fx.compressor?.setThreshold(-18);
+      fx.compressor?.setRatio(3.5);
+      fx.compressor?.setAttack(0.008);
+      fx.compressor?.setMakeup(2.5);
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.12);
+      fx.chorus?.setRate(1.0);
+      fx.reverb?.setMix(0.10);
+      fx.reverb?.setDecay(1.0);
+      fx.masterEq?.setLowGain(2.0);
+      fx.masterEq?.setHighGain(0.5);
+    } else if (userType === "club_saw1") {
+      // Club Saw Lead 1 - Stereo ensemble + stereo tape delay
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.28);
+      fx.chorus?.setRate(0.85);
+      fx.delay?.setBypass(false);
+      fx.delay?.setMix(0.18);
+      fx.delay?.setDivision(0.375);
+      fx.delay?.setFeedback(0.22);
+      fx.reverb?.setMix(0.20);
+      fx.reverb?.setDecay(2.2);
+      fx.masterEq?.setHighGain(0.5);
+    } else if (userType === "club_brass") {
+      // Vital Club Brass Lead - Punch limiter + studio plate
+      fx.compressor?.setBypass(false);
+      fx.compressor?.setThreshold(-16);
+      fx.compressor?.setRatio(4.0);
+      fx.compressor?.setAttack(0.006);
+      fx.compressor?.setMakeup(2.5);
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.15);
+      fx.chorus?.setRate(0.7);
+      fx.reverb?.setMix(0.22);
+      fx.reverb?.setDecay(1.8);
+      fx.masterEq?.setMidGain(1.0);
+    } else if (userType === "hiq_bass") {
+      // HiQ Deep Bass - Clean heavy sub punch
+      fx.compressor?.setBypass(false);
+      fx.compressor?.setThreshold(-22);
+      fx.compressor?.setRatio(4.5);
+      fx.compressor?.setAttack(0.010);
+      fx.compressor?.setRelease(0.10);
+      fx.compressor?.setMakeup(3.5);
+      fx.reverb?.setMix(0.05);
+      fx.reverb?.setDecay(0.6);
+      fx.masterEq?.setLowGain(2.5);
+    } else if (userType === "mika_piano") {
+      // Mika Dance Piano - Heavy club chord punch + plate reverb
+      fx.compressor?.setBypass(false);
+      fx.compressor?.setThreshold(-18);
+      fx.compressor?.setRatio(3.0);
+      fx.compressor?.setAttack(0.020);
+      fx.compressor?.setMakeup(2.5);
+      fx.reverb?.setMix(0.20);
+      fx.reverb?.setDecay(1.8);
+      fx.masterEq?.setLowGain(0.5);
+      fx.masterEq?.setHighGain(0.5);
+    } else if (userType === "river_bass2") {
+      // River Sub Bass 2 - Smooth low-end analog warmth
+      fx.tube?.setBypass(false);
+      fx.tube?.setDrive(0.14);
+      fx.tube?.setMix(0.20);
+      fx.compressor?.setBypass(false);
+      fx.compressor?.setThreshold(-22);
+      fx.compressor?.setRatio(4.0);
+      fx.compressor?.setAttack(0.012);
+      fx.compressor?.setMakeup(3.0);
+      fx.masterEq?.setLowGain(3.0);
+      fx.masterEq?.setMidGain(-1.0);
+    }
+
+    // --- USER BANK C: EDM & Festival Anthems ---
+    else if (userType === "iconic_lead1") {
+      // Stadium EDM Anthem Lead 1 - Wide stereo + ping-pong delay + hall reverb
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.25);
+      fx.chorus?.setRate(0.85);
+      fx.delay?.setBypass(false);
+      fx.delay?.setMix(0.22);
+      fx.delay?.setDivision(0.375);
+      fx.delay?.setFeedback(0.25);
+      fx.reverb?.setMix(0.22);
+      fx.reverb?.setDecay(2.2);
+      fx.masterEq?.setHighGain(0.5);
+    } else if (userType === "iconic_lead2") {
+      // Festival Melbourne Screamer - Controlled presence + concert hall
+      fx.tube?.setBypass(false);
+      fx.tube?.setDrive(0.20);
+      fx.tube?.setMix(0.28);
+      fx.compressor?.setBypass(false);
+      fx.compressor?.setThreshold(-16);
+      fx.compressor?.setRatio(3.5);
+      fx.compressor?.setAttack(0.008);
+      fx.compressor?.setMakeup(2.5);
+      fx.reverb?.setMix(0.24);
+      fx.reverb?.setDecay(2.4);
+      fx.masterEq?.setMidGain(1.2);
+    } else if (userType === "supersaw_jp80") {
+      // Authentic JP-8000 SuperSaw Stack - Massive unison chorus + tape delay
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.35);
+      fx.chorus?.setRate(0.75);
+      fx.delay?.setBypass(false);
+      fx.delay?.setMix(0.20);
+      fx.delay?.setDivision(0.25);
+      fx.delay?.setFeedback(0.22);
+      fx.reverb?.setMix(0.25);
+      fx.reverb?.setDecay(2.8);
+      fx.masterEq?.setLowGain(1.0);
+      fx.masterEq?.setHighGain(0.8);
+    } else if (userType === "bigroom_saw") {
+      // Big Room Festival Saw - Punch limiter + concert hall
+      fx.compressor?.setBypass(false);
+      fx.compressor?.setThreshold(-15);
+      fx.compressor?.setRatio(4.5);
+      fx.compressor?.setAttack(0.005);
+      fx.compressor?.setMakeup(2.8);
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.25);
+      fx.chorus?.setRate(0.8);
+      fx.reverb?.setMix(0.26);
+      fx.reverb?.setDecay(2.5);
+      fx.masterEq?.setMidGain(0.8);
+    } else if (userType === "trance_oct") {
+      // Shimmering Euro Anthem Trance Octave - Dimension chorus + ping-pong
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.28);
+      fx.chorus?.setRate(0.65);
+      fx.delay?.setBypass(false);
+      fx.delay?.setMix(0.22);
+      fx.delay?.setDivision(0.375);
+      fx.delay?.setFeedback(0.28);
+      fx.reverb?.setMix(0.26);
+      fx.reverb?.setDecay(2.8);
+      fx.masterEq?.setHighGain(0.5);
+    } else if (userType === "retro_synthbass1") {
+      // Punch Synth Bass - Punchy low-end control
+      fx.compressor?.setBypass(false);
+      fx.compressor?.setThreshold(-22);
+      fx.compressor?.setRatio(4.5);
+      fx.compressor?.setAttack(0.010);
+      fx.compressor?.setRelease(0.12);
+      fx.compressor?.setMakeup(3.0);
+      fx.masterEq?.setLowGain(2.5);
+    } else if (userType === "club_brass_rave") {
+      // Rave Synth Brass - Punch compression + gated plate
+      fx.tube?.setBypass(false);
+      fx.tube?.setDrive(0.18);
+      fx.tube?.setMix(0.25);
+      fx.compressor?.setBypass(false);
+      fx.compressor?.setThreshold(-16);
+      fx.compressor?.setRatio(4.0);
+      fx.compressor?.setAttack(0.008);
+      fx.compressor?.setMakeup(2.5);
+      fx.reverb?.setMix(0.22);
+      fx.reverb?.setDecay(1.8);
+      fx.masterEq?.setHighGain(0.8);
+    } else if (userType === "k2500_oohs") {
+      // Kurzweil K-2500 Voice Oohs - Shimmer chorus + deep cathedral
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.32);
+      fx.chorus?.setRate(0.50);
+      fx.reverb?.setMix(0.35);
+      fx.reverb?.setDecay(3.5);
+      fx.masterEq?.setLowGain(0.5);
+    } else if (userType === "gus_voice") {
+      // GUS Synth Voice - Slow phaser + chorus + cathedral reverb
+      fx.phaser?.setBypass(false);
+      fx.phaser?.setMix(0.22);
+      fx.phaser?.setRate(0.35);
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.22);
+      fx.chorus?.setRate(0.60);
+      fx.reverb?.setMix(0.30);
+      fx.reverb?.setDecay(3.0);
+      fx.masterEq?.setMidGain(1.0);
+    }
+
+    // --- USER BANK D: Techno, Trance & Underground ---
+    else if (userType === "warehouse_saw") {
+      // Techno Warehouse Saw - Controlled overdrive + tight dark room
+      fx.tube?.setBypass(false);
+      fx.tube?.setDrive(0.24);
+      fx.tube?.setMix(0.32);
+      fx.compressor?.setBypass(false);
+      fx.compressor?.setThreshold(-16);
+      fx.compressor?.setRatio(3.5);
+      fx.compressor?.setAttack(0.008);
+      fx.compressor?.setMakeup(2.5);
+      fx.reverb?.setMix(0.18);
+      fx.reverb?.setDecay(1.4);
+      fx.masterEq?.setMidGain(1.5);
+    } else if (userType === "dark_organ") {
+      // Dark Underground Organ - Subtle tube drive + dark studio plate
+      fx.tube?.setBypass(false);
+      fx.tube?.setDrive(0.18);
+      fx.tube?.setMix(0.25);
+      fx.reverb?.setMix(0.20);
+      fx.reverb?.setDecay(1.8);
+      fx.masterEq?.setMidGain(1.0);
+    } else if (userType === "trance_synth") {
+      // Euro Trance Synth - Stereo flanger + ping-pong delay + concert hall
+      fx.flanger?.setBypass(false);
+      fx.flanger?.setMix(0.20);
+      fx.flanger?.setRate(0.4);
+      fx.delay?.setBypass(false);
+      fx.delay?.setMix(0.22);
+      fx.delay?.setDivision(0.375);
+      fx.delay?.setFeedback(0.25);
+      fx.reverb?.setMix(0.26);
+      fx.reverb?.setDecay(2.6);
+      fx.masterEq?.setHighGain(0.5);
+    } else if (userType === "berlin_sub") {
+      // Berlin Sub Bass - Heavy low-end sub boost + tight compression
+      fx.compressor?.setBypass(false);
+      fx.compressor?.setThreshold(-24);
+      fx.compressor?.setRatio(5.0);
+      fx.compressor?.setAttack(0.015);
+      fx.compressor?.setRelease(0.15);
+      fx.compressor?.setMakeup(3.8);
+      fx.masterEq?.setLowGain(3.5);
+      fx.masterEq?.setHighGain(-1.5);
+    } else if (userType === "club_saw2") {
+      // Detuned Club Saw 2 - Punch compressor + stereo tape delay
+      fx.compressor?.setBypass(false);
+      fx.compressor?.setThreshold(-15);
+      fx.compressor?.setRatio(4.0);
+      fx.compressor?.setAttack(0.008);
+      fx.compressor?.setMakeup(2.5);
+      fx.delay?.setBypass(false);
+      fx.delay?.setMix(0.20);
+      fx.delay?.setDivision(0.25);
+      fx.delay?.setFeedback(0.22);
+      fx.reverb?.setMix(0.20);
+      fx.reverb?.setDecay(1.8);
+      fx.masterEq?.setMidGain(1.0);
+    } else if (userType === "trance_oct2") {
+      // Trance Synth Oct2 - Massive octave stack + concert hall
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.30);
+      fx.chorus?.setRate(0.70);
+      fx.delay?.setBypass(false);
+      fx.delay?.setMix(0.22);
+      fx.delay?.setDivision(0.375);
+      fx.delay?.setFeedback(0.25);
+      fx.reverb?.setMix(0.28);
+      fx.reverb?.setDecay(3.0);
+      fx.masterEq?.setHighGain(0.5);
+    } else if (userType === "saw_gs") {
+      // Saw Wave GS - Warm analog chorus + plate reverb
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.26);
+      fx.chorus?.setRate(0.65);
+      fx.reverb?.setMix(0.20);
+      fx.reverb?.setDecay(2.0);
+      fx.masterEq?.setMidGain(0.8);
+    } else if (userType === "acid_resonator") {
+      // Screaming TB-303 Acid Resonator - Overdrive drive + resonant tape delay
+      fx.tube?.setBypass(false);
+      fx.tube?.setDrive(0.28);
+      fx.tube?.setMix(0.38);
+      fx.delay?.setBypass(false);
+      fx.delay?.setMix(0.18);
+      fx.delay?.setDivision(0.25);
+      fx.delay?.setFeedback(0.25);
+      fx.reverb?.setMix(0.10);
+      fx.reverb?.setDecay(1.0);
+      fx.masterEq?.setLowGain(2.5);
+      fx.masterEq?.setMidGain(1.8);
+    } else if (userType === "doctor_solo") {
+      // Doctor Solo Lead - Piercing pitch overdrive + ping-pong delay
+      fx.tube?.setBypass(false);
+      fx.tube?.setDrive(0.20);
+      fx.tube?.setMix(0.28);
+      fx.delay?.setBypass(false);
+      fx.delay?.setMix(0.22);
+      fx.delay?.setDivision(0.375);
+      fx.delay?.setFeedback(0.26);
+      fx.reverb?.setMix(0.24);
+      fx.reverb?.setDecay(2.5);
+      fx.masterEq?.setMidGain(1.2);
+    }
+
+    // --- USER BANK E: Studio Rompler & GM2 Elite (Jnsgm2.sf2) ---
+    else if (userType === "jns_rhodes") {
+      // Vintage Mark I Rhodes - Warm suitcase bell-tine EP + stereo chorus + studio plate
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.35);
+      fx.chorus?.setRate(0.95);
+      fx.reverb?.setMix(0.22);
+      fx.reverb?.setDecay(1.8);
+      fx.masterEq?.setLowGain(1.0);
+      fx.masterEq?.setHighGain(0.5);
+    } else if (userType === "jns_hammond") {
+      // Gospel Hammond B3 - Fast rotary speaker + warm tube drive + plate reverb
+      fx.rotary?.setBypass(false);
+      fx.rotary?.setSpeed("fast");
+      fx.rotary?.setMix(0.50);
+      fx.tube?.setBypass(false);
+      fx.tube?.setDrive(0.16);
+      fx.tube?.setMix(0.20);
+      fx.reverb?.setMix(0.20);
+      fx.reverb?.setDecay(1.5);
+      fx.masterEq?.setMidGain(0.8);
+    } else if (userType === "jns_shakuhachi") {
+      // Bamboo Shakuhachi Flute - Breathy bamboo flute + ping-pong delay + cathedral hall
+      fx.delay?.setBypass(false);
+      fx.delay?.setMix(0.24);
+      fx.delay?.setDivision(0.375);
+      fx.delay?.setFeedback(0.30);
+      fx.reverb?.setMix(0.30);
+      fx.reverb?.setDecay(3.0);
+      fx.masterEq?.setHighGain(0.5);
+    } else if (userType === "jns_fingered_bass") {
+      // Classic Fingered Bass - Punch compressor + warm low end + subtle room
+      fx.compressor?.setBypass(false);
+      fx.compressor?.setThreshold(-20);
+      fx.compressor?.setRatio(3.8);
+      fx.compressor?.setAttack(0.010);
+      fx.compressor?.setRelease(0.12);
+      fx.compressor?.setMakeup(3.0);
+      fx.reverb?.setMix(0.08);
+      fx.reverb?.setDecay(0.8);
+      fx.masterEq?.setLowGain(2.5);
+      fx.masterEq?.setMidGain(0.5);
+    } else if (userType === "jns_charang") {
+      // Charang Screamer - Overdrive lead + tape delay + concert hall
+      fx.tube?.setBypass(false);
+      fx.tube?.setDrive(0.18);
+      fx.tube?.setMix(0.24);
+      fx.delay?.setBypass(false);
+      fx.delay?.setMix(0.24);
+      fx.delay?.setDivision(0.375);
+      fx.delay?.setFeedback(0.28);
+      fx.reverb?.setMix(0.22);
+      fx.reverb?.setDecay(2.2);
+      fx.masterEq?.setMidGain(1.5);
+    } else if (userType === "jns_5th_saw") {
+      // 5th Power Saw Lead - Parallel 5th rave lead + ensemble chorus + ping-pong delay
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.32);
+      fx.chorus?.setRate(0.85);
+      fx.delay?.setBypass(false);
+      fx.delay?.setMix(0.20);
+      fx.delay?.setDivision(0.375);
+      fx.delay?.setFeedback(0.22);
+      fx.reverb?.setMix(0.22);
+      fx.reverb?.setDecay(2.4);
+      fx.masterEq?.setHighGain(0.5);
+    } else if (userType === "jns_halo_pad") {
+      // Ethereal Halo Pad - Roland D-50 / JV choir pad + phaser swirl + cathedral hall
+      fx.phaser?.setBypass(false);
+      fx.phaser?.setMix(0.35);
+      fx.phaser?.setRate(0.4);
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.30);
+      fx.chorus?.setRate(0.65);
+      fx.reverb?.setMix(0.38);
+      fx.reverb?.setDecay(3.8);
+      fx.masterEq?.setLowGain(1.0);
+    } else if (userType === "jns_bowed_glass") {
+      // Bowed Crystal Glass - Acoustic glass texture + flanger + wide shimmer delay
+      fx.flanger?.setBypass(false);
+      fx.flanger?.setMix(0.28);
+      fx.flanger?.setRate(0.5);
+      fx.delay?.setBypass(false);
+      fx.delay?.setMix(0.18);
+      fx.delay?.setDivision(0.5);
+      fx.delay?.setFeedback(0.30);
+      fx.reverb?.setMix(0.35);
+      fx.reverb?.setDecay(3.5);
+    } else if (userType === "jns_sitar") {
+      // Mystic Sitar & Drone - Exotic sitar pluck + compressor + room ambience
+      fx.compressor?.setBypass(false);
+      fx.compressor?.setThreshold(-16);
+      fx.compressor?.setRatio(3.2);
+      fx.compressor?.setAttack(0.008);
+      fx.compressor?.setMakeup(2.0);
+      fx.delay?.setBypass(false);
+      fx.delay?.setMix(0.15);
+      fx.delay?.setDivision(0.375);
+      fx.delay?.setFeedback(0.18);
+      fx.reverb?.setMix(0.22);
+      fx.reverb?.setDecay(1.6);
     }
   }
 }

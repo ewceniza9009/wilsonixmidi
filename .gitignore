@@ -61,6 +61,8 @@ Thumbs.db
 scratch/
 scratch_test_*.mjs
 .system_generated/
+__pycache__/
+*.pyc
 
 src-tauri/target
 src-tauri/WixTools
