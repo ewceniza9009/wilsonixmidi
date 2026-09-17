@@ -3880,6 +3880,15 @@ body.mobile-stage-keys .studio-keyboard-deck {
   overflow: hidden;
 }
 
+.sfx-cat-tabs-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  margin-bottom: 5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 4px;
+}
+
 .sfx-cat-tabs {
   display: flex;
   flex-wrap: nowrap;
@@ -3888,14 +3897,53 @@ body.mobile-stage-keys .studio-keyboard-deck {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   gap: 4px;
-  padding-bottom: 4px;
-  margin-bottom: 5px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+  transition: all 0.2s ease;
+}
+
+.sfx-cat-tabs.expanded {
+  flex-wrap: wrap;
+  overflow-x: visible;
 }
 
 .sfx-cat-tabs::-webkit-scrollbar {
   display: none;
+}
+
+.sfx-tab-toggle-btn {
+  background: rgba(99, 102, 241, 0.12);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.sfx-tab-toggle-btn:hover {
+  background: rgba(99, 102, 241, 0.25);
+  color: #ffffff;
+  border-color: rgba(99, 102, 241, 0.6);
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.3);
+}
+
+.sfx-tab-toggle-btn.active {
+  background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+  color: #ffffff;
+  border-color: #6366f1;
 }
 
 .sfx-cat-btn {
@@ -3985,6 +4033,18 @@ body.mobile-stage-keys .studio-keyboard-deck {
   border-color: #6366f1 !important;
   background: #312e81 !important;
   box-shadow: 0 0 16px rgba(99, 102, 241, 0.8), inset 0 0 8px #fff !important;
+}
+
+.sfx-pad-card.playing {
+  border-color: #10b981 !important;
+  background: linear-gradient(180deg, #064e3b 0%, #022c22 100%) !important;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.6) !important;
+  animation: sfxPlayingPulse 1.2s infinite alternate ease-in-out;
+}
+
+@keyframes sfxPlayingPulse {
+  0% { box-shadow: 0 0 8px rgba(16, 185, 129, 0.35); }
+  100% { box-shadow: 0 0 18px rgba(16, 185, 129, 0.85), inset 0 0 6px rgba(52, 211, 153, 0.4); }
 }
 
 .sfx-pad-icon {
