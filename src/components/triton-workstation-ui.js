@@ -292,6 +292,7 @@ export class TritonWorkstationUI {
     this.bindSubTabs();
     this.bindBankButtons();
     this.bindProgramGrid();
+    this.bindFastScroll();
     this.bindRealtimeKnobs();
     this.bindSearch();
     this.bindIfxMfxControls();
@@ -309,11 +310,22 @@ export class TritonWorkstationUI {
       return this.renderArpView();
     }
 
+    // Distinct modern vector SVG icons for each soundbank
+    const BANK_ICONS = {
+      USER_A: `<svg viewBox="0 0 24 24" class="bank-svg-icon icon-triton" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8v8M10 8v8M14 8v8M18 8v8"/><path d="M6 12h4M14 12h4"/></svg>`,
+      KORG_M1: `<svg viewBox="0 0 24 24" class="bank-svg-icon icon-m1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><path d="M7 15v-2M12 15v-3M17 15v-1"/></svg>`,
+      Y_EOS: `<svg viewBox="0 0 24 24" class="bank-svg-icon icon-yeos" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+      EDM_CLUB: `<svg viewBox="0 0 24 24" class="bank-svg-icon icon-edm" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+      COMBI: `<svg viewBox="0 0 24 24" class="bank-svg-icon icon-combi" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>`,
+      PERCUSSION: `<svg viewBox="0 0 24 24" class="bank-svg-icon icon-drums" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>`,
+      CINEMATIC_FX: `<svg viewBox="0 0 24 24" class="bank-svg-icon icon-cinema" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M4 11V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/><path d="m4 11 16-4"/><path d="m9 5 2 6"/><path d="m14 5 2 6"/></svg>`,
+    };
+
     // Default: BROWSER Mode
     const bankCardHtml = b => `
           <button class="triton-bank-card ${this.activeBankId === b.id ? "active" : ""}" data-bank="${b.id}">
             <div class="bank-thumb-preview">
-              <div class="mini-triton-icon"></div>
+              ${BANK_ICONS[b.id] || `<div class="mini-triton-icon"></div>`}
             </div>
             <div class="bank-meta">
               <span class="bank-card-title">${b.name}</span>
@@ -325,7 +337,7 @@ export class TritonWorkstationUI {
     const combiCardHtml = () => `
           <button class="triton-bank-card ${this.activeBankId === "COMBI" ? "active" : ""}" data-bank="COMBI">
             <div class="bank-thumb-preview">
-              <div class="mini-triton-icon"></div>
+              ${BANK_ICONS.COMBI}
             </div>
             <div class="bank-meta">
               <span class="bank-card-title">COMBI</span>
@@ -725,6 +737,21 @@ export class TritonWorkstationUI {
 
       cell.addEventListener("pointerdown", handleSelect);
     });
+  }
+
+  bindFastScroll() {
+    const grid = this.container?.querySelector(".touchview-program-grid");
+    if (!grid) return;
+    grid.addEventListener(
+      "wheel",
+      (e) => {
+        if (Math.abs(e.deltaY) > 0) {
+          e.preventDefault();
+          grid.scrollTop += e.deltaY * 1.5;
+        }
+      },
+      { passive: false }
+    );
   }
 
   selectProgramById(progId) {

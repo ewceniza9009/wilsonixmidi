@@ -1,23 +1,23 @@
 /* ==========================================================================
    KORG TRITON WORKSTATION & MULTI-LAYER COMBI STYLES
-   Brushed Silver Chassis, TouchView Blue LCD, 4-Column Program Matrix,
+   Flagship Dark Titanium Chassis, TouchView OLED LCD, 4-Column Program Matrix,
    Realtime Controls 1-4, and 4-Timbre Combi Mixer.
    ========================================================================== */
 
-/* Triton Chassis */
+/* Triton Chassis - Flagship Dark Titanium DAW Workstation */
 .triton-hardware-chassis {
   height: 100%;
   max-height: 100%;
   box-sizing: border-box;
-  background: linear-gradient(180deg, #d4d8df 0%, #b8bec9 12%, #8e96a4 100%);
-  border: 1px solid #5a6270;
-  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, #1c212d 0%, #151923 40%, #10131b 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
   padding: 6px 10px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7), inset 0 1px 3px rgba(255, 255, 255, 0.8);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  color: #11141a;
+  gap: 5px;
+  color: var(--text-primary);
   overflow: hidden;
 }
 
@@ -27,13 +27,15 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: nowrap;
-  gap: 8px;
-  background: linear-gradient(180deg, #323742 0%, #1c2027 100%);
-  border: 1px solid #11141a;
-  border-radius: var(--radius-sm);
-  padding: 4px 10px;
+  gap: 10px;
+  background: rgba(14, 17, 24, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  padding: 5px 12px;
   color: #fff;
-  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 2px 6px rgba(0, 0, 0, 0.4);
   flex-shrink: 0;
 }
 
@@ -87,31 +89,31 @@
   width: 25px;
   height: 25px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #ffffff 0%, #d1d5db 30%, #94a3b8 65%, #475569 100%);
-  border: 1.5px solid #1e293b;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.8), inset 0 1px 1px rgba(255, 255, 255, 0.9), inset 0 -1px 2px rgba(0, 0, 0, 0.5);
+  background: radial-gradient(circle at 35% 35%, #3a4254 0%, #202634 50%, #141722 100%);
+  border: 1.5px solid #2e3648;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.7), inset 0 1px 1px rgba(255, 255, 255, 0.25), inset 0 -1px 2px rgba(0, 0, 0, 0.8);
   position: relative;
   cursor: ns-resize;
-  transition: transform 0.1s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.12s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .triton-silver-knob:hover {
   transform: scale(1.08);
   border-color: var(--accent-amber);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 8px var(--accent-amber-glow);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.9), 0 0 10px var(--accent-amber-glow);
 }
 
 .knob-notch {
   width: 2px;
   height: 8px;
-  background: #0f172a;
+  background: var(--accent-amber);
   border-radius: 1px;
   position: absolute;
   top: 2px;
   left: calc(50% - 1px);
   transform-origin: bottom center;
   transform: rotate(-30deg);
-  box-shadow: 0 0 1px rgba(255, 255, 255, 0.7);
+  box-shadow: 0 0 4px var(--accent-amber);
 }
 
 .rt-label {
@@ -120,15 +122,15 @@
   color: #cbd5e1;
 }
 
-/* Blue LCD Display */
+/* TouchView OLED Display */
 .triton-lcd-display {
   flex: 1;
   min-width: 200px;
-  background: radial-gradient(circle at 50% 50%, #004d80 0%, #00223d 100%);
-  border: 2px solid #11151c;
+  background: radial-gradient(circle at 50% 30%, #062a42 0%, #031422 100%);
+  border: 1px solid rgba(0, 229, 255, 0.35);
   border-radius: var(--radius-sm);
-  padding: 4px 10px;
-  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.9);
+  padding: 5px 12px;
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.9), 0 0 14px rgba(0, 229, 255, 0.12);
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -304,27 +306,77 @@
   align-items: center;
   justify-content: flex-start;
   gap: 6px;
-  background: #181e29;
-  border: 1px solid #334155;
-  border-radius: 4px;
-  padding: 4px 6px;
+  background: rgba(18, 22, 32, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
   cursor: pointer;
   min-width: 0;
   overflow: hidden;
-  transition: all 0.15s ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 2px 4px rgba(0, 0, 0, 0.4);
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
   user-select: none;
   touch-action: manipulation;
 }
 
 .triton-bank-card:hover {
-  background: #252e3e;
-  border-color: #475569;
+  background: rgba(28, 35, 50, 0.95);
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-1px);
 }
 
 .triton-bank-card.active {
-  background: linear-gradient(135deg, rgba(2, 132, 199, 0.5), rgba(2, 132, 199, 0.2));
-  border-color: #38bdf8;
-  box-shadow: 0 0 6px rgba(56, 189, 248, 0.4);
+  background: linear-gradient(135deg, rgba(255, 118, 77, 0.25) 0%, rgba(20, 25, 36, 0.95) 100%);
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 12px var(--accent-amber-glow), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.bank-thumb-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  background: rgba(8, 10, 15, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+  transition: all 0.15s ease;
+}
+
+.bank-svg-icon {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.icon-triton { color: #f59e0b; }
+.icon-m1 { color: #38bdf8; }
+.icon-yeos { color: #eab308; }
+.icon-edm { color: #ff5f1f; }
+.icon-combi { color: #a855f7; }
+.icon-drums { color: #00f59b; }
+.icon-cinema { color: #ec4899; }
+
+.triton-bank-card:hover .bank-thumb-preview {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(12, 15, 23, 0.8);
+}
+
+.triton-bank-card:hover .bank-svg-icon {
+  transform: scale(1.12);
+}
+
+.triton-bank-card.active .bank-thumb-preview {
+  border-color: var(--accent-amber);
+  background: rgba(255, 118, 77, 0.15);
+  box-shadow: 0 0 8px var(--accent-amber-glow);
+}
+
+.triton-bank-card.active .bank-svg-icon {
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 4px currentColor);
 }
 
 .mini-triton-icon {
@@ -368,26 +420,38 @@
 .touchview-program-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-auto-rows: 30px;
+  grid-auto-rows: 32px;
   align-content: start;
   gap: 5px;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  scroll-behavior: auto !important;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 4px 4px 8px 2px;
   position: relative;
   z-index: 2;
   scrollbar-width: thin;
-  scrollbar-color: rgba(56, 189, 248, 0.4) transparent;
+  scrollbar-color: rgba(255, 118, 77, 0.45) rgba(0, 0, 0, 0.25);
 }
 
 .touchview-program-grid::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
+}
+
+.touchview-program-grid::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 3px;
 }
 
 .touchview-program-grid::-webkit-scrollbar-thumb {
-  background: rgba(56, 189, 248, 0.4);
-  border-radius: 2px;
+  background: rgba(255, 118, 77, 0.45);
+  border-radius: 3px;
+}
+
+.touchview-program-grid::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-amber);
 }
 
 @media (max-width: 1100px) {
@@ -411,19 +475,20 @@
 .triton-prog-cell {
   display: flex;
   align-items: center;
-  gap: 5px;
-  height: 30px;
-  min-height: 30px;
+  gap: 6px;
+  height: 32px;
+  min-height: 32px;
   box-sizing: border-box;
-  background: #181d27;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 3px;
+  background: rgba(18, 22, 32, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius-sm);
   padding: 0 8px;
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
-  transition: all 0.1s ease;
+  transition: all 0.12s ease;
+  position: relative;
 }
 
 .triton-prog-cell * {
@@ -431,14 +496,14 @@
 }
 
 .triton-prog-cell:hover {
-  background: #252e3d;
-  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(30, 37, 52, 0.9);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .triton-prog-cell.active {
-  background: #0284c7 !important;
-  border-color: #38bdf8 !important;
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.6), inset 0 0 6px rgba(255, 255, 255, 0.3) !important;
+  background: linear-gradient(90deg, rgba(255, 118, 77, 0.3) 0%, rgba(26, 32, 46, 0.95) 100%) !important;
+  border-color: var(--accent-amber) !important;
+  box-shadow: 0 0 14px var(--accent-amber-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
 }
 
 .prog-bank-code {
@@ -449,7 +514,7 @@
 }
 
 .triton-prog-cell.active .prog-bank-code {
-  color: #e0f2fe !important;
+  color: var(--accent-amber-bright) !important;
 }
 
 .prog-num {
@@ -460,7 +525,7 @@
 }
 
 .triton-prog-cell.active .prog-num {
-  color: #fef08a !important;
+  color: #fff !important;
 }
 
 .prog-name-label {
@@ -476,7 +541,7 @@
 .triton-prog-cell.active .prog-name-label {
   color: #ffffff !important;
   font-weight: 800 !important;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
 }
 
 .prog-star {
@@ -839,22 +904,25 @@
 }
 
 /* ==================================================================
-   SPLIT KEYBOARD CONSOLE (dedicated view)
+   SPLIT KEYBOARD CONSOLE (Flagship DAW Glassmorphism Design)
    ================================================================== */
 .split-console-view {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   padding: 16px;
-  border: 1px solid rgba(168, 85, 247, 0.25);
-  border-radius: var(--radius-md);
-  background:
-    linear-gradient(180deg, rgba(168, 85, 247, 0.08), rgba(10, 12, 18, 0.6));
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, rgba(20, 24, 34, 0.95) 0%, rgba(12, 15, 22, 0.98) 100%);
+  box-shadow: var(--shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .split-console-view.on {
-  border-color: var(--accent-amber);
-  box-shadow: 0 0 16px rgba(245, 158, 11, 0.15);
+  border-color: rgba(255, 118, 77, 0.4);
+  box-shadow: 0 0 24px rgba(255, 118, 77, 0.15), var(--shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .split-console-header {
@@ -863,76 +931,105 @@
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .split-console-title {
   margin: 4px 0 2px;
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 800;
-  background: linear-gradient(90deg, var(--accent-amber), #f8b56a);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  letter-spacing: 0.3px;
+  color: #f8fafc;
 }
 
 .split-console-sub {
   margin: 0;
-  font-size: 0.75rem;
-  color: #cbd5e1;
+  font-size: 0.72rem;
+  color: #94a3b8;
   max-width: 640px;
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 .split-console-sub b {
-  color: #fde68a;
+  color: #f1f5f9;
+  font-weight: 700;
 }
 
 .split-master-area {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: var(--radius-sm);
-  padding: 8px 12px;
+  gap: 12px;
+  background: rgba(8, 10, 15, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  padding: 6px 14px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
 }
 
 .split-status-badge {
-  font-size: 0.85rem;
+  font-size: 0.72rem;
   font-weight: 800;
-  padding: 8px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  letter-spacing: 0.5px;
+  padding: 5px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-sm);
-  background: #1a1f28;
-  color: #94a3b8;
+  background: #181d28;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.split-status-badge::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #475569;
 }
 
 .split-status-badge.on {
-  background: var(--accent-amber);
-  color: #0f1117;
+  background: rgba(255, 118, 77, 0.15);
+  color: var(--accent-amber);
   border-color: var(--accent-amber);
-  box-shadow: 0 0 14px rgba(255, 118, 77, 0.4);
+  box-shadow: 0 0 12px var(--accent-amber-glow);
+}
+
+.split-status-badge.on::before {
+  background: var(--accent-amber);
+  box-shadow: 0 0 6px var(--accent-amber);
 }
 
 .split-label {
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   font-weight: 800;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.8px;
   color: #94a3b8;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
 .split-point-select {
-  background: #0f131a;
-  border: 1px solid var(--accent-amber);
+  background: #141722;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: var(--radius-sm);
-  color: #38bdf8;
+  color: var(--accent-cyan-bright);
+  font-family: var(--font-family-mono);
   font-size: 0.82rem;
   font-weight: 800;
-  padding: 5px 8px;
+  padding: 4px 10px;
   outline: none;
   cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.split-point-select:focus,
+.split-point-select:hover {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 8px var(--accent-cyan-glow);
 }
 
 .split-cards-row {
@@ -950,98 +1047,138 @@
 .split-card {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   border-radius: var(--radius-md);
-  padding: 14px;
-  background: rgba(12, 15, 22, 0.75);
+  padding: 16px;
+  background: rgba(14, 18, 26, 0.85);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.split-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  opacity: 0.85;
 }
 
 .split-card-lower {
-  border: 2px solid rgba(239, 68, 68, 0.55);
-  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.15), inset 0 0 30px rgba(239, 68, 68, 0.05);
+  border-color: rgba(255, 118, 77, 0.25);
+}
+
+.split-card-lower::before {
+  background: linear-gradient(90deg, #ff764d, #f97316);
+}
+
+.split-card-lower:hover {
+  border-color: rgba(255, 118, 77, 0.45);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5), 0 0 16px rgba(255, 118, 77, 0.15);
 }
 
 .split-card-upper {
-  border: 2px solid rgba(59, 130, 246, 0.55);
-  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.15), inset 0 0 30px rgba(59, 130, 246, 0.05);
+  border-color: rgba(0, 229, 255, 0.25);
+}
+
+.split-card-upper::before {
+  background: linear-gradient(90deg, #00e5ff, #0284c7);
+}
+
+.split-card-upper:hover {
+  border-color: rgba(0, 229, 255, 0.45);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5), 0 0 16px rgba(0, 229, 255, 0.15);
 }
 
 .split-card-side {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .split-card-tag {
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   font-weight: 800;
-  letter-spacing: 1px;
-  color: #94a3b8;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
 }
+
+.split-card-lower .split-card-tag { color: var(--accent-amber); }
+.split-card-upper .split-card-tag { color: var(--accent-cyan-bright); }
 
 .split-card-title {
   margin: 0;
-  font-size: 1.35rem;
-  font-weight: 900;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.2px;
 }
-
-.split-card-lower .split-card-title { color: #f87171; }
-.split-card-upper .split-card-title { color: #60a5fa; }
 
 .split-card-hint {
   margin: 0;
-  font-size: 0.70rem;
-  color: #cbd5e1;
+  font-size: 0.68rem;
+  color: #94a3b8;
 }
 
 .split-card-controls {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
 }
 
 .split-instr-select,
 .split-fx-select {
   width: 100%;
   height: 28px;
-  padding: 3px 22px 3px 8px;
+  padding: 3px 22px 3px 10px;
   font-size: 0.72rem;
   font-weight: 700;
-  box-sizing: border-box;
+  background: #0d1017;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  color: #f1f5f9;
+  outline: none;
+  transition: border-color 0.15s ease;
 }
 
-.split-fx-select {
-  background: #090c12;
-  border-color: rgba(56, 189, 248, 0.35);
-  color: #38bdf8;
+.split-fx-select:focus,
+.split-fx-select:hover {
+  border-color: var(--accent-amber);
 }
 
 .split-card-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .split-oct-btn {
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   font-weight: 800;
-  padding: 3px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-top-color: rgba(255, 255, 255, 0.25);
+  padding: 3px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-sm);
-  background: linear-gradient(180deg, #2b3447 0%, #1c2331 100%);
+  background: linear-gradient(180deg, #222836 0%, #151922 100%);
   color: #f1f5f9;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transition: all 0.12s ease;
 }
 
 .split-oct-btn:hover {
-  background: linear-gradient(180deg, #38455d 0%, #252e40 100%);
+  background: linear-gradient(180deg, #2d3547 0%, #1c212d 100%);
   border-color: var(--accent-amber);
   color: var(--accent-amber);
-  box-shadow: 0 0 6px var(--accent-amber-glow);
+  box-shadow: 0 0 8px var(--accent-amber-glow);
 }
 
 .split-oct-btn:active {
@@ -1049,10 +1186,11 @@
 }
 
 .split-oct-val {
+  font-family: var(--font-family-mono);
   font-size: 0.78rem;
   font-weight: 800;
   color: #ffffff;
-  min-width: 34px;
+  min-width: 30px;
   text-align: center;
 }
 
@@ -1067,18 +1205,18 @@
   font-family: var(--font-family-mono);
   font-size: 0.72rem;
   font-weight: 800;
-  color: #fb923c;
+  color: var(--accent-amber);
   min-width: 36px;
-  text-shadow: 0 0 6px rgba(251, 146, 60, 0.4);
 }
 
 .split-card-current {
   font-size: 0.68rem;
-  color: #cbd5e1;
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px dashed rgba(255, 255, 255, 0.16);
+  color: #94a3b8;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: var(--radius-sm);
-  padding: 6px 8px;
+  padding: 6px 10px;
+  line-height: 1.4;
 }
 
 .split-card-current b {
@@ -1204,19 +1342,20 @@
 
 .timbre-combo-input {
   width: 100%;
-  background: linear-gradient(180deg, #10141c 0%, #171c26 100%);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #0d1017;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
-  font-size: 0.68rem;
+  font-family: var(--font-family-studio);
+  font-size: 0.72rem;
   font-weight: 700;
-  padding: 3px 6px;
-  height: 25px;
+  padding: 4px 8px;
+  height: 28px;
   outline: none;
   cursor: text;
   box-sizing: border-box;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.7);
-  transition: all 0.14s ease;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .timbre-combo-input:focus {
@@ -1226,19 +1365,21 @@
 
 .timbre-combo-list {
   position: absolute;
-  top: calc(100% + 3px);
+  top: calc(100% + 4px);
   left: 0;
   right: 0;
-  z-index: 80;
+  z-index: 100;
   max-height: 260px;
   overflow-y: auto;
-  background: #0d111a;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.75), 0 0 1px rgba(255, 255, 255, 0.1);
+  background: rgba(14, 17, 25, 0.98);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.8), 0 0 1px rgba(255, 255, 255, 0.15);
   display: none;
   margin: 0;
-  padding: 3px 0;
+  padding: 4px 0;
 }
 
 .timbre-combo-list.open {

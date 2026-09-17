@@ -72,28 +72,6 @@ export const COMBI_PRESETS = {
       { id: 3, name: "Korg M1 Fresh Air Shimmer", inst: "m1_fresh_air", fx: "spring_surf", gain: 0.50, pan: 0, oct: 1, minVel: 60, maxVel: 127, enabled: true },
     ],
   },
-  synthesizer_you_cannon: {
-    id: "synthesizer_you_cannon",
-    name: "💥 Synthesizer You - 80s Gated Snare & Beat Stack",
-    category: "Synthesizer You Signature",
-    layers: [
-      { id: 0, name: "80s Gated Snare Cannon", inst: "sy_gated_snare_1", fx: "gated_cannon", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Punchy 80s Tape Kick", inst: "sy_kick_punch", fx: "tape_sat_master", gain: 0.95, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Analog Synth Bassline", inst: "sy_bass_riff", fx: "tape_sat_master", gain: 0.80, pan: -0.05, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Surf Pluck Lead", inst: "sy_surf_pluck_c4", fx: "spring_surf", gain: 0.85, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-    ],
-  },
-  synthesizer_you_vocal_dub: {
-    id: "synthesizer_you_vocal_dub",
-    name: "🎤 Synthesizer You - Slapback Vocal & Tape Sat Stack",
-    category: "Synthesizer You Signature",
-    layers: [
-      { id: 0, name: "Slapback Lead Vocal Phrase", inst: "sy_vox_slap_3", fx: "slapback_vocal", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Juno Stereo Chorus Swell", inst: "sy_chorus_swell", fx: "analog_juno_chorus", gain: 0.70, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Optical Tremolo Pulse", inst: "synth_bass_1", fx: "opto_tremolo_16th", gain: 0.75, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Surf Lead Spring Echo", inst: "sy_surf_spring", fx: "spring_surf", gain: 0.60, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-    ],
-  },
   whitney_ballad: {
     id: "whitney_ballad",
     name: "★ Whitney 1992 - I Have Nothing (Foster Rig)",

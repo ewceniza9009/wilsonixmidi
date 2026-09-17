@@ -93,52 +93,71 @@
   min-width: 0;
   width: 100%;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-  transition: border-color 0.15s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .ableton-device-box:hover {
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 .device-bar {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #141720;
-  padding: 3px 6px;
+  background: linear-gradient(180deg, #1c212e 0%, #131722 100%);
+  padding: 3px 8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  min-height: 22px;
+  min-height: 24px;
   box-sizing: border-box;
 }
 
 .dev-power-btn {
-  background: #28303f;
-  color: #94a3b8;
-  border: none;
-  font-size: 0.54rem;
+  background: #202736;
+  color: #64748b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.52rem;
   font-weight: 800;
-  padding: 1px 5px;
-  border-radius: 2px;
+  padding: 2px 6px;
+  border-radius: 3px;
   cursor: pointer;
   letter-spacing: 0.3px;
   transition: all 0.12s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dev-power-btn::before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #475569;
 }
 
 .dev-power-btn.active {
+  background: rgba(255, 118, 77, 0.18);
+  color: #fff;
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 8px var(--accent-amber-glow);
+}
+
+.dev-power-btn.active::before {
   background: var(--accent-amber);
-  color: #000;
-  box-shadow: 0 0 6px var(--accent-amber-glow);
+  box-shadow: 0 0 6px var(--accent-amber);
 }
 
 .dev-name {
-  font-size: 0.58rem;
-  font-weight: 700;
-  color: #e2e8f0;
+  font-size: 0.60rem;
+  font-weight: 800;
+  color: #f1f5f9;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.3px;
 }
 
 .dev-body {

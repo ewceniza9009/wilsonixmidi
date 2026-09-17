@@ -98,17 +98,17 @@ body.mobile-stage-keys .studio-keyboard-deck {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  background: rgba(18, 21, 28, 0.96);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-subtle);
+  background: rgba(15, 18, 26, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-md);
   padding: 3px 8px;
   height: 38px;
   min-height: 38px;
   max-height: 38px;
   box-sizing: border-box;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   flex-wrap: nowrap;
   width: 100%;
 }
@@ -1298,39 +1298,42 @@ body.mobile-stage-keys .studio-keyboard-deck {
 .ws-tab-btn {
   display: flex;
   align-items: center;
-  gap: 2px;
-  background: linear-gradient(180deg, #222836 0%, #171c26 100%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-top-color: rgba(255, 255, 255, 0.2);
+  gap: 3px;
+  background: rgba(18, 22, 32, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   color: #94a3b8;
-  font-size: 0.58rem;
-  font-weight: 800;
-  padding: 3px 5px;
+  font-family: var(--font-family-studio);
+  font-size: 0.60rem;
+  font-weight: 700;
+  padding: 4px 8px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   white-space: nowrap;
-  letter-spacing: 0.3px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-  transition: all 0.12s ease;
+  letter-spacing: 0.4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
   flex-shrink: 0 !important;
+  user-select: none;
+  touch-action: manipulation;
 }
 
 .ws-tab-btn:hover {
-  background: linear-gradient(180deg, #2d3546 0%, #202735 100%);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(30, 37, 52, 0.95);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-1px);
 }
 
 .ws-tab-btn.active {
-  background: linear-gradient(135deg, rgba(255, 118, 77, 0.35), rgba(255, 118, 77, 0.12));
+  background: linear-gradient(135deg, rgba(255, 118, 77, 0.3) 0%, rgba(26, 32, 46, 0.95) 100%);
   border-color: var(--accent-amber);
-  color: #ffedd5;
-  box-shadow: 0 0 8px var(--accent-amber-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  box-shadow: 0 0 10px var(--accent-amber-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .ws-tab-btn.keys-toggle-btn {
-  color: #38bdf8;
-  border-color: rgba(56, 189, 248, 0.35);
+  color: var(--accent-cyan-bright);
+  border-color: rgba(56, 189, 248, 0.3);
   font-weight: 800;
 }
 
@@ -1344,14 +1347,14 @@ body.mobile-stage-keys .studio-keyboard-deck {
   background: linear-gradient(135deg, rgba(56, 189, 248, 0.35), rgba(14, 165, 233, 0.15));
   border-color: #38bdf8;
   color: #ffffff;
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
 }
 
 .ws-tab-btn.fullscreen-btn {
   font-size: 0.72rem;
-  padding: 2px 5px;
+  padding: 3px 6px;
   color: #38bdf8;
-  border-color: rgba(56, 189, 248, 0.3);
+  border-color: rgba(56, 189, 248, 0.25);
 }
 
 .ws-tab-btn.fullscreen-btn:hover {
