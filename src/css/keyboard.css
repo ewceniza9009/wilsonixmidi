@@ -751,7 +751,7 @@
   margin-right: -7px;
 }
 
-/* Individual Piano Keys - Razor-Sharp Native Rendering, Zero Blur */
+/* Individual Piano Keys - Razor-Sharp Native Rendering, Zero Blur, Hardware-Accelerated */
 .piano-key {
   position: relative;
   cursor: pointer;
@@ -761,7 +761,8 @@
   -webkit-user-select: none !important;
   -webkit-touch-callout: none !important;
   -webkit-user-drag: none !important;
-  transition: transform 0.02s ease-out;
+  transform: translateZ(0);
+  transition: none !important;
 }
 
 .white-key {
@@ -776,7 +777,8 @@
   border-radius: 0 0 5px 5px;
   z-index: 1;
   box-shadow: 0 3px 5px rgba(0, 0, 0, 0.35), inset 0 1px 0 #ffffff, inset 0 -2px 0 rgba(0, 0, 0, 0.05);
-  transition: transform 0.02s ease-out, box-shadow 0.02s ease-out, background-color 0.02s ease-out;
+  transform: translateZ(0);
+  transition: none !important;
 }
 
 .white-key:hover {
@@ -789,10 +791,10 @@
 .white-key.active {
   background-color: #ffedd5;
   background-image: linear-gradient(180deg, #fff7ed 0%, #fed7aa 40%, #ff8a65 75%, #ff5722 100%);
-  transform: translateY(3px);
-  box-shadow: 0 0 16px rgba(255, 118, 77, 0.8), inset 0 2px 4px rgba(0, 0, 0, 0.25);
-  border-bottom: 3px solid #ea580c;
-  transition: none !important; /* Instant visual strike: 0ms lag */
+  transform: translateY(2px) translateZ(0);
+  box-shadow: 0 0 8px rgba(255, 118, 77, 0.75), inset 0 2px 4px rgba(0, 0, 0, 0.25);
+  border-bottom: 6px solid #ea580c;
+  transition: none !important;
 }
 
 .black-key {
@@ -808,7 +810,8 @@
   margin-right: -10px;
   z-index: 3;
   box-shadow: -1px 2px 3px rgba(0, 0, 0, 0.6), 1px 2px 3px rgba(0, 0, 0, 0.6), inset 1px 0 0 rgba(255, 255, 255, 0.2), inset -1px 0 0 rgba(0, 0, 0, 0.8);
-  transition: transform 0.02s ease-out, box-shadow 0.02s ease-out, background-color 0.02s ease-out;
+  transform: translateZ(0);
+  transition: none !important;
 }
 
 .black-key:hover {
@@ -820,10 +823,10 @@
 .black-key.active {
   background-color: #ea580c;
   background-image: linear-gradient(180deg, #ff8a65 0%, #ea580c 60%, #c2410c 100%);
-  transform: translateY(2px);
-  box-shadow: 0 0 16px rgba(255, 87, 34, 0.9), inset 0 1px 2px rgba(255, 255, 255, 0.25);
-  border-bottom: 3px solid #9a3412;
-  transition: none !important; /* Instant visual strike: 0ms lag */
+  transform: translateY(2px) translateZ(0);
+  box-shadow: 0 0 8px rgba(255, 87, 34, 0.85), inset 0 1px 2px rgba(255, 255, 255, 0.25);
+  border-bottom: 5px solid #9a3412;
+  transition: none !important;
 }
 
 /* Key labels: Tier 1 (Upper) QWERTY badge + Tier 2 (Bottom) Note name */
