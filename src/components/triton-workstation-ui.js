@@ -14,17 +14,71 @@ import { multiLayerEngine, COMBI_PRESETS } from "../audio/multi-layer-engine.js"
 export class TritonWorkstationUI {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
-    this.activeBankId = "USER_A";
+
+    // Restore saved active bank and program from localStorage if available
+    let savedBank = "USER_A";
+    let savedProgId = null;
+    try {
+      savedBank = localStorage.getItem("wilsonix_triton_active_bank") || "USER_A";
+      savedProgId = localStorage.getItem("wilsonix_triton_active_prog_id");
+    } catch (e) {}
+
+    // Verify savedBank exists in TRITON_BANKS or is COMBI
+    if (savedBank !== "COMBI" && !TRITON_BANKS[savedBank]) {
+      savedBank = "USER_A";
+    }
+
+    this.activeBankId = savedBank;
     this.activeSubTab = "BROWSER"; // 'BROWSER', 'EASY', 'IFX/MFX', 'ARP'
-    this.activeProg = TRITON_BANKS.USER_A.programs[29]; // A036 Velo Piano ST (Concert Grand) default
+
+    // Find initial program strictly respecting savedBank
+    let initialProg = null;
+    if (savedBank === "COMBI") {
+      if (savedProgId && COMBI_PRESETS[savedProgId]) {
+        initialProg = COMBI_PRESETS[savedProgId];
+      } else {
+        initialProg = Object.values(COMBI_PRESETS)[0];
+      }
+    } else if (TRITON_BANKS[savedBank]) {
+      const bankProgs = TRITON_BANKS[savedBank].programs || [];
+      if (savedProgId) {
+        initialProg = bankProgs.find(p => p.id === savedProgId);
+      }
+      if (!initialProg && bankProgs.length > 0) {
+        initialProg = bankProgs[0];
+      }
+    }
+
+    if (!initialProg) {
+      initialProg = TRITON_BANKS.USER_A.programs[29];
+      this.activeBankId = "USER_A";
+    }
+
+    this.activeProg = initialProg;
+    this._persistSelection();
     this.searchQuery = "";
 
     this.render();
-    this.applyTritonProgram(this.activeProg);
+    if (this.isCombiBank() && this.activeProg) {
+      multiLayerEngine.setCombiPreset(this.activeProg.id);
+    } else if (this.activeProg) {
+      this.applyTritonProgram(this.activeProg);
+    }
 
     multiLayerEngine.addLayerChangeListener(() => {
       this.syncActiveProgramFromEngine();
     });
+  }
+
+  _persistSelection() {
+    try {
+      if (this.activeBankId) {
+        localStorage.setItem("wilsonix_triton_active_bank", this.activeBankId);
+      }
+      if (this.activeProg && this.activeProg.id) {
+        localStorage.setItem("wilsonix_triton_active_prog_id", this.activeProg.id);
+      }
+    } catch (e) {}
   }
 
   syncActiveProgramFromEngine() {
@@ -265,8 +319,8 @@ export class TritonWorkstationUI {
           </button>
         `;
 
-    // Bank card display order (COMBI card sits right after GENUINE SAX & REEDS)
-    const bankRowOrder = ["USER_A", "KORG_M1", "USER_B", "USER_C", "USER_D", "GENUINE_SAX", "COMBI", "NATURE", "HUMAN_VOX", "WEIRD_FX", "DJ_CINEMATIC", "PERCUSSION"];
+    // Bank card display order (Y_EOS sits directly next to KORG_M1; COMBI sits right after GENUINE SAX & REEDS)
+    const bankRowOrder = ["USER_A", "KORG_M1", "Y_EOS", "USER_B", "USER_C", "USER_D", "GENUINE_SAX", "COMBI", "NATURE", "HUMAN_VOX", "WEIRD_FX", "DJ_CINEMATIC", "PERCUSSION"];
 
     return `
       <!-- Bank Selectors Row -->
@@ -580,6 +634,14 @@ export class TritonWorkstationUI {
         const newBank = btn.getAttribute("data-bank");
         if (this.activeBankId !== newBank) {
           this.activeBankId = newBank;
+          if (newBank === "COMBI") {
+            this.activeProg = Object.values(COMBI_PRESETS)[0];
+            multiLayerEngine.setCombiPreset(this.activeProg.id);
+          } else if (TRITON_BANKS[newBank] && TRITON_BANKS[newBank].programs?.length > 0) {
+            this.activeProg = TRITON_BANKS[newBank].programs[0];
+            this.applyTritonProgram(this.activeProg, true);
+          }
+          this._persistSelection();
           this.render();
         }
       };
@@ -607,6 +669,7 @@ export class TritonWorkstationUI {
           const cp = COMBI_PRESETS[progId];
           if (cp) {
             this.activeProg = cp;
+            this._persistSelection();
             this._suppressAutoBankSwitch = true;
             try {
               multiLayerEngine.setCombiPreset(progId);
@@ -629,6 +692,7 @@ export class TritonWorkstationUI {
 
         if (prog) {
           this.activeProg = prog;
+          this._persistSelection();
           this._suppressAutoBankSwitch = true;
           try {
             this.applyTritonProgram(prog, true);
@@ -656,6 +720,7 @@ export class TritonWorkstationUI {
       const cp = COMBI_PRESETS[progId];
       this.activeBankId = "COMBI";
       this.activeProg = cp;
+      this._persistSelection();
       this.render();
       multiLayerEngine.setCombiPreset(progId);
       this.updateLcdAndGridHighlight(progId, cp.name, "BANK: COMBI", `CATEGORY: ${(cp.category || "COMBI").toUpperCase()}`);
@@ -668,6 +733,7 @@ export class TritonWorkstationUI {
       if (prog) {
         this.activeBankId = bankId;
         this.activeProg = prog;
+        this._persistSelection();
         this.render();
         this.applyTritonProgram(prog, true);
         this.updateLcdAndGridHighlight(prog.id, prog.name, `BANK: ${this.activeBankId.replace("_", " ")} ${prog.num || ""}`, `CATEGORY: ${(prog.category || "").toUpperCase()}`);
@@ -681,6 +747,11 @@ export class TritonWorkstationUI {
 
     if (prog.m1Type) {
       this.applyM1Program(prog);
+      return;
+    }
+
+    if (prog.eosType) {
+      this.applyYamahaEosProgram(prog);
       return;
     }
 
@@ -1643,6 +1714,348 @@ export class TritonWorkstationUI {
         fx.reverb.setMix(0.25);
         fx.reverb.setDecay(2.4);
       }
+    }
+  }
+
+  applyYamahaEosProgram(prog) {
+    const fx = audioCore.fxRack;
+    const eosType = prog.eosType || "";
+    const instId = prog.instId || (eosType.startsWith("eos_") ? eosType : "eos_" + eosType);
+
+    // Crucial: Load the unique PCM instrument for each preset
+    multiLayerEngine.setSingleInstrument(instId);
+
+    // Reset all FX to clean baseline first to prevent unwanted bleed
+    if (fx) {
+      fx.tube?.setBypass(true);
+      fx.autopan?.setBypass(true);
+      fx.chorus?.setBypass(true);
+      fx.phaser?.setBypass(true);
+      fx.flanger?.setBypass(true);
+      fx.rotary?.setBypass(true);
+      fx.tremolo?.setBypass(true);
+      fx.delay?.setBypass(true);
+      fx.compressor?.setBypass(true);
+      fx.reverb?.setBypass(false);
+      fx.reverb?.setMix(0.18);
+      fx.reverb?.setDecay(1.8);
+      fx.masterEq?.setLowGain(0);
+      fx.masterEq?.setMidGain(0);
+      fx.masterEq?.setHighGain(0);
+    }
+
+    if (!fx) return;
+
+    // Preset-specific authentic FX staging
+    if (eosType === "dreamn") {
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.35);
+      fx.chorus?.setRate(0.85);
+      fx.reverb?.setMix(0.28);
+      fx.reverb?.setDecay(2.6);
+      fx.masterEq?.setLowGain(0.5);
+      fx.masterEq?.setHighGain(1.0);
+    } else if (eosType === "deeproads") {
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.22);
+      fx.chorus?.setRate(0.45);
+      fx.reverb?.setMix(0.18);
+      fx.reverb?.setDecay(1.8);
+      fx.masterEq?.setLowGain(0.5);
+      fx.masterEq?.setHighGain(1.0);
+    } else if (eosType === "oldroads") {
+      fx.autopan?.setBypass(false);
+      fx.autopan?.setMix(0.25);
+      fx.autopan?.setRate(1.2);
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.18);
+      fx.reverb?.setMix(0.16);
+      fx.masterEq?.setHighGain(1.0);
+    } else if (eosType === "wah_clavi") {
+      fx.delay?.setBypass(false);
+      fx.delay?.setMix(0.15);
+      fx.delay?.setDivision(0.25);
+      fx.delay?.setFeedback(0.20);
+      fx.masterEq?.setMidGain(2.0);
+      fx.masterEq?.setHighGain(2.5);
+    } else if (eosType === "lofi_piano") {
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.18);
+      fx.reverb?.setMix(0.22);
+      fx.masterEq?.setLowGain(1.0);
+      fx.masterEq?.setHighGain(-1.0);
+    } else if (eosType === "cp80") {
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.35);
+      fx.chorus?.setRate(1.0);
+      fx.reverb?.setMix(0.24);
+      fx.masterEq?.setHighGain(1.5);
+    } else if (eosType === "tx816") {
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.38);
+      fx.chorus?.setRate(0.95);
+      fx.reverb?.setMix(0.25);
+      fx.masterEq?.setHighGain(2.0);
+    } else if (eosType === "midi_grand") {
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.15);
+      fx.reverb?.setMix(0.22);
+      fx.masterEq?.setLowGain(0.5);
+      fx.masterEq?.setHighGain(1.5);
+    } else if (eosType === "vibes") {
+      fx.tremolo?.setBypass(false);
+      fx.tremolo?.setRate(4.2);
+      fx.tremolo?.setDepth(0.40);
+      fx.reverb?.setMix(0.28);
+      fx.reverb?.setDecay(2.2);
+    } else if (eosType === "eos_saw900") {
+      fx.flanger?.setBypass(false);
+      fx.flanger?.setMix(0.28);
+      fx.delay?.setBypass(false);
+      fx.delay?.setMix(0.22);
+      fx.delay?.setDivision(0.375);
+      fx.delay?.setFeedback(0.28);
+      fx.reverb?.setMix(0.24);
+      fx.masterEq?.setHighGain(1.5);
+    } else if (eosType === "eos_extacy") {
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.32);
+      fx.delay?.setBypass(false);
+      fx.delay?.setMix(0.22);
+      fx.delay?.setDivision(0.25);
+      fx.reverb?.setMix(0.22);
+      fx.masterEq?.setHighGain(1.5);
+    } else if (eosType === "thicksaw") {
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.38);
+      fx.delay?.setBypass(false);
+      fx.delay?.setMix(0.25);
+      fx.delay?.setDivision(0.375);
+      fx.reverb?.setMix(0.26);
+      fx.masterEq?.setHighGain(2.0);
+    } else if (eosType === "square2") {
+      fx.tube?.setBypass(false);
+      fx.tube?.setDrive(0.35);
+      fx.reverb?.setMix(0.16);
+      fx.masterEq?.setMidGain(1.5);
+    } else if (eosType === "seq_ana") {
+      fx.delay?.setBypass(false);
+      fx.delay?.setMix(0.24);
+      fx.delay?.setDivision(0.25);
+      fx.delay?.setFeedback(0.30);
+      fx.reverb?.setMix(0.20);
+    } else if (eosType === "sweeppad") {
+      fx.phaser?.setBypass(false);
+      fx.phaser?.setMix(0.40);
+      fx.phaser?.setRate(0.35);
+      fx.reverb?.setMix(0.35);
+      fx.reverb?.setDecay(3.0);
+    } else if (eosType === "warmpad") {
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.35);
+      fx.reverb?.setMix(0.32);
+      fx.reverb?.setDecay(2.8);
+    } else if (eosType === "vocoder" || eosType === "eos_vocoder") {
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.35);
+      fx.reverb?.setMix(0.25);
+      fx.masterEq?.setMidGain(2.0);
+    } else if (eosType === "analog_brass") {
+      fx.compressor?.setBypass(false);
+      fx.compressor?.setThreshold(-18);
+      fx.reverb?.setMix(0.20);
+      fx.masterEq?.setMidGain(1.0);
+      fx.masterEq?.setHighGain(1.5);
+    } else if (eosType === "synth_brass") {
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.28);
+      fx.reverb?.setMix(0.22);
+      fx.masterEq?.setHighGain(1.5);
+    } else if (eosType === "organ_60s") {
+      fx.rotary?.setBypass(false);
+      fx.rotary?.setSpeed("fast");
+      fx.rotary?.setMix(0.45);
+      fx.reverb?.setMix(0.22);
+    } else if (eosType === "rubber_bass") {
+      fx.compressor?.setBypass(false);
+      fx.compressor?.setThreshold(-22);
+      fx.masterEq?.setLowGain(2.0);
+    } else if (eosType === "seq_bass") {
+      fx.delay?.setBypass(false);
+      fx.delay?.setMix(0.18);
+      fx.delay?.setDivision(0.25);
+      fx.masterEq?.setLowGain(2.5);
+    } else if (eosType === "synbass101") {
+      fx.tube?.setBypass(false);
+      fx.tube?.setDrive(0.40);
+      fx.masterEq?.setLowGain(3.0);
+    } else if (eosType === "jazz_guitar") {
+      // Warm, pristine hollow-body archtop jazz guitar tone (Wes Montgomery / Joe Pass / George Benson)
+      fx.tube?.setBypass(true);
+      fx.compressor?.setBypass(false);
+      fx.compressor?.setThreshold(-18);
+      fx.compressor?.setRatio(2.5);
+      fx.compressor?.setAttack(0.012);
+      fx.compressor?.setRelease(0.22);
+      fx.compressor?.setMakeup(2.2);
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.12);
+      fx.chorus?.setRate(0.65);
+      fx.reverb?.setMix(0.18);
+      fx.reverb?.setDecay(1.6);
+      fx.masterEq?.setLowGain(1.2);
+      fx.masterEq?.setMidGain(1.5);
+      fx.masterEq?.setHighGain(0.0);
+    } else if (eosType === "upright_bass") {
+      fx.compressor?.setBypass(false);
+      fx.compressor?.setThreshold(-20);
+      fx.compressor?.setRatio(3.5);
+      fx.compressor?.setMakeup(2.5);
+      fx.reverb?.setMix(0.14);
+      fx.reverb?.setDecay(1.2);
+      fx.masterEq?.setLowGain(3.0);
+      fx.masterEq?.setMidGain(1.0);
+      fx.masterEq?.setHighGain(-0.5);
+    } else if (eosType === "tekk_hit1" || eosType === "tekk_hit2" || eosType === "tekk_hit3") {
+      fx.reverb?.setMix(0.25);
+      fx.reverb?.setDecay(1.4);
+      fx.masterEq?.setLowGain(1.5);
+      fx.masterEq?.setHighGain(1.0);
+
+    // ── Omega Premium Elite Collection ──
+
+    } else if (eosType === "fantasia") {
+      // Ethereal motion pad with phaser sweep + lush cathedral reverb
+      fx.phaser?.setBypass(false);
+      fx.phaser?.setMix(0.35);
+      fx.phaser?.setRate(0.25);
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.28);
+      fx.chorus?.setRate(0.55);
+      fx.reverb?.setMix(0.38);
+      fx.reverb?.setDecay(3.5);
+      fx.masterEq?.setHighGain(1.0);
+    } else if (eosType === "jp_strings") {
+      // JP-8000 lush supersaw strings – wide stereo chorus + hall reverb
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.40);
+      fx.chorus?.setRate(0.75);
+      fx.reverb?.setMix(0.30);
+      fx.reverb?.setDecay(2.8);
+      fx.masterEq?.setMidGain(1.0);
+      fx.masterEq?.setHighGain(1.5);
+    } else if (eosType === "ob_strings") {
+      // Oberheim OB-X analog string ensemble – warm ensemble + plate reverb
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.35);
+      fx.chorus?.setRate(0.90);
+      fx.compressor?.setBypass(false);
+      fx.compressor?.setThreshold(-16);
+      fx.compressor?.setRatio(2.5);
+      fx.reverb?.setMix(0.25);
+      fx.reverb?.setDecay(2.2);
+      fx.masterEq?.setLowGain(1.0);
+    } else if (eosType === "euro_hit") {
+      // 90s Eurodance orchestral hit stab – punchy compression + gated reverb
+      fx.compressor?.setBypass(false);
+      fx.compressor?.setThreshold(-14);
+      fx.compressor?.setRatio(6.0);
+      fx.compressor?.setAttack(0.005);
+      fx.compressor?.setRelease(0.10);
+      fx.compressor?.setMakeup(4.0);
+      fx.reverb?.setMix(0.30);
+      fx.reverb?.setDecay(0.8);
+      fx.masterEq?.setLowGain(2.0);
+      fx.masterEq?.setHighGain(2.0);
+    } else if (eosType === "acid_bass") {
+      // TB-303 acid squelch bass – tube overdrive + resonant filter + tape delay
+      fx.tube?.setBypass(false);
+      fx.tube?.setDrive(0.45);
+      fx.tube?.setMix(0.60);
+      fx.delay?.setBypass(false);
+      fx.delay?.setMix(0.18);
+      fx.delay?.setDivision(0.25);
+      fx.delay?.setFeedback(0.25);
+      fx.reverb?.setMix(0.10);
+      fx.masterEq?.setLowGain(3.5);
+      fx.masterEq?.setMidGain(2.0);
+    } else if (eosType === "funk_gtr") {
+      // Disco funk wah guitar – auto-wah + compressor + room reverb
+      fx.compressor?.setBypass(false);
+      fx.compressor?.setThreshold(-18);
+      fx.compressor?.setRatio(3.5);
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.15);
+      fx.reverb?.setMix(0.16);
+      fx.reverb?.setDecay(1.2);
+      fx.masterEq?.setMidGain(2.0);
+      fx.masterEq?.setHighGain(1.5);
+    } else if (eosType === "silky_pad") {
+      // Ultra-lush dreamy string cloud – slow chorus + deep cathedral reverb
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.38);
+      fx.chorus?.setRate(0.40);
+      fx.reverb?.setMix(0.40);
+      fx.reverb?.setDecay(4.0);
+      fx.masterEq?.setLowGain(0.5);
+      fx.masterEq?.setHighGain(1.0);
+    } else if (eosType === "space_voice") {
+      // Ethereal space choir synth vocal – dimension chorus + delay + huge reverb
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.35);
+      fx.chorus?.setRate(0.65);
+      fx.delay?.setBypass(false);
+      fx.delay?.setMix(0.22);
+      fx.delay?.setDivision(0.375);
+      fx.delay?.setFeedback(0.30);
+      fx.reverb?.setMix(0.35);
+      fx.reverb?.setDecay(3.2);
+      fx.masterEq?.setMidGain(1.5);
+    } else if (eosType === "rotary_organ") {
+      // Fast Leslie rotary Hammond organ
+      fx.rotary?.setBypass(false);
+      fx.rotary?.setSpeed("fast");
+      fx.rotary?.setMix(0.50);
+      fx.tube?.setBypass(false);
+      fx.tube?.setDrive(0.25);
+      fx.tube?.setMix(0.40);
+      fx.reverb?.setMix(0.18);
+      fx.reverb?.setDecay(1.4);
+    } else if (eosType === "mg_square") {
+      // Moog square wave mono lead – overdrive + ping-pong delay
+      fx.tube?.setBypass(false);
+      fx.tube?.setDrive(0.30);
+      fx.tube?.setMix(0.50);
+      fx.delay?.setBypass(false);
+      fx.delay?.setMix(0.24);
+      fx.delay?.setDivision(0.375);
+      fx.delay?.setFeedback(0.30);
+      fx.reverb?.setMix(0.20);
+      fx.masterEq?.setMidGain(1.5);
+      fx.masterEq?.setHighGain(1.0);
+    } else if (eosType === "slow_strings") {
+      // Cinematic slow attack orchestral strings – lush ensemble + concert hall
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.30);
+      fx.chorus?.setRate(0.55);
+      fx.reverb?.setMix(0.32);
+      fx.reverb?.setDecay(3.0);
+      fx.masterEq?.setLowGain(1.0);
+      fx.masterEq?.setMidGain(0.5);
+      fx.masterEq?.setHighGain(1.0);
+    } else if (eosType === "oct_brass") {
+      // Massive octave-layered synth brass – punchy compression + studio plate
+      fx.compressor?.setBypass(false);
+      fx.compressor?.setThreshold(-16);
+      fx.compressor?.setRatio(4.0);
+      fx.compressor?.setAttack(0.008);
+      fx.compressor?.setMakeup(3.5);
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setMix(0.20);
+      fx.reverb?.setMix(0.22);
+      fx.reverb?.setDecay(1.8);
+      fx.masterEq?.setMidGain(1.0);
+      fx.masterEq?.setHighGain(2.0);
     }
   }
 }

@@ -985,7 +985,7 @@ export class MultiLayerEngine {
     eng.setProgram(prog);
     this._syncWorkletParams(prog);
     if (typeof gain === "number" && gain > 0 && eng.config) {
-      eng.config.masterGain = 0.48 * Math.min(1.15, Math.max(0.5, gain));
+      eng.config.masterGain = 0.82 * Math.min(1.15, Math.max(0.5, gain));
     }
     return eng;
   }

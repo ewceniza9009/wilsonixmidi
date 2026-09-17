@@ -108,7 +108,7 @@ export class TritonVirtualAnalogEngine {
       isPercussive,
       isLead,
       syncSlave: isSyncProgram,
-      masterGain: 0.48,
+      masterGain: 0.82,
     };
   }
 

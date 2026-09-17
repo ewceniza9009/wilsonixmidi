@@ -4,6 +4,7 @@
  */
 
 import { KORG_PCM_BANKS } from "./korg-pcm-data.js";
+import { YAMAHA_EOS_PCM_BANKS } from "./yamaha-eos-pcm-data.js";
 import { ABLETUNES_BANKS } from "./abletunes-manifest.js";
 import { SfxSoundGenerator } from "./sfx-sound-generator.js";
 import { sampleCache } from "./sample-cache.js";
@@ -44,6 +45,46 @@ const INST_ALIASES = {
   abletunes_fm_piano: "abletunes_fm_piano",
   abletunes_fm_dx7: "abletunes_fm_piano",
   m1_fresh_air: "abletunes_fm_piano",
+  tekk_hit1: "tekk_hit1",
+  tekk_hit2: "tekk_hit2",
+  tekk_hit3: "tekk_hit3",
+  eos_dreamn: "eos_dreamn",
+  eos_deeproads: "eos_deeproads",
+  eos_oldroads: "eos_oldroads",
+  eos_wah_clavi: "eos_wah_clavi",
+  eos_lofi_piano: "eos_lofi_piano",
+  eos_cp80: "eos_cp80",
+  eos_tx816: "eos_tx816",
+  eos_midi_grand: "eos_midi_grand",
+  eos_vocoder: "eos_vocoder",
+  eos_saw900: "eos_saw900",
+  eos_extacy: "eos_extacy",
+  eos_vibes: "eos_vibes",
+  eos_thicksaw: "eos_thicksaw",
+  eos_square2: "eos_square2",
+  eos_seq_ana: "eos_seq_ana",
+  eos_sweeppad: "eos_sweeppad",
+  eos_warmpad: "eos_warmpad",
+  eos_analog_brass: "eos_analog_brass",
+  eos_synth_brass: "eos_synth_brass",
+  eos_organ_60s: "eos_organ_60s",
+  eos_rubber_bass: "eos_rubber_bass",
+  eos_seq_bass: "eos_seq_bass",
+  eos_synbass101: "eos_synbass101",
+  eos_jazz_guitar: "eos_jazz_guitar",
+  eos_upright_bass: "eos_upright_bass",
+  eos_fantasia: "eos_fantasia",
+  eos_jp_strings: "eos_jp_strings",
+  eos_ob_strings: "eos_ob_strings",
+  eos_euro_hit: "eos_euro_hit",
+  eos_acid_bass: "eos_acid_bass",
+  eos_funk_gtr: "eos_funk_gtr",
+  eos_silky_pad: "eos_silky_pad",
+  eos_space_voice: "eos_space_voice",
+  eos_rotary_organ: "eos_rotary_organ",
+  eos_mg_square: "eos_mg_square",
+  eos_slow_strings: "eos_slow_strings",
+  eos_oct_brass: "eos_oct_brass",
   distortion_guitar: "distortion_guitar",
   overdriven_guitar: "overdriven_guitar",
   electric_guitar_clean: "electric_guitar_clean",
@@ -191,41 +232,162 @@ const INST_ALIASES = {
 };
 
 const INST_TRIM_GAINS = {
-  acoustic_grand_piano: 1.0,
-  abletunes_upright: 1.0,
-  m1_piano_16: 1.0,
-  electric_piano_1: 1.0,
-  abletunes_fm_piano: 1.0,
-  string_ensemble_1: 1.0,
-  m1_universe: 1.0,
-  m1_choir: 1.0,
-  choir_aahs: 1.0,
-  acoustic_guitar_nylon: 1.0,
-  electric_guitar_clean: 1.0,
-  alto_sax: 1.0,
-  brass_section: 1.0,
-  drawbar_organ: 1.0,
-  synth_bass_1: 1.0,
-  m1_slap_bass: 1.0,
-  distortion_guitar: 1.0,
-  overdriven_guitar: 1.0,
-  trumpet: 1.0,
-  trombone: 1.0,
-  tenor_sax: 1.0,
-  flute: 1.0,
-  clarinet: 1.0,
-  violin: 1.0,
-  cello: 1.0,
-  church_organ: 1.0,
+  // Acoustic Pianos — reference level (~0.85)
+  acoustic_grand_piano: 0.85,
+  abletunes_upright: 0.85,
+  m1_piano_16: 0.85,
+
+  // Electric Pianos — reference level (~0.85)
+  electric_piano_1: 0.85,
+  abletunes_fm_piano: 0.85,
+  electric_piano_2: 0.85,
+  tri_stage_ep: 0.85,
+  dx7_ep1: 0.85,
+  triton_dyno_ep: 0.85,
+
+  // Strings & Choir — sustained, high RMS → pull back
+  string_ensemble_1: 0.58,
+  m1_universe: 0.55,
+  m1_symphonic: 0.58,
+  m1_strings: 0.58,
+  m1_choir: 0.50,
+  choir_aahs: 0.50,
+  voice_oohs: 0.52,
+  ooh_ahh: 0.50,
+
+  // Brass — medium-sustained
+  brass_section: 0.72,
+  m1_brass_1: 0.72,
+  fat_brass_horns: 0.72,
+  supersaw_lead: 0.75,
+  trumpet: 0.75,
+  trombone: 0.75,
+  muted_trumpet: 0.70,
+
+  // Saxophones — expressive medium
+  alto_sax: 0.75,
+  tenor_sax: 0.75,
+  soprano_sax: 0.78,
+  sax_genuine_solo: 0.75,
+  sax_sensual: 0.75,
+  sax_blues_growl: 0.78,
+  sax_funk_stab: 0.80,
+  sax_fall: 0.78,
+  sax_scoop: 0.78,
+  sax_alto_lead: 0.75,
+  sax_soprano: 0.78,
+
+  // Guitars — transient-heavy
+  acoustic_guitar_nylon: 0.90,
+  electric_guitar_clean: 0.90,
+  acoustic_guitar_steel: 0.90,
+  distortion_guitar: 0.85,
+  overdriven_guitar: 0.85,
+  m1_guitar_1: 0.90,
+  m1_12string: 0.90,
+  fantom_nylon_pluck: 0.90,
+
+  // Bass — low frequency needs presence
+  synth_bass_1: 0.80,
+  m1_slap_bass: 0.80,
+  m1_fretless: 0.82,
+  acoustic_bass: 0.90,
+  slap_bass_1: 0.85,
+  m1_synth_bass_1: 0.80,
+  moog_punch_bass: 0.80,
+  pick_bass: 0.85,
+
+  // Organ — very sustained, pull back
+  drawbar_organ: 0.60,
+  m1_organ_2: 0.60,
+  m1_rock_organ: 0.60,
+  church_organ: 0.60,
+  rock_organ: 0.60,
+
+  // Woodwinds — medium
+  flute: 0.88,
+  clarinet: 0.90,
+  m1_flute: 0.88,
+  m1_pan_flute: 0.85,
+  pan_flute: 0.85,
+
+  // Strings (bowed)
+  violin: 0.78,
+  cello: 0.80,
+
+  // Bells & Mallet — quick decay, boost slightly
   vibraphone: 1.0,
-  electric_piano_2: 1.0,
-  acoustic_bass: 1.0,
-  soprano_sax: 1.0,
-  muted_trumpet: 1.0,
-  acoustic_guitar_steel: 1.0,
-  slap_bass_1: 1.0,
-  rock_organ: 1.0,
-  harpsichord: 1.0,
+  harpsichord: 0.95,
+  kalimba: 1.0,
+  m1_kalimba: 1.0,
+  m1_bottle_bell: 0.95,
+  m1_bell_ring: 0.95,
+  m1_koto: 0.95,
+
+  // Hits & Stabs — transient, punchy
+  tekk_hit1: 0.95,
+  tekk_hit2: 0.95,
+  tekk_hit3: 0.95,
+
+  // Drum & Percussion — keep punchy
+  synth_drum: 0.90,
+  drum_kick_r: 0.90,
+  drum_snare_r: 0.88,
+  drum_hhclosed_r: 0.75,
+  drum_hhopen_r: 0.78,
+  drum_crash_r: 0.82,
+
+  // SFX — moderate
+  applause: 0.70,
+  concert_applause: 0.70,
+  stadium_roar: 0.70,
+  crowd_cheer: 0.70,
+  ovation: 0.70,
+  breath_noise: 0.60,
+  tubular_bells: 0.85,
+  wind_chimes: 0.80,
+  crystal_chimes: 0.80,
+  gunshot: 0.90,
+  taiko_drum: 0.90,
+
+  // Yamaha EOS instruments — pull sustained sounds back
+  eos_dreamn: 0.60,
+  eos_deeproads: 0.65,
+  eos_oldroads: 0.65,
+  eos_wah_clavi: 0.80,
+  eos_lofi_piano: 0.80,
+  eos_cp80: 0.80,
+  eos_tx816: 0.80,
+  eos_midi_grand: 0.85,
+  eos_vibes: 1.0,
+  eos_vocoder: 0.60,
+  eos_saw900: 0.72,
+  eos_extacy: 0.72,
+  eos_thicksaw: 0.70,
+  eos_square2: 0.75,
+  eos_seq_ana: 0.72,
+  eos_sweeppad: 0.55,
+  eos_warmpad: 0.58,
+  eos_analog_brass: 0.70,
+  eos_synth_brass: 0.70,
+  eos_organ_60s: 0.62,
+  eos_rubber_bass: 0.82,
+  eos_seq_bass: 0.82,
+  eos_synbass101: 0.82,
+  eos_jazz_guitar: 0.88,
+  eos_upright_bass: 0.88,
+  eos_fantasia: 0.55,
+  eos_jp_strings: 0.58,
+  eos_ob_strings: 0.58,
+  eos_euro_hit: 0.88,
+  eos_acid_bass: 0.80,
+  eos_funk_gtr: 0.85,
+  eos_silky_pad: 0.52,
+  eos_space_voice: 0.55,
+  eos_rotary_organ: 0.62,
+  eos_mg_square: 0.72,
+  eos_slow_strings: 0.58,
+  eos_oct_brass: 0.70,
 };
 
 export function noteNameToMidi(noteStr) {
@@ -1491,6 +1653,7 @@ export class NativePcmEngine {
         instId.includes("choir") ||
         instId.includes("organ") ||
         instId.includes("voice") ||
+        instId.includes("vox") ||
         instId.includes("universe") ||
         instId.includes("sax") ||
         instId.includes("bass") ||
@@ -1500,8 +1663,23 @@ export class NativePcmEngine {
         instId.includes("trombone") ||
         instId.includes("violin") ||
         instId.includes("cello") ||
-        instId.includes("brass"));
-    if (!isDroneInstrument || originalBuf.duration < 0.8)
+        instId.includes("brass") ||
+        instId.includes("saw") ||
+        instId.includes("extacy") ||
+        instId.includes("vocoder") ||
+        instId.includes("synth") ||
+        instId.includes("lead") ||
+        instId.includes("square") ||
+        instId.includes("thicksaw") ||
+        instId.includes("sweeppad") ||
+        instId.includes("warmpad") ||
+        instId.includes("seq_") ||
+        instId.includes("dreamn"));
+    if (
+      instId.startsWith("tekk_") ||
+      !isDroneInstrument ||
+      originalBuf.duration < 0.8
+    )
       return this.fadeBufferEnd(originalBuf, 0.4);
     const numChannels = Math.max(2, originalBuf.numberOfChannels);
     const sampleRate = originalBuf.sampleRate;
@@ -1585,6 +1763,47 @@ export class NativePcmEngine {
     await Promise.all([
       this.decodeEmbeddedAnchors("acoustic_grand_piano"),
       this.decodeEmbeddedAnchors("choir_aahs"),
+      this.decodeEmbeddedAnchors("eos_dreamn"),
+      this.decodeEmbeddedAnchors("eos_deeproads"),
+      this.decodeEmbeddedAnchors("eos_oldroads"),
+      this.decodeEmbeddedAnchors("eos_wah_clavi"),
+      this.decodeEmbeddedAnchors("eos_cp80"),
+      this.decodeEmbeddedAnchors("eos_tx816"),
+      this.decodeEmbeddedAnchors("eos_lofi_piano"),
+      this.decodeEmbeddedAnchors("eos_midi_grand"),
+      this.decodeEmbeddedAnchors("eos_vibes"),
+      this.decodeEmbeddedAnchors("eos_saw900"),
+      this.decodeEmbeddedAnchors("eos_extacy"),
+      this.decodeEmbeddedAnchors("eos_thicksaw"),
+      this.decodeEmbeddedAnchors("eos_square2"),
+      this.decodeEmbeddedAnchors("eos_seq_ana"),
+      this.decodeEmbeddedAnchors("eos_sweeppad"),
+      this.decodeEmbeddedAnchors("eos_warmpad"),
+      this.decodeEmbeddedAnchors("eos_vocoder"),
+      this.decodeEmbeddedAnchors("eos_analog_brass"),
+      this.decodeEmbeddedAnchors("eos_synth_brass"),
+      this.decodeEmbeddedAnchors("eos_organ_60s"),
+      this.decodeEmbeddedAnchors("eos_rubber_bass"),
+      this.decodeEmbeddedAnchors("eos_seq_bass"),
+      this.decodeEmbeddedAnchors("eos_synbass101"),
+      this.decodeEmbeddedAnchors("eos_jazz_guitar"),
+      this.decodeEmbeddedAnchors("eos_upright_bass"),
+      this.decodeEmbeddedAnchors("tekk_hit1"),
+      this.decodeEmbeddedAnchors("tekk_hit2"),
+      this.decodeEmbeddedAnchors("tekk_hit3"),
+      // Omega Premium Elite Collection
+      this.decodeEmbeddedAnchors("eos_fantasia"),
+      this.decodeEmbeddedAnchors("eos_jp_strings"),
+      this.decodeEmbeddedAnchors("eos_ob_strings"),
+      this.decodeEmbeddedAnchors("eos_euro_hit"),
+      this.decodeEmbeddedAnchors("eos_acid_bass"),
+      this.decodeEmbeddedAnchors("eos_funk_gtr"),
+      this.decodeEmbeddedAnchors("eos_silky_pad"),
+      this.decodeEmbeddedAnchors("eos_space_voice"),
+      this.decodeEmbeddedAnchors("eos_rotary_organ"),
+      this.decodeEmbeddedAnchors("eos_mg_square"),
+      this.decodeEmbeddedAnchors("eos_slow_strings"),
+      this.decodeEmbeddedAnchors("eos_oct_brass"),
       this.loadSoundfont("alto_sax"),
       this.loadSoundfont("tenor_sax"),
     ]);
@@ -1745,7 +1964,7 @@ export class NativePcmEngine {
   }
 
   async decodeEmbeddedAnchors(instId) {
-    const instData = KORG_PCM_BANKS[instId];
+    const instData = KORG_PCM_BANKS[instId] || YAMAHA_EOS_PCM_BANKS[instId];
     if (!instData || !instData.anchors) return;
     if (!this.decodedBuffers.has(instId))
       this.decodedBuffers.set(instId, new Map());
@@ -1778,6 +1997,19 @@ export class NativePcmEngine {
     if (this.sfxGenerator && this.sfxGenerator.isSfxInstrument(instId))
       return null;
     if (instId && INST_ALIASES[instId]) instId = INST_ALIASES[instId];
+
+    if (YAMAHA_EOS_PCM_BANKS && YAMAHA_EOS_PCM_BANKS[instId]) {
+      if (
+        !this.decodedBuffers.has(instId) ||
+        this.decodedBuffers.get(instId).size === 0
+      ) {
+        this.decodeEmbeddedAnchors(instId);
+      }
+      const eosMap = this.decodedBuffers.get(instId);
+      if (eosMap && eosMap.size > 0) {
+        return this.findAnchorInMap(eosMap, targetMidi);
+      }
+    }
 
     if (instId && instId.startsWith("abletunes_")) {
       const bankKey =
@@ -2060,11 +2292,53 @@ export class NativePcmEngine {
       const trim = INST_TRIM_GAINS[instId] || 1.0;
       const dynamicAmp = Math.pow(velNorm, 1.25);
       const peakGain = (0.1 + dynamicAmp * 0.9) * customGain * trim;
-      const [isSax, isChoir] = this._instTimbre(instId);
+      const [isSax, isChoirTimbre] = this._instTimbre(instId);
+      const isChoir =
+        isChoirTimbre ||
+        instId === "choir_aahs" ||
+        instId === "m1_choir" ||
+        instId === "m1_ooh_ahh" ||
+        instId?.includes("choir") ||
+        instId?.includes("voice") ||
+        instId?.includes("vox");
+      const isString =
+        instId === "string_ensemble_1" ||
+        instId?.includes("string") ||
+        instId?.includes("pad") ||
+        instId?.includes("saw") ||
+        instId?.includes("extacy") ||
+        instId?.includes("vocoder") ||
+        instId?.includes("dreamn") ||
+        instId?.includes("synth") ||
+        instId?.includes("lead");
+      const isHit = instId?.includes("hit");
+      const isPiano =
+        instId?.includes("piano") ||
+        instId?.includes("roads") ||
+        instId?.includes("cp80") ||
+        instId?.includes("tx816") ||
+        instId?.includes("grand") ||
+        instId?.includes("clavi") ||
+        instId?.includes("ep");
+
+      const releaseTime = isHit
+        ? 1.8
+        : isString
+          ? 0.65
+          : isChoir
+            ? 0.45
+            : isPiano
+              ? 0.38
+              : isSax
+                ? 0.22
+                : 0.25;
+
       const minCutoff = isSax ? 4000 : isChoir ? 1000 : 3500;
       const maxCutoff = isSax ? 16000 : isChoir ? 8500 : 20000;
-      const noteFreq = 440 * Math.pow(2, (midiNote - 69) / 12);
-      const filterNorm = Math.min(1.0, (minCutoff + Math.pow(velNorm, 1.35) * (maxCutoff - minCutoff)) / 20000);
+      const filterNorm = Math.min(
+        1.0,
+        (minCutoff + Math.pow(velNorm, 1.35) * (maxCutoff - minCutoff)) / 20000,
+      );
 
       this.pcmWorkletNode.noteOn({
         instId,
@@ -2075,14 +2349,16 @@ export class NativePcmEngine {
         anchorMidi: anchorData.anchorMidi,
         playbackRate: bentPlaybackRate,
         isLoopable: !!buf._isLoopable,
-        loopStart: buf._isLoopStartSec || 0,
-        loopEnd: buf._isLoopEndSec || 0,
+        loopStart: buf._loopStartSec || 0,
+        loopEnd: buf._loopEndSec || 0,
         attackTime: isChoir ? 0.04 : 0.003,
-        decayTime: 0.25,
-        sustainLevel: 0.65,
-        releaseTime: isChoir ? 0.2 : isSax ? 0.12 : 0.06,
+        decayTime: isPiano ? 0.4 : 0.25,
+        sustainLevel: isHit ? 0.95 : isPiano ? 0.75 : 0.65,
+        releaseTime,
         filterCutoff: filterNorm,
-        maxLife: buf._isLoopable ? 60.0 : Math.min(8.0, (buf.duration || 4.0) + 0.1),
+        maxLife: buf._isLoopable
+          ? 60.0
+          : Math.min(8.0, (buf.duration || 4.0) + 0.1),
       });
       return null; // voice managed by worklet, no main-thread record
     }
@@ -2398,22 +2674,58 @@ export class NativePcmEngine {
               v.instId === "choir_aahs" ||
               v.instId === "m1_choir" ||
               v.instId === "m1_ooh_ahh" ||
-              v.instId?.includes("choir");
+              v.instId?.includes("choir") ||
+              v.instId?.includes("voice") ||
+              v.instId?.includes("vox");
             const isString =
               v.instId === "string_ensemble_1" ||
               v.instId?.includes("string") ||
-              v.instId?.includes("pad");
-            const isSax = v.instId === "alto_sax" || v.instId?.includes("sax");
-            const tau = isChoir ? 0.2 : isString ? 0.08 : isSax ? 0.12 : 0.015;
-            v.voiceGain.gain.cancelScheduledValues(now);
-            v.voiceGain.gain.setTargetAtTime(0, now, tau);
+              v.instId?.includes("pad") ||
+              v.instId?.includes("saw") ||
+              v.instId?.includes("extacy") ||
+              v.instId?.includes("vocoder") ||
+              v.instId?.includes("dreamn") ||
+              v.instId?.includes("synth") ||
+              v.instId?.includes("lead");
+            const isSax =
+              v.instId === "alto_sax" ||
+              v.instId?.includes("sax") ||
+              v.instId?.includes("reed") ||
+              v.instId?.includes("flute");
+            const isHit = v.instId?.includes("hit");
+            const isPiano =
+              v.instId?.includes("piano") ||
+              v.instId?.includes("roads") ||
+              v.instId?.includes("cp80") ||
+              v.instId?.includes("tx816") ||
+              v.instId?.includes("grand") ||
+              v.instId?.includes("clavi") ||
+              v.instId?.includes("ep");
+
+            const tau = isChoir
+              ? 0.2
+              : isString
+                ? 0.25
+                : isSax
+                  ? 0.12
+                  : isHit
+                    ? 0.6
+                    : isPiano
+                      ? 0.08
+                      : 0.06;
             const stopTime = isChoir
               ? 1.4
               : isString
-                ? 0.5
+                ? 1.2
                 : isSax
                   ? 0.55
-                  : 0.1;
+                  : isHit
+                    ? 1.8
+                    : isPiano
+                      ? 0.45
+                      : 0.35;
+            v.voiceGain.gain.cancelScheduledValues(now);
+            v.voiceGain.gain.setTargetAtTime(0, now, tau);
             v.src.stop(now + stopTime);
             if (v.vibLfo) {
               try {
@@ -2477,11 +2789,6 @@ export class NativePcmEngine {
               }
               if (!oldest) break;
             oldest.voiceGain.gain.cancelScheduledValues(now);
-            // Moved off the 25ms tau to the same 50ms low-slope family used by
-            // smart stealing: when sustain is ON and fast chords overflow the
-            // 48-voice sustained pool, the deepest tail is trimmed on a slow
-            // 50ms exponential instead of the sharp 25ms chop that punched
-            // against the limiter as the residual sustain-pedal "burn/crackle".
             oldest.voiceGain.gain.setTargetAtTime(0, now, 0.05);
             oldest.src.stop(now + 0.18);
               if (oldest.vibLfo) {
@@ -2504,26 +2811,63 @@ export class NativePcmEngine {
               v.instId === "choir_aahs" ||
               v.instId === "m1_choir" ||
               v.instId === "m1_ooh_ahh" ||
-              v.instId?.includes("choir");
+              v.instId?.includes("choir") ||
+              v.instId?.includes("voice") ||
+              v.instId?.includes("vox");
             const isString =
               v.instId === "string_ensemble_1" ||
               v.instId?.includes("string") ||
-              v.instId?.includes("pad");
+              v.instId?.includes("pad") ||
+              v.instId?.includes("saw") ||
+              v.instId?.includes("extacy") ||
+              v.instId?.includes("vocoder") ||
+              v.instId?.includes("dreamn") ||
+              v.instId?.includes("synth") ||
+              v.instId?.includes("lead") ||
+              v.instId?.includes("brass") ||
+              v.instId?.includes("organ");
             const isSax =
               v.instId === "alto_sax" ||
               v.instId?.includes("sax") ||
               v.instId?.includes("reed") ||
               v.instId?.includes("flute");
-            const tau = isChoir ? 0.08 : isString ? 0.06 : isSax ? 0.03 : 0.015;
-            v.voiceGain.gain.cancelScheduledValues(now);
-            v.voiceGain.gain.setTargetAtTime(0, now, tau);
-            const stopTime = isChoir
-              ? 0.28
+            const isHit = v.instId?.includes("hit");
+            const isPiano =
+              v.instId?.includes("piano") ||
+              v.instId?.includes("roads") ||
+              v.instId?.includes("cp80") ||
+              v.instId?.includes("tx816") ||
+              v.instId?.includes("grand") ||
+              v.instId?.includes("clavi") ||
+              v.instId?.includes("vibes") ||
+              v.instId?.includes("guitar") ||
+              v.instId?.includes("bass") ||
+              v.instId?.includes("ep");
+
+            const tau = isHit
+              ? 0.5
               : isString
                 ? 0.22
-                : isSax
-                  ? 0.1
-                  : 0.06;
+                : isChoir
+                  ? 0.18
+                  : isPiano
+                    ? 0.12
+                    : isSax
+                      ? 0.08
+                      : 0.10;
+            const stopTime = isHit
+              ? 1.8
+              : isString
+                ? 1.2
+                : isChoir
+                  ? 0.85
+                  : isPiano
+                    ? 0.65
+                    : isSax
+                      ? 0.35
+                      : 0.45;
+            v.voiceGain.gain.cancelScheduledValues(now);
+            v.voiceGain.gain.setTargetAtTime(0, now, tau);
             v.src.stop(now + stopTime);
             if (v.vibLfo) {
               try {

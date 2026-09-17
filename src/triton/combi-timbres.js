@@ -123,6 +123,10 @@ export function resolveTritonProgram(prog) {
   if (prog.m1Type) {
     return { type: "pcm", instKey: M1_INST[prog.m1Type] || resolvePcmByProgram(prog) };
   }
+  if (prog.eosType) {
+    const key = prog.instId || (prog.eosType.startsWith("eos_") ? prog.eosType : "eos_" + prog.eosType);
+    return { type: "pcm", instKey: key };
+  }
   if (prog.instId) {
     return { type: "pcm", instKey: prog.instId };
   }

@@ -15,8 +15,8 @@ import { getComponent } from "./component-registry.js";
 export class RegistrationManager {
   constructor() {
     this.storageKey = "wilsonix_midikey_registrations";
-    this.currentBank = "A"; // A, B, C, D
-    this.currentSlot = 1; // 1-8
+    this.currentBank = localStorage.getItem("wilsonix_current_reg_bank") || "A"; // A, B, C, D
+    this.currentSlot = parseInt(localStorage.getItem("wilsonix_current_reg_slot") || "1", 10); // 1-8
     this.banks = this.loadBanks();
     this.onRecallCallback = null;
 
@@ -196,6 +196,10 @@ export class RegistrationManager {
 
     this.currentBank = bank;
     this.currentSlot = slotNumber;
+    try {
+      localStorage.setItem("wilsonix_current_reg_bank", bank);
+      localStorage.setItem("wilsonix_current_reg_slot", String(slotNumber));
+    } catch (e) {}
 
     try {
       // 1. Triton VA Program (e.g. Brian's Sync A017, Smooth Sine A010)

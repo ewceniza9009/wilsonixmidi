@@ -196,7 +196,13 @@ export const CHORD_BANKS = {
 export class ChordPadsUI {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
-    this.activeBank = "basic_chords";
+    let savedBank = "basic_chords";
+    try {
+      savedBank = localStorage.getItem("wilsonix_chord_active_bank") || "basic_chords";
+    } catch (e) {}
+    if (!CHORD_BANKS[savedBank]) savedBank = "basic_chords";
+
+    this.activeBank = savedBank;
     this.activeNotesMap = new Map(); // PadIndex -> Array of active midi notes
     this.genresExpanded = false;
 
@@ -257,6 +263,9 @@ export class ChordPadsUI {
         if (now - lastTap < 120) return;
         lastTap = now;
         this.activeBank = btn.getAttribute("data-bank");
+        try {
+          localStorage.setItem("wilsonix_chord_active_bank", this.activeBank);
+        } catch (e) {}
         this.render();
         this.bindEvents();
       };

@@ -49,7 +49,8 @@ class PcmWorkletVoice {
 
     // Low-pass filter (1-pole, cheap)
     this.filterCutoff = 0.5; // normalized 0-1
-    this.filterPrev = 0;
+    this.filterPrevL = 0;
+    this.filterPrevR = 0;
 
     // Trim (heldNotes map key for steal logic)
     this.held = false;
@@ -83,7 +84,8 @@ class PcmWorkletVoice {
     this.sustainLevel = sustainLevel || 0.65;
     this.releaseTime = releaseTime || 0.15;
     this.filterCutoff = filterCutoff || 0.5;
-    this.filterPrev = 0;
+    this.filterPrevL = 0;
+    this.filterPrevR = 0;
     this.pedalHeld = false;
     this.held = true;
   }
@@ -106,7 +108,8 @@ class PcmWorkletVoice {
     this.pedalHeld = false;
     this.sampleBufferL = null;
     this.sampleBufferR = null;
-    this.filterPrev = 0;
+    this.filterPrevL = 0;
+    this.filterPrevR = 0;
   }
 
   readSample(position) {
@@ -346,12 +349,9 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
       const attackRate = 1.0 / Math.max(0.001, voice.attackTime * this.sampleRate);
       const decayRate = 1.0 / Math.max(0.001, voice.decayTime * this.sampleRate);
       const releaseRate = 1.0 / Math.max(0.001, voice.releaseTime * this.sampleRate);
-
-      // 1-pole low-pass filter coefficient
       const filterAlpha = Math.exp(-2.0 * PI * voice.filterCutoff * 0.45 * this.invSampleRate);
 
       for (let i = 0; i < numFrames; i++) {
-        // Envelope
         switch (voice.envStage) {
           case 1: // Attack
             voice.envLevel += attackRate;
@@ -386,12 +386,10 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
         }
         if (!voice.active) break;
 
-        // Read sample with linear interpolation
         const pos = voice.playbackPosition;
         let sampleL = voice.readSample(pos);
         let sampleR = voice.readSampleR(pos);
 
-        // Advance position
         let nextPos = pos + voice.playbackRate;
         if (voice.isLoopable && voice.loopEnd > voice.loopStart) {
           while (nextPos >= voice.loopEnd) {
@@ -403,17 +401,11 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
         }
         voice.playbackPosition = nextPos;
 
-        // Apply envelope + gain + poly scale
         const amp = voice.envLevel * voice.gain * masterScale;
-        sampleL *= amp;
-        sampleR *= amp;
-
-        // Simple 1-pole low-pass filter
-        voice.filterPrev = voice.filterPrev * filterAlpha + sampleL * (1.0 - filterAlpha);
-        sampleL = voice.filterPrev;
-
-        outL[i] += sampleL;
-        outR[i] += sampleR;
+        voice.filterPrevL = voice.filterPrevL * filterAlpha + sampleL * (1.0 - filterAlpha);
+        voice.filterPrevR = voice.filterPrevR * filterAlpha + sampleR * (1.0 - filterAlpha);
+        outL[i] += voice.filterPrevL * amp;
+        outR[i] += voice.filterPrevR * amp;
       }
     }
 
