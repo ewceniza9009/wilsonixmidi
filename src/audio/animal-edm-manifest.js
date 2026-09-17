@@ -106,7 +106,7 @@ export const ANIMAL_EDM_BANKS = {
     name: "🦁 Animal Power Saw Lead",
     category: "EDM Festival (Animal)",
     file: "animal_shot_014.wav",
-    rootMidi: 72,
+    rootMidi: 60,
     subCategory: "Lead & Saw",
   },
   animal_sub_drop_bass_2: {

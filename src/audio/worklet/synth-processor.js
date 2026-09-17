@@ -57,10 +57,15 @@ class WorkletVoice {
     this.freq = 440.0 * Math.pow(2.0, (note - 69.0) / 12.0);
     this.startTime = time;
     this.envStage = 1; // Attack
+    this.envLevel = 0.0;
     this.pedalHeld = false;
     this.phase1 = 0;
     this.phase2 = 0;
     this.phaseSub = 0;
+    this.ic1eqL = 0;
+    this.ic2eqL = 0;
+    this.ic1eqR = 0;
+    this.ic2eqR = 0;
   }
 
   noteOff(pedal = false) {
@@ -166,11 +171,14 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
       // the pedal-held voices. Genuinely held keys (not pedal-held) stay.
       this.pedalDown = !!data.down;
       if (!data.down) {
+        let delay = 0;
         for (let i = 0; i < MAX_VOICES; i++) {
           const v = this.voices[i];
           if (v.active && v.pedalHeld) {
             v.pedalHeld = false;
+            v.envLevel *= Math.max(0.01, 1.0 - delay * 0.003);
             v.envStage = 4; // Release
+            delay++;
           }
         }
       }
@@ -206,16 +214,27 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
         voice = this.voices.find(v => v.envStage === 4);
       }
       if (!voice) {
-        // Steal oldest non-held first, then oldest overall
+        // Steal quietest oldest non-held first, then quietest oldest overall
         let bestTarget = null;
-        let bestTime = Infinity;
+        let bestScore = Infinity;
         let oldest = this.voices[0];
         let oldestTime = oldest.startTime;
         for (let i = 0; i < MAX_VOICES; i++) {
           const v = this.voices[i];
           const t = v.startTime || 0;
           if (t < oldestTime) { oldest = v; oldestTime = t; }
-          if (!this.heldNotes.has(v.note) && t < bestTime) { bestTarget = v; bestTime = t; }
+          if (!this.heldNotes.has(v.note)) {
+            const score = v.envLevel * 1000 + t;
+            if (score < bestScore) { bestTarget = v; bestScore = score; }
+          }
+        }
+        if (!bestTarget) {
+          for (let i = 0; i < MAX_VOICES; i++) {
+            const v = this.voices[i];
+            const t = v.startTime || 0;
+            const score = v.envLevel * 1000 + t;
+            if (score < bestScore) { bestTarget = v; bestScore = score; }
+          }
         }
         voice = bestTarget || oldest;
       }

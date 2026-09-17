@@ -12,7 +12,8 @@ const MAX_VOICES = 128;
 const PI = Math.PI;
 
 class PcmWorkletVoice {
-  constructor() {
+  constructor(sampleRate = 44100) {
+    this.sampleRate = sampleRate;
     this.active = false;
     this.midiNote = 0;
     this.velocity = 0;
@@ -75,8 +76,8 @@ class PcmWorkletVoice {
     this.startTime = 0;
     this.maxLife = maxLife || 8.0;
     this.isLoopable = isLoopable;
-    this.loopStart = loopStart;
-    this.loopEnd = loopEnd;
+    this.loopStart = (loopStart || 0) * this.sampleRate;
+    this.loopEnd = (loopEnd || 0) * this.sampleRate;
     this.envStage = 1;
     this.envLevel = 0.0;
     this.attackTime = attackTime || 0.003;
@@ -143,7 +144,7 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
 
     this.voices = [];
     for (let i = 0; i < MAX_VOICES; i++) {
-      this.voices.push(new PcmWorkletVoice());
+      this.voices.push(new PcmWorkletVoice(this.sampleRate));
     }
 
     // Shared RingBuffer reader setup (same pattern as synth-processor.js)
@@ -193,12 +194,18 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
       case "sustain":
         this.pedalDown = !!data.down;
         if (!data.down) {
+          // Stagger pedal release: spread release across ~4ms to prevent mass
+          // transient that causes limiter breathing (buzzing/hissing)
+          let delay = 0;
           for (let i = 0; i < MAX_VOICES; i++) {
             const v = this.voices[i];
             if (v.active && v.pedalHeld) {
               v.pedalHeld = false;
-              v.envStage = 4;
               v.held = false;
+              // Quick ramp down before entering release to avoid DC jump
+              v.envLevel *= Math.max(0.01, 1.0 - delay * 0.003);
+              v.envStage = 4;
+              delay++;
             }
           }
         }
@@ -248,26 +255,38 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
       }
     }
 
-    // Allocate voice: prefer free, then released, then oldest non-held, then oldest
+    // Allocate voice: prefer free, then released & quiet, then quietest non-held, then quietest
     let voice = null;
     for (let i = 0; i < MAX_VOICES; i++) {
       if (!this.voices[i].active) { voice = this.voices[i]; break; }
     }
     if (!voice) {
       for (let i = 0; i < MAX_VOICES; i++) {
-        if (this.voices[i].envStage === 4) { voice = this.voices[i]; break; }
+        const v = this.voices[i];
+        if (v.envStage === 4 && v.envLevel < 0.05) { voice = v; break; }
       }
     }
     if (!voice) {
       let bestTarget = null;
-      let bestTime = Infinity;
+      let bestScore = Infinity;
       let oldest = null;
       let oldestTime = Infinity;
       for (let i = 0; i < MAX_VOICES; i++) {
         const v = this.voices[i];
         const t = v.startTime || 0;
         if (t < oldestTime) { oldest = v; oldestTime = t; }
-        if (!this.heldNotes.has(v.midiNote) && t < bestTime) { bestTarget = v; bestTime = t; }
+        if (!this.heldNotes.has(v.midiNote)) {
+          const score = v.envLevel * 1000 + t;
+          if (score < bestScore) { bestTarget = v; bestScore = score; }
+        }
+      }
+      if (!bestTarget) {
+        for (let i = 0; i < MAX_VOICES; i++) {
+          const v = this.voices[i];
+          const t = v.startTime || 0;
+          const score = v.envLevel * 1000 + t;
+          if (score < bestScore) { bestTarget = v; bestScore = score; }
+        }
       }
       voice = bestTarget || oldest;
     }
@@ -351,7 +370,8 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
       const attackRate = 1.0 / Math.max(0.001, voice.attackTime * this.sampleRate);
       const decayRate = 1.0 / Math.max(0.001, voice.decayTime * this.sampleRate);
       const releaseRate = 1.0 / Math.max(0.001, voice.releaseTime * this.sampleRate);
-      const filterAlpha = Math.exp(-2.0 * PI * voice.filterCutoff * 0.45 * this.invSampleRate);
+      const cutoffHz = Math.max(200, Math.min(20000, voice.filterCutoff * 20000));
+      const filterAlpha = Math.exp(-2.0 * PI * cutoffHz * this.invSampleRate);
 
       for (let i = 0; i < numFrames; i++) {
         switch (voice.envStage) {
@@ -393,19 +413,35 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
         let sampleR = voice.readSampleR(pos);
 
         let nextPos = pos + voice.playbackRate;
+        let sampleEnded = false;
         if (voice.isLoopable && voice.loopEnd > voice.loopStart) {
           while (nextPos >= voice.loopEnd) {
             nextPos -= (voice.loopEnd - voice.loopStart);
           }
         } else if (nextPos >= bufLen) {
-          voice.forceStop();
-          break;
+          sampleEnded = true;
+          if (voice.held || voice.pedalHeld) {
+            nextPos = pos;
+            voice.envLevel *= 0.5;
+            if (voice.envLevel < 0.001) {
+              voice.forceStop();
+              break;
+            }
+          } else {
+            voice.forceStop();
+            break;
+          }
         }
         voice.playbackPosition = nextPos;
+
+        if (sampleEnded) { sampleL = 0; sampleR = 0; }
 
         const amp = voice.envLevel * voice.gain * masterScale;
         voice.filterPrevL = voice.filterPrevL * filterAlpha + sampleL * (1.0 - filterAlpha);
         voice.filterPrevR = voice.filterPrevR * filterAlpha + sampleR * (1.0 - filterAlpha);
+        // Denormal flush: prevents CPU spikes from subnormal floats in filter state
+        if (voice.filterPrevL > -1e-18 && voice.filterPrevL < 1e-18) voice.filterPrevL = 0;
+        if (voice.filterPrevR > -1e-18 && voice.filterPrevR < 1e-18) voice.filterPrevR = 0;
         outL[i] += voice.filterPrevL * amp;
         outR[i] += voice.filterPrevR * amp;
       }

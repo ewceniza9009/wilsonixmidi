@@ -2776,7 +2776,7 @@ export class NativePcmEngine {
       // Single O(n) pass — no temporary array allocation, no GC churn during
       // sustained dense playing (organs/pads love doing this).
       let target = null;
-      let targetTime = Infinity;
+      let bestScore = Infinity;
       let oldest = null;
       let oldestTime = Infinity;
       for (let i = 0; i < this.voiceQueue.length; i++) {
@@ -2784,7 +2784,19 @@ export class NativePcmEngine {
         if (!v) continue;
         const t = v.startTime || 0;
         if (t < oldestTime) { oldest = v; oldestTime = t; }
-        if (!this.heldNotes.has(v.midiNote) && t < targetTime) { target = v; targetTime = t; }
+        if (!this.heldNotes.has(v.midiNote)) {
+          const score = (v.voiceGain?.gain?.value || 0) * 1000 + t;
+          if (score < bestScore) { target = v; bestScore = score; }
+        }
+      }
+      if (!target) {
+        for (let i = 0; i < this.voiceQueue.length; i++) {
+          const v = this.voiceQueue[i];
+          if (!v) continue;
+          const t = v.startTime || 0;
+          const score = (v.voiceGain?.gain?.value || 0) * 1000 + t;
+          if (score < bestScore) { target = v; bestScore = score; }
+        }
       }
       if (!target) target = oldest;
       if (!target) break;
