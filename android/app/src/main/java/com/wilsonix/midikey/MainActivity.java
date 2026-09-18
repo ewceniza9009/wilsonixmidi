@@ -15,6 +15,15 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // FLAG_SECURE: blocks MIUI 3-finger screenshot & screen capture
+        if (getWindow() != null) {
+            getWindow().setFlags(
+                WindowManager.LayoutParams.FLAG_SECURE,
+                WindowManager.LayoutParams.FLAG_SECURE
+            );
+        }
+        
         setupImmersiveMode();
         setupGestureExclusion();
     }
