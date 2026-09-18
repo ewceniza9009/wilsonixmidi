@@ -92,43 +92,43 @@ export class TritonVirtualAnalogEngine {
     // master period -- the authentic raucous octave/harmonic "sync lead" character.
     const isSyncProgram = /(\bsync\b|octa.?sync|harm.?sync|sync.?lead)/i.test((prog.category || "") + " " + (prog.name || "") + " " + (prog.ifx || ""));
 
-    // ── User-approved re-voice: A013 / A018 / A036 ──────────────────────
-    // These three piano-family presets all hit the isOrganOrEP branch and
-    // collapse into the same triangle+sine voice. Re-voice each into a
-    // genuinely distinct timbre using the engine's own oscillator primitives.
+    // ── Phase S data-driven re-voice: A013 / A018 / A036 ─────────────────
+    // Tone values are LOCKED INTO THE PRESET DATA (triton-soundbanks.js):
+    // gain1/gain2/gain3, osc3Type/osc3Ratio, osc2, r2, cutoff, attack.
+    // The engine only re-reads the preset's own fields — no hardcoded DSP.
     let cutoffHz = prog.cutoff || 6000;
     let attackVal = prog.attack ?? 0.01;
     if (prog.id === "A036") {
       // Velo Piano ST → bright punchy bell-tine EP: triangle + octave
       // triangle (hair of detune), bright open filter, percussive pluck body.
-      osc2 = "triangle";
-      r2 = 2.001;
-      gain1 = 0.55;
-      gain2 = 0.38;
-      gain3 = 0.0;
-      cutoffHz = 7200;
+      osc2 = safeWave(prog.osc2);
+      r2 = prog.r2;
+      gain1 = prog.gain1;
+      gain2 = prog.gain2;
+      gain3 = prog.gain3;
+      cutoffHz = prog.cutoff;
       attackVal = Math.max(0.005, prog.attack ?? 0.002);
     } else if (prog.id === "A013") {
       // Piano Pad 2 → warm, soft, slow-swelling pad: near-unison detuned
       // triangles, gentle low-pass, slow attack. Reads as a pad, not a piano.
-      osc2 = "triangle";
-      r2 = 1.003;
-      gain1 = 0.50;
-      gain2 = 0.30;
-      gain3 = 0.0;
-      cutoffHz = 4000;
-      attackVal = 0.30;
+      osc2 = safeWave(prog.osc2);
+      r2 = prog.r2;
+      gain1 = prog.gain1;
+      gain2 = prog.gain2;
+      gain3 = prog.gain3;
+      cutoffHz = prog.cutoff;
+      attackVal = Math.max(0.005, prog.attack ?? 0.01);
     } else if (prog.id === "A018") {
       // Icy Piano Pad → cold crystalline shimmer: triangle + 2-octave sine
       // bell harmonic pushed up + a fixed octave glass partial, bright filter.
-      osc2 = "sine";
-      r2 = 4.002;
-      gain1 = 0.42;
-      gain2 = 0.40;
-      gain3 = 0.12;
-      osc3Type = "sine";
-      osc3Ratio = 2.0;
-      cutoffHz = 8500;
+      osc2 = safeWave(prog.osc2);
+      r2 = prog.r2;
+      gain1 = prog.gain1;
+      gain2 = prog.gain2;
+      gain3 = prog.gain3;
+      if (prog.osc3Type) osc3Type = safeWave(prog.osc3Type);
+      if (prog.osc3Ratio) osc3Ratio = prog.osc3Ratio;
+      cutoffHz = prog.cutoff;
       attackVal = Math.max(0.005, prog.attack ?? 0.01);
     }
 
