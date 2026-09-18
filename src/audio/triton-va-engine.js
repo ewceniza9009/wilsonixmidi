@@ -41,9 +41,9 @@ export class TritonVirtualAnalogEngine {
     this.activeProgram = prog;
 
     const osc1 = safeWave(prog.osc1 || "sawtooth");
-    const osc2 = safeWave(prog.osc2 || "sawtooth");
+    let osc2 = safeWave(prog.osc2 || "sawtooth");
     const r1 = prog.r1 || 1.0;
-    const r2 = prog.r2 || 1.0;
+    let r2 = prog.r2 || 1.0;
 
     // Oscillator 3 configuration and blend gains:
     // 1. Pure Sine Leads (Smooth Sine Lead): strong fundamental core + octave sheen, no 3rd osc beating
@@ -92,6 +92,46 @@ export class TritonVirtualAnalogEngine {
     // master period -- the authentic raucous octave/harmonic "sync lead" character.
     const isSyncProgram = /(\bsync\b|octa.?sync|harm.?sync|sync.?lead)/i.test((prog.category || "") + " " + (prog.name || "") + " " + (prog.ifx || ""));
 
+    // ── User-approved re-voice: A013 / A018 / A036 ──────────────────────
+    // These three piano-family presets all hit the isOrganOrEP branch and
+    // collapse into the same triangle+sine voice. Re-voice each into a
+    // genuinely distinct timbre using the engine's own oscillator primitives.
+    let cutoffHz = prog.cutoff || 6000;
+    let attackVal = prog.attack ?? 0.01;
+    if (prog.id === "A036") {
+      // Velo Piano ST → bright punchy bell-tine EP: triangle + octave
+      // triangle (hair of detune), bright open filter, percussive pluck body.
+      osc2 = "triangle";
+      r2 = 2.001;
+      gain1 = 0.55;
+      gain2 = 0.38;
+      gain3 = 0.0;
+      cutoffHz = 7200;
+      attackVal = Math.max(0.005, prog.attack ?? 0.002);
+    } else if (prog.id === "A013") {
+      // Piano Pad 2 → warm, soft, slow-swelling pad: near-unison detuned
+      // triangles, gentle low-pass, slow attack. Reads as a pad, not a piano.
+      osc2 = "triangle";
+      r2 = 1.003;
+      gain1 = 0.50;
+      gain2 = 0.30;
+      gain3 = 0.0;
+      cutoffHz = 4000;
+      attackVal = 0.30;
+    } else if (prog.id === "A018") {
+      // Icy Piano Pad → cold crystalline shimmer: triangle + 2-octave sine
+      // bell harmonic pushed up + a fixed octave glass partial, bright filter.
+      osc2 = "sine";
+      r2 = 4.002;
+      gain1 = 0.42;
+      gain2 = 0.40;
+      gain3 = 0.12;
+      osc3Type = "sine";
+      osc3Ratio = 2.0;
+      cutoffHz = 8500;
+      attackVal = Math.max(0.005, prog.attack ?? 0.01);
+    }
+
     this.config = {
       osc1Type: osc1,
       osc1Ratio: r1,
@@ -103,10 +143,10 @@ export class TritonVirtualAnalogEngine {
       gain2,
       gain3,
       filterType: "lowpass",
-      filterCutoff: Math.min(9500, prog.cutoff || 6000),
+      filterCutoff: Math.min(9500, cutoffHz),
       filterQ: Math.min(1.2, prog.Q || 0.8),
       filterDecay: null,
-      attack: Math.max(0.005, prog.attack ?? 0.01),
+      attack: Math.max(0.005, attackVal),
       decay: prog.decay || 2.0,
       sustainLevel: prog.sustain ?? 0.65,
       release: Math.max(0.06, prog.release ?? 0.35),

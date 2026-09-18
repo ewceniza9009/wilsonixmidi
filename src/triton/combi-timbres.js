@@ -179,6 +179,19 @@ export function resolveTritonProgram(prog) {
   if (prog.instId) {
     return { type: "pcm", instKey: prog.instId };
   }
+  // Piano-family PADS with genuine oscillator data are synth voices, not
+  // rompler piano samples (e.g. A013 "Piano Pad 2", A018 "Icy Piano Pad").
+  // Routing them to the same grand-piano PCM made them identical to each
+  // other; sending them to the VA engine gives each its own distinct voice.
+  if ((prog.osc1 || prog.osc2) && /piano\s+pad|icy piano/i.test(prog.name || "")) {
+    return { type: "va", prog };
+  }
+  // A030 "Trombone Hard" declares real sawtooth oscillators; route it to the
+  // VA engine so it plays a punchy synth-brass trombone instead of the weak
+  // generic soundfont sample (user-confirmed choice).
+  if (prog.id === "A030" && (prog.osc1 || prog.osc2)) {
+    return { type: "va", prog };
+  }
   if (isSynthTimbre(prog)) {
     return { type: "va", prog };
   }

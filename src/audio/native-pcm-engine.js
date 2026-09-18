@@ -1806,12 +1806,24 @@ export class NativePcmEngine {
             const ch1 = buf.getChannelData(1);
             let ch0Sum = 0,
               ch1Sum = 0;
-            const sampleLen = Math.min(2000, ch0.length);
-            for (let i = 0; i < sampleLen; i += 10) {
+            const step = Math.max(1, Math.floor(ch0.length / 600));
+            for (let i = 0; i < ch0.length; i += step) {
               ch0Sum += Math.abs(ch0[i]);
               ch1Sum += Math.abs(ch1[i]);
             }
-            if (ch0Sum > 0.001 && ch1Sum < 0.00005) ch1.set(ch0);
+            const louder = ch0Sum >= ch1Sum ? ch0 : ch1;
+            const louderSum = Math.max(ch0Sum, ch1Sum);
+            const quieterSum = Math.min(ch0Sum, ch1Sum);
+            // Rescue panned-mono sources (e.g. the alto_sax bank files that
+            // were recorded hard-left with a near-silent right channel) so
+            // they play centered instead of "only in one earphone". The
+            // previous check only caught a FULLY silent channel; real samples
+            // are panned, not silent, so they slipped through. True balanced
+            // stereo (>~10dB separation) is left untouched.
+            if (louderSum > 0.001 && quieterSum < louderSum / 3.2) {
+              ch0.set(louder);
+              ch1.set(louder);
+            }
           }
           try {
             let peak = 0;

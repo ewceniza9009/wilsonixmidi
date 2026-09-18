@@ -1083,6 +1083,24 @@ export class TritonWorkstationUI {
       fx.masterEq?.setHighGain(1.4);
     }
 
+    // A023 Old VOX Legend — combo-organ chain: subtle tube warmth, spinning
+    // vibrato (fast deep chorus), tight room, presence EQ. Tames the raw
+    // square-wave buzz and adds the classic organ motion.
+    if (prog.id === "A023") {
+      fx.tube?.setBypass(false);
+      fx.tube?.setDrive(0.16);
+      fx.tube?.setMix(0.22);
+      fx.chorus?.setBypass(false);
+      fx.chorus?.setRate(1.1);
+      fx.chorus?.setDepth(0.9);
+      fx.chorus?.setMix(0.35);
+      fx.reverb?.setBypass(false);
+      fx.reverb?.setMix(0.14);
+      fx.reverb?.setDecay(1.1);
+      fx.masterEq?.setMidGain(1.2);
+      fx.masterEq?.setHighGain(-0.5);
+    }
+
     } finally {
       fx._bootstrapping = false;
       fx._updateChainRouting();
