@@ -278,7 +278,8 @@ export class TritonWorkstationUI {
           <div class="nav-cluster-right">
             <div class="triton-search-box">
               <span class="search-ico">🔍</span>
-              <input type="text" id="triton-search-input" placeholder="Search 60+ patches..." value="${this.searchQuery}" />
+              <input type="text" id="triton-search-input" placeholder="Search 60+ patches..." value="${this.searchQuery || ""}" />
+              <button type="button" class="triton-search-clear ${this.searchQuery ? "visible" : ""}" id="triton-search-clear" title="Clear search" aria-label="Clear search">✕</button>
             </div>
           </div>
         </div>
@@ -1328,28 +1329,57 @@ export class TritonWorkstationUI {
 
   bindSearch() {
     const searchInput = document.getElementById("triton-search-input");
+    const clearBtn = document.getElementById("triton-search-clear");
+
+    const updateGrid = () => {
+      const programs = this.getGridPrograms();
+      const grid = this.container.querySelector(".touchview-program-grid");
+      if (grid) {
+        grid.innerHTML = programs
+          .map(
+            p => `
+          <div class="triton-prog-cell ${this.isGridCellActive(p) ? "active" : ""}" data-prog-id="${p.id}">
+            <span class="prog-bank-code">${this.activeBankId.replace("_", " ")}</span>
+            <span class="prog-num">${p.num}</span>
+            <span class="prog-name-label">${p.name}</span>
+            <span class="prog-star">★</span>
+          </div>
+        `
+          )
+          .join("");
+        this.bindProgramGrid();
+      }
+    };
+
     searchInput?.addEventListener("input", e => {
       this.searchQuery = e.target.value;
+      if (clearBtn) {
+        clearBtn.classList.toggle("visible", !!this.searchQuery.trim());
+      }
       clearTimeout(this._searchDebounce);
-      this._searchDebounce = setTimeout(() => {
-        const programs = this.getGridPrograms();
-        const grid = this.container.querySelector(".touchview-program-grid");
-        if (grid) {
-          grid.innerHTML = programs
-            .map(
-              p => `
-            <div class="triton-prog-cell ${this.isGridCellActive(p) ? "active" : ""}" data-prog-id="${p.id}">
-              <span class="prog-bank-code">${this.activeBankId.replace("_", " ")}</span>
-              <span class="prog-num">${p.num}</span>
-              <span class="prog-name-label">${p.name}</span>
-              <span class="prog-star">★</span>
-            </div>
-          `
-            )
-            .join("");
-          this.bindProgramGrid();
-        }
-      }, 160);
+      this._searchDebounce = setTimeout(updateGrid, 160);
+    });
+
+    searchInput?.addEventListener("keydown", e => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        this.searchQuery = "";
+        searchInput.value = "";
+        if (clearBtn) clearBtn.classList.remove("visible");
+        clearTimeout(this._searchDebounce);
+        updateGrid();
+      }
+    });
+
+    clearBtn?.addEventListener("click", () => {
+      this.searchQuery = "";
+      if (searchInput) {
+        searchInput.value = "";
+        searchInput.focus();
+      }
+      clearBtn.classList.remove("visible");
+      clearTimeout(this._searchDebounce);
+      updateGrid();
     });
   }
 

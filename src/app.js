@@ -76,6 +76,11 @@ class MidiKeyEliteApp {
     this.installGlobalErrorReporter();
     initMobileDevice();
 
+    // P3.5: Register Service Worker for PWA offline support
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+
     // 0. Pre-arm AudioContext and pre-decode PCM buffers into RAM on page boot
     try {
       audioCore.init();

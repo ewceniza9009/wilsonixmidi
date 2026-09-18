@@ -103,6 +103,8 @@ export class MediaPlayerEngine {
     this.audioEl.volume = this.volume;
     this.audioEl.playbackRate = this.rate;
 
+    this._initMediaSession();
+
     this.mediaSource = undefined;
     this.gainNode = audioCore.ctx.createGain();
     this.gainNode.gain.value = this.volume;
@@ -117,6 +119,47 @@ export class MediaPlayerEngine {
 
   setOnTime(cb) {
     this._onTime = cb;
+  }
+
+  _initMediaSession() {
+    if (typeof navigator === "undefined" || !navigator.mediaSession) return;
+    navigator.mediaSession.setActionHandler("play", () => this.play());
+    navigator.mediaSession.setActionHandler("pause", () => this.pause());
+    navigator.mediaSession.setActionHandler("previoustrack", () => this.prev());
+    navigator.mediaSession.setActionHandler("nexttrack", () => this.next());
+    navigator.mediaSession.setActionHandler("seekto", (details) => {
+      if (this.audioEl && details.seekTime !== undefined) {
+        this.audioEl.currentTime = details.seekTime;
+      }
+    });
+    navigator.mediaSession.setActionHandler("seekbackward", (details) => {
+      if (this.audioEl) {
+        const skip = details.seekOffset || 10;
+        this.audioEl.currentTime = Math.max(0, this.audioEl.currentTime - skip);
+      }
+    });
+    navigator.mediaSession.setActionHandler("seekforward", (details) => {
+      if (this.audioEl) {
+        const skip = details.seekOffset || 10;
+        this.audioEl.currentTime = Math.min(this.audioEl.duration || 0, this.audioEl.currentTime + skip);
+      }
+    });
+  }
+
+  _updateMediaSession() {
+    if (typeof navigator === "undefined" || !navigator.mediaSession) return;
+    const track = this.playlist[this.currentIndex];
+    if (!track) {
+      navigator.mediaSession.metadata = null;
+      navigator.mediaSession.playbackState = "none";
+      return;
+    }
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: track.name,
+      artist: "WILSONIX MIDIKEY",
+      album: track.source === "disk" ? "Stage Rig" : "Session",
+    });
+    navigator.mediaSession.playbackState = this.isPlaying ? "playing" : "paused";
   }
 
   /* ===================== Playlist management ===================== */
@@ -406,6 +449,7 @@ export class MediaPlayerEngine {
     } catch {
       this.isPlaying = false;
     }
+    this._updateMediaSession();
     this._onState();
   }
 
@@ -414,6 +458,7 @@ export class MediaPlayerEngine {
       this.audioEl.pause();
       this.isPlaying = false;
     }
+    this._updateMediaSession();
     this._onState();
   }
 
@@ -425,6 +470,7 @@ export class MediaPlayerEngine {
       this.isPlaying = false;
       this._loadedMeta = false;
     }
+    this._updateMediaSession();
     this._onTime({ currentTime: 0, duration: 0 });
     this._onState();
   }
