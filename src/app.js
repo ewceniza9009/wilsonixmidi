@@ -21,6 +21,7 @@ import { DemoStationUI } from "./components/demo-station.js";
 import { MediaPlayerUI } from "./components/media-player-ui.js";
 import { multiLayerEngine } from "./audio/multi-layer-engine.js";
 import { registerComponent } from "./components/component-registry.js";
+import { initMobileDevice } from "./mobile/device.js";
 
 class MidiKeyEliteApp {
   constructor() {
@@ -37,8 +38,43 @@ class MidiKeyEliteApp {
     this.unlocked = false;
   }
 
+  installGlobalErrorReporter() {
+    if (window.__midikeyErrorReporterInstalled) return;
+    window.__midikeyErrorReporterInstalled = true;
+
+    const report = (msg) => {
+      if (!msg) return;
+      console.error("[MIDIKEY]", msg);
+      const now = Date.now();
+      if (
+        this._lastErrorMsg === msg &&
+        now - (this._lastErrorAt || 0) < 5000
+      ) {
+        return;
+      }
+      this._lastErrorMsg = msg;
+      this._lastErrorAt = now;
+      try {
+        audioCore._diagToast?.("⚠ " + String(msg).slice(0, 140));
+      } catch (e) {}
+    };
+
+    window.addEventListener("error", (e) => report(e.message || "Unknown error"));
+    window.addEventListener("unhandledrejection", (e) => {
+      const r = e.reason;
+      let msg = "";
+      if (r instanceof Error) msg = r.message;
+      else if (r && r.message) msg = r.message;
+      else if (typeof r === "string") msg = r;
+      else msg = "Unhandled promise rejection";
+      report(msg);
+    });
+  }
+
   start() {
     console.log("Initializing MidiKey Elite Workstation...");
+    this.installGlobalErrorReporter();
+    initMobileDevice();
 
     // 0. Pre-arm AudioContext and pre-decode PCM buffers into RAM on page boot
     try {
@@ -341,15 +377,19 @@ class MidiKeyEliteApp {
     });
 
 
-    // 13. Fullscreen Toggle
+    // 13. Fullscreen Toggle (state synced from fullscreenchange, not optimistic)
     const fullscreenBtn = document.getElementById("btn-toggle-fullscreen");
+    const syncFullscreenState = () => {
+      if (fullscreenBtn) {
+        fullscreenBtn.classList.toggle("active", !!document.fullscreenElement);
+      }
+    };
+    document.addEventListener("fullscreenchange", syncFullscreenState);
     fullscreenBtn?.addEventListener("click", () => {
       if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen?.().catch(() => {});
-        fullscreenBtn.classList.add("active");
       } else {
         document.exitFullscreen?.().catch(() => {});
-        fullscreenBtn.classList.remove("active");
       }
     });
 

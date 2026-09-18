@@ -3,9 +3,10 @@
  * Pre-caches genuine 24-bit multi-samples into RAM AudioBuffers with 0.00ms touch-to-sound latency.
  */
 
-import { KORG_PCM_BANKS } from "./korg-pcm-data.js";
-import { YAMAHA_EOS_PCM_BANKS } from "./yamaha-eos-pcm-data.js";
-import { USER_BANK_PCM_BANKS } from "./user-bank-pcm-data.js";
+import {
+  bankData,
+  ensureBankForInst,
+} from "./pcm-bank-loader.js";
 import { ABLETUNES_BANKS } from "./abletunes-manifest.js";
 import { animalEdmLoader } from "./animal-edm-loader.js";
 import { bloomEdmLoader } from "./bloom-edm-loader.js";
@@ -1339,13 +1340,15 @@ export class LayerInsertProcessor {
         break;
       }
       case "sidechain_pump": {
+        // Base 1.0 + sine ±0.4 swept gain 0.6→1.4, so the open half slammed 40%
+        // past unity into the limiter. Use 0.75 ± 0.25 for a clean 0.5→1.0 swing.
         const gainNode = ctx.createGain();
-        gainNode.gain.value = 1.0;
+        gainNode.gain.value = 0.75;
         const lfo = ctx.createOscillator();
         lfo.type = "sine";
         lfo.frequency.value = 2.0;
         const lfoGain = ctx.createGain();
-        lfoGain.gain.value = 0.4;
+        lfoGain.gain.value = 0.25;
         lfo.connect(lfoGain);
         lfoGain.connect(gainNode.gain);
         lfo.start();
@@ -1991,66 +1994,135 @@ export class NativePcmEngine {
   }
 
   async initBuffers() {
-    await Promise.all([
-      this.decodeEmbeddedAnchors("acoustic_grand_piano"),
-      this.decodeEmbeddedAnchors("choir_aahs"),
-      this.decodeEmbeddedAnchors("eos_dreamn"),
-      this.decodeEmbeddedAnchors("eos_deeproads"),
-      this.decodeEmbeddedAnchors("eos_oldroads"),
-      this.decodeEmbeddedAnchors("eos_wah_clavi"),
-      this.decodeEmbeddedAnchors("eos_cp80"),
-      this.decodeEmbeddedAnchors("eos_tx816"),
-      this.decodeEmbeddedAnchors("eos_lofi_piano"),
-      this.decodeEmbeddedAnchors("eos_midi_grand"),
-      this.decodeEmbeddedAnchors("eos_vibes"),
-      this.decodeEmbeddedAnchors("eos_saw900"),
-      this.decodeEmbeddedAnchors("eos_extacy"),
-      this.decodeEmbeddedAnchors("eos_thicksaw"),
-      this.decodeEmbeddedAnchors("eos_square2"),
-      this.decodeEmbeddedAnchors("eos_seq_ana"),
-      this.decodeEmbeddedAnchors("eos_sweeppad"),
-      this.decodeEmbeddedAnchors("eos_warmpad"),
-      this.decodeEmbeddedAnchors("eos_vocoder"),
-      this.decodeEmbeddedAnchors("eos_analog_brass"),
-      this.decodeEmbeddedAnchors("eos_synth_brass"),
-      this.decodeEmbeddedAnchors("eos_organ_60s"),
-      this.decodeEmbeddedAnchors("eos_rubber_bass"),
-      this.decodeEmbeddedAnchors("eos_seq_bass"),
-      this.decodeEmbeddedAnchors("eos_synbass101"),
-      this.decodeEmbeddedAnchors("eos_jazz_guitar"),
-      this.decodeEmbeddedAnchors("eos_upright_bass"),
-      this.decodeEmbeddedAnchors("tekk_hit1"),
-      this.decodeEmbeddedAnchors("tekk_hit2"),
-      this.decodeEmbeddedAnchors("tekk_hit3"),
+    // Eager boot decode — v2.0.4 behavior: every bank instrument is decoded
+    // BEFORE the engine is marked ready, so first notes always play the real
+    // instrument (never a substitute) with no mid-play load/decode jank.
+    const eagerInsts = [
+      "acoustic_grand_piano",
+      "choir_aahs",
+      "eos_dreamn",
+      "eos_deeproads",
+      "eos_oldroads",
+      "eos_wah_clavi",
+      "eos_cp80",
+      "eos_tx816",
+      "eos_lofi_piano",
+      "eos_midi_grand",
+      "eos_vibes",
+      "eos_saw900",
+      "eos_extacy",
+      "eos_thicksaw",
+      "eos_square2",
+      "eos_seq_ana",
+      "eos_sweeppad",
+      "eos_warmpad",
+      "eos_vocoder",
+      "eos_analog_brass",
+      "eos_synth_brass",
+      "eos_organ_60s",
+      "eos_rubber_bass",
+      "eos_seq_bass",
+      "eos_synbass101",
+      "eos_jazz_guitar",
+      "eos_upright_bass",
+      "tekk_hit1",
+      "tekk_hit2",
+      "tekk_hit3",
       // Omega Premium Elite Collection
-      this.decodeEmbeddedAnchors("eos_fantasia"),
-      this.decodeEmbeddedAnchors("eos_jp_strings"),
-      this.decodeEmbeddedAnchors("eos_ob_strings"),
-      this.decodeEmbeddedAnchors("eos_euro_hit"),
-      this.decodeEmbeddedAnchors("eos_acid_bass"),
-      this.decodeEmbeddedAnchors("eos_funk_gtr"),
-      this.decodeEmbeddedAnchors("eos_silky_pad"),
-      this.decodeEmbeddedAnchors("eos_space_voice"),
-      this.decodeEmbeddedAnchors("eos_rotary_organ"),
-      this.decodeEmbeddedAnchors("eos_mg_square"),
-      this.decodeEmbeddedAnchors("eos_slow_strings"),
-      this.decodeEmbeddedAnchors("eos_oct_brass"),
+      "eos_fantasia",
+      "eos_jp_strings",
+      "eos_ob_strings",
+      "eos_euro_hit",
+      "eos_acid_bass",
+      "eos_funk_gtr",
+      "eos_silky_pad",
+      "eos_space_voice",
+      "eos_rotary_organ",
+      "eos_mg_square",
+      "eos_slow_strings",
+      "eos_oct_brass",
       // USER BANK B, C, D (Initial Lead Preload)
-      this.decodeEmbeddedAnchors("edm_house_piano"),
-      this.decodeEmbeddedAnchors("korg_techno_organ"),
-      this.decodeEmbeddedAnchors("edm_iconic_lead1"),
-      this.decodeEmbeddedAnchors("edm_supersaw_jp80"),
-      this.decodeEmbeddedAnchors("edm_warehouse_saw"),
+      "edm_house_piano",
+      "korg_techno_organ",
+      "edm_iconic_lead1",
+      "edm_supersaw_jp80",
+      "edm_warehouse_saw",
+    ];
+    await Promise.all([
+      ...eagerInsts.map((id) => this.decodeEmbeddedAnchors(id)),
       this.loadSoundfont("alto_sax"),
       this.loadSoundfont("tenor_sax"),
     ]);
     this._createReedChiffBuffer();
     this.isReady = true;
+    this._dbgMainThreadVoices = 0;
+    console.log(
+      `[PCM] ready: decodedInsts=${this.decodedBuffers.size} ` +
+        `workletReady=${!!(this.pcmWorkletNode && this.pcmWorkletNode.isReady)} ` +
+        `activeVoices=${this.activeVoices.size}`,
+    );
     this.loadAbletunesInstrument("fm_piano");
     this.loadAbletunesInstrument("upright_piano");
+    setTimeout(() => {
+      const w = this.pcmWorkletNode;
+      console.info(
+        `[PCM] t+4s: workletReady=${!!(w && w.isReady)} ` +
+          `initError=${w && w.lastInitError ? String(w.lastInitError).slice(0, 140) : "none"} ` +
+          `activeVoices=${this.activeVoices.size}`,
+      );
+    }, 4000);
     animalEdmLoader.preloadTopShots(this.ctx, this.decodedBuffers);
     bloomEdmLoader.preloadTopShots(this.ctx, this.decodedBuffers);
     const idlePreload = async () => {
+      const embeddedDeferred = [
+        "eos_dreamn",
+        "eos_deeproads",
+        "eos_oldroads",
+        "eos_wah_clavi",
+        "eos_cp80",
+        "eos_tx816",
+        "eos_lofi_piano",
+        "eos_midi_grand",
+        "eos_vibes",
+        "eos_saw900",
+        "eos_extacy",
+        "eos_thicksaw",
+        "eos_square2",
+        "eos_seq_ana",
+        "eos_sweeppad",
+        "eos_warmpad",
+        "eos_vocoder",
+        "eos_analog_brass",
+        "eos_synth_brass",
+        "eos_organ_60s",
+        "eos_rubber_bass",
+        "eos_seq_bass",
+        "eos_synbass101",
+        "eos_jazz_guitar",
+        "eos_upright_bass",
+        "tekk_hit1",
+        "tekk_hit2",
+        "tekk_hit3",
+        // Omega Premium Elite Collection
+        "eos_fantasia",
+        "eos_jp_strings",
+        "eos_ob_strings",
+        "eos_euro_hit",
+        "eos_acid_bass",
+        "eos_funk_gtr",
+        "eos_silky_pad",
+        "eos_space_voice",
+        "eos_rotary_organ",
+        "eos_mg_square",
+        "eos_slow_strings",
+        "eos_oct_brass",
+        // USER BANK B, C, D (Deferred Lead Preload)
+        "edm_house_piano",
+        "korg_techno_organ",
+        "edm_iconic_lead1",
+        "edm_supersaw_jp80",
+        "edm_warehouse_saw",
+      ];
       const coreInstruments = [
         "electric_piano_2",
         "electric_guitar_clean",
@@ -2070,6 +2142,10 @@ export class NativePcmEngine {
         "drum_hhopen_r",
         "drum_crash_r",
       ];
+      for (const inst of embeddedDeferred) {
+        await this.decodeEmbeddedAnchors(inst);
+        await new Promise((r) => setTimeout(r, 120));
+      }
       for (const inst of coreInstruments) {
         await this.loadSoundfont(inst);
         await new Promise((r) => setTimeout(r, 120));
@@ -2085,6 +2161,7 @@ export class NativePcmEngine {
   preloadInstrument(instId) {
     if (!instId || !this.ctx) return Promise.resolve();
     if (this.decodedBuffers.has(instId) && this.decodedBuffers.get(instId).size > 0) {
+      this._prewarmWorklet(instId);
       return Promise.resolve();
     }
     if (instId.startsWith("animal_")) {
@@ -2093,15 +2170,13 @@ export class NativePcmEngine {
       return bloomEdmLoader.loadInstrument(instId, this.ctx, this.decodedBuffers);
     } else if (instId.startsWith("abletunes_")) {
       const bankKey = instId === "abletunes_fm_piano" ? "fm_piano" : "upright_piano";
-      return this.loadAbletunesInstrument(bankKey);
-    } else if (
-      (KORG_PCM_BANKS && KORG_PCM_BANKS[instId]) ||
-      (YAMAHA_EOS_PCM_BANKS && YAMAHA_EOS_PCM_BANKS[instId]) ||
-      (USER_BANK_PCM_BANKS && USER_BANK_PCM_BANKS[instId])
-    ) {
-      return this.decodeEmbeddedAnchors(instId);
+      return this.loadAbletunesInstrument(bankKey).then(() => {
+        this._prewarmWorklet(instId);
+      });
     } else {
-      return this.loadSoundfont(instId);
+      return this.decodeEmbeddedAnchors(instId).then(() => {
+        this._prewarmWorklet(instId);
+      });
     }
   }
 
@@ -2149,6 +2224,7 @@ export class NativePcmEngine {
                 instId,
               );
               instMap.set(midi, processedBuf);
+              this._trackDecodedBuffer(instId, processedBuf);
             } catch (err) {
               logger.warn(
                 "PCM",
@@ -2162,6 +2238,7 @@ export class NativePcmEngine {
     } catch (err) {
       logger.warn("PCM", `Failed to load soundfont: ${instId}`, err);
     }
+    this._maybeEvictDecodedBuffers();
   }
 
   /**
@@ -2251,24 +2328,39 @@ export class NativePcmEngine {
             );
             instMap.set(sample.m, processedBuf);
             instMap.set(`${sample.m}_${sample.v}`, processedBuf);
+            this._trackDecodedBuffer(instId, processedBuf);
           } catch (e) {}
         }),
       );
     }
+    this._maybeEvictDecodedBuffers();
   }
 
   async decodeEmbeddedAnchors(instId) {
-    const instData = KORG_PCM_BANKS[instId] || YAMAHA_EOS_PCM_BANKS[instId] || USER_BANK_PCM_BANKS[instId];
-    if (!instData || !instData.anchors) return;
+    if (!this._decodePromises) this._decodePromises = new Map();
+    if (this._decodePromises.has(instId)) return this._decodePromises.get(instId);
+    const p = this._runDecodeEmbedded(instId).finally(() => {
+      this._decodePromises.delete(instId);
+    });
+    this._decodePromises.set(instId, p);
+    return p;
+  }
+
+  async _runDecodeEmbedded(instId) {
+    const bank = await ensureBankForInst(instId);
+    const instData = bank ? bank[instId] : null;
+    if (!instData || !instData.anchors) {
+      return this.loadSoundfont(instId);
+    }
     if (!this.decodedBuffers.has(instId))
       this.decodedBuffers.set(instId, new Map());
     const instMap = this.decodedBuffers.get(instId);
     const ctx = this.ctx;
     const anchorPromises = Object.entries(instData.anchors).map(
-      async ([midiStr, base64]) => {
+      async ([midiStr, anchor]) => {
         const midi = parseInt(midiStr);
         try {
-          const arrayBuf = this.base64ToArrayBuffer(base64);
+          const arrayBuf = await this.fetchEmbeddedAnchor(anchor);
           const audioBuf = await this.decodeAudioBuffer(ctx, arrayBuf);
           const processedBuf = this.createCrossfadedLoopBuffer(
             ctx,
@@ -2276,6 +2368,7 @@ export class NativePcmEngine {
             instId,
           );
           instMap.set(midi, processedBuf);
+          this._trackDecodedBuffer(instId, processedBuf);
         } catch (e) {
           console.warn(
             `[PCM Rompler] Anchor ${midi} decode failed for ${instId}:`,
@@ -2285,6 +2378,90 @@ export class NativePcmEngine {
       },
     );
     await Promise.all(anchorPromises);
+    this._maybeEvictDecodedBuffers();
+  }
+
+  /**
+   * Resolves an embedded bank anchor to its raw encoded bytes. Anchors now
+   * point at bundled .mp3 assets ("banks/<bank>/<instId>/<midi>.mp3");
+   * legacy inline "data:audio/mp3;base64,…" values are still supported.
+   */
+  async fetchEmbeddedAnchor(anchor) {
+    if (typeof anchor === "string" && anchor.startsWith("data:")) {
+      return this.base64ToArrayBuffer(anchor);
+    }
+    const resp = await fetch(anchor);
+    if (!resp.ok) throw new Error(`Anchor asset ${anchor} -> HTTP ${resp.status}`);
+    return resp.arrayBuffer();
+  }
+
+  _trackDecodedBuffer(instId, buf) {
+    if (!buf) return;
+    if (!this._bufOwner) this._bufOwner = new WeakMap();
+    this._bufOwner.set(buf, instId);
+  }
+
+  /**
+   * Uploads an instrument's decoded buffers to the worklet ahead of the first
+   * note (P1.5). Registers the decode name plus every alias that resolves to
+   * it, because the worklet keys noteOn by the requested instId.
+   */
+  _prewarmWorklet(instId) {
+    const w = this.pcmWorkletNode;
+    if (!instId || !w || !w.isReady) return;
+    const instMap = this.decodedBuffers.get(instId);
+    if (!instMap || instMap.size === 0) return;
+    const names = new Set([instId]);
+    if (INST_ALIASES) {
+      for (const key of Object.keys(INST_ALIASES)) {
+        if (INST_ALIASES[key] === instId) names.add(key);
+      }
+    }
+    for (const name of names) w.prewarm(name, instMap);
+  }
+
+  _touchBuffer(buf) {
+    if (!buf) return;
+    const owner = this._bufOwner && this._bufOwner.get(buf);
+    if (!owner) return;
+    if (!this._instLastUsed) this._instLastUsed = new Map();
+    this._instLastUsed.set(owner, performance.now());
+    if (!this._touchCount) this._touchCount = 0;
+    if (++this._touchCount % 12 === 0) this._maybeEvictDecodedBuffers();
+  }
+
+  _decodedBufferBytes(instMap) {
+    if (!instMap || instMap.size === 0) return 0;
+    const rate = this.ctx ? this.ctx.sampleRate : 44100;
+    let bytes = 0;
+    for (const buf of instMap.values()) {
+      if (!buf) continue;
+      const ch = Math.max(2, buf.numberOfChannels || 2);
+      const sr = buf.sampleRate || rate;
+      bytes += buf.duration * sr * ch * 4;
+    }
+    return bytes;
+  }
+
+  _getDecodedMemoryBudget() {
+    const isMobile =
+      typeof window !== "undefined" &&
+      (window.Capacitor ||
+        /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent));
+    return isMobile ? 256 * 1024 * 1024 : 512 * 1024 * 1024;
+  }
+
+  _maybeEvictDecodedBuffers() {
+    // DISARMED — audio-regression fix (v2.0.4 parity restored).
+    // Auto-eviction caused mid-play decode churn once a session crossed the
+    // budget: scheduled (song) notes hit findNearestAnchor, found the map
+    // evicted, and re-decoded instruments ON THE MAIN THREAD during playback
+    // (lag + hiss + NULL notes + churn on ALL presets — worst on desktop,
+    // where the whole catalog is resident). v2.0.4 never evicted decodes.
+    // Decoded banks stay resident for the session; FLAC already cut the
+    // footprint. Re-enable ONLY via a safe redesign: cold-only candidates,
+    // never-during-active-transport, and worklet-catalog-aware.
+    return;
   }
 
   findNearestAnchor(instId, targetMidi, velocity = 95) {
@@ -2292,9 +2469,11 @@ export class NativePcmEngine {
       return null;
     if (instId && INST_ALIASES[instId]) instId = INST_ALIASES[instId];
 
+    const yamahaBank = bankData("yamaha");
+    const userBank = bankData("user");
     if (
-      (YAMAHA_EOS_PCM_BANKS && YAMAHA_EOS_PCM_BANKS[instId]) ||
-      (USER_BANK_PCM_BANKS && USER_BANK_PCM_BANKS[instId])
+      (yamahaBank && yamahaBank[instId]) ||
+      (userBank && userBank[instId])
     ) {
       if (
         !this.decodedBuffers.has(instId) ||
@@ -2306,6 +2485,8 @@ export class NativePcmEngine {
       if (eosMap && eosMap.size > 0) {
         return this.findAnchorInMap(eosMap, targetMidi);
       }
+    } else if (!yamahaBank && !userBank) {
+      ensureBankForInst(instId).catch(() => {});
     }
 
     if (instId && instId.startsWith("abletunes_")) {
@@ -2374,7 +2555,13 @@ export class NativePcmEngine {
 
     let instMap = this.decodedBuffers.get(instId);
     if (!instMap || instMap.size === 0) {
-      this.loadSoundfont(instId);
+      // Ensure the real instrument loads so the keyword-based substitute below
+      // is only a transient "ready-gated fallback": decodeEmbeddedAnchors
+      // resolves bank (korg/eos/user) ids AND falls back to loadSoundfont for
+      // GM ids, so a first note / post-eviction note always brings back the
+      // actual sound (byte-identical to the eager boot decode in v2.0.4),
+      // never a permanent piano/EP/sax substitute.
+      this.decodeEmbeddedAnchors(instId).catch(() => {});
       const str = String(instId || "").toLowerCase();
       if (
         str.includes("choir") ||
@@ -2587,6 +2774,7 @@ export class NativePcmEngine {
 
     const anchorData = this.findNearestAnchor(instId, midiNote, velocity);
     if (!anchorData || !anchorData.buffer) return null;
+    this._touchBuffer(anchorData.buffer);
 
     const ctx = this.ctx;
     const now = when > 0 ? Math.max(when, ctx.currentTime) : ctx.currentTime;
@@ -2603,14 +2791,13 @@ export class NativePcmEngine {
     if (!destOverride && when === 0 && this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
       const buf = anchorData.buffer;
 
-      // On-demand buffer transfer: if a soundfont loaded after worklet init,
-      // push the buffer now so the worklet can play it.
-      const bufKey = instId + ":" + anchorData.anchorMidi;
-      if (!this.pcmWorkletNode._loadedBuffers.has(bufKey)) {
-        this.pcmWorkletNode.loadBuffer(instId, anchorData.anchorMidi, buf);
-        this.pcmWorkletNode._loadedBuffers.add(bufKey);
-      }
-
+      // On-demand buffer transfer (v2.0.4 behavior restored): push this exact
+      // layer now unless the worklet already holds it. ensureBuffer compares
+      // buffer identity, so same-layer retriggers are free and differing
+      // velocity layers re-upload only the layer they need. This keeps
+      // velocity-layered instruments (piano) correct AND prewarmed — no
+      // mid-play transfer storm = no choppy.
+      this.pcmWorkletNode.ensureBuffer(instId, anchorData.anchorMidi, buf);
       const trim = getInstrumentTrimGain(instId);
       const dynamicAmp = Math.pow(velNorm, 1.25);
       const peakGain = (0.1 + dynamicAmp * 0.9) * customGain * trim;

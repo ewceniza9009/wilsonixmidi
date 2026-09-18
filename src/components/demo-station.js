@@ -9,6 +9,7 @@ import { MidiConverterEngine } from "../audio/midi-converter-engine.js";
 import { multiLayerEngine } from "../audio/multi-layer-engine.js";
 import { audioCore } from "../audio/audio-core.js";
 import { noteScheduler } from "../audio/lookahead-scheduler.js";
+import { escapeHtml } from "../utils/escape-html.js";
 
 export class DemoStationUI {
   constructor(containerId) {
@@ -109,10 +110,10 @@ export class DemoStationUI {
       <div class="demo-song-row ${song.isCustom ? "demo-custom-row" : ""}" data-song="${song.id}">
         <div class="demo-song-label">
           <div class="demo-title-line">
-            <span class="demo-song-title">${song.title}</span>
+            <span class="demo-song-title">${escapeHtml(song.title)}</span>
             ${song.isCustom ? '<span class="demo-custom-badge">USER MIDI</span>' : ""}
           </div>
-          <span class="demo-song-subtitle">${song.subtitle}</span>
+          <span class="demo-song-subtitle">${escapeHtml(song.subtitle)}</span>
         </div>
         <div class="demo-song-controls">
           <div class="demo-progress-track">

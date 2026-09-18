@@ -362,12 +362,12 @@ export class ChordPadsUI {
     const activeNotes = [...chord.notes];
     this.activeNotesMap.set(index, activeNotes);
 
-    // Micro-timing spread: stagger noteOns by 2ms to avoid all voices hitting
-    // the audio thread at the exact same sample (causes transient spike / graininess)
+    // Real-time notes (when = 0): route pads through the AudioWorklet engine,
+    // the same path as keys/touch — NOT the scheduled main-thread path (which
+    // only accepts when > 0 and reintroduces lag/dropped voices on pad bursts).
     try {
-      const baseTime = audioCore.ctx ? audioCore.ctx.currentTime + 0.002 : 0;
       activeNotes.forEach((m, i) => {
-        multiLayerEngine.noteOn(m, 105, baseTime > 0 ? baseTime + i * 0.002 : 0);
+        multiLayerEngine.noteOn(m, 105, 0);
       });
     } catch (e) {
       activeNotes.forEach(m => {

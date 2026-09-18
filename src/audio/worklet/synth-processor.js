@@ -239,7 +239,6 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
         voice = bestTarget || oldest;
       }
       voice.noteOn(note, velocity, this.currentTime);
-      this.port.postMessage({ type: "visual", note, on: true, vel: velocity });
     } else if (cmd === 0x80 || (cmd === 0x90 && velocity === 0)) {
       // Note Off
       this.heldNotes.delete(note);
@@ -248,7 +247,6 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
           this.voices[i].noteOff(this.pedalDown);
         }
       }
-      this.port.postMessage({ type: "visual", note, on: false, vel: 0 });
     } else if (cmd === 0xb0 && note === 123) {
       // All Notes Off
       for (let i = 0; i < MAX_VOICES; i++) {

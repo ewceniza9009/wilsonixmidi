@@ -1364,15 +1364,19 @@ body.mobile-stage-keys .wheel-track {
 /* Tablet & Mobile Responsiveness for Docked X/Y Pad */
 @media (max-width: 650px) {
   .xy-pad-bay {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 130px;
-    background: rgba(13, 16, 23, 0.95);
-    backdrop-filter: blur(8px);
-    box-shadow: 4px 0 15px rgba(0, 0, 0, 0.85);
-    margin-right: 0;
+    position: static;
+    width: 96px;
+    min-width: 88px;
+    max-width: 110px;
+    flex-shrink: 0;
+    margin-right: 4px;
+    background: transparent;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+
+  .xy-pad-widget {
+    min-height: 120px;
   }
 }
 

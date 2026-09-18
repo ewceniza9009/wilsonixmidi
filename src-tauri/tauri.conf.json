@@ -15,6 +15,8 @@
         "title": "WILSONIX MIDIKEY",
         "width": 1400,
         "height": 900,
+        "minWidth": 1100,
+        "minHeight": 700,
         "resizable": true,
         "fullscreen": false
       }
@@ -28,23 +30,19 @@
           "ipc:",
           "http://ipc.localhost",
           "'self'",
-          "blob:",
-          "https://fonts.googleapis.com",
-          "https://fonts.gstatic.com"
+          "blob:"
         ],
         "script-src": [
           "'self'",
-          "'unsafe-eval'"
+          "blob:"
         ],
         "style-src": [
           "'self'",
-          "'unsafe-inline'",
-          "https://fonts.googleapis.com"
+          "'unsafe-inline'"
         ],
         "font-src": [
           "'self'",
-          "data:",
-          "https://fonts.gstatic.com"
+          "data:"
         ],
         "img-src": [
           "'self'",
@@ -74,26 +72,21 @@
           "'self'",
           "http://localhost:3000",
           "ws://localhost:3000",
-          "blob:",
-          "https://fonts.googleapis.com",
-          "https://fonts.gstatic.com"
+          "blob:"
         ],
         "script-src": [
           "'self'",
-          "'unsafe-eval'",
-          "'unsafe-inline'",
-          "http://localhost:3000"
+          "http://localhost:3000",
+          "blob:"
         ],
         "style-src": [
           "'self'",
           "'unsafe-inline'",
-          "http://localhost:3000",
-          "https://fonts.googleapis.com"
+          "http://localhost:3000"
         ],
         "font-src": [
           "'self'",
-          "data:",
-          "https://fonts.gstatic.com"
+          "data:"
         ],
         "img-src": [
           "'self'",

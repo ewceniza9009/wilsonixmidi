@@ -1,7 +1,19 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
 use tauri::ipc::Response;
+
+fn allowed_media_dirs() -> &'static Mutex<std::collections::HashSet<PathBuf>> {
+    static DIRS: OnceLock<Mutex<std::collections::HashSet<PathBuf>>> = OnceLock::new();
+    DIRS.get_or_init(|| Mutex::new(std::collections::HashSet::new()))
+}
+
+fn canonical_key(path: &Path) -> Option<PathBuf> {
+    std::fs::canonicalize(path)
+        .ok()
+        .map(|p| p.to_string_lossy().to_lowercase().into())
+}
 
 #[tauri::command]
 async fn pick_media() -> Result<Vec<String>, String> {
@@ -23,10 +35,22 @@ async fn pick_media() -> Result<Vec<String>, String> {
             .add_filter("All files", &["*"])
             .pick_files();
         match files {
-            Some(f) => Ok(f
-                .into_iter()
-                .map(|p| p.to_string_lossy().to_string())
-                .collect()),
+            Some(f) => {
+                let paths: Vec<PathBuf> = f.into_iter().collect();
+                if let Ok(mut dirs) = allowed_media_dirs().lock() {
+                    for p in &paths {
+                        if let Some(parent) = p.parent() {
+                            if let Some(key) = canonical_key(parent) {
+                                dirs.insert(key);
+                            }
+                        }
+                    }
+                }
+                Ok(paths
+                    .into_iter()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .collect())
+            }
             None => Ok(Vec::new()),
         }
     })
@@ -40,7 +64,8 @@ const MEDIA_EXTENSIONS: &[&str] = &[
 ];
 
 /// Only allow reading files that could plausibly have been selected through the
-/// media picker/playlist. Blocks traversal segments and null/control characters.
+/// media picker/playlist. Blocks traversal segments, null/control characters,
+/// unsupported extensions, and any path outside directories the user picked.
 fn is_safe_media_path(path: &str) -> bool {
     if path.is_empty() || path.len() > 4096 {
         return false;
@@ -61,12 +86,34 @@ fn is_safe_media_path(path: &str) -> bool {
     }
 }
 
+fn is_within_picked_dirs(path: &Path) -> bool {
+    let Some(key) = canonical_key(path) else {
+        return false;
+    };
+    let Ok(dirs) = allowed_media_dirs().lock() else {
+        return false;
+    };
+    let mut parent = PathBuf::from(&key);
+    loop {
+        if dirs.contains(&parent) {
+            return true;
+        }
+        if !parent.pop() {
+            return false;
+        }
+    }
+}
+
 #[tauri::command]
 fn read_media(path: String) -> Result<Response, String> {
     if !is_safe_media_path(&path) {
         return Err("read_media rejected: the requested path is not a supported media file".into());
     }
-    match std::fs::read(&path) {
+    let p = Path::new(&path);
+    if !is_within_picked_dirs(p) {
+        return Err("read_media rejected: the requested path was not selected through the media picker".into());
+    }
+    match std::fs::read(p) {
         Ok(bytes) => Ok(Response::new(bytes)),
         Err(e) => Err(format!("{e}")),
     }

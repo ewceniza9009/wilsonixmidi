@@ -292,6 +292,7 @@ export class MediaPlayerUI {
     });
 
     document.addEventListener("keydown", (e) => {
+      if (e.defaultPrevented) return;
       if (e.code === "Space" && e.target === document.body) {
         e.preventDefault();
         mediaPlayer.toggle();

@@ -1004,7 +1004,11 @@ export class MultiLayerEngine {
     tritonVaEngine._sustainSettings = this.settings;
     this._vaEngines.forEach(eng => { eng._sustainSettings = this.settings; });
 
-
+    // Bring up the audio worklets (VA synth + native PCM) on the high-priority
+    // audio thread. This MUST run or every PCM/VA note silently falls back to
+    // the main thread, which chokes under layered/combi or swept material
+    // (choppy + dropped notes). Idempotent, so safe to call repeatedly.
+    this._initWorklet().catch((e) => console.warn("[MLE] _initWorklet failed:", e));
   }
 
   async _initWorklet() {
@@ -1083,11 +1087,22 @@ export class MultiLayerEngine {
     try {
       const decodedBuffers = this.pcmEngine.decodedBuffers;
       if (!decodedBuffers) return;
+      const w = this._pcmWorkletNode;
+      const seen = new Set();
       decodedBuffers.forEach((instMap, instId) => {
-        instMap.forEach((buf, anchorMidi) => {
-          if (buf && buf.length > 0) {
-            this._pcmWorkletNode.loadBuffer(instId, anchorMidi, buf);
-          }
+        instMap.forEach((buf, anchorKey) => {
+          if (!buf) return;
+          // Layered maps carry STRING keys ("60_1") while the worklet looks up
+          // by NUMERIC anchor midi. Normalize so layered instruments preload
+          // correctly (otherwise every note transfers mid-play -> choppy).
+          const midiKey = typeof anchorKey === "number"
+            ? anchorKey
+            : parseInt(String(anchorKey).split("_")[0], 10);
+          if (!Number.isFinite(midiKey)) return;
+          const dedupe = instId + ":" + midiKey;
+          if (seen.has(dedupe)) return;
+          seen.add(dedupe);
+          w.ensureBuffer(instId, midiKey, buf);
         });
       });
     } catch (e) {

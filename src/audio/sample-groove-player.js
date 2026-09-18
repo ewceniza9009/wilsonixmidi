@@ -17,7 +17,7 @@ export const GROOVE_TRACKS = [
     bars: 4,
     color: "#06b6d4",
     description: "Authentic ripped 80s spring reverb surf lead, gated snare cannon, Juno chorus pads & driving bass groove",
-    sampleUrl: "/samples/synthesizer_you/synthesizer_you_4bar_groove.wav",
+    sampleUrl: "/samples/synthesizer_you/synthesizer_you_4bar_groove.flac",
   },
   {
     id: "bloom_loop_002",
@@ -28,7 +28,7 @@ export const GROOVE_TRACKS = [
     bars: 4,
     color: "#ec4899",
     description: "Stickz Bloom Synth Loop 002: Vocal synth, soft chords, piano and warm bass",
-    sampleUrl: "/samples/bloom_edm/bloom_loop_002_95bpm_fsmin.wav",
+    sampleUrl: "/samples/bloom_edm/bloom_loop_002_95bpm_fsmin.flac",
   },
   {
     id: "bloom_loop_003",
@@ -39,7 +39,7 @@ export const GROOVE_TRACKS = [
     bars: 8,
     color: "#a855f7",
     description: "Stickz Bloom Synth Loop 003: Iconic vocal chops, wavy Flume pad, and heavy sub drop",
-    sampleUrl: "/samples/bloom_edm/bloom_loop_003_100bpm_dmin.wav",
+    sampleUrl: "/samples/bloom_edm/bloom_loop_003_100bpm_dmin.flac",
   },
   {
     id: "house_90s",

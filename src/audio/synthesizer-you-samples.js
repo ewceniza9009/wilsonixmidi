@@ -13,7 +13,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     icon: "🌊",
     category: "synthesizer_you",
     desc: "Plucky staccato melody bathed in 3.2kHz resonant spring drip",
-    file: "/samples/synthesizer_you/surf_spring_synth_riff.wav",
+    file: "/samples/synthesizer_you/surf_spring_synth_riff.flac",
     gain: 1.15,
   },
   {
@@ -22,7 +22,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     icon: "✨",
     category: "synthesizer_you",
     desc: "Lush 1980s Roland Juno-style widened stereo synth pad",
-    file: "/samples/synthesizer_you/synth_chorus_pad_swell.wav",
+    file: "/samples/synthesizer_you/synth_chorus_pad_swell.flac",
     gain: 1.10,
   },
   {
@@ -31,7 +31,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     icon: "🎯",
     category: "synthesizer_you",
     desc: "Dense plate reverb abruptly snapped shut at 180ms",
-    file: "/samples/synthesizer_you/gated_snare_cannon_1.wav",
+    file: "/samples/synthesizer_you/gated_snare_cannon_1.flac",
     gain: 1.25,
   },
   {
@@ -40,7 +40,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     icon: "💥",
     category: "synthesizer_you",
     desc: "Massive punchy explosive snare with hard noise gate",
-    file: "/samples/synthesizer_you/gated_snare_cannon_2.wav",
+    file: "/samples/synthesizer_you/gated_snare_cannon_2.flac",
     gain: 1.25,
   },
   {
@@ -49,7 +49,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     icon: "🎤",
     category: "synthesizer_you",
     desc: "95ms tape echo with zero feedback and high-end roll-off",
-    file: "/samples/synthesizer_you/slapback_vox_chop_1.wav",
+    file: "/samples/synthesizer_you/slapback_vox_chop_1.flac",
     gain: 1.20,
   },
   {
@@ -58,7 +58,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     icon: "🔥",
     category: "synthesizer_you",
     desc: "In-your-face rockabilly vocal punch with vintage tape slap",
-    file: "/samples/synthesizer_you/slapback_vox_chop_2.wav",
+    file: "/samples/synthesizer_you/slapback_vox_chop_2.flac",
     gain: 1.20,
   },
   {
@@ -67,7 +67,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     icon: "🎶",
     category: "synthesizer_you",
     desc: "Tape-saturated lead vocal phrase at front of mix",
-    file: "/samples/synthesizer_you/slapback_vox_chop_3.wav",
+    file: "/samples/synthesizer_you/slapback_vox_chop_3.flac",
     gain: 1.20,
   },
   {
@@ -76,7 +76,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     icon: "🎤",
     category: "synthesizer_you",
     desc: "Altered vocal cut from the Synthesizer You track",
-    file: "/samples/synthesizer_you/slapback_vox_chop_4.wav",
+    file: "/samples/synthesizer_you/slapback_vox_chop_4.flac",
     gain: 1.20,
   },
   {
@@ -85,7 +85,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     icon: "🎤",
     category: "synthesizer_you",
     desc: "Vocal phrase sliced at 0:23 from the Synthesizer You track",
-    file: "/samples/synthesizer_you/slapback_vox_chop_5.wav",
+    file: "/samples/synthesizer_you/slapback_vox_chop_5.flac",
     gain: 1.20,
   },
   {
@@ -94,7 +94,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     icon: "🎤",
     category: "synthesizer_you",
     desc: "Vocal phrase sliced at 1:05 from the Synthesizer You track",
-    file: "/samples/synthesizer_you/slapback_vox_chop_6.wav",
+    file: "/samples/synthesizer_you/slapback_vox_chop_6.flac",
     gain: 1.20,
   },
   {
@@ -103,7 +103,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     icon: "🎤",
     category: "synthesizer_you",
     desc: "Vocal phrase sliced at 1:51 from the Synthesizer You track",
-    file: "/samples/synthesizer_you/slapback_vox_chop_7.wav",
+    file: "/samples/synthesizer_you/slapback_vox_chop_7.flac",
     gain: 1.20,
   },
   {
@@ -112,7 +112,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     icon: "🎤",
     category: "synthesizer_you",
     desc: "Vocal phrase sliced at 2:29 from the Synthesizer You track",
-    file: "/samples/synthesizer_you/slapback_vox_chop_8.wav",
+    file: "/samples/synthesizer_you/slapback_vox_chop_8.flac",
     gain: 1.20,
   },
   {
@@ -121,7 +121,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     icon: "🎤",
     category: "synthesizer_you",
     desc: "Vocal phrase sliced at 3:04 from the Synthesizer You track",
-    file: "/samples/synthesizer_you/slapback_vox_chop_9.wav",
+    file: "/samples/synthesizer_you/slapback_vox_chop_9.flac",
     gain: 1.20,
   },
   {
@@ -130,7 +130,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     icon: "🎤",
     category: "synthesizer_you",
     desc: "Vocal phrase sliced at 3:16 from the Synthesizer You track",
-    file: "/samples/synthesizer_you/slapback_vox_chop_10.wav",
+    file: "/samples/synthesizer_you/slapback_vox_chop_10.flac",
     gain: 1.20,
   },
   {
@@ -139,7 +139,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     icon: "🎸",
     category: "synthesizer_you",
     desc: "Driving 1980s synth bassline with stereo chorus widening",
-    file: "/samples/synthesizer_you/analog_synth_bass_riff.wav",
+    file: "/samples/synthesizer_you/analog_synth_bass_riff.flac",
     gain: 1.15,
   },
   {
@@ -148,7 +148,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     icon: "⚡",
     category: "synthesizer_you",
     desc: "Cinematic synth frequency sweep and transition build",
-    file: "/samples/synthesizer_you/synth_riser_sweep_fx.wav",
+    file: "/samples/synthesizer_you/synth_riser_sweep_fx.flac",
     gain: 1.10,
   },
   {
@@ -157,7 +157,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     icon: "💿",
     category: "synthesizer_you",
     desc: "Motor slowdown pitch fall with metallic spring tail",
-    file: "/samples/synthesizer_you/synth_tape_drop_fx.wav",
+    file: "/samples/synthesizer_you/synth_tape_drop_fx.flac",
     gain: 1.15,
   },
   {
@@ -166,7 +166,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     icon: "🥁",
     category: "synthesizer_you",
     desc: "Punchy transient kick drum with tape head bump",
-    file: "/samples/synthesizer_you/punchy_80s_kick_hit.wav",
+    file: "/samples/synthesizer_you/punchy_80s_kick_hit.flac",
     gain: 1.20,
   },
   {
@@ -175,7 +175,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     icon: "🏄",
     category: "synthesizer_you",
     desc: "Single clean surf pluck with spring drip impulse",
-    file: "/samples/synthesizer_you/surf_pluck_c4_sample.wav",
+    file: "/samples/synthesizer_you/surf_pluck_c4_sample.flac",
     gain: 1.15,
   }
 ];

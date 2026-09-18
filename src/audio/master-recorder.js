@@ -13,6 +13,8 @@ import { audioCore } from "./audio-core.js";
 // dev-server portability (same pattern as synth-worklet-node.js)
 import tapProcessorCode from "./worklet/audio-tap-processor.js?raw";
 
+import { downloadBlob } from "../utils/download-blob.js";
+
 export class MasterRecorder {
   constructor() {
     this.isRecording = false;
@@ -219,20 +221,10 @@ export class MasterRecorder {
     const sampleRate = audioCore.ctx?.sampleRate || 48000;
     const wavBlob = this.encodeWAV(this.recBuffersL, this.recBuffersR, this.recLength, sampleRate);
 
-    // Trigger auto-download
+    // Trigger auto-download (native share sheet on Android)
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
     const filename = `WILSONIX_Live_Take_${timestamp}.wav`;
-    const url = URL.createObjectURL(wavBlob);
-    const a = document.createElement("a");
-    a.style.display = "none";
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }, 2000);
+    downloadBlob(filename, wavBlob);
 
     if (this.onStateChange) {
       this.onStateChange({

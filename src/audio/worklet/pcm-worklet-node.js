@@ -17,6 +17,7 @@ export class PcmWorkletNode {
     this.sharedBuffer = null;
     this._pendingBuffers = [];
     this._loadedBuffers = new Set();
+    this._bufferRegistry = new Map();
     this._sustainSettings = null;
   }
 
@@ -75,6 +76,7 @@ export class PcmWorkletNode {
     } catch (err) {
       console.warn("[PcmWorkletNode] Failed to initialize:", err);
       this.isReady = false;
+      this.lastInitError = err;
       return false;
     }
   }
@@ -108,6 +110,46 @@ export class PcmWorkletNode {
       bufferL,
       bufferR,
     });
+  }
+
+  /**
+   * Uploads anchorMidi's audio only when the exact layer/sample differs from
+   * what the worklet already holds. Keeps velocity-correct layers in sync
+   * without redundant transfers: a note resolving to the already-loaded layer
+   * costs nothing (pointer compare), a note resolving to a different velocity
+   * layer re-uploads just that layer. This is what lets velocity-layered
+   * instruments (e.g. the piano) be fully prewarmed without ever playing the
+   * wrong layer.
+   */
+  ensureBuffer(instId, anchorMidi, audioBuffer) {
+    if (!audioBuffer) return false;
+    const key = `${instId}:${anchorMidi}`;
+    if (this._bufferRegistry.get(key) === audioBuffer) return false;
+    this._bufferRegistry.set(key, audioBuffer);
+    this._loadedBuffers.add(key);
+    this.loadBuffer(instId, anchorMidi, audioBuffer);
+    return true;
+  }
+
+  /**
+   * Pushes every decoded anchor of an instrument to the worklet ahead of the
+   * first note. The full-PCM Float32 copy happens here, at instrument
+   * (de)selection time, instead of synchronously inside the first noteOn
+   * (P1.5). Idempotent per (instId, anchorMidi): layered maps carry string
+   * keys ("60_1"), so every distinct anchor midi is covered exactly once.
+   */
+  prewarm(instId, instMap) {
+    if (!instMap || instMap.size === 0) return 0;
+    let pushed = 0;
+    const seen = new Set();
+    for (const [key, audioBuf] of instMap.entries()) {
+      const midiKey = typeof key === "number" ? key : parseInt(key.split("_")[0], 10);
+      if (Number.isNaN(midiKey)) continue;
+      if (seen.has(midiKey)) continue;
+      seen.add(midiKey);
+      if (this.ensureBuffer(instId, midiKey, audioBuf)) pushed++;
+    }
+    return pushed;
   }
 
   noteOn(params) {

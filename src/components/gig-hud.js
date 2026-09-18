@@ -23,6 +23,7 @@ import {
   getFullVersionString,
 } from "../version.js";
 import { getComponent } from "./component-registry.js";
+import { escapeHtml } from "../utils/escape-html.js";
 
 export class GigHudUI {
   constructor(containerId, onOpenLicenseModal) {
@@ -665,7 +666,7 @@ export class GigHudUI {
             <!-- Live Active Sound Status Badge -->
             <div class="hud-live-badge" id="hud-live-badge" title="Active Sound Playing on Keyboard">
               <span class="live-badge-icon" id="hud-live-icon">${soundIcon}</span>
-              <span class="live-badge-text" id="hud-live-text">${activeSoundName}</span>
+              <span class="live-badge-text" id="hud-live-text">${escapeHtml(activeSoundName)}</span>
             </div>
 
             <!-- Fast Performance Stacks & Combi/Split Selector -->
@@ -679,7 +680,7 @@ export class GigHudUI {
                       .map(
                         (s) => `
                       <option value="${s.id}" ${s.id === activeSoundId ? "selected" : ""}>
-                        ${s.name}
+                        ${escapeHtml(s.name)}
                       </option>
                     `,
                       )
@@ -757,7 +758,7 @@ export class GigHudUI {
                       const slotTitle =
                         slotData?.name || `Rig ${curBank}-${num}`;
                       return `
-                          <button class="rig-slot-pill ${curSlot === num ? "active" : ""}" data-slot="${num}" title="Rig ${curBank}-${num}: ${slotTitle} (Press F${num}, Shift+F${num} to Store)">${num}</button>
+                          <button class="rig-slot-pill ${curSlot === num ? "active" : ""}" data-slot="${num}" title="Rig ${curBank}-${num}: ${escapeHtml(slotTitle)} (Press F${num}, Shift+F${num} to Store)">${num}</button>
                         `;
                     })
                     .join("")}
@@ -777,7 +778,7 @@ export class GigHudUI {
                     .map(
                       (b) => `
                     <option value="${b.id}" ${activeLayerBank === b.id ? "selected" : ""}>
-                      + ${b.name}
+                      + ${escapeHtml(b.name)}
                     </option>
                   `,
                     )

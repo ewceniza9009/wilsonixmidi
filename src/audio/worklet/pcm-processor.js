@@ -177,13 +177,23 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
     this.sustainDecayTau = 2.4;
     this.heldNoteSec = 15.0;
 
-    // Poly scale
+    // Poly scale (single-instrument; exact original law)
     this.polyScale = 1.0;
+    // Combi-layer trim: a 4-layer stack multiplies the voice count, so the
+    // 1/sqrt(N) law ducks a combi far below single-instrument level. Floor it
+    // for combi layer voices only; single instruments keep the original law.
+    this.polyScaleCombi = 1.0;
 
     this.reusableEvent = { status: 0, note: 0, velocity: 0, time: 0 };
 
     this.port.onmessage = e => {
-      this.handleMessage(e.data);
+      // Armored dispatch: one bad message must never take down the audio-thread
+      // message handling (that would silently mute everything after it).
+      try {
+        this.handleMessage(e.data);
+      } catch (err) {
+        try { console.error("[PCM-processor] message error:", err); } catch (_) {}
+      }
     };
   }
 
@@ -377,10 +387,22 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
 
     // Polyphony-aware output trim
     let activeCount = 0;
-    for (let v = 0; v < MAX_VOICES; v++) if (this.voices[v].active) activeCount++;
+    for (let v = 0; v < MAX_VOICES; v++) {
+      const vv = this.voices[v];
+      // Only voices that are actually audible count toward the polyphony trim.
+      // Near-silent sustained tails (envLevel ~0.02) must not drag the 1/sqrt(N)
+      // gain down and mute freshly played notes ("sound disappears after a
+      // while of pounding/pads/sustain").
+      if (vv.active && vv.envLevel > 0.05) activeCount++;
+    }
     const targetScale = 1.0 / Math.sqrt(Math.max(1, activeCount));
     this.polyScale += (targetScale - this.polyScale) * 0.12;
     const masterScale = this.polyScale;
+
+    // Combi layer voices get a floored trim so a stacked Combi stays at a
+    // healthy level instead of ducking toward silence/whisper under chords.
+    const combiTarget = Math.max(0.6, targetScale);
+    this.polyScaleCombi += (combiTarget - this.polyScaleCombi) * 0.12;
 
     for (let v = 0; v < MAX_VOICES; v++) {
       const voice = this.voices[v];
@@ -477,7 +499,8 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
 
         if (sampleEnded) { sampleL = 0; sampleR = 0; }
 
-        const amp = voice.envLevel * voice.gain * masterScale;
+        const amp = voice.envLevel * voice.gain *
+          (typeof voice.layerIndex === "number" ? this.polyScaleCombi : masterScale);
         voice.filterPrevL = voice.filterPrevL * filterAlpha + sampleL * (1.0 - filterAlpha);
         voice.filterPrevR = voice.filterPrevR * filterAlpha + sampleR * (1.0 - filterAlpha);
         // Denormal flush: prevents CPU spikes from subnormal floats in filter state

@@ -64,12 +64,12 @@ test("GROOVE_TRACKS includes bloom_loop_002 and bloom_loop_003 with valid files 
 });
 
 test("Bloom EDM Stems (Vocal Chops and Wavy Pad) exist in public/samples/bloom_edm", () => {
-  const chopsPath = path.resolve("public/samples/bloom_edm/bloom_stem_003_vocal_chops.wav");
-  const padPath = path.resolve("public/samples/bloom_edm/bloom_stem_003_wavy_pad.wav");
+  const chopsPath = path.resolve("public/samples/bloom_edm/bloom_stem_003_vocal_chops.flac");
+  const padPath = path.resolve("public/samples/bloom_edm/bloom_stem_003_wavy_pad.flac");
 
-  assert.ok(fs.existsSync(chopsPath), "bloom_stem_003_vocal_chops.wav must exist on disk");
-  assert.ok(fs.statSync(chopsPath).size > 100000, "bloom_stem_003_vocal_chops.wav must be > 100KB");
+  assert.ok(fs.existsSync(chopsPath), "bloom_stem_003_vocal_chops.flac must exist on disk");
+  assert.ok(fs.statSync(chopsPath).size > 100000, "bloom_stem_003_vocal_chops.flac must be > 100KB");
 
-  assert.ok(fs.existsSync(padPath), "bloom_stem_003_wavy_pad.wav must exist on disk");
-  assert.ok(fs.statSync(padPath).size > 100000, "bloom_stem_003_wavy_pad.wav must be > 100KB");
+  assert.ok(fs.existsSync(padPath), "bloom_stem_003_wavy_pad.flac must exist on disk");
+  assert.ok(fs.statSync(padPath).size > 100000, "bloom_stem_003_wavy_pad.flac must be > 100KB");
 });

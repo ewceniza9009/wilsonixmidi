@@ -5,6 +5,7 @@
 
 import { FxRackManager } from "./fx-rack-manager.js";
 import { SpatialEngine } from "./spatial-engine.js";
+import { downloadBlob } from "../utils/download-blob.js";
 
 export const LATENCY_PROFILES = {
   "ultra-low": { id: "ultra-low", latencyHint: "interactive", label: "Stage Ultra-Low", targetMs: 2.9, frames: 128, description: "64–128 frames / Fastest response for dedicated audio interfaces" },
@@ -463,12 +464,7 @@ export class AudioCore {
     const ab = await this.ctx.decodeAudioData(arrayBuffer);
     const buf = this._bufferToWav(ab);
     const name = `midikey-diag-${seconds}s.wav`;
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
-    a.download = name;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    await downloadBlob(name, new Blob([buf], { type: "audio/wav" }));
     return name;
   }
 
