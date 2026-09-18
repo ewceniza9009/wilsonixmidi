@@ -266,17 +266,25 @@ export class DemoStationUI {
         audioCore.fxRack.applyPreset(song.fxPreset);
       }
 
-      // Pre-decode the song's instruments so playback starts instantly
+      // Pre-decode all instruments needed by the combi so playback starts without main-thread decode jank
       if (multiLayerEngine.pcmEngine) {
         const pcm = multiLayerEngine.pcmEngine;
-        const embedded = song.embeddedInsts || [];
-        const soundfonts = song.soundfontInsts || [];
-        await Promise.all([
-          ...embedded.map((inst) =>
-            pcm.isReady ? pcm.decodeEmbeddedAnchors(inst) : Promise.resolve(),
-          ),
-          ...soundfonts.map((inst) => pcm.loadSoundfont(inst)),
-        ]);
+        const preloads = [];
+        if (multiLayerEngine.layers) {
+          multiLayerEngine.layers.forEach((layer) => {
+            if (layer.enabled && layer.inst && !layer.inst.startsWith("va:")) {
+              const key = multiLayerEngine.resolveBankKey(layer.inst);
+              preloads.push(pcm.preloadInstrument(key));
+            }
+          });
+        }
+        (song.embeddedInsts || []).forEach((inst) => {
+          preloads.push(pcm.preloadInstrument(inst));
+        });
+        (song.soundfontInsts || []).forEach((inst) => {
+          preloads.push(pcm.loadSoundfont(inst));
+        });
+        await Promise.all(preloads);
       }
     } catch (e) {
       console.warn("Demo player audio setup:", e);
@@ -304,28 +312,6 @@ export class DemoStationUI {
         this.activeMidiNotes.add(ev.note);
         const offAt = songStart + (ev.time + (ev.dur || 600)) / 1000;
         noteScheduler.noteOff(ev.note, offAt, "demo-" + song.id);
-
-        // Visual key lighting aligned to the audible moment (wall clock approx)
-        const onDelay = Math.max(0, (at - ctx.currentTime) * 1000);
-        const visTimer = setTimeout(
-          () => {
-            if (!this.isPlaying || this.currentSong !== song.id) return;
-            this.emitKeyVisual([ev.note], true, scaledVel);
-          },
-          Math.max(0, onDelay - 12),
-        );
-        this.timers.push(visTimer);
-
-        const offDelay = Math.max(0, (offAt - ctx.currentTime) * 1000);
-        const visOffTimer = setTimeout(
-          () => {
-            if (!this.isPlaying || this.currentSong !== song.id) return;
-            this.activeMidiNotes.delete(ev.note);
-            this.emitKeyVisual([ev.note], false, 0);
-          },
-          Math.max(0, offDelay - 12),
-        );
-        this.timers.push(visOffTimer);
       }
     });
 

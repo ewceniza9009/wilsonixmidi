@@ -8,7 +8,8 @@ export const song =   {
     combi: "vintage_funk_fusion",
     fxPreset: null,
     durationMs: 30000,
-    embeddedInsts: ["electric_piano_1","brass_section","synth_bass_1"],
+    embeddedInsts: ["drawbar_organ", "synth_bass_1"],
+    soundfontInsts: ["electric_guitar_clean"],
     events: [
       { time: 100, note: 35, vel: 110, dur: 245 },
       { time: 100, note: 23, vel: 110, dur: 245 },

@@ -224,15 +224,31 @@ export class FxRackManager {
 
   // Hard-cut output during preset switch to prevent old FX tails bleeding through
   muteOutput() {
-    if (this.masterEq?.output) {
-      this.masterEq.output.gain?.setValueAtTime(0, this.ctx.currentTime);
-    }
+    const now = this.ctx.currentTime;
+    try {
+      if (this.output?.gain) {
+        this.output.gain.cancelScheduledValues(now);
+        this.output.gain.setValueAtTime(0, now);
+      }
+      if (this.input?.gain) {
+        this.input.gain.cancelScheduledValues(now);
+        this.input.gain.setValueAtTime(0, now);
+      }
+    } catch (e) {}
   }
 
   unmuteOutput() {
-    if (this.masterEq?.output) {
-      this.masterEq.output.gain?.setTargetAtTime(1.0, this.ctx.currentTime, 0.015);
-    }
+    const now = this.ctx.currentTime;
+    try {
+      if (this.output?.gain) {
+        this.output.gain.cancelScheduledValues(now);
+        this.output.gain.setTargetAtTime(1.0, now, 0.015);
+      }
+      if (this.input?.gain) {
+        this.input.gain.cancelScheduledValues(now);
+        this.input.gain.setTargetAtTime(1.0, now, 0.015);
+      }
+    } catch (e) {}
   }
 
   // Reset all effect parameters to safe defaults — prevents old preset bleed

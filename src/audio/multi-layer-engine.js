@@ -2004,6 +2004,11 @@ export class MultiLayerEngine {
     this.setPitchBend(0);
     this.setModWheel(0);
 
+    // Hard-mute master output immediately so zero residue/tails can leak
+    if (audioCore?.hardSilence) {
+      try { audioCore.hardSilence(); } catch (e) {}
+    }
+
     // 1. Notify all registered panic hooks (demo player, looper, schedulers, groove, etc.)
     if (this._panicHooks) {
       this._panicHooks.forEach((hook) => {

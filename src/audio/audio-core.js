@@ -231,6 +231,31 @@ export class AudioCore {
     } catch (e) {}
   }
 
+  hardSilence() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const currentGain = this.masterGain?.gain?.value ?? 1.0;
+    try {
+      if (this.masterGain?.gain) {
+        this.masterGain.gain.cancelScheduledValues(now);
+        this.masterGain.gain.setValueAtTime(0.0, now);
+        setTimeout(() => {
+          try {
+            this.masterGain.gain.setTargetAtTime(Math.max(0.1, currentGain), this.ctx.currentTime, 0.02);
+          } catch (e) {}
+        }, 45);
+      }
+    } catch (e) {}
+    if (this.fxRack) {
+      try {
+        this.fxRack.muteOutput();
+        setTimeout(() => {
+          try { this.fxRack.unmuteOutput(); } catch (e) {}
+        }, 45);
+      } catch (e) {}
+    }
+  }
+
   updateLatencyMetrics() {
     if (!this.ctx) return;
     const base = (this.ctx.baseLatency || 0.0026) * 1000;

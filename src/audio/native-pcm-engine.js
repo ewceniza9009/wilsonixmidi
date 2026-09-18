@@ -792,10 +792,11 @@ export class LayerInsertProcessor {
       const now = this.ctx.currentTime;
       this.sustainedVoices.forEach((v) => {
         try {
+          if (v.src) v.src.loop = false;
           v.voiceGain.gain.cancelScheduledValues(now);
-          v.voiceGain.gain.setValueAtTime(v.voiceGain.gain.value || 0.0, now);
-          v.voiceGain.gain.setTargetAtTime(0, now, 0.06);
-          v.src.stop(now + 0.25);
+          v.voiceGain.gain.setValueAtTime(0.0, now);
+          v.src.stop(now + 0.01);
+          v.src.disconnect();
         } catch (e) {}
         if (this.engine) this.engine.removeVoice(v.midiNote, v);
       });
@@ -816,15 +817,29 @@ export class LayerInsertProcessor {
       });
       this.sustainedVoices?.clear();
 
+      // Temporarily mute insert input & dryGain to choke ANY orphaned or zombie nodes
+      if (this.input?.gain) {
+        this.input.gain.cancelScheduledValues(now);
+        this.input.gain.setValueAtTime(0.0, now);
+        setTimeout(() => {
+          try { this.input.gain.setTargetAtTime(1.0, this.ctx.currentTime, 0.02); } catch (e) {}
+        }, 40);
+      }
+      if (this.dryGain?.gain) {
+        this.dryGain.gain.cancelScheduledValues(now);
+        this.dryGain.gain.setValueAtTime(0.0, now);
+        setTimeout(() => {
+          try { this.dryGain.gain.setTargetAtTime(1.0, this.ctx.currentTime, 0.02); } catch (e) {}
+        }, 40);
+      }
+
       this.wetGain.gain.cancelScheduledValues(now);
-      this.wetGain.gain.setValueAtTime(this.wetGain.gain.value || 0.0, now);
-      this.wetGain.gain.setTargetAtTime(0, now, 0.06);
+      this.wetGain.gain.setValueAtTime(0.0, now);
       this.activeFxNodes.forEach((node) => {
         try {
           if (node.gain && node.gain.cancelScheduledValues) {
             node.gain.cancelScheduledValues(now);
-            node.gain.setValueAtTime(node.gain.value || 0.0, now);
-            node.gain.setTargetAtTime(0, now, 0.06);
+            node.gain.setValueAtTime(0.0, now);
           }
         } catch (e) {}
       });
@@ -1596,6 +1611,7 @@ export class NativePcmEngine {
     this.decodedBuffers = new Map();
     this.activeVoices = new Map();
     this.sustainedVoices = new Map();
+    this._allActiveVoices = new Set();
 
     this.sustainPedal = false;
     this.sustainHoldSec = 7.0;
@@ -2067,16 +2083,25 @@ export class NativePcmEngine {
   }
 
   preloadInstrument(instId) {
-    if (!instId || !this.ctx) return;
+    if (!instId || !this.ctx) return Promise.resolve();
+    if (this.decodedBuffers.has(instId) && this.decodedBuffers.get(instId).size > 0) {
+      return Promise.resolve();
+    }
     if (instId.startsWith("animal_")) {
-      animalEdmLoader.loadInstrument(instId, this.ctx, this.decodedBuffers);
+      return animalEdmLoader.loadInstrument(instId, this.ctx, this.decodedBuffers);
     } else if (instId.startsWith("bloom_")) {
-      bloomEdmLoader.loadInstrument(instId, this.ctx, this.decodedBuffers);
+      return bloomEdmLoader.loadInstrument(instId, this.ctx, this.decodedBuffers);
     } else if (instId.startsWith("abletunes_")) {
       const bankKey = instId === "abletunes_fm_piano" ? "fm_piano" : "upright_piano";
-      this.loadAbletunesInstrument(bankKey);
-    } else if (!this.decodedBuffers.has(instId)) {
-      this.loadSoundfont(instId);
+      return this.loadAbletunesInstrument(bankKey);
+    } else if (
+      (KORG_PCM_BANKS && KORG_PCM_BANKS[instId]) ||
+      (YAMAHA_EOS_PCM_BANKS && YAMAHA_EOS_PCM_BANKS[instId]) ||
+      (USER_BANK_PCM_BANKS && USER_BANK_PCM_BANKS[instId])
+    ) {
+      return this.decodeEmbeddedAnchors(instId);
+    } else {
+      return this.loadSoundfont(instId);
     }
   }
 
@@ -2735,7 +2760,10 @@ export class NativePcmEngine {
                 now,
               );
               oldV.voiceGain.gain.setTargetAtTime(0.0, now, rTau);
-              if (oldV.src) oldV.src.stop(now + rStop);
+              if (oldV.src) {
+                oldV.src.loop = false;
+                oldV.src.stop(now + rStop);
+              }
             } catch (e) {}
             this._removeFromTracking(midiNote, oldV);
             const rn = midiNote;
@@ -2826,7 +2854,10 @@ export class NativePcmEngine {
               now,
             );
             oldV.voiceGain.gain.setTargetAtTime(0.0, now, rsTau);
-            if (oldV.src) oldV.src.stop(now + rsStop);
+            if (oldV.src) {
+              oldV.src.loop = false;
+              oldV.src.stop(now + rsStop);
+            }
           } catch (e) {}
           this._removeFromTracking(midiNote, oldV);
           const rn = midiNote;
@@ -2937,6 +2968,8 @@ export class NativePcmEngine {
       _isRecycled: false,
     };
 
+    this._allActiveVoices.add(voiceRecord);
+
     while (this.voiceQueue.length >= this.MAX_VOICES) {
       // Smart voice stealing — prioritize released tails first
       let target = null;
@@ -2972,7 +3005,10 @@ export class NativePcmEngine {
           now,
         );
         target.voiceGain.gain.setTargetAtTime(0.0, now, 0.005);
-        if (target.src) target.src.stop(now + 0.025);
+        if (target.src) {
+          target.src.loop = false;
+          target.src.stop(now + 0.025);
+        }
       } catch (e) {}
       this._removeFromTracking(target.midiNote, target);
       const stlMidiNote = target.midiNote;
@@ -3000,6 +3036,7 @@ export class NativePcmEngine {
     if (!voiceRecord || voiceRecord._isRemoved) return;
     voiceRecord._isRemoved = true;
     voiceRecord._isRecycled = true;
+    this._allActiveVoices.delete(voiceRecord);
     if (voiceRecord.src) {
       try {
         voiceRecord.src.onended = null;
@@ -3609,6 +3646,13 @@ export class NativePcmEngine {
       this.sustainedVoices.forEach((list) => list.forEach(killVoice));
       this.activeVoices.clear();
       this.sustainedVoices.clear();
+    }
+
+    if (this._allActiveVoices) {
+      this._allActiveVoices.forEach(killVoice);
+      if (!preserveLooper) {
+        this._allActiveVoices.clear();
+      }
     }
 
     this.heldNotes.clear();
