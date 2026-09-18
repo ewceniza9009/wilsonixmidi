@@ -3676,17 +3676,23 @@ export class NativePcmEngine {
           return;
         }
         try {
-          // Ultra-fast 6ms clickless fade for glissando sweeps & rapid chord transitions
+          if (v.src) v.src.loop = false;
+          // Ultra-fast 8ms clickless fade for glissando sweeps & rapid chord transitions
           v.voiceGain.gain.cancelScheduledValues(now);
           v.voiceGain.gain.setValueAtTime(v.voiceGain.gain.value || 0.0, now);
-          v.voiceGain.gain.setTargetAtTime(0.0, now, 0.006);
-          v.src.stop(now + 0.025);
+          v.voiceGain.gain.setTargetAtTime(0.0, now, 0.008);
+          v.src.stop(now + 0.035);
           if (v.vibLfo) {
-            try { v.vibLfo.stop(now + 0.025); } catch (e) {}
+            try { v.vibLfo.stop(now + 0.035); } catch (e) {}
           }
           if (v.growlLfo) {
-            try { v.growlLfo.stop(now + 0.025); } catch (e) {}
+            try { v.growlLfo.stop(now + 0.035); } catch (e) {}
           }
+          this._removeFromTracking(midiNote, v);
+          const stopTimer = setTimeout(() => {
+            this._disconnectAndRecycle(midiNote, v);
+          }, 45);
+          this._scheduledStops.add(stopTimer);
         } catch (e) {}
       } else {
         remaining.push(v);

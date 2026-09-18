@@ -478,6 +478,21 @@ export class VirtualKeyboardUI {
       isMouseDown = false;
     });
 
+    this._onWindow(window, "blur", () => {
+      if (this.activeMouseChord) {
+        this.activeMouseChord.forEach(n => {
+          this.setKeyVisualState(n, false);
+          if (typeof multiLayerEngine.fastNoteOff === "function") {
+            multiLayerEngine.fastNoteOff(n);
+          } else {
+            multiLayerEngine.noteOff(n);
+          }
+        });
+        this.activeMouseChord = null;
+      }
+      isMouseDown = false;
+    });
+
     // Robust Multi-Touch Engine for Mobile, Tablets & Android Touchscreens
     // Xiaomi/HyperOS firmware drops touch IDs mid-press (touchcancel without
     // finger lift). Deferred release: cancelled touches get 200ms grace period
@@ -545,6 +560,10 @@ export class VirtualKeyboardUI {
                 this.setKeyVisualState(n, false);
                 if (arpeggiator.enabled) {
                   arpeggiator.handleNoteOff(n);
+                } else if (multiLayerEngine.sustainPedalActive || qwertyKeyboard.sustainPedal || qwertyKeyboard.sustainLatched) {
+                  multiLayerEngine.noteOff(n);
+                } else if (typeof multiLayerEngine.fastNoteOff === "function") {
+                  multiLayerEngine.fastNoteOff(n);
                 } else {
                   multiLayerEngine.noteOff(n);
                 }

@@ -1619,12 +1619,7 @@ export class MultiLayerEngine {
       if (zone && zone.inst !== null && zone.inst !== undefined && zone.inst !== "current_stack") {
         const transposedMidi = Math.max(21, Math.min(108, midiNote + (zone.oct || 0) * 12));
         if (zone.vaProg) {
-          // Live note → worklet (zero-jank), scheduled → main-thread VA
-          if (when === 0 && this._workletReady && this._workletNode) {
-            this._workletNode.noteOn(transposedMidi, velocity);
-          } else {
-            this.getVaEngineFor(zone.vaProg, zone.gain, isLower ? 4 : 5).noteOn(transposedMidi, velocity, when);
-          }
+          this.getVaEngineFor(zone.vaProg, zone.gain, isLower ? 4 : 5).noteOn(transposedMidi, velocity, when);
         } else if (this.pcmEngine) {
           const dest = (this.pcmEngine.splitZoneInserts && this.pcmEngine.splitZoneInserts[isLower ? "lower" : "upper"])
             ? this.pcmEngine.splitZoneInserts[isLower ? "lower" : "upper"].input
@@ -1638,12 +1633,7 @@ export class MultiLayerEngine {
 
     // Triton VA mode: real oscillator engine plays the program's own waveforms
     if (this.isTritonVaMode && this.activeTritonVaProg) {
-      // Live note → worklet (zero-jank), scheduled → main-thread VA
-      if (when === 0 && this._workletReady && this._workletNode) {
-        this._workletNode.noteOn(midiNote, velocity);
-      } else {
-        tritonVaEngine.noteOn(midiNote, velocity, when);
-      }
+      tritonVaEngine.noteOn(midiNote, velocity, when);
       return;
     }
 
@@ -1688,12 +1678,7 @@ export class MultiLayerEngine {
         const effectiveGain = (layer.gain ?? 1.0) * combiScale * polyHeadroom;
         const transposedMidi = Math.max(21, Math.min(108, midiNote + layer.oct * 12));
         if (layer.vaProg) {
-          // Live note → worklet (zero-jank), scheduled → main-thread VA
-          if (when === 0 && this._workletReady && this._workletNode) {
-            this._workletNode.noteOn(transposedMidi, velocity);
-          } else {
-            this.getVaEngineFor(layer.vaProg, effectiveGain, i).noteOn(transposedMidi, velocity, when);
-          }
+          this.getVaEngineFor(layer.vaProg, effectiveGain, i).noteOn(transposedMidi, velocity, when);
         } else if (this.pcmEngine) {
           this.pcmEngine.playNote(layer.inst, transposedMidi, velocity, effectiveGain, i, null, when);
         }
@@ -1757,11 +1742,7 @@ export class MultiLayerEngine {
       if (zone && zone.inst !== null && zone.inst !== undefined && zone.inst !== "current_stack") {
         const transposedMidi = Math.max(21, Math.min(108, midiNote + (zone.oct || 0) * 12));
         if (zone.vaProg) {
-          if (when === 0 && this._workletReady && this._workletNode) {
-            this._workletNode.noteOff(transposedMidi);
-          } else {
-            this.getVaEngineFor(zone.vaProg, zone.gain, isLower ? 4 : 5).noteOff(transposedMidi, when);
-          }
+          this.getVaEngineFor(zone.vaProg, zone.gain, isLower ? 4 : 5).noteOff(transposedMidi, when);
         } else if (this.pcmEngine) {
           this.pcmEngine.stopNote(zone.inst, transposedMidi, when);
         }
@@ -1771,9 +1752,6 @@ export class MultiLayerEngine {
     }
 
     if (this.isTritonVaMode && this.activeTritonVaProg) {
-      if (this._workletReady && this._workletNode) {
-        this._workletNode.noteOff(midiNote);
-      }
       tritonVaEngine.noteOff(midiNote, when);
       return;
     }
@@ -1790,11 +1768,7 @@ export class MultiLayerEngine {
           const layer = this.layers[i];
           const transposedMidi = Math.max(21, Math.min(108, midiNote + layer.oct * 12));
           if (layer.vaProg) {
-            if (when === 0 && this._workletReady && this._workletNode) {
-              this._workletNode.noteOff(transposedMidi);
-            } else {
-              this.getVaEngineFor(layer.vaProg, layer.gain, i).noteOff(transposedMidi, when);
-            }
+            this.getVaEngineFor(layer.vaProg, layer.gain, i).noteOff(transposedMidi, when);
           } else {
             this.pcmEngine.stopNote(layer.inst, transposedMidi, when);
           }
@@ -1818,17 +1792,57 @@ export class MultiLayerEngine {
     this.heldNotes.delete(midiNote);
     this._clearHeldNoteTimer(midiNote);
 
+    const now = when > 0 ? when : (audioCore.ctx ? audioCore.ctx.currentTime : 0);
+
+    // Pad sidechain ducking release: restore Layer 1 volume when all lead keys are released
+    if (this.isPadDuckingEnabled && this.isCombiMode && this.layers[0]?.enabled) {
+      this.activeLeadNotes = Math.max(0, this.activeLeadNotes - 1);
+      if (this.activeLeadNotes === 0 && this.pcmEngine && this.pcmEngine.layerInserts && this.pcmEngine.layerInserts[1]) {
+        const ctx = audioCore.ctx;
+        if (ctx) {
+          this.pcmEngine.layerInserts[1].input.gain.setTargetAtTime(1.0, now, 0.28);
+        }
+      }
+    }
+
+    // Split zone release
+    if (this.isSplitMode) {
+      const isLower = midiNote < this.splitPointMidi;
+      const zone = this.splitZone(isLower ? "lower" : "upper");
+
+      if (zone && zone.inst !== null && zone.inst !== undefined && zone.inst !== "current_stack") {
+        const transposedMidi = Math.max(21, Math.min(108, midiNote + (zone.oct || 0) * 12));
+        if (zone.vaProg) {
+          this.getVaEngineFor(zone.vaProg, zone.gain, isLower ? 4 : 5).noteOff(transposedMidi, when);
+        } else if (this.pcmEngine) {
+          if (typeof this.pcmEngine.fastStopNote === "function") {
+            this.pcmEngine.fastStopNote(zone.inst, transposedMidi, when);
+          } else {
+            this.pcmEngine.stopNote(zone.inst, transposedMidi, when);
+          }
+        }
+        return;
+      }
+    }
+
+    if (this.isTritonVaMode && this.activeTritonVaProg) {
+      tritonVaEngine.noteOff(midiNote, when);
+      return;
+    }
+    if (this.isSynthMode) {
+      synthEngine.noteOff(midiNote);
+      if (synthEngine.isDualLayer) {
+        synthEngine.releaseLayerVoice(midiNote);
+      }
+    }
+
     if (this.pcmEngine) {
       if (this.isCombiMode) {
         for (let i = 0; i < this.layers.length; i++) {
           const layer = this.layers[i];
           const transposedMidi = Math.max(21, Math.min(108, midiNote + layer.oct * 12));
           if (layer.vaProg) {
-            if (when === 0 && this._workletReady && this._workletNode) {
-              this._workletNode.noteOff(transposedMidi);
-            } else {
-              this.getVaEngineFor(layer.vaProg, layer.gain, i).noteOff(transposedMidi, when);
-            }
+            this.getVaEngineFor(layer.vaProg, layer.gain, i).noteOff(transposedMidi, when);
           } else {
             if (typeof this.pcmEngine.fastStopNote === "function") {
               this.pcmEngine.fastStopNote(layer.inst, transposedMidi, when);
@@ -1920,8 +1934,7 @@ export class MultiLayerEngine {
       if (zone && zone.inst !== null && zone.inst !== undefined && zone.inst !== "current_stack") {
         const transposedMidi = Math.max(21, Math.min(108, midiNote + (zone.oct || 0) * 12));
         if (zone.vaProg) {
-          if (when === 0 && this._workletReady && this._workletNode) this._workletNode.noteSilentOff(transposedMidi);
-          else this.getVaEngineFor(zone.vaProg, zone.gain, isLower ? 4 : 5).noteOff(transposedMidi, when);
+          this.getVaEngineFor(zone.vaProg, zone.gain, isLower ? 4 : 5).noteOff(transposedMidi, when);
         } else if (this.pcmEngine) {
           this.pcmEngine.stopNote(zone.inst, transposedMidi, when);
         }
@@ -1930,8 +1943,7 @@ export class MultiLayerEngine {
     }
 
     if (this.isTritonVaMode && this.activeTritonVaProg) {
-      if (when === 0 && this._workletReady && this._workletNode) this._workletNode.noteSilentOff(midiNote);
-      else tritonVaEngine.noteOff(midiNote, when);
+      tritonVaEngine.noteOff(midiNote, when);
       return;
     }
 
@@ -1942,8 +1954,7 @@ export class MultiLayerEngine {
           if (!layer.enabled) continue;
           const transposedMidi = Math.max(21, Math.min(108, midiNote + layer.oct * 12));
           if (layer.vaProg) {
-            if (when === 0 && this._workletReady && this._workletNode) this._workletNode.noteSilentOff(transposedMidi);
-            else this.getVaEngineFor(layer.vaProg, layer.gain, i).noteOff(transposedMidi, when);
+            this.getVaEngineFor(layer.vaProg, layer.gain, i).noteOff(transposedMidi, when);
           } else {
             this.pcmEngine.stopNote(layer.inst, transposedMidi, when);
           }
@@ -1971,7 +1982,8 @@ export class MultiLayerEngine {
     }
     if (this.isTritonVaMode && this.activeTritonVaProg) {
       tritonVaEngine.setSustainPedal(isDown, when);
-    } else if (this.pcmEngine) {
+    }
+    if (this.pcmEngine) {
       this.pcmEngine.setSustainPedal(isDown, when);
       if (this.isCombiMode) {
         this._vaEngines.forEach(eng => { try { eng.setSustainPedal(isDown, when); } catch (err) {} });

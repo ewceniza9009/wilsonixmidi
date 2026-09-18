@@ -52,7 +52,7 @@ export class TritonVirtualAnalogEngine {
     // 4. General Pads, Strings, Brass: clean 2-osc mix (no sub rumble)
     const isLead = /(lead|trance|saw|synth|stabb|stab|fast|hit|motion)/i.test((prog.category || "") + " " + (prog.name || ""));
     const isPureSineLead = (osc1 === "sine" && osc2 === "sine") && isLead;
-    const isOrganOrEP = /(organ|ep|piano|tine|clav|vibes|bell|wurly|rhodes)/i.test((prog.category || "") + " " + (prog.name || ""));
+    const isOrganOrEP = /(organ|\bep\b|piano|tine|clav|vibes|bell|wurly|rhodes)/i.test((prog.category || "") + " " + (prog.name || ""));
 
     let osc3Type = "sine";
     let osc3Ratio = 0.5;
@@ -85,7 +85,7 @@ export class TritonVirtualAnalogEngine {
     if (osc2 === "square") gain2 *= 0.65;
     if (osc3Type === "square") gain3 *= 0.65;
 
-    const isPercussive = /(stab|hit|pluck|slap|tine|ep|wurly|rhodes|clav|harp|kalimba|mallet|vibes|vibe|bell(?!\s*pad)|piano(?!\s*pad))/i.test((prog.category || "") + " " + (prog.name || ""));
+    const isPercussive = /(stab|hit|pluck|slap|tine|\bep\b|wurly|rhodes|clav|harp|kalimba|mallet|vibes|vibe|bell(?!\s*pad)|piano(?!\s*pad))/i.test((prog.category || "") + " " + (prog.name || ""));
 
     // HARD SYNC: programs named "sync" (Brian's Sync, Octa Sync, sync pads/leads)
     // route osc2 to the phase-sync WaveShaper so the slave is reset by osc1 on every
