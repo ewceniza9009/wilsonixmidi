@@ -13,6 +13,7 @@ import { midiLearnManager } from "./midi-learn.js";
 import { registrationManager } from "../components/registration-manager.js";
 import { scaleLock } from "./scale-lock.js";
 import { arpeggiator } from "../audio/arpeggiator.js";
+import { midiOutManager } from "./midi-out.js";
 
 export class MidiManager {
   constructor() {
@@ -42,6 +43,10 @@ export class MidiManager {
       };
 
       this.bindInputs();
+
+      // Initialize MIDI OUT
+      await midiOutManager.init();
+
       return true;
     } catch (err) {
       console.warn("Web MIDI permission denied or unavailable:", err);
@@ -62,7 +67,31 @@ export class MidiManager {
       });
     }
 
+    // Update MIDI OUT outputs
+    midiOutManager.updateOutputList();
+
     this.bindInputs();
+  }
+
+  // MIDI OUT delegation
+  getMidiOutputList() {
+    return midiOutManager.getOutputList();
+  }
+
+  getSelectedMidiOutputs() {
+    return midiOutManager.getSelectedOutputs();
+  }
+
+  selectMidiOutput(id, add = false) {
+    midiOutManager.selectOutput(id, add);
+  }
+
+  deselectMidiOutput(id) {
+    midiOutManager.deselectOutput(id);
+  }
+
+  clearMidiOutputs() {
+    midiOutManager.clearOutputs();
   }
 
   bindInputs() {

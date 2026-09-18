@@ -16,6 +16,8 @@ import { masterRecorder } from "../audio/master-recorder.js";
 import { registrationManager } from "./registration-manager.js";
 import { getTritonProgramById } from "../triton/combi-timbres.js";
 import { arpeggiator } from "../audio/arpeggiator.js";
+import { midiManager } from "../midi/midi-manager.js";
+import { midiOutManager } from "../midi/midi-out.js";
 import {
   APP_VERSION,
   BUILD_NUMBER,
@@ -655,22 +657,18 @@ export class GigHudUI {
 
     this.container.innerHTML = `
       <div class="gig-hud-wrapper">
-        <!-- 1. PRIMARY TOP BAR (Ultra clean, spacious, zero collisions) -->
+        <!-- 1. PRIMARY TOP BAR (Balanced 3-column workstation cockpit) -->
         <header class="gig-hud-bar">
           <!-- LEFT: Brand & Live Performance Readout + Stacks Selector -->
           <div class="hud-section hud-left-group">
             <div class="brand-logo">
-              <span class="logo-accent">WILSONIX</span><span class="brand-sub"> MIDIKEY</span>
+              <span class="logo-accent">WILSONIX</span><span class="brand-sub"> PRO</span>
             </div>
 
-            <!-- Live Active Sound Status Badge -->
-            <div class="hud-live-badge" id="hud-live-badge" title="Active Sound Playing on Keyboard">
-              <span class="live-badge-icon" id="hud-live-icon">${soundIcon}</span>
-              <span class="live-badge-text" id="hud-live-text">${escapeHtml(activeSoundName)}</span>
-            </div>
-
-            <!-- Fast Performance Stacks & Combi/Split Selector -->
-            <div class="hud-perf-mode-group">
+            <!-- Integrated Master Sound Cockpit (Touch-friendly, zero collisions) -->
+            <div class="hud-sound-cockpit" id="hud-sound-cockpit" title="Active Sound & Performance Preset Selector">
+              <span class="sound-cockpit-icon" id="hud-live-icon">${soundIcon}</span>
+              <span class="sound-cockpit-text" id="hud-live-text">${escapeHtml(activeSoundName)}</span>
               <select class="hud-perf-select" id="hud-perf-select" title="Switch Signature Combis, Keyboard Splits & Solo Rigs">
                 ${presetGroups
                   .map(
@@ -690,19 +688,12 @@ export class GigHudUI {
                   )
                   .join("")}
               </select>
+              <span class="sound-cockpit-chevron">▾</span>
             </div>
           </div>
 
-          <!-- RIGHT: Master Volume, Workspace Tabs, Keys, Tools Drawer Toggle & Fullscreen -->
-          <div class="hud-section hud-right-group">
-            <!-- Master Volume -->
-            <div class="hud-volume-unit" data-midi-param="master_vol" title="Master Volume (Right-click to MIDI Learn)">
-              <span class="hud-vol-icon">🔊</span>
-              <input type="range" id="hud-master-vol" min="0" max="100" value="50" class="hud-vol-slider" />
-              <span class="hud-vol-readout" id="hud-master-vol-val">50%</span>
-            </div>
-
-            <!-- Workspace Tabs & Utility Controls -->
+          <!-- CENTER: Workspace Navigation Engine (Fills the center void) -->
+          <div class="hud-section hud-center-group">
             <nav class="ws-tabs-bar" id="hud-workspace-tabs">
               <select class="ws-tabs-dropdown" id="hud-ws-tabs-select" title="Switch Workspace View">
                 <option value="triton">🎛️ MAIN</option>
@@ -724,6 +715,19 @@ export class GigHudUI {
                 <button class="ws-tab-btn" data-view="demo" title="30s Interactive Song Clips">DEMO</button>
                 <button class="ws-tab-btn" data-view="player" title="Media Player">PLAYER</button>
               </div>
+            </nav>
+          </div>
+
+          <!-- RIGHT: Master Volume, Keys, Tools Drawer Toggle & Fullscreen -->
+          <div class="hud-section hud-right-group">
+            <!-- Master Volume Console (Proper studio fader + readout) -->
+            <div class="hud-volume-unit" data-midi-param="master_vol" title="Master Volume (Right-click to MIDI Learn)">
+              <span class="hud-vol-icon">🔊</span>
+              <input type="range" id="hud-master-vol" min="0" max="100" value="50" class="hud-vol-slider" />
+              <span class="hud-vol-readout" id="hud-master-vol-val">50%</span>
+            </div>
+
+            <div class="hud-quick-actions">
               <button class="ws-tab-btn keys-toggle-btn active" id="btn-hud-toggle-keys" title="Toggle Piano Keyboard (F4)">🎹 KEYS</button>
 
               <!-- Collapsible Tools Shelf Toggle Button -->
@@ -734,7 +738,7 @@ export class GigHudUI {
               </button>
 
               <button class="ws-tab-btn fullscreen-btn" id="btn-toggle-fullscreen" title="Toggle Fullscreen">⛶</button>
-            </nav>
+            </div>
           </div>
         </header>
 
@@ -763,9 +767,11 @@ export class GigHudUI {
                     })
                     .join("")}
                 </div>
-                <button class="rig-save-btn" id="hud-rig-save-btn" title="Store Current Sound & FX to Active Slot (Shift+F${curSlot})">💾</button>
-                <button class="rig-save-btn" id="hud-setlist-export" title="Export Rigs & Setlist (.mkgig)">⬇️</button>
-                <button class="rig-save-btn" id="hud-setlist-import-btn" title="Import Rigs & Setlist (.mkgig)">⬆️</button>
+                <div class="rig-actions-capsule">
+                  <button class="rig-save-btn" id="hud-rig-save-btn" title="Store Current Sound & FX to Active Slot (Shift+F${curSlot})">💾</button>
+                  <button class="rig-save-btn" id="hud-setlist-export" title="Export Rigs & Setlist (.mkgig)">⬇️</button>
+                  <button class="rig-save-btn" id="hud-setlist-import-btn" title="Import Rigs & Setlist (.mkgig)">⬆️</button>
+                </div>
                 <input type="file" id="hud-setlist-import" accept=".mkgig,application/json,.json" hidden />
               </div>
             </div>
@@ -804,7 +810,7 @@ export class GigHudUI {
               </button>
 
               <div class="tempo-control-box">
-                <button class="hud-btn arp-btn ${arpeggiator.enabled ? "active" : ""}" id="btn-toggle-arp" title="Live Groove Arpeggiator (Rhythmic Chord Rolls)">
+                <button class="arp-btn ${arpeggiator.enabled ? "active" : ""}" id="btn-toggle-arp" title="Live Groove Arpeggiator (Rhythmic Chord Rolls)">
                   <span class="arp-led"></span>
                   ARP
                 </button>
@@ -814,7 +820,7 @@ export class GigHudUI {
               </div>
             </div>
 
-            <!-- Bay 4: Live Status Cluster -->
+            <!-- Bay 5: Live Status Cluster -->
             <div class="hud-drawer-bay status-bay">
               <div class="hud-status-cluster">
                 <!-- GIG Mode Pill -->
@@ -887,22 +893,42 @@ export class GigHudUI {
     const slotBtns = this.container.querySelectorAll(".rig-slot-pill");
 
     bankBtns.forEach((btn) => {
-      btn.addEventListener("click", () => {
+      let lastTap = 0;
+      const handleBank = (e) => {
+        if (e && e.type === "pointerdown") {
+          e.preventDefault();
+        }
+        const now = performance.now();
+        if (now - lastTap < 80) return;
+        lastTap = now;
+
         bankBtns.forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
         const bank = btn.getAttribute("data-bank");
         registrationManager.currentBank = bank;
         registrationManager.recallSlot(bank, registrationManager.currentSlot);
-      });
+      };
+      btn.addEventListener("pointerdown", handleBank);
+      btn.addEventListener("click", handleBank);
     });
 
     slotBtns.forEach((btn) => {
-      btn.addEventListener("click", () => {
+      let lastTap = 0;
+      const handleSlot = (e) => {
+        if (e && e.type === "pointerdown") {
+          e.preventDefault();
+        }
+        const now = performance.now();
+        if (now - lastTap < 80) return;
+        lastTap = now;
+
         slotBtns.forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
-        const slot = parseInt(btn.getAttribute("data-slot"));
+        const slot = parseInt(btn.getAttribute("data-slot"), 10);
         registrationManager.recallSlot(registrationManager.currentBank, slot);
-      });
+      };
+      btn.addEventListener("pointerdown", handleSlot);
+      btn.addEventListener("click", handleSlot);
     });
 
     document
@@ -960,6 +986,25 @@ export class GigHudUI {
       e.target.value = "";
     });
 
+    // P3.8: MIDI OUT bindings
+    const midiOutSelect = document.getElementById("hud-midi-out-select");
+    midiOutSelect?.addEventListener("change", (e) => {
+      const selected = Array.from(e.target.selectedOptions).map((o) => o.value);
+      midiManager.clearMidiOutputs();
+      selected.forEach((id, i) => midiManager.selectMidiOutput(id, i > 0));
+    });
+
+    document
+      .getElementById("btn-midi-clock")
+      ?.addEventListener("click", () => {
+        if (midiOutManager.clockRunning) {
+          midiOutManager.stopClock();
+        } else {
+          midiOutManager.startClock(this.bpm);
+        }
+        this.syncToolsIndicator();
+      });
+
     registrationManager.onRecallCallback = ({ bank, slot, preset }) => {
       bankBtns.forEach((b) =>
         b.classList.toggle("active", b.getAttribute("data-bank") === bank),
@@ -971,6 +1016,14 @@ export class GigHudUI {
         ),
       );
       this.syncSoundDisplay();
+      // P3.8: Send Program Change on registration recall (Bank A=0..7, B=8..15, C=16..23, D=24..31)
+      const bankLetters = ["A", "B", "C", "D"];
+      const bankIdx = bankLetters.indexOf(bank);
+      if (bankIdx >= 0) {
+        const program = bankIdx * 8 + (slot - 1);
+        try { midiOutManager.programChange(0, program); } catch (e) {}
+      }
+
       const layerBtn = document.getElementById("btn-toggle-layer");
       const layerSelect = document.getElementById("hud-layer-select");
       const isLayerOn =
@@ -1202,7 +1255,13 @@ export class GigHudUI {
       const b = document.getElementById("btn-toggle-arp");
       if (b) b.classList.toggle("active", enabled);
       const bpmEl = document.getElementById("bpm-val");
-      if (bpmEl && typeof bpm === "number") bpmEl.innerText = bpm;
+      if (bpmEl && typeof bpm === "number") {
+        bpmEl.innerText = bpm;
+        this.bpm = bpm;
+      }
+      if (midiOutManager.clockRunning && typeof bpm === "number") {
+        midiOutManager.setBpm(bpm);
+      }
       this.syncToolsIndicator();
     };
 
@@ -1224,6 +1283,7 @@ export class GigHudUI {
           this.bpm = Math.round(60000 / avg);
           if (bpmVal) bpmVal.innerText = this.bpm;
           arpeggiator.setBpm(this.bpm);
+          if (midiOutManager.clockRunning) midiOutManager.setBpm(this.bpm);
         }
       }
     });
@@ -1354,6 +1414,12 @@ export class GigHudUI {
     } else if (dot) {
       dot.remove();
     }
+
+    // P3.8: MIDI Clock button sync
+    const clockBtn = document.getElementById("btn-midi-clock");
+    if (clockBtn) {
+      clockBtn.classList.toggle("active", midiOutManager.clockRunning);
+    }
   }
 
   startVuMonitor() {
@@ -1461,9 +1527,10 @@ export class GigHudUI {
     pop.innerHTML = `
       <div class="latency-pop-head">
         <span>ROUND-TRIP LATENCY & BUFFER CONTROL</span>
-        <button class="latency-pop-close" id="hud-latency-close">✕</button>
+        <button class="latency-pop-close" id="hud-latency-close" title="Close">✕</button>
       </div>
       <div class="latency-pop-columns">
+        <!-- COLUMN 1: AUDIO ENGINE & HARDWARE OUTPUT -->
         <div class="latency-pop-col">
           <div class="latency-profile-section">
             <div class="latency-profile-title">BUFFER / LATENCY PROFILE</div>
@@ -1480,25 +1547,6 @@ export class GigHudUI {
                 <span class="prof-title">SAFE STAGE</span>
                 <span class="prof-sub">512 frames</span>
               </button>
-            </div>
-          </div>
-          <div class="latency-device-section" id="latency-device-section">
-            <div class="latency-profile-title">OUTPUT DEVICE</div>
-            <select class="latency-device-select" id="latency-device-select">
-              <option value="">Default</option>
-            </select>
-            <div class="latency-pop-reco">
-              🔌 Select USB audio interface or wired output.
-              ⚠️ Never use Bluetooth for live keyboards.
-            </div>
-          </div>
-          <div class="latency-device-section" id="latency-spatial-section">
-            <div class="latency-profile-title">🎧 BINAURAL MONITOR</div>
-            <select class="latency-device-select" id="latency-spatial-select">
-              <option value="off" selected>OFF (Dry Signal)</option>
-            </select>
-            <div class="latency-pop-reco">
-              🎧 HRTF 3D spatial for headphones. Best with wired IEMs.
             </div>
           </div>
           <div class="latency-pop-body">${rows}</div>
@@ -1522,8 +1570,81 @@ export class GigHudUI {
                   : "🔹 Real latency = base buffer + OS output buffer."
             }</span>
           </div>
+
+          <!-- Audio Output Device -->
+          <div class="latency-device-section" id="latency-device-section">
+            <div class="latency-profile-title">🔈 AUDIO OUTPUT DEVICE</div>
+            <select class="latency-device-select" id="latency-device-select">
+              <option value="">Default</option>
+            </select>
+            <div class="latency-pop-reco">
+              🔌 Select USB audio interface or wired output.
+              ⚠️ Never use Bluetooth for live keyboards.
+            </div>
+          </div>
+
+          <!-- Binaural Monitor -->
+          <div class="latency-device-section" id="latency-spatial-section">
+            <div class="latency-profile-title">🎧 BINAURAL MONITOR</div>
+            <select class="latency-device-select" id="latency-spatial-select">
+              <option value="off" selected>OFF (Dry Signal)</option>
+            </select>
+            <div class="latency-pop-reco">
+              🎧 HRTF 3D spatial for headphones. Best with wired IEMs.
+            </div>
+          </div>
         </div>
+
+        <!-- COLUMN 2: CONTROLLER & PERFORMANCE -->
         <div class="latency-pop-col">
+          <!-- MIDI OUT & SYNC -->
+          <div class="latency-device-section" id="latency-midi-section">
+            <div class="latency-profile-title">🔌 MIDI OUT & SYNC</div>
+            <div class="midi-out-popover-widget">
+              <div class="midi-out-row">
+                <label for="latency-midi-out-select" class="midi-out-label">
+                  <span>OUTPUT PORTS:</span>
+                  <span class="midi-out-subhint">Ctrl+Click for multi</span>
+                </label>
+                <select id="latency-midi-out-select" class="midi-out-select" title="Select MIDI Output Port(s)" multiple>
+                  ${
+                    midiManager.getMidiOutputList().length > 0
+                      ? midiManager.getMidiOutputList()
+                          .map(
+                            (o) => `<option value="${o.id}" ${midiManager.getSelectedMidiOutputs().some(s => s.id === o.id) ? "selected" : ""}>${escapeHtml(o.name)}</option>`
+                          )
+                          .join("")
+                      : `<option value="" disabled>(No MIDI outputs detected)</option>`
+                  }
+                </select>
+              </div>
+              <div class="midi-out-controls-row">
+                <div class="midi-out-row">
+                  <label for="latency-midi-channel" class="midi-out-label">CHANNEL:</label>
+                  <select id="latency-midi-channel" class="midi-out-select">
+                    ${Array.from({length: 16}, (_, i) => `<option value="${i}" ${i === 0 ? "selected" : ""}>Ch ${i+1}</option>`).join("")}
+                  </select>
+                </div>
+                <div class="midi-out-row">
+                  <label class="midi-out-label">CLOCK SYNC:</label>
+                  <div class="midi-out-sync-row">
+                    <button class="midi-clock-btn ${midiOutManager.clockRunning ? "active" : ""}" id="latency-btn-midi-clock" title="Toggle MIDI Clock Sync (Start/Stop sends MIDI Start/Stop)">
+                      <span class="clock-led"></span>
+                      <span>CLK</span>
+                    </button>
+                    <span class="midi-clock-bpm" id="latency-midi-clock-bpm">${this.bpm} BPM</span>
+                  </div>
+                </div>
+              </div>
+              <div class="midi-out-status ${midiManager.getSelectedMidiOutputs().length > 0 ? "has-output" : ""}" id="latency-midi-status">
+                ${midiManager.getSelectedMidiOutputs().length > 0
+                  ? midiManager.getSelectedMidiOutputs().map(o => escapeHtml(o.name)).join(", ")
+                  : "No output selected"}
+              </div>
+            </div>
+          </div>
+
+          <!-- PERFORMANCE SETTINGS -->
           <div class="latency-device-section" id="latency-settings-section">
             <div class="latency-profile-title">⚙️ PERFORMANCE SETTINGS</div>
             <div class="settings-grid">
@@ -1642,6 +1763,44 @@ export class GigHudUI {
         audioCore.setSpatialEnvironment(spatialSelect.value);
       });
     }
+
+    // MIDI OUT popover controls
+    const midiOutSelectPop = pop.querySelector("#latency-midi-out-select");
+    midiOutSelectPop?.addEventListener("change", (e) => {
+      e.stopPropagation();
+      const selected = Array.from(e.target.selectedOptions).map((o) => o.value).filter(Boolean);
+      midiManager.clearMidiOutputs();
+      selected.forEach((id, i) => midiManager.selectMidiOutput(id, i > 0));
+      const statusEl = pop.querySelector("#latency-midi-status");
+      if (statusEl) {
+        const hasOut = midiManager.getSelectedMidiOutputs().length > 0;
+        statusEl.textContent = hasOut
+          ? midiManager.getSelectedMidiOutputs().map(o => escapeHtml(o.name)).join(", ")
+          : "No output selected";
+        statusEl.classList.toggle("has-output", hasOut);
+      }
+    });
+
+    const midiChannelSelectPop = pop.querySelector("#latency-midi-channel");
+    if (midiChannelSelectPop) {
+      midiChannelSelectPop.value = String(midiOutManager.channel || 0);
+      midiChannelSelectPop.addEventListener("change", (e) => {
+        e.stopPropagation();
+        midiOutManager.channel = parseInt(e.target.value, 10) || 0;
+      });
+    }
+
+    const midiClockBtn = pop.querySelector("#latency-btn-midi-clock");
+    midiClockBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (midiOutManager.clockRunning) {
+        midiOutManager.stopClock();
+      } else {
+        midiOutManager.startClock(this.bpm);
+      }
+      this.syncToolsIndicator();
+      midiClockBtn.classList.toggle("active", midiOutManager.clockRunning);
+    });
 
     // Settings sliders
     const bindSlider = (id, valId, key, fmt) => {

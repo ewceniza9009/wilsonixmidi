@@ -13,6 +13,7 @@ import { getTritonProgramById, getTritonBankName, getTritonPcmEntries, getTriton
 import { SynthWorkletNode } from "./worklet/synth-worklet-node.js";
 import { PcmWorkletNode } from "./worklet/pcm-worklet-node.js";
 import { HD_SOUNDBANKS } from "./soundbanks.js";
+import { midiOutManager } from "../midi/midi-out.js";
 
 export { HD_SOUNDBANKS };
 
@@ -1576,6 +1577,8 @@ export class MultiLayerEngine {
     if (!this.pcmEngine) this.init();
     audioCore.ensureRunning();
 
+    try { midiOutManager.noteOn(midiOutManager.channel, midiNote, velocity); } catch (e) {}
+
     // 1:1 Instant Synchronous Visual Key Trigger (True 0.00ms touch-to-visual response)
     if (this.onNoteChangeCallback) {
       if (when === 0) {
@@ -1693,6 +1696,8 @@ export class MultiLayerEngine {
 
   noteOff(midiNote, when = 0) {
     audioCore.ensureRunning();
+
+    try { midiOutManager.noteOff(midiOutManager.channel, midiNote); } catch (e) {}
 
     // 1:1 Instant Synchronous Visual Key Release
     if (this.onNoteChangeCallback) {

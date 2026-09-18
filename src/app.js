@@ -157,8 +157,10 @@ class MidiKeyEliteApp {
         try {
           const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
           if (saved && typeof saved.top === "number" && typeof saved.right === "number") {
-            pill.style.top = saved.top + "px";
-            pill.style.right = saved.right + "px";
+            const safeTop = Math.max(46, Math.min(window.innerHeight - 36, saved.top));
+            const safeRight = Math.max(8, Math.min(window.innerWidth - 100, saved.right));
+            pill.style.top = safeTop + "px";
+            pill.style.right = safeRight + "px";
           }
         } catch (e) {}
 
@@ -169,7 +171,7 @@ class MidiKeyEliteApp {
           if (e.button && e.button !== 0) return;
           dragStartX = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
           dragStartY = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
-          startTop = parseInt(pill.style.top || "38", 10);
+          startTop = parseInt(pill.style.top || "46", 10);
           startRight = parseInt(pill.style.right || "14", 10);
           didDrag = false;
           pill.classList.add("dragging");
@@ -185,8 +187,8 @@ class MidiKeyEliteApp {
           if (Math.abs(dx) > 3 || Math.abs(dy) > 3) didDrag = true;
           const maxTop = window.innerHeight - pill.offsetHeight - 4;
           const maxRight = window.innerWidth - pill.offsetWidth - 4;
-          pill.style.top = Math.max(0, Math.min(maxTop, startTop + dy)) + "px";
-          pill.style.right = Math.max(0, Math.min(maxRight, startRight - dx)) + "px";
+          pill.style.top = Math.max(46, Math.min(maxTop, startTop + dy)) + "px";
+          pill.style.right = Math.max(8, Math.min(maxRight, startRight - dx)) + "px";
         };
 
         const onPointerUp = () => {

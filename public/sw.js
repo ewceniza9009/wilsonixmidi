@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wilsonix-midikey-v1';
+const CACHE_NAME = 'wilsonix-midikey-v2';
 const ASSETS = [
   '/',
   '/index.html',
@@ -12,7 +12,7 @@ const ASSETS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)).catch(() => {})
   );
   self.skipWaiting();
 });
@@ -29,15 +29,30 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
-  if (request.url.includes('/samples/') || request.url.includes('/soundfonts/') || request.url.includes('/banks/') || request.url.includes('/abletunes/')) {
+  if (!request.url.startsWith('http')) return;
+  if (
+    request.url.includes('/samples/') ||
+    request.url.includes('/soundfonts/') ||
+    request.url.includes('/banks/') ||
+    request.url.includes('/abletunes/')
+  ) {
     return;
   }
+
   event.respondWith(
     caches.match(request).then((cached) => {
       const network = fetch(request)
         .then((response) => {
-          if (response.ok && request.url.startsWith(self.location.origin)) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()));
+          if (
+            response &&
+            response.ok &&
+            response.status === 200 &&
+            request.url.startsWith(self.location.origin)
+          ) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, responseClone).catch(() => {});
+            }).catch(() => {});
           }
           return response;
         })
