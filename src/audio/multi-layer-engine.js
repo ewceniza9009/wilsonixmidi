@@ -1368,7 +1368,6 @@ export class MultiLayerEngine {
     if (!COMBI_PRESETS[presetId]) return;
     
     const newCombi = COMBI_PRESETS[presetId];
-    const _isSameCombi = this.activeCombi && this.activeCombi.id === presetId;
     const fxPresetChanged = this.activeCombi?.fxPreset !== newCombi.fxPreset;
     
     // Force-clear sustain pedal first — prevents sustained voices bleeding into new preset
@@ -1400,12 +1399,8 @@ export class MultiLayerEngine {
       }
     }
     
-    // Only init if engine not ready (first load)
-    if (!this.pcmEngine || !this._workletReady) {
-      this.init();
-    }
-    
-    // Only sync layer FX if layers changed
+    // NO init() call - engine already initialized at startup
+    // Only sync layer FX
     this.syncLayerFx();
     
     // Only apply FX preset if it actually changed
