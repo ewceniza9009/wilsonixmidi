@@ -249,6 +249,12 @@ export class DemoStationUI {
       this.stop();
     }
 
+    // Nuclear cleanup: discard ALL demo authors to prevent bleed from previous songs
+    // (discard only removes queued events; already-dispatched noteOffs still fire)
+    noteScheduler.queue = noteScheduler.queue.filter(
+      ev => !String(ev.author).startsWith("demo-")
+    );
+
     // Always silence any lingering engine state before a new clip
     try {
       multiLayerEngine.panic();
