@@ -52,6 +52,9 @@ export class AudioCore {
         }
       }
     } catch (e) {}
+    // This never becomes "current" until a new context is actually created
+    // with it (see init). Lets the HUD tell the user "applies next launch".
+    this.appliedLatencyProfile = null;
     this.profileListeners = [];
 
     // Pre-allocated buffer for zero GC overhead during 60/120fps metering
@@ -67,6 +70,8 @@ export class AudioCore {
     if (this.ctx) return this.ctx;
 
     const profile = LATENCY_PROFILES[this.currentLatencyProfile] || LATENCY_PROFILES["balanced"];
+    // The profile that is physically bound into the context's buffer size.
+    this.appliedLatencyProfile = profile.id;
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     try {
       this.ctx = new AudioContextClass({ latencyHint: profile.latencyHint });
@@ -267,28 +272,17 @@ export class AudioCore {
   setLatencyProfile(profileId) {
     if (!LATENCY_PROFILES[profileId]) return false;
     this.currentLatencyProfile = profileId;
-    const prevSpatialEnv = this.spatialEngine?.currentEnv || "off";
     try {
       localStorage.setItem("midikey_latency_profile", profileId);
       localStorage.setItem("midikey_latency_profile_chosen", "1");
     } catch (e) {}
 
-    if (this.ctx) {
-      const oldMasterGain = this.masterGain ? this.masterGain.gain.value : 1.0;
-      try {
-        this.ctx.close();
-      } catch (e) {}
-      this.ctx = null;
-      this.spatialEngine = null;
-      this.init();
-      if (this.masterGain) this.masterGain.gain.value = oldMasterGain;
-      this.unlock();
-    }
-
-    // Restore spatial environment after context recreation
-    if (prevSpatialEnv !== "off") {
-      this.setSpatialEnvironment(prevSpatialEnv);
-    }
+    // P2.1: CONTEXT IS NEVER CLOSED MID-SESSION. The AudioContext binds its
+    // buffer size at construction (latencyHint) and cannot be resized without
+    // recreating it — which previously killed every active engine, worklet,
+    // voice, and note (all audio dies). The profile is persisted above and
+    // applied cleanly on the next launch, when init() reads it from storage.
+    // Spatial environment is left untouched — no rebuild, no state loss.
 
     this.profileListeners.forEach(cb => {
       try { cb(this.currentLatencyProfile); } catch (e) {}
@@ -523,6 +517,8 @@ export class AudioCore {
       profileFrames: currentProfile.frames || 0,
       measuredFrames: 0,
       recommendedProfile: null,
+      // True when a profile is saved but not yet bound into the running context.
+      pendingRestart: !!(this.ctx && this.appliedLatencyProfile && this.appliedLatencyProfile !== this.currentLatencyProfile),
     };
     if (!this.ctx) return out;
 

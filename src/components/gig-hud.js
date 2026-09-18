@@ -1227,6 +1227,15 @@ export class GigHudUI {
       paintLatency(l);
     });
 
+    // Keep the latency pill active state in sync whenever the profile changes
+    // from any surface (picker here, settings, future devices), and reflect
+    // the "applies next launch" state the moment it is saved.
+    audioCore.onLatencyProfileChange((prof) => {
+      const newL = audioCore.measureLatency();
+      paintLatency(newL);
+      this._pendingLatencyProfile = prof;
+    });
+
     window.addEventListener("click", () => this._closeLatencyPopover());
 
     // 7. Sunlight Mode Toggle
@@ -1470,7 +1479,9 @@ export class GigHudUI {
             <span>${
               stalled
                 ? "⚠️ Audio clock stalled — play a note to re-lock."
-                : "🔹 Real latency = base buffer + OS output buffer."
+                : l.pendingRestart
+                  ? "🔄 Saved — buffer profile applies on next launch (no audio restart needed)."
+                  : "🔹 Real latency = base buffer + OS output buffer."
             }</span>
           </div>
         </div>
