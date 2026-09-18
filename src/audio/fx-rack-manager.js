@@ -268,6 +268,7 @@ export class FxRackManager {
     this.delay?.flush();
     this.delay?.setMix(0);
     this.slapback?.setMix(0);  // slapback has no feedback param (zero-feedback by design)
+    this.dubEcho?.flush();
     this.dubEcho?.setFeedback(0);
     this.dubEcho?.setMix(0);
 

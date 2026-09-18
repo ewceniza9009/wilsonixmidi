@@ -707,6 +707,7 @@ export class MultiLayerEngine {
 
     this.onNoteChangeCallback = null;
     this.onPanicCallback = null;
+    this._panicHooks = new Set();
 
     this.onLayerChangeCallback = null;
     this.layerChangeListeners = new Set();
@@ -1979,46 +1980,88 @@ export class MultiLayerEngine {
     }
   }
 
+  registerPanicHook(fn) {
+    if (typeof fn === "function") {
+      this._panicHooks.add(fn);
+      return () => this._panicHooks.delete(fn);
+    }
+    return () => {};
+  }
+
+  unregisterPanicHook(fn) {
+    this._panicHooks.delete(fn);
+  }
+
   setModWheel(amount) {
     if (!this.pcmEngine) this.init();
     if (this.pcmEngine) this.pcmEngine.setModWheel(amount);
+    synthEngine.setModWheel(amount);
   }
 
   panic() {
     this.activeLeadNotes = 0;
     this.setSustainPedal(false);
+    this.setPitchBend(0);
+    this.setModWheel(0);
 
+    // 1. Notify all registered panic hooks (demo player, looper, schedulers, groove, etc.)
+    if (this._panicHooks) {
+      this._panicHooks.forEach((hook) => {
+        try { hook(); } catch (e) {}
+      });
+    }
     if (this.onPanicCallback) {
       try { this.onPanicCallback(); } catch (e) {}
     }
+    if (typeof window !== "undefined") {
+      try {
+        window.dispatchEvent(new CustomEvent("wilsonix:panic"));
+      } catch (e) {}
+    }
+
+    // 2. Clear visual note styling for all active keys
     if (this.onNoteChangeCallback) {
-      this.heldNotes.forEach(note => {
+      this.heldNotes.forEach((note) => {
         try { this.onNoteChangeCallback(note, false, 0); } catch (e) {}
       });
     }
 
+    // 3. Silence all PCM engine voices & stop SFX generator
     if (this.pcmEngine) {
-      this.pcmEngine.allNotesOff();
+      this.pcmEngine.allNotesOff(false);
+      if (this.pcmEngine.sfxGenerator && typeof this.pcmEngine.sfxGenerator.stopAll === "function") {
+        try { this.pcmEngine.sfxGenerator.stopAll(); } catch (e) {}
+      }
+      this.pcmEngine.pitchBendSemitones = 0;
+      this.pcmEngine.modWheelAmount = 0;
     }
+
+    // 4. Silence all synth & VA voices
+    synthEngine.panic();
     tritonVaEngine.allNotesOff();
     this.vaAllNotesOff();
     if (this._workletReady && this._workletNode) this._workletNode.allNotesOff();
     this._clearHeldNoteState();
 
+    // 5. Instantly kill all FX Rack tails, delays, reverbs, and feedback loops
     if (audioCore.fxRack) {
       try {
-        if (audioCore.fxRack.delay) audioCore.fxRack.delay.setBypass(true);
-        if (audioCore.fxRack.dubEcho) audioCore.fxRack.dubEcho.setBypass(true);
-        if (audioCore.fxRack.slapback) audioCore.fxRack.slapback.setBypass(true);
-        if (audioCore.fxRack.springReverb) audioCore.fxRack.springReverb.setBypass(true);
-        if (audioCore.fxRack.reverb) audioCore.fxRack.reverb.setBypass(true);
-        if (audioCore.fxRack.shimmerReverb) audioCore.fxRack.shimmerReverb.setBypass(true);
-        if (audioCore.fxRack.gatedReverb) audioCore.fxRack.gatedReverb.setBypass(true);
-        if (audioCore.fxRack.talkbox) audioCore.fxRack.talkbox.setBypass(true);
+        audioCore.fxRack.muteOutput();
+        audioCore.fxRack.resetAllEffects();
+        if (audioCore.fxRack._chainEffects) {
+          audioCore.fxRack._chainEffects.forEach((fx) => {
+            try { fx.setBypass(true); } catch (e) {}
+          });
+        }
+        setTimeout(() => {
+          try { audioCore.fxRack.unmuteOutput(); } catch (e) {}
+        }, 35);
       } catch (e) {}
     }
+
+    // 6. Recover audio graph if context crashed
     if (audioCore.recoverAudioGraph) {
-      audioCore.recoverAudioGraph();
+      try { audioCore.recoverAudioGraph(); } catch (e) {}
     }
   }
 

@@ -877,6 +877,17 @@ export class VirtualKeyboardUI {
     panicBtn?.addEventListener("click", triggerPanic);
     panicBtn?.addEventListener("touchstart", triggerPanic, { passive: false });
 
+    window.addEventListener("wilsonix:panic", () => {
+      this.activeTouches.clear();
+      this.activeMouseChord = null;
+      this.keyStates.fill(0);
+      for (const el of this.keyElements.values()) {
+        el.classList.remove("active");
+      }
+      qwertyKeyboard.sustainLatched = false;
+      this.updateHudState();
+    });
+
     const tabletHelpBtn = document.getElementById("btn-tablet-multitouch-help");
     tabletHelpBtn?.addEventListener("click", () => {
       alert(

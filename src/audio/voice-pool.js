@@ -255,7 +255,7 @@ export class PolyphonicVoice {
           this.isBusy = false;
           this.activeMidiNote = null;
         }
-      }, (fadeSec + 0.04) * 1000);
+      }, (rel * 1000) + 40);
     } catch (e) {}
   }
 
@@ -268,13 +268,12 @@ export class PolyphonicVoice {
     this.activeMidiNote = null;
     try {
       this.voiceGain.gain.cancelScheduledValues(now);
-      this.voiceGain.gain.setValueAtTime(this.voiceGain.gain.value || 0.0, now);
-      this.voiceGain.gain.setTargetAtTime(0.0, now, 0.03);
+      this.voiceGain.gain.setValueAtTime(0.0, now);
     } catch (e) {}
     setTimeout(() => {
       if (gen !== this._gen) return;
       this.isBusy = false;
-    }, 80);
+    }, 40);
   }
 
   // Permanently silence this voice's oscillators. Only safe for pools whose

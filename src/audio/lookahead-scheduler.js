@@ -131,3 +131,10 @@ export class LookaheadScheduler {
 }
 
 export const noteScheduler = new LookaheadScheduler();
+
+if (typeof multiLayerEngine?.registerPanicHook === "function") {
+  multiLayerEngine.registerPanicHook(() => {
+    noteScheduler.stop();
+    noteScheduler.clear();
+  });
+}

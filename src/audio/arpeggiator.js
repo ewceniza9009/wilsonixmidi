@@ -281,3 +281,10 @@ export class Arpeggiator {
 }
 
 export const arpeggiator = new Arpeggiator();
+
+if (typeof multiLayerEngine?.registerPanicHook === "function") {
+  multiLayerEngine.registerPanicHook(() => arpeggiator.stop());
+}
+if (typeof window !== "undefined") {
+  window.addEventListener("wilsonix:panic", () => arpeggiator.stop());
+}

@@ -1,33 +1,44 @@
-# Upload release assets directly via curl.exe for high-speed streaming
+# Upload release assets directly via curl.exe for high-speed streaming with reliable clobber
+$ErrorActionPreference = "Stop"
+
 $token = (gh auth token).Trim()
 $releaseId = (gh api repos/ewceniza9009/wilsonixmidi/releases/tags/v2.0.3 --jq ".id").Trim()
 
-Write-Host "Uploading to Release ID: $releaseId" -ForegroundColor Cyan
+Write-Host "Target GitHub Release ID: $releaseId (v2.0.3)" -ForegroundColor Cyan
+
+function Upload-AssetWithClobber($filePath, $assetName, $contentType) {
+    if (-not (Test-Path $filePath)) {
+        Write-Warning "File not found: $filePath"
+        return
+    }
+
+    # Clobber: query all assets via GitHub API, delete matching asset ID if it exists
+    $allAssets = gh api "repos/ewceniza9009/wilsonixmidi/releases/$releaseId/assets" | ConvertFrom-Json
+    $existing = $allAssets | Where-Object { $_.name -eq $assetName }
+    if ($existing) {
+        Write-Host "Clobbering existing asset: $($existing.name) (ID: $($existing.id))..." -ForegroundColor Magenta
+        gh api -X DELETE "repos/ewceniza9009/wilsonixmidi/releases/assets/$($existing.id)" | Out-Null
+        Start-Sleep -Seconds 2
+    }
+
+    $fileSize = [math]::Round((Get-Item $filePath).Length / 1MB, 1)
+    Write-Host "`n>>> Uploading $assetName ($fileSize MB) via high-speed curl..." -ForegroundColor Yellow
+    $url = "https://uploads.github.com/repos/ewceniza9009/wilsonixmidi/releases/$releaseId/assets?name=$assetName"
+
+    & curl.exe --progress-bar -X POST `
+        -H "Authorization: Bearer $token" `
+        -H "Content-Type: $contentType" `
+        --data-binary "@$filePath" `
+        $url
+
+    Write-Host "`nFinished upload for $assetName!" -ForegroundColor Green
+}
 
 # 1. APK
-$apkPath = "dist-apk/wilsonix-midikey.apk"
-if (Test-Path $apkPath) {
-    $apkSize = [math]::Round((Get-Item $apkPath).Length / 1MB, 1)
-    Write-Host "`n>>> Uploading wilsonix-midikey.apk ($apkSize MB)..." -ForegroundColor Yellow
-    & curl.exe --progress-bar -X POST `
-        -H "Authorization: Bearer $token" `
-        -H "Content-Type: application/vnd.android.package-archive" `
-        --data-binary "@$apkPath" `
-        "https://uploads.github.com/repos/ewceniza9009/wilsonixmidi/releases/$releaseId/assets?name=wilsonix-midikey.apk"
-    Write-Host "`nAPK upload completed!" -ForegroundColor Green
-}
+Upload-AssetWithClobber "dist-apk/wilsonix-midikey.apk" "wilsonix-midikey.apk" "application/vnd.android.package-archive"
 
 # 2. Windows Installer
-$exePath = "dist-installer/WILSONIX.MIDIKEY_2.0.3_x64-setup.exe"
-if (Test-Path $exePath) {
-    $exeSize = [math]::Round((Get-Item $exePath).Length / 1MB, 1)
-    Write-Host "`n>>> Uploading WILSONIX.MIDIKEY_2.0.3_x64-setup.exe ($exeSize MB)..." -ForegroundColor Yellow
-    & curl.exe --progress-bar -X POST `
-        -H "Authorization: Bearer $token" `
-        -H "Content-Type: application/octet-stream" `
-        --data-binary "@$exePath" `
-        "https://uploads.github.com/repos/ewceniza9009/wilsonixmidi/releases/$releaseId/assets?name=WILSONIX.MIDIKEY_2.0.3_x64-setup.exe"
-    Write-Host "`nWindows Installer upload completed!" -ForegroundColor Green
-}
+Upload-AssetWithClobber "dist-installer/WILSONIX.MIDIKEY_2.0.3_x64-setup.exe" "WILSONIX.MIDIKEY_2.0.3_x64-setup.exe" "application/octet-stream"
 
-Write-Host "`nAll release assets successfully attached to GitHub Release v2.0.3!" -ForegroundColor Cyan
+Write-Host "`nVerifying release assets on GitHub..." -ForegroundColor Cyan
+gh release view v2.0.3

@@ -622,3 +622,8 @@ export class SampleGroovePlayer {
 
 export const sampleGroovePlayer = new SampleGroovePlayer();
 
+if (typeof window !== "undefined") {
+  window.addEventListener("wilsonix:panic", () => {
+    sampleGroovePlayer.stop();
+  });
+}

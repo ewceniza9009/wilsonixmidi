@@ -108,6 +108,16 @@ export class DubSpaceEcho {
     this.delayNode.delayTime.setTargetAtTime(this.time, this.ctx.currentTime, 0.05);
   }
 
+  flush() {
+    const now = this.ctx.currentTime;
+    try {
+      this.feedbackGain.gain.cancelScheduledValues(now);
+      this.feedbackGain.gain.setValueAtTime(0, now);
+      this.wetGain.gain.cancelScheduledValues(now);
+      this.wetGain.gain.setValueAtTime(0, now);
+    } catch (e) {}
+  }
+
   setBpmSync(bpm, division = 0.375) {
     this.bpm = bpm;
     const beatSec = 60 / bpm;

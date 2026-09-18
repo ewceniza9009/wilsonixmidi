@@ -3544,21 +3544,25 @@ export class NativePcmEngine {
         return; // Retain active playing looper voice!
       }
       try {
-        if (v.src) v.src.onended = null;
+        if (v.src) {
+          v.src.onended = null;
+          v.src.loop = false; // Break infinite sample loops immediately!
+        }
         if (v.voiceGain) {
           v.voiceGain.gain.cancelScheduledValues(now);
-          v.voiceGain.gain.setValueAtTime(v.voiceGain.gain.value || 0.0, now);
-          v.voiceGain.gain.setTargetAtTime(0.0, now, 0.02);
+          v.voiceGain.gain.setValueAtTime(0.0, now);
         }
-        if (v.src) v.src.stop(now + 0.08);
+        if (v.src) {
+          try { v.src.stop(now + 0.02); } catch (e) {}
+        }
         if (v.vibLfo) {
           try {
-            v.vibLfo.stop(now + 0.1);
+            v.vibLfo.stop(now + 0.05);
           } catch (e) {}
         }
         if (v.growlLfo) {
           try {
-            v.growlLfo.stop(now + 0.1);
+            v.growlLfo.stop(now + 0.05);
           } catch (e) {}
         }
         setTimeout(() => {
@@ -3613,6 +3617,7 @@ export class NativePcmEngine {
     if (this.layerInserts) {
       this.layerInserts.forEach((ins) => {
         try {
+          ins.setSustain(false);
           ins.flush();
         } catch (e) {}
       });
@@ -3620,6 +3625,7 @@ export class NativePcmEngine {
     if (this.splitZoneInserts) {
       Object.values(this.splitZoneInserts).forEach((ins) => {
         try {
+          ins.setSustain(false);
           ins.flush();
         } catch (e) {}
       });
@@ -3628,6 +3634,7 @@ export class NativePcmEngine {
       this.looperInserts.forEach((trackBuses) => {
         trackBuses.forEach((ins) => {
           try {
+            ins.setSustain(false);
             ins.flush();
           } catch (e) {}
         });

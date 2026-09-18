@@ -208,6 +208,13 @@ export class ChordPadsUI {
 
     this.render();
     this.bindEvents();
+
+    if (typeof multiLayerEngine?.registerPanicHook === "function") {
+      multiLayerEngine.registerPanicHook(() => this.releaseAllChords(true));
+    }
+    if (typeof window !== "undefined") {
+      window.addEventListener("wilsonix:panic", () => this.releaseAllChords(true));
+    }
   }
 
   render() {

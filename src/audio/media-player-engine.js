@@ -490,3 +490,9 @@ export class MediaPlayerEngine {
 }
 
 export const mediaPlayer = new MediaPlayerEngine();
+
+if (typeof window !== "undefined") {
+  window.addEventListener("wilsonix:panic", () => {
+    mediaPlayer.pause();
+  });
+}

@@ -70,6 +70,29 @@ export class GroovePlayerUI {
     this.render();
     this.bindEvents();
     this.setupGrooveCallbacks();
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("wilsonix:panic", () => {
+        this.stopAll();
+      });
+    }
+  }
+
+  stopAll() {
+    if (this.groovePlayer && this.groovePlayer.isPlaying) {
+      this.groovePlayer.stop();
+      this.updatePlayState();
+    }
+    if (this.activeBloomSources) {
+      this.activeBloomSources.forEach((src, id) => {
+        try { src.stop(); src.disconnect(); } catch (e) {}
+        this.updatePadPlayingState(id, false);
+      });
+      this.activeBloomSources.clear();
+    }
+    if (this.sfxGen && typeof this.sfxGen.stopAll === "function") {
+      try { this.sfxGen.stopAll(); } catch (e) {}
+    }
   }
 
   initSfx() {

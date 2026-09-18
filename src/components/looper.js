@@ -43,6 +43,13 @@ export class ClipLooper {
     this.render();
     this.bindEvents();
     this.hookSynthEngine();
+
+    if (typeof multiLayerEngine?.registerPanicHook === "function") {
+      multiLayerEngine.registerPanicHook(() => this.stopAllPlayback());
+    }
+    if (typeof window !== "undefined") {
+      window.addEventListener("wilsonix:panic", () => this.stopAllPlayback());
+    }
   }
 
   _blankTrack(id) {
@@ -750,5 +757,19 @@ export class ClipLooper {
     track.preset = null;
     track.state = "empty";
     this.updateTrackUi(trackId);
+  }
+
+  stopAllPlayback() {
+    this._stopCountInClicks();
+    if (this.recordingTrackId !== null) {
+      this.stopRecording(this.recordingTrackId);
+    }
+    this.tracks.forEach((track, idx) => {
+      if (track.state === "playing" || track.state === "counting" || track.state === "recording") {
+        this.stopPlayback(idx);
+        track.state = track.events.length > 0 ? "stopped" : "empty";
+        this.updateTrackUi(idx);
+      }
+    });
   }
 }

@@ -26,6 +26,13 @@ export class DemoStationUI {
     this.render();
     this.renderList();
     this.bindEvents();
+
+    if (typeof multiLayerEngine?.registerPanicHook === "function") {
+      multiLayerEngine.registerPanicHook(() => this.stop(false));
+    }
+    if (typeof window !== "undefined") {
+      window.addEventListener("wilsonix:panic", () => this.stop(false));
+    }
   }
 
   loadCustomSongs() {
@@ -337,32 +344,42 @@ export class DemoStationUI {
     this.updateProgress(song.id, 0, song.durationMs);
   }
 
-  stop() {
-    this.isPlaying = false;
-    this.clearTimers();
-    if (this.currentSong) {
-      noteScheduler.discard("demo-" + this.currentSong);
-    }
-    if (this.progressInterval) {
-      clearInterval(this.progressInterval);
-      this.progressInterval = null;
-    }
-
-    for (const note of this.activeMidiNotes) {
-      try {
-        multiLayerEngine.noteOff(note);
-      } catch (e) {}
-      this.emitKeyVisual([note], false, 0);
-    }
-    this.activeMidiNotes.clear();
+  stop(triggerEnginePanic = true) {
+    if (this._isStopping) return;
+    this._isStopping = true;
     try {
-      multiLayerEngine.setSustainPedal(false);
-      multiLayerEngine.panic();
-    } catch (e) {}
+      this.isPlaying = false;
+      this.clearTimers();
+      if (this.currentSong) {
+        noteScheduler.discard("demo-" + this.currentSong);
+      }
+      if (this.progressInterval) {
+        clearInterval(this.progressInterval);
+        this.progressInterval = null;
+      }
 
-    this.updateButtons();
-    if (this.currentSong) {
-      this.updateProgress(this.currentSong, 0, 30000);
+      for (const note of this.activeMidiNotes) {
+        try {
+          multiLayerEngine.noteOff(note);
+        } catch (e) {}
+        this.emitKeyVisual([note], false, 0);
+      }
+      this.activeMidiNotes.clear();
+      this.emitKeyVisual([], false, 0);
+
+      if (triggerEnginePanic) {
+        try {
+          multiLayerEngine.setSustainPedal(false);
+          multiLayerEngine.panic();
+        } catch (e) {}
+      }
+
+      this.updateButtons();
+      if (this.currentSong) {
+        this.updateProgress(this.currentSong, 0, 30000);
+      }
+    } finally {
+      this._isStopping = false;
     }
   }
 
