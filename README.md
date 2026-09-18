@@ -1,22 +1,20 @@
 # WILSONIX MIDIKEY 🎹✨
 
 > **Professional Zero-Latency Live Performance Digital Audio Workstation, Hybrid Rompler & Synthesizer**  
-> _Engineered for high-pressure live stage gigs, church worship, recording studios, and mobile performance across Windows Desktop and Android._
-
-[![Platform: Windows](<https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011%20(x64)-0078D6?style=for-the-badge&logo=windows>)](https://github.com/ewceniza9009/wilsonixmidi/releases)
+> _Engineered for high-pressure live stage gigs, church worship, recording studios, and mobile performance across Windows Desktop and Androi[![Platform: Windows](<https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011%20(x64)-0078D6?style=for-the-badge&logo=windows>)](https://github.com/ewceniza9009/wilsonixmidi/releases)
 [![Platform: Android](https://img.shields.io/badge/Platform-Android%208.0%2B%20%7C%20ARM64-3DDC84?style=for-the-badge&logo=android)](https://github.com/ewceniza9009/wilsonixmidi/releases)
 [![Audio: Web Audio API](https://img.shields.io/badge/Audio-Direct%20PCM%20%2B%20VA%20Engine-FF6F00?style=for-the-badge&logo=audio)](https://github.com/ewceniza9009/wilsonixmidi)
 [![Framework: Tauri v2 + Vite](https://img.shields.io/badge/Framework-Tauri%20v2%20%7C%20Rust-673AB7?style=for-the-badge)](https://tauri.app/)
 [![License: Proprietary](https://img.shields.io/badge/License-WILSONIX%20Commercial-red?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi)
-[![Version: v2.0.3](https://img.shields.io/badge/Version-v2.0.3%20Build%2022%20Production-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
+[![Version: v2.1.0](https://img.shields.io/badge/Version-v2.1.0%20Build%2023%20Production-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
 
 ---
 
-## 🚀 Official Production Downloads (v2.0.3 Build 22 Latest Release)
+## 🚀 Official Production Downloads (v2.1.0 Build 23 Latest Release)
 
 | Package / Distribution        | Target Operating System           |  Architecture  |                                                             Direct Download Link                                                              |
 | :---------------------------- | :-------------------------------- | :------------: | :-------------------------------------------------------------------------------------------------------------------------------------------: |
-| **Windows Desktop Installer** | Windows 10 / 11                   |      x64       | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX.MIDIKEY_2.0.3_x64-setup.exe) |
+| **Windows Desktop Installer** | Windows 10 / 11                   |      x64       | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX.MIDIKEY_2.1.0_x64-setup.exe) |
 | **Android Package (APK)**     | Android 8.0+ (Oreo to Android 15) | ARM64 / x86_64 |        [⬇️ Download Android APK (`.apk`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/wilsonix-midikey.apk)         |
 
 _Official binaries and checksums are verified and hosted on the [GitHub Releases page](https://github.com/ewceniza9009/wilsonixmidi/releases)._
@@ -26,38 +24,83 @@ _Official binaries and checksums are verified and hosted on the [GitHub Releases
 ## ✨ Key Features at a Glance
 
 - 🎹 **Hybrid Dual-Core Sound Engine** — Direct multi-layer PCM Rompler, dual-oscillator Virtual Analog subtractive synth (TVA/TVF, hard-sync leads), and physical-modeling brass, reeds, drums & percussion, engineered for zero-latency live performance.
+- 🔌 **Web MIDI OUT & Master Clock Forwarding** — Turn WILSONIX MIDIKEY into a master stage controller. Multi-port simultaneous output routing, channel assignment (Ch 1–16), and master MIDI Clock pulse transmission synced to live tap tempo.
+- 🎛️ **Elite TouchView Tablet UI** — Balanced 3-column workstation cockpit with centered workspace tabs, high-precision master studio fader with live dB readout, and enlarged tactile Rig Bank/Slot keypads optimized for Android touchscreens.
 - 🎚️ **4-Timbre Combi Stacking** — Stack up to four layers with per-layer volume, pan, octave, semitone and velocity control, plus a dual-zone split console with dynamic split point selection.
-- 🎛️ **23-Device Hardware Master FX Rack** — Optical compressor, auto-wah, talkbox formant filter, tube drive, bitcrusher, vinyl lo-fi tape, Haas stereo widener, auto-pan, 6-stage phaser, flanger, Dimension-D chorus, Leslie rotary, tremolo, slapback, dub echo, ping-pong delay, spring/shimmer/gated/algorithmic reverb, tape saturation, and a master EQ-limiter — plus 22 Triton IFX/MFX algorithms and 35 per-layer insert FX for 80+ named algorithm choices.
-- 🎧 **Binaural Stage Monitor — 3D Spatial Audio** — HRTF-based 3D spatialization for in-ear headphones. Simulates concert hall, studio, stadium, intimate club, and cathedral environments using synthetic room impulse responses. Zero-latency head tracking with real-time source positioning.
-- 🥁 **Physical-Modeling Drums & Percussion** — Acoustic kick, wood-shell snare, bronze hi-hats, and chromatically tuned Latin percussion (cowbell, cascara timbales, congas) with true zero-latency strike response.
-- 💾 **Stage Registration Memory (32 Rigs)** — 4 Banks × 8 Slots with `F1`–`F8` instant recall, full live-state snapshots, and schema-validated JSON setlist import/export.
-- 🎹 **12-Pad MPC Chord Matrix & Scale Engine** — One-touch Jazz, Gospel, Neo-Soul and Pop voicings (24-chord learn bank, 11 genre banks) with a quantizing scale/key lock engine.
+- 🎛️ **23-Device Hardware Master FX Rack** — Optical compressor, auto-wah, talkbox formant filter, tube drive, bitcrusher, vinyl lo-fi tape, Haas stereo widener, auto-pan, 6-stage phaser, flanger, Dimension-D chorus, Leslie rotary, tremolo, slapback, dub echo, ping-pong delay, spring/shimmer/gated/algorithmic reverb, tape saturation, and a master EQ-limiter.
+- 🎧 **Binaural Stage Monitor — 3D Spatial Audio** — HRTF-based 3D spatialization for in-ear headphones simulating concert hall, studio, stadium, and cathedral acoustic environments.
+- 🥁 **Physical-Modeling Drums & Percussion** — Acoustic kick, wood-shell snare, bronze hi-hats, and chromatically tuned Latin percussion with zero-latency response.
+- 💾 **Stage Registration Memory (32 Rigs)** — 4 Banks × 8 Slots with instant recall, full live-state snapshots, and schema-validated JSON setlist import/export.
+- 🎹 **12-Pad MPC Chord Matrix & Scale Engine** — One-touch Jazz, Gospel, Neo-Soul and Pop voicings with quantizing scale/key lock.
 - 🔁 **Clock-Anchored Arpeggiator & Multi-Track Looper** — Web Audio look-ahead scheduling keeps tempo rock-solid under heavy stage load.
-- 🎹 **Standard MIDI File Import** — Drag-and-drop `.mid`/`.midi` demo playback with tempo, velocity, and duration parsing plus a dedicated playback volume and persistent custom song library.
-- ⏱️ **Held-Note Max-Sustain Limiter** — Auto-resets runaway held notes (2–60s configurable ceiling) silently in the audio engine to stop drone notes and stuck sustains mid-gig.
-- 🎙️ **Lossless WAV Master Recorder + Media Player** — Pre-DAC waveform capture with a zero-gain monitor sink; MP3/WAV/FLAC/OGG/M4A/AAC backing-track deck with playlist support.
-- 📊 **Hardware HUD & Diagnostics** — 60 FPS VU metering, real-time latency/CPU profiling, panic reset, and an 8-second pre-DAC waveform diagnostic tap.
-- 🔒 **Crypto-Hardened Security & Licensing** — ECDSA P-256 signature verification with hardware machine binding, strict CSP, and boot-time re-validation of stored licenses.
-
-_For the full deep-dive, see the [Master Feature Catalog](#-master-feature-catalog--core-capabilities) below._
+- 🎙️ **Lossless WAV Master Recorder + Media Player** — Pre-DAC waveform capture with a zero-gain monitor sink; MP3/WAV/FLAC/OGG/M4A/AAC backing-track deck.
+- 🔒 **Crypto-Hardened Security & Licensing** — ECDSA P-256 signature verification with hardware machine binding, strict CSP, and boot-time license validation.
 
 ---
 
-## 📑 Granular Changelog & Release Notes (v2.0.3 • Build 22)
+## 📑 Granular Changelog & Release Notes (v2.1.0 • Build 23)
+
+### 1. 🎛️ Elite TouchView Tablet UI & Stage Tools Shelf Redesign
+- **Balanced 3-Column Cockpit**: Restructured the top HUD bar into a balanced 3-column layout:
+  - **Left**: Brand logo (`WILSONIX PRO`) and Master Sound Cockpit with cyan border glow, category icon, and interactive patch selector.
+  - **Center**: Complete Workspace Navigation Engine (`MAIN`, `COMBI`, `SPLIT`, `FX`, `CHORDS`, `GROOVES`, `DEMO`, `PLAYER`) anchored in center stage. Fully visible across tablet viewports with **zero central void**.
+  - **Right**: Master Output Console + Quick Action toggles (`🎹 KEYS`, `▲ TOOLS`, `⛶ Fullscreen`).
+- **Master Studio Volume Console**: Replaced the compact volume slider with a full-sized studio fader (75–80px) and permanent, high-contrast amber readout (`50%` / dB level).
+- **Full-Width Balanced Stage Shelf**: Configured `.tools-drawer-inner` with `justify-content: space-between`, distributing Rig Snapshots, Dual-Layer & Ducker, Recorder & Arp, and Live Telemetry across the entire width with zero dead space on the right.
+- **Android Touch Optimization**:
+  - Enlarged Rig Bank buttons (`A`, `B`, `C`, `D`) to `min-width: 34–36px; height: 30–32px; font-weight: 900;`.
+  - Enlarged Rig Slot buttons (`1` to `8`) to `width: 30–32px; height: 30–32px; font-weight: 800;`.
+  - Removed overlapping coarse-pointer `::after` pseudo-elements that blocked touches between adjacent keys.
+  - Added debounced `pointerdown` listeners and `touch-action: manipulation` for 0ms tap latency on Android tablets.
+
+### 2. 🔌 Web MIDI OUT & Master Clock Synchronization
+- **External Hardware Control**: Forward live note-ons, note-offs, pitch bend, and control change (CC) events to connected USB/Bluetooth MIDI synthesizers, sound modules, and hardware workstations.
+- **Multi-Port Routing**: Supports transmitting to multiple MIDI output ports simultaneously or single designated ports with configurable MIDI channel routing (Ch 1–16).
+- **Master MIDI Clock Generator**: Transmits standard 24 PPQ MIDI Clock pulses, Start, and Stop messages locked to the live tap tempo BPM engine.
+- **Integrated Hardware Popover**: Dedicated "MIDI OUT & SYNC" section inside the Latency & Buffer Control popover with live port selection, channel selector, clock toggle, and port status display.
+
+### 3. 🔒 Core Engine Safety, Hardening & Memory Architecture (Fix Plan Implementation)
+- **Voice-Stealing Timer Fix (P0.1)**: Replaced undefined `fadeSec` variable timer with `(rel * 1000) + 40ms`, eliminating voice-stealing tail snaps and release clicks during heavy polyphonic playing.
+- **Stored XSS Sanitization (P0.2 & P0.3)**: Sanitized and escaped all imported MIDI song titles, subtitles, and Rig slot names against attribute-injection and stored XSS vectors.
+- **Production Content Security Policy (P0.4 & P0.5)**: Hardened CSP across Tauri, Android WebView, and web bundles: removed `unsafe-eval` while preserving `blob:` worklet execution.
+- **IPC & Audio Thread Cleanup (P0.6)**: Gated dead worklet visual IPC messages, eliminating redundant main-thread garbage collection and cross-thread traffic.
+- **Space-Key Conflict Fix (P0.7)**: Scoped spacebar play/pause strictly to the active media player view, preventing backing tracks from toggling when holding piano sustain.
+- **State Synchronization & Error Surfacing (P0.8 & P0.9)**: Synchronized fullscreen state on Esc/F11 via `fullscreenchange`; wired unhandled rejection and error toasts for visible diagnostics.
+- **Mobile Hardware Integration (P0.12, P0.13, P0.14)**:
+  - Android hardware Back button closes active modals/drawers first before exiting.
+  - Screen Wake Lock API prevents display sleep and audio suspension during live performances.
+  - Capacitor Filesystem downloads enable lossless WAV recording, diagnostic dumps, and setlist exports on Android.
+- **Offline Self-Hosted Fonts (P0.15)**: Bundled Inter and JetBrains Mono fonts locally, removing external Google Fonts dependencies for true offline stage reliability.
+- **Sidechain Pump Ceiling (P0.16)**: Clamped pump swing to `0.5 ± 0.5`, preventing master limiter clipping and distortion.
+- **Memory Architecture & Code-Splitting (P1.1, P1.3, P1.4, P1.7)**:
+  - Code-split embedded PCM data with dynamic imports and idle chunking.
+  - Deduplicated loop buffers per instrument ID, slashing RAM usage on loopable sounds by ~50%.
+  - Added LRU caching with memory budgeting for decoded AudioBuffers.
+- **Preset Sound-Design & Re-Voicing (Phase S)**:
+  - Routed A013 ("Piano Pad 2"), A018 ("Icy Piano Pad"), and A036 ("Acoustic Piano") through distinct Virtual Analog oscillator paths.
+  - Re-voiced A023 Old VOX Legend organ chain with authentic tube drive, chorus, and tight reverb.
+  - Automatic stereo centering for imbalanced panned-mono samples (e.g., Korg alto sax).
+  - Re-voiced A030 Trombone Hard to punchy VA saw brass.
+- **PWA Service Worker v2 (P3.5)**:
+  - Resolved `Response body is already used` clone error by cloning synchronously prior to body streaming.
+  - Added 200 OK status validation and quota error handlers.
+  - Upgraded cache namespace to `wilsonix-midikey-v2`.
+
+---
+
+## 📑 Prior Release Notes (v2.0.3 • Build 22)
 
 ### 1. 🎚️ Universal Equal Volume & Loudness Normalization Across ALL Presets
-
 - **Hardware-Accurate Trim Gain Matrix**: Calibrated empirical trim gains across all soundbank categories in `native-pcm-engine.js`: Stickz Bloom EDM (`0.50–0.55`), Stickz Animal EDM (`0.50–0.65`), Abletunes Modern EDM (`0.60–0.68`), Synthesizer You leads (`0.65–0.78`), and SoundFonts (`0.85–1.0`).
 - **Dynamic Category Fallback**: `getInstrumentTrimGain(instId)` automatically applies safe category trims (leads/saws capped at `0.58`, pads at `0.65`, acoustic at `0.90`), guaranteeing newly registered or unlisted soundbanks never blast at raw 1.0 gain.
 - **Psychoacoustic Combi Layer Scaling**: Replaced linear $1/\sum\text{gain}$ with equal-power scaling $\min\left(1.0, \frac{1.35}{\sqrt{\sum\text{gain}}}\right)$ in `multi-layer-engine.js`. Multi-layer Combi stacks now match single-timbre presets within $\pm1.2\text{ dB}$ RMS without squashing.
-- **Transparent Studio AGC & Compressor Rebalancing**: Wired a non-linear studio loudness leveler directly preceding the master EQ in `fx-rack-manager.js` for artifact-free dynamic leveling. Rebalanced Triton workstation compressor auto make-up gain from excessive $+12\text{ dB}$ down to transparent unity restoration ($1.25$–$1.45$).
+- **Transparent Studio AGC & Compressor Rebalancing**: Wired a non-linear studio loudness leveler directly preceding the master EQ in `fx-rack-manager.js` for artifact-free dynamic leveling.
 - **Subtractive Synth Oscillator RMS Matching**: Calibrated square wave oscillators by $0.65$ in `synth-processor.js` and `triton-va-engine.js` to match sawtooth/triangle power density.
 
 ### 2. 🔁 Studio-Grade Pitch-Synchronous Loop Sustain Engine
-
-- **Seamless Infinite Sustain on EDM Leads & Pads**: High-energy EDM samples (Bloom & Animal EDM leads, saws, plucks, and vocal chops) now loop smoothly without audible seams, clicks, or abrupt cutoffs while keys or sustain are held.
+- **Seamless Infinite Sustain on EDM Leads & Pads**: High-energy EDM samples loop smoothly without audible seams, clicks, or abrupt cutoffs while keys or sustain are held.
 - **Autocorrelation & Zero-Crossing Phase Locking**: `sample-loop-helper.js` detects the fundamental frequency period ($\tau$) in the sustain region and locks loop points to rising zero crossings aligned to whole period cycles.
-- **Equal-Power Crossfading**: $\cos/\sin$ crossfade envelope preserves constant RMS power through the turnaround, preventing volume dips or phase cancellation pops.
+- **Equal-Power Crossfading**: $\cos/\sin$ crossfade envelope preserves constant RMS power through the turnaround.$ crossfade envelope preserves constant RMS power through the turnaround, preventing volume dips or phase cancellation pops.
 
 ### 3. ⏱️ Latency Popover Modal Sustain Controls Integration
 
@@ -68,155 +111,6 @@ _For the full deep-dive, see the [Master Feature Catalog](#-master-feature-catal
 
 - **Glissando & Rapid Strum Protection**: Fixed rapid chord pad voice choking and fast keyboard sweeps so note-offs never unlatch `qwertyKeyboard.sustainLatched` or corrupt active sustain states.
 - **Limiter Pumping Prevention**: Eliminated ducking and pumping artifacts on dense 16-voice polyphonic chords.
-
----
-
-## 📑 Prior Release Notes (v2.0.2 • Build 21)
-
-### 1. 🎨 Pro Activation & Access Modal Redesign
-
-- **Glassmorphic Hardware Dialog**: Replaced plain modal with a glassmorphic container featuring gradient borders, backdrop blur, and depth drop-shadows.
-- **Illuminated Status & Hardware ID**: Monospace terminal capsule (`HWID: DEV_...`) with cyan glow and animated copy feedback; pulsing amber/green status LEDs for Evaluation and Pro tiers.
-- **2-Column Feature Comparison**: Replaced raw bullet points with structured standard vs pro feature cards with custom icon badges.
-- **Responsive Stacking**: Seamlessly scales and stacks on mobile/tablets without clipping soft keyboards.
-
-### 2. 🎹 Keyboard Controls HUD Strip Overhaul
-
-- **Unified DAW Hardware Dock**: Replaced mismatched white button boxes with a unified DAW top bar with segmented control bays.
-- **Modular Grouping**: Expression wheels bay, Octave segment (`- OCT` | `C4` | `+ OCT` | `C3-C5`), Scale lock & performance tools, Dynamics & velocity presets (`PP` · `MP` · `MF` · `FF` · `SFZ`), and illuminated Sustain latch LED.
-- **Clean Scale Selectors**: Borderless transparent dropdowns for Root and Scale modes that blend directly into the module pill.
-
-### 3. 🌓 Split Keyboard Console Theme Harmonization
-
-- **Dark Studio Console Integrity**: Scoped `.split-console-view` and `.split-keyboard-console` under `[data-theme="light"]` so all labels, hints, and subtexts retain high-contrast readability (`#cbd5e1` / `#94a3b8`) over dark hardware surfaces.
-- **High-Visibility Controls**: Inset search inputs, effect selectors, and octave buttons (`-12`, `+12`) styled for maximum stage visibility.
-
-### 4. ☀️ Light Theme — Keyboard Deck Strip
-
-- **Full Light-Mode Keyboard HUD**: New `light-app.css` provides complete light-theme coverage for the keyboard deck strip — pitch bend / mod / air wheels, octave mini-picker, velocity accent pills, curve accent strip, hide-keys toggle, and the sustain latch + pedal LED. All styles are 100% scoped to `[data-theme="light"]` with zero runtime cost in dark mode.
-
-### 5. 🔊 Session Clip Looper Volume Control
-
-- **Dedicated Loop Volume Slider**: New **LOOP VOL** fader (10–100%, default 55%) in the looper header lets performers ride the clip playback level under their live preset without affecting the master mix or individual layer gains.
-- **Per-Note Gain Scaling**: The looper gain multiplier is applied at the note-scheduling layer (`L.gain * this.looperGain`), keeping the audio worklet sample loop untouched for zero added latency.
-
-### 6. 🎛️ New Live SFX Instruments
-
-- **⚡ Sound System Laser Zap** (`laser_zap`): Punchy electronic laser sweep for DJ transitions and drops.
-- **🎺 Dancehall Stage Airhorn Blast** (`dub_horn`): Classic dancehall/reggae airhorn one-shot for live hype.
-- **💣 Heavy 808 Sub-Boom / Bass Drop** (`sub_boom`): Deep 808-style sub-bass boom for trap and EDM drops.
-- **🌊 White Noise Sweep & Transition Riser** (`noise_riser`): Building white noise riser for tension and transitions.
-
-### 7. 🧹 Codebase Formatting & Hygiene
-
-- **Prettier Standardization**: Applied consistent code formatting across `gig-hud.js` — object literals expanded to multi-line, arrow function parentheses normalized, string quotes standardized to double-quotes. Zero logic changes.
-
----
-
-## 📑 Prior Release Notes (v2.0.1 • Build 20)
-
-### 1. 🔁 Clip Looper Sustain-Playback Fix
-
-- **Sticky Sustain Flag Elimination**: Resolved a critical looper bug where a clip played back with sustain would latch the per-bus `sustainActive` flag onto all 4 buses of that track — meaning any clip subsequently recorded with the damper pedal **up** still played back with sustain. Looper buses now reset to the recorded initial-sustain state at every loop iteration and on playback start/stop, so clips always faithfully reproduce exactly what was played during recording.
-- **Accurate Initial-Sustain Capture**: Recording now reads the real-time pedal state from the correct engine property (`multiLayerEngine.sustainPedalActive`) instead of a dead accessor, ensuring clips recorded with the pedal held down correctly open with sustain.
-
-### 2. 📱 Rig Bank Touch-Size Overhaul (Tablet & Mobile)
-
-- **Bigger Tap Targets**: Rig bank/slot pills grew from ~12–16px to comfortable **34px desktop / 36px tablet** touch targets with proper flex-centering, so performers can hit register recalls reliably on tablets and phones.
-- **Tablet No-Longer-Shrinks**: The ≤1200px media query previously shrank rig buttons with `!important`; it now enforces the roomier 36px sizes instead.
-- **Drawer Height Raised**: The tools drawer expanded height was bumped from 48/44px to **56px** so the larger pills fully fit.
-
----
-
-## 📑 Prior Release Notes (v2.0.0 • Build 19)
-
-### 1. 🎹 MIDI File Import & Smart Demo Station Playback
-
-- **Drag-and-Drop Standard MIDI File Import**: Import `.mid`/`.midi` files directly into the Demo Station — a zero-dependency MIDI parser (`midi-converter-engine.js`) reads Note On/Off, velocity, duration, tempo, and time signatures, converting them into live sequenced playback with correct timing.
-- **Playback Volume Control**: Imported MIDI songs and built-in demos now have a dedicated demo volume fader, letting performers blend backing arrangements against the live keyboard mix.
-- **Custom Song Library Persistence**: Imported MIDI demos are saved to `localStorage` as a personal custom demo collection, reloaded on next launch.
-- **Clean Stage EP Combi (`clean_electric_piano`)**: New signature 4-timbre stack pairing a clean stage electric piano with warm companion layers for polished worship/gospel ballad work.
-
-### 2. 🎚️ Held-Note Auto-Reset & Max-Sustain Limiter
-
-- **Max-Sustain Protection**: Any note held longer than the configurable **Held Note Max** (2–60 seconds, default 15s) is automatically, silently released in the audio engine — eliminating runaway drone notes, hanging sustained pads, and stuck sustains during chaotic live segments.
-- **Per-Note Arsenal Timer**: Each held note arms its own limiter; releasing the key cancels it while the damper pedal continues normally for intentional lyrical sustains.
-- **Fully Audio-Only Reset**: The auto-reset pathway bypasses visuals/midi-out so it never flashes UI or retriggers hardware — just clean silence.
-- **HUD Control**: New **Held Note Max** slider in the Gig HUD to dial the sustain ceiling live.
-
-### 3. 🔊 Master-Bus Buzz/Hiss Elimination
-
-- **Complete Master-Bus Noise Overhaul**: Eliminated persistent buzzing/hissing and high-freq artifacts across the entire chain — master recorder (WAV) sink, lookahead limiter detector, and router/synth sum buses — for a dead-silent rest state and cleaner recordings.
-
-### 4. 🧱 Demo Song Engine Modularization
-
-- **Per-Song Module Split**: The monolithic demo-song bank was refactored into 20 dedicated per-song ES modules under `src/audio/demo-songs/` — dramatically improving maintainability, tree-shaking, and hot-reload speed without changing song content.
-
----
-
-## 📑 Prior Release Notes (v1.1.7 • Build 18)
-
-### 1. 🔁 Champion 4-Track Synchronized Clip Looper & Preset Freezing
-
-- **Per-Track Preset Snapshot & Dedicated Looper Buses**: Freezes the full 4-layer Combi configuration at record time and routes playback through 16 dedicated stereo sub-buses (`looperInserts[trackId][layerSlot]`), allowing live performers to freely switch instruments/presets on the keyboard without altering the sound of playing loops.
-- **Beat-Snapped Loop Seams & Count-In Metronome**: Clean 1-bar count-in audio clicks, automatic beat-length quantization, 30ms seam guard, and orphan note-off filtering for glitch-free loop turnarounds.
-- **Isolated Looper Sustain**: Looper tracks maintain their own independent sustain state without colliding with live damper pedal releases.
-
-### 2. 🎸 New Combi Presets & Sound Staging
-
-- **The Final Countdown** (`final_countdown`): Signature Europe Supersaw Lead + M1 Universe Pad layer.
-- **Europe Ambient** (`europe_ambient`): Celestial M1 Universe Pad with cathedral reverb diffusion.
-- **Synthesizer You Gain Calibration**: Tuned lead layers to 0.85 gain for safe multi-layer chord summing without master limiter squashing.
-
-### 3. 🎛️ DSP Headroom & Effect Filter Optimization
-
-- **`warm_eq` Low Shelf**: Calibrated low-shelf gain to 1.0dB to eliminate sub-bass rumble on heavy chords.
-- **`spring_surf` & `opto_tremolo_16th`**: Refined resonance Q (2.5) and tremolo pulse speed (5.5Hz) for organic vintage acoustic tone.
-
----
-
-## 📑 Prior Release Notes (v1.1.6 • Build 17)
-
-### 1. 🎚️ Expanded Signature 4-Timbre Combi Presets
-
-- **Curated Multi-Genre Sound Stacks**: Added and finely calibrated 7 signature 4-timbre combis:
-  - **Neo-Soul Chill**: Studio DX7 FM Piano + Warm Strings + Celestial Universe Pad + Finger Sub Bass.
-  - **Lo-Fi Study Beats**: Abletunes Felt Upright Piano + Vibraphone + Mellow Upright Bass + Korg M1 Universe Air.
-  - **Lo-Fi Vintage Tape Rhodes**: Vintage Stage Rhodes + Organic Kalimba Bell + Upright Bass + Vinyl String Pad.
-  - **Bossa Nova Sunset**: Abletunes Upright Piano + Acoustic Bass + Vibraphone + Soft Air Pad.
-  - **Acid Jazz Groove**: Dyno FM EP + Resonant Synth Bass + Bright Brass Stabs + Triton Lead.
-  - **Blue Note Trio**: 24-bit Abletunes Upright Grand + Upright Bass + Jazz Organ + Soft Pad.
-  - **Synthesizer You**: 4-Layer Triton Analog Poly Synth stack.
-- **Dynamic Headroom Equalization**: Integrated automated `1 / sqrt(N)` combi scaling and bus pad protection (`0.45`), preventing master limiter clipping on dense multi-voice chords.
-
-### 2. 🎛️ Gig HUD & Preset Ribbon Interactive Integration
-
-- **Direct Ribbon Recall**: Updated the **★ SIGNATURE 4-TIMBRE COMBIS** bank in `gig-hud.js` with instant category indexing and one-touch loading.
-- **Visual Status Feedback**: Instant HUD badge synchronization with active combi layers and split configurations.
-
-### 3. 🎹 Virtual Keyboard Touch Tracking & Hardware Acceleration
-
-- **Smooth 60 FPS Rendering**: Applied CSS hardware-accelerated transforms (`transform: translateZ(0)` and `will-change: transform`) to virtual piano keys.
-- **Multi-Touch Precision**: Retained pointer and touch event maps for fluid, chord-ready performance on Android tablets and touch monitors.
-
-### 4. 🔒 Pro License Manager & Android WebView Robustness
-
-- **Software Hash Fallback**: Resilient device-bound activation key generation even when Android WebView disables WebGL/Canvas fingerprinting.
-- **Null-Safe Setlist Validator**: Seamless loading of external JSON setlist files without crashes from uninitialized or null layer properties.
-
----
-
-## 📑 Prior Release Notes (v1.1.5 • Build 16)
-
-### 1. 🛡️ Robust Setlist Schema & Null-Safety Validation
-
-- **Deep Null-Safety Handling**: Updated `isValidSlot` in `setlist-validation.js` to use loose null checks (`!= null`), safely tolerating explicitly serialized `null` properties in external setlists without rejecting valid configuration snapshots.
-- **Enhanced JSON Compatibility**: Allows seamless interoperability with third-party DAW bank exports and diverse cloud backup representations.
-
-### 2. 🎶 Extended Multi-Genre Demo Song Bank & Live Arrangements
-
-- **High-Energy Funk & Pop Arrangements**: Expanded the interactive Demo Station catalog with rich multi-section songs (including rolled chords, funk stabs, rising brass hits, and dynamic velocity profiling).
-- **Zero-Latency Sequenced Preview**: Demonstrates acoustic Rompler polyphony, physical-modeled brass, and real-time DSP layering under realistic live performance conditions.
 
 ---
 
@@ -470,7 +364,7 @@ npm run lint
 
 # 4. Build Windows Desktop NSIS Setup Installer (.exe)
 npm run build:desktop
-# Output: src-tauri/target/release/bundle/nsis/WILSONIX MIDIKEY_2.0.2_x64-setup.exe
+# Output: src-tauri/target/release/bundle/nsis/WILSONIX MIDIKEY_2.1.0_x64-setup.exe
 
 # 5. Build Android APK (.apk)
 npm run build:apk

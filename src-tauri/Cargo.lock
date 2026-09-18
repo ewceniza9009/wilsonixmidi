@@ -4501,7 +4501,7 @@ dependencies = [
 
 [[package]]
 name = "wilsonix-midikey"
-version = "2.0.3"
+version = "2.1.0"
 dependencies = [
  "rfd",
  "tauri",
