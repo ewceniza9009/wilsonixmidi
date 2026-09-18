@@ -406,7 +406,7 @@ export class MediaPlayerUI {
           <span class="media-pl-name">${this._esc(t.name)}</span>
           <span class="media-pl-meta">${meta.label} · ${fmtTime(t.duration)} · ${fmtSize(t.size)}</span>
         </div>
-        <span class="media-pl-status" title="${t.missing ? (t.placeholder ? "Browser build: re-drop this file to play again" : "File not found on disk") : t.source === "session" ? "Session file (re-add after restart in browser)" : "Saved path"}">${t.missing ? (t.placeholder ? "↪" : "✕") : "✓"}</span>
+        <span class="media-pl-status" title="${t.missing ? (t.placeholder ? "File path is not stored (privacy): re-add this file to play again" : "File not found on disk") : t.source === "session" ? "Session file (re-add after restart in browser)" : "Resolved this session"}">${t.missing ? (t.placeholder ? "↪" : "✕") : "✓"}</span>
         <button class="media-pl-del" data-id="${this._esc(t.id)}" title="Remove">✕</button>
       `;
 
@@ -461,18 +461,26 @@ export class MediaPlayerUI {
     badge.style.borderColor = meta.color;
     status.className =
       "media-np-status " +
-      (track.missing
-        ? "media-np-status-missing"
-        : mediaPlayer.isPlaying
-          ? "media-np-status-playing"
-          : "media-np-status-ready");
-    status.textContent = track.missing
-      ? track.placeholder
-        ? "RE-ADD FILE"
-        : "MISSING FILE"
-      : mediaPlayer.isPlaying
-        ? "PLAYING"
-        : "READY";
+      (mediaPlayer.error
+        ? "media-np-status-error"
+        : mediaPlayer.stalled
+          ? "media-np-status-stalled"
+          : track.missing
+            ? "media-np-status-missing"
+            : mediaPlayer.isPlaying
+              ? "media-np-status-playing"
+              : "media-np-status-ready");
+    status.textContent = mediaPlayer.error
+      ? mediaPlayer.error
+      : mediaPlayer.stalled
+        ? "BUFFERING…"
+        : track.missing
+          ? track.placeholder
+            ? "RE-ADD FILE"
+            : "MISSING FILE"
+          : mediaPlayer.isPlaying
+            ? "PLAYING"
+            : "READY";
   }
 
   _drawStaticWave() {

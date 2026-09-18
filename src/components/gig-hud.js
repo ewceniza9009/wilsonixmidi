@@ -764,6 +764,9 @@ export class GigHudUI {
                     .join("")}
                 </div>
                 <button class="rig-save-btn" id="hud-rig-save-btn" title="Store Current Sound & FX to Active Slot (Shift+F${curSlot})">💾</button>
+                <button class="rig-save-btn" id="hud-setlist-export" title="Export Rigs & Setlist (.mkgig)">⬇️</button>
+                <button class="rig-save-btn" id="hud-setlist-import-btn" title="Import Rigs & Setlist (.mkgig)">⬆️</button>
+                <input type="file" id="hud-setlist-import" accept=".mkgig,application/json,.json" hidden />
               </div>
             </div>
 
@@ -921,6 +924,41 @@ export class GigHudUI {
           });
         }
       });
+
+    // P3.7: Export/Import setlist (.mkgig) — Pro-gated, validated via importSetlist
+    document
+      .getElementById("hud-setlist-export")
+      ?.addEventListener("click", () => {
+        if (!licenseManager.hasProAccess()) {
+          licenseManager.requirePro("Exporting Stage Rigs & Setlist");
+          return;
+        }
+        registrationManager.exportSetlist();
+      });
+
+    const importInput = document.getElementById("hud-setlist-import");
+    document
+      .getElementById("hud-setlist-import-btn")
+      ?.addEventListener("click", () => {
+        if (!licenseManager.hasProAccess()) {
+          licenseManager.requirePro("Importing Stage Rigs & Setlist");
+          return;
+        }
+        importInput?.click();
+      });
+    importInput?.addEventListener("change", async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const text = await file.text();
+      const ok = registrationManager.importSetlist(text);
+      if (ok) {
+        this.render();
+        this.syncSoundDisplay();
+      } else {
+        alert("Invalid .mkgig file — could not import setlist.");
+      }
+      e.target.value = "";
+    });
 
     registrationManager.onRecallCallback = ({ bank, slot, preset }) => {
       bankBtns.forEach((b) =>

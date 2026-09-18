@@ -110,6 +110,21 @@
   -webkit-touch-callout: none;
 }
 
+/* P3.2: Restore text selection on content users legitimately need to copy:
+   machine ID, license key input, status/error text, and form inputs.
+   Piano keys and UI chrome keep user-select:none via the reset above. */
+code#hw-fingerprint-val,
+.fingerprint-box code,
+#license-key-input,
+.activation-msg,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 html, body {
   width: 100%;
   height: auto;

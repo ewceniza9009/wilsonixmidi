@@ -329,6 +329,35 @@ body.mobile-stage-keys .studio-keyboard-deck {
   }
 }
 
+/* P3.3: Ensure every compact HUD control keeps a >=44px usable touch target on
+   coarse pointers WITHOUT enlarging the visual element (the stage deck is fixed
+   height). The ::after overlay extends the tappable region only. */
+@media (hover: none) and (pointer: coarse) {
+  .floating-license-pill,
+  .hud-tools-toggle,
+  .rig-bank-pill,
+  .rig-slot-pill,
+  .rig-save-btn,
+  .hud-btn {
+    position: relative;
+  }
+  .floating-license-pill::after,
+  .hud-tools-toggle::after,
+  .rig-bank-pill::after,
+  .rig-slot-pill::after,
+  .rig-save-btn::after,
+  .hud-btn::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    min-width: var(--touch-target-min);
+    min-height: var(--touch-target-min);
+    transform: translate(-50%, -50%);
+    z-index: 1;
+  }
+}
+
 /* Live Sound Readout Badge (Always shows what sound is playing - Responsive Flexible Width) */
 .hud-live-badge {
   display: flex;

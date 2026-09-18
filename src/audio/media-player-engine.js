@@ -23,6 +23,7 @@ const MIME_BY_EXT = {
 
 let uidCounter = 1;
 const nextUid = () => `mp-${Date.now().toString(36)}-${uidCounter++}`;
+const nextPathKey = () => `pth-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 
 export class MediaPlayerEngine {
   constructor() {
@@ -41,6 +42,11 @@ export class MediaPlayerEngine {
     this._onState = () => {};
     this._onTime = () => {};
     this._loadedMeta = false;
+    this.error = null;
+    this.stalled = false;
+    // P3.6: absolute disk paths exist only in this in-session map, keyed by a
+    // random scoped token. localStorage persists name + token, never the path.
+    this._scopedPaths = new Map();
   }
 
   init() {
@@ -65,6 +71,35 @@ export class MediaPlayerEngine {
       });
     });
     this.audioEl.addEventListener("ended", () => this._handleEnded());
+    this.audioEl.addEventListener("error", () => {
+      const err = this.audioEl.error;
+      if (err) {
+        const codes = {
+          1: "playback aborted",
+          2: "network error while loading",
+          3: "file could not be decoded",
+          4: "source is not supported",
+        };
+        this.error = `MEDIA ERROR — ${codes[err.code] || `code ${err.code}`}`;
+      } else {
+        this.error = "MEDIA ERROR";
+      }
+      this.isPlaying = false;
+      this._onState();
+    });
+    this.audioEl.addEventListener("stalled", () => {
+      this.stalled = true;
+      this._onState();
+    });
+    this.audioEl.addEventListener("playing", () => {
+      this.stalled = false;
+      this._onState();
+    });
+    this.audioEl.addEventListener("loadstart", () => {
+      this.error = null;
+      this.stalled = false;
+      this._onState();
+    });
     this.audioEl.volume = this.volume;
     this.audioEl.playbackRate = this.rate;
 
@@ -164,9 +199,12 @@ export class MediaPlayerEngine {
         const url = URL.createObjectURL(
           new Blob([buf], { type: MIME_BY_EXT[meta.ext] || "audio/mpeg" })
         );
+        const pathKey = nextPathKey();
+        this._scopedPaths.set(pathKey, path);
         track = {
           ...meta,
-          path,
+          pathKey,
+          path: null,
           size: 0,
           duration: 0,
           url,
@@ -183,7 +221,8 @@ export class MediaPlayerEngine {
       } catch (err) {
         track = {
           ...meta,
-          path,
+          pathKey: null,
+          path: null,
           size: 0,
           duration: 0,
           url: null,
@@ -191,7 +230,8 @@ export class MediaPlayerEngine {
           source: "disk",
         };
         if (reuse) {
-          reuse.path = path;
+          reuse.pathKey = null;
+          reuse.path = null;
           reuse.missing = true;
           added.push(reuse);
           continue;
@@ -212,30 +252,36 @@ export class MediaPlayerEngine {
       const stored = JSON.parse(raw);
       if (!Array.isArray(stored)) return;
       for (const item of stored) {
+        const scopedKey = item.pathKey || null;
+        const resolvedPath = scopedKey ? this._scopedPaths.get(scopedKey) || null : null;
         const track = {
           id: nextUid(),
           name: item.name || "Untitled",
           ext: item.ext || "",
           mime: item.mime || "audio/mpeg",
-          path: item.path || null,
+          pathKey: scopedKey,
+          path: null,
           size: item.size || 0,
           duration: item.duration || 0,
           url: null,
           missing: false,
           placeholder: false,
-          source: item.path ? "disk" : "placeholder",
+          source: scopedKey ? "disk" : "placeholder",
         };
-        if (this.isTauri && item.path) {
+        if (this.isTauri && resolvedPath) {
           try {
-            const buf = await this._invoke("read_media", { path: item.path });
+            const buf = await this._invoke("read_media", { path: resolvedPath });
             track.url = URL.createObjectURL(
               new Blob([buf], { type: track.mime })
             );
           } catch {
             track.missing = true;
           }
-        } else if (this.isTauri && !item.path) {
+        } else if (this.isTauri && !resolvedPath) {
+          // Absolute path is never persisted (P3.6). On a fresh session the
+          // scoped token cannot be resolved, so treat as a re-add placeholder.
           track.missing = true;
+          track.placeholder = true;
         } else {
           // Browser / PWA: absolute paths cannot be reopened by a web app.
           // Keep the row as a placeholder so the user can re-drop the file.
@@ -257,7 +303,7 @@ export class MediaPlayerEngine {
         name: t.name,
         ext: t.ext,
         mime: t.mime,
-        path: t.source === "disk" ? t.path : null,
+        pathKey: t.source === "disk" ? t.pathKey : null,
         size: t.size,
         duration: t.duration,
       }));

@@ -293,6 +293,20 @@
   border: 1px solid rgba(248, 113, 113, 0.4);
 }
 
+.media-np-status-error {
+  color: #fca5a5;
+  border: 1px solid rgba(248, 113, 113, 0.7);
+  background: rgba(248, 113, 113, 0.12);
+  box-shadow: 0 0 14px rgba(248, 113, 113, 0.35);
+  animation: media-pulse 0.9s ease-in-out infinite;
+}
+
+.media-np-status-stalled {
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  animation: media-pulse 1s ease-in-out infinite;
+}
+
 @keyframes media-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
