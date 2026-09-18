@@ -1006,6 +1006,12 @@ body.mobile-stage-keys .studio-keyboard-deck {
   background: #141c2b;
 }
 
+#hud-latency-val {
+  min-width: 4.2ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .latency-dot, .midi-indicator {
   width: 5px;
   height: 5px;

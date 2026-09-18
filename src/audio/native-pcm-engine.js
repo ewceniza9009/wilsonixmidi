@@ -2419,8 +2419,11 @@ export class NativePcmEngine {
       this.decodedBuffers.set(instId, new Map());
     const instMap = this.decodedBuffers.get(instId);
     const ctx = this.ctx;
-    const anchorPromises = Object.entries(instData.anchors).map(
-      async ([midiStr, anchor]) => {
+    const anchors = Object.entries(instData.anchors);
+    const BATCH_SIZE = 3; // Decode 3 anchors at a time to avoid main-thread freeze
+    for (let i = 0; i < anchors.length; i += BATCH_SIZE) {
+      const batch = anchors.slice(i, i + BATCH_SIZE);
+      await Promise.all(batch.map(async ([midiStr, anchor]) => {
         const midi = parseInt(midiStr);
         try {
           const arrayBuf = await this.fetchEmbeddedAnchor(anchor);
@@ -2438,9 +2441,10 @@ export class NativePcmEngine {
             e,
           );
         }
-      },
-    );
-    await Promise.all(anchorPromises);
+      }));
+      // Yield to main thread between batches
+      await new Promise(r => setTimeout(r, 0));
+    }
     this._maybeEvictDecodedBuffers();
   }
 

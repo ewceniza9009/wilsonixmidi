@@ -345,15 +345,13 @@ export class MultiLayerUI {
   }
 
   bindEvents() {
-    // Combi search (debounced: no full DOM rebuild per keystroke)
+    // Combi search (debounced: filter visible results, no full DOM rebuild)
     const searchInput = this.container.querySelector("#combi-search-input");
     searchInput?.addEventListener("input", e => {
       this.combiSearchQuery = e.target.value;
       clearTimeout(this._searchDebounce);
       this._searchDebounce = setTimeout(() => {
-        this.render();
-        this.bindEvents();
-        // Refocus search input
+        this.filterProgramGrid();
         const newInput = this.container.querySelector("#combi-search-input");
         if (newInput) { newInput.focus(); newInput.setSelectionRange(newInput.value.length, newInput.value.length); }
       }, 160);
@@ -364,8 +362,7 @@ export class MultiLayerUI {
       btn.addEventListener("click", () => {
         multiLayerEngine.setCombiPreset(btn.getAttribute("data-combi-search"));
         this.combiSearchQuery = "";
-        this.render();
-        this.bindEvents();
+        this.updateCombiSelectorActive();
       });
     });
 
@@ -374,16 +371,14 @@ export class MultiLayerUI {
     presetSelect?.addEventListener("change", e => {
       multiLayerEngine.setCombiPreset(e.target.value);
       this.combiSearchQuery = "";
-      this.render();
-      this.bindEvents();
+      this.updateCombiSelectorActive();
     });
     const stepPreset = delta => {
       const ids = Object.keys(COMBI_PRESETS);
       const cur = Math.max(0, ids.indexOf(multiLayerEngine.activeCombi.id));
       const next = ids[(cur + delta + ids.length) % ids.length];
       multiLayerEngine.setCombiPreset(next);
-      this.render();
-      this.bindEvents();
+      this.updateCombiSelectorActive();
     };
     this.container.querySelector("#combi-prev-btn")?.addEventListener("click", () => stepPreset(-1));
     this.container.querySelector("#combi-next-btn")?.addEventListener("click", () => stepPreset(1));
@@ -669,5 +664,17 @@ export class MultiLayerUI {
       const strip = document.getElementById(`layer-strip-${i}`);
       if (strip) strip.classList.toggle("active", !!l.enabled);
     });
+  }
+
+  updateCombiSelectorActive() {
+    const presetSelect = this.container.querySelector("#combi-preset-select");
+    if (presetSelect && multiLayerEngine.activeCombi?.id) {
+      const exists = [...presetSelect.options].some(o => o.value === multiLayerEngine.activeCombi.id);
+      if (exists) presetSelect.value = multiLayerEngine.activeCombi.id;
+    }
+    this.container.querySelectorAll("[data-combi-search]").forEach(btn => {
+      btn.classList.toggle("active", btn.getAttribute("data-combi-search") === multiLayerEngine.activeCombi?.id);
+    });
+    this.filterProgramGrid();
   }
 }

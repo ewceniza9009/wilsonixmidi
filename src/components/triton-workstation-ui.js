@@ -642,7 +642,19 @@ export class TritonWorkstationUI {
         if (now - lastTap < 120) return;
         lastTap = now;
         this.activeSubTab = btn.getAttribute("data-tab");
-        this.render();
+        // Don't full render - just update sub-tab buttons and content area
+        this.container.querySelectorAll(".triton-subtab").forEach(b => {
+          b.classList.toggle("active", b.getAttribute("data-tab") === this.activeSubTab);
+        });
+        const screen = this.container.querySelector(".touchview-screen");
+        if (screen) {
+          const programs = this.getGridPrograms();
+          screen.innerHTML = this.renderTouchViewContent(programs);
+          this.bindProgramGrid();
+          this.bindFastScroll();
+          this.bindRealtimeKnobs();
+          this.bindSearch();
+        }
       };
       btn.addEventListener("pointerdown", handleTab);
       btn.addEventListener("click", handleTab);
@@ -671,7 +683,24 @@ export class TritonWorkstationUI {
             this.applyTritonProgram(this.activeProg, true);
           }
           this._persistSelection();
-          this.render();
+          // Don't full render - just update bank cards and program grid
+          this.container.querySelectorAll(".triton-bank-card").forEach(b => {
+            b.classList.toggle("active", b.getAttribute("data-bank") === this.activeBankId);
+          });
+          // Re-render only the program grid (bank content changed)
+          const grid = this.container.querySelector(".touchview-program-grid");
+          if (grid) {
+            grid.innerHTML = this.getGridPrograms()
+              .map(p => `
+              <div class="triton-prog-cell ${this.isGridCellActive(p) ? "active" : ""}" data-prog-id="${p.id}">
+                <span class="prog-bank-code">${this.activeBankId.replace("_", " ")}</span>
+                <span class="prog-num">${p.num}</span>
+                <span class="prog-name-label">${p.name}</span>
+                <span class="prog-star">★</span>
+              </div>`)
+              .join("");
+            this.bindProgramGrid();
+          }
         }
       };
       btn.addEventListener("pointerdown", handleBank);
@@ -765,9 +794,17 @@ export class TritonWorkstationUI {
       this.activeBankId = "COMBI";
       this.activeProg = cp;
       this._persistSelection();
-      this.render();
-      multiLayerEngine.setCombiPreset(progId);
+      // Don't full render - just update LCD and grid highlight
       this.updateLcdAndGridHighlight(progId, cp.name, "BANK: COMBI", `CATEGORY: ${(cp.category || "COMBI").toUpperCase()}`);
+      // Update bank card active state
+      this.container.querySelectorAll(".triton-bank-card").forEach(b => {
+        b.classList.toggle("active", b.getAttribute("data-bank") === "COMBI");
+      });
+      // Update grid cell active state
+      this.container.querySelectorAll(".triton-prog-cell").forEach(cell => {
+        cell.classList.toggle("active", cell.getAttribute("data-prog-id") === progId);
+      });
+      multiLayerEngine.setCombiPreset(progId);
       return;
     }
 
@@ -781,9 +818,15 @@ export class TritonWorkstationUI {
         this.activeBankId = bankId;
         this.activeProg = prog;
         this._persistSelection();
-        this.render();
-        this.applyTritonProgram(prog, true);
+        // Don't full render - just update LCD, grid highlight, and bank card active state
         this.updateLcdAndGridHighlight(prog.id, prog.name, `BANK: ${this.activeBankId.replace("_", " ")} ${prog.num || ""}`, `CATEGORY: ${(prog.category || "").toUpperCase()}`);
+        this.container.querySelectorAll(".triton-bank-card").forEach(b => {
+          b.classList.toggle("active", b.getAttribute("data-bank") === bankId);
+        });
+        this.container.querySelectorAll(".triton-prog-cell").forEach(cell => {
+          cell.classList.toggle("active", cell.getAttribute("data-prog-id") === progId);
+        });
+        this.applyTritonProgram(prog, true);
         return;
       }
     }

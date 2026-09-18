@@ -273,25 +273,27 @@ export class DemoStationUI {
         audioCore.fxRack.applyPreset(song.fxPreset);
       }
 
-      // Pre-decode all instruments needed by the combi so playback starts without main-thread decode jank
+      // Fire-and-forget preloads - don't block UI thread
       if (multiLayerEngine.pcmEngine) {
         const pcm = multiLayerEngine.pcmEngine;
-        const preloads = [];
+        const insts = [];
         if (multiLayerEngine.layers) {
           multiLayerEngine.layers.forEach((layer) => {
             if (layer.enabled && layer.inst && !layer.inst.startsWith("va:")) {
-              const key = multiLayerEngine.resolveBankKey(layer.inst);
-              preloads.push(pcm.preloadInstrument(key));
+              insts.push(multiLayerEngine.resolveBankKey(layer.inst));
             }
           });
         }
-        (song.embeddedInsts || []).forEach((inst) => {
-          preloads.push(pcm.preloadInstrument(inst));
+        (song.embeddedInsts || []).forEach((inst) => insts.push(inst));
+        (song.soundfontInsts || []).forEach((inst) => insts.push(inst));
+        const unique = [...new Set(insts)];
+        unique.forEach((inst) => {
+          if (inst.startsWith("soundfont:") || inst.endsWith("-mp3")) {
+            pcm.loadSoundfont(inst).catch(() => {});
+          } else {
+            pcm.preloadInstrument(inst).catch(() => {});
+          }
         });
-        (song.soundfontInsts || []).forEach((inst) => {
-          preloads.push(pcm.loadSoundfont(inst));
-        });
-        await Promise.all(preloads);
       }
     } catch (e) {
       console.warn("Demo player audio setup:", e);

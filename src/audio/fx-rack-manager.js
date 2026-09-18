@@ -630,6 +630,7 @@ export class FxRackManager {
           break;
       }
     } finally {
+      this._currentPreset = presetName;
       this._bootstrapping = false;
       this._updateChainRouting();
       // Unmute after chain is rebuilt — old tails are gone, new preset is clean

@@ -1201,8 +1201,9 @@ export class MultiLayerEngine {
     this.activeTritonVaProg = null;
     const resolved = this.resolveBankKey(instKey);
     this.activeSingleInst = resolved;
+    // Fire-and-forget preload - don't block UI thread
     if (this.pcmEngine) {
-      this.pcmEngine.preloadInstrument(resolved);
+      this.pcmEngine.preloadInstrument(resolved).catch(() => {});
     }
 
     // Synchronize Layer 0 with the active single instrument
@@ -1363,48 +1364,64 @@ export class MultiLayerEngine {
     }
   }
 
-  setCombiPreset(presetId) {
-    if (COMBI_PRESETS[presetId]) {
-      // Force-clear sustain pedal first — prevents sustained voices bleeding into new preset
-      this.setSustainPedal(false);
-      if (this.pcmEngine) this.pcmEngine.allNotesOff(true);
-      tritonVaEngine.allNotesOff();
-      this.vaAllNotesOff();
-      synthEngine.panic();
-      if (this._workletReady && this._workletNode) this._workletNode.allNotesOff();
-      this._clearHeldNoteState();
+  async setCombiPreset(presetId) {
+    if (!COMBI_PRESETS[presetId]) return;
+    
+    const newCombi = COMBI_PRESETS[presetId];
+    const _isSameCombi = this.activeCombi && this.activeCombi.id === presetId;
+    const fxPresetChanged = this.activeCombi?.fxPreset !== newCombi.fxPreset;
+    
+    // Force-clear sustain pedal first — prevents sustained voices bleeding into new preset
+    this.setSustainPedal(false);
+    if (this.pcmEngine) this.pcmEngine.allNotesOff(true);
+    tritonVaEngine.allNotesOff();
+    this.vaAllNotesOff();
+    synthEngine.panic();
+    if (this._workletReady && this._workletNode) this._workletNode.allNotesOff();
+    this._clearHeldNoteState();
 
-      this.activeCombi = COMBI_PRESETS[presetId];
-      this.isCombiMode = true;
-      this.isSplitMode = false;
-      this.isSynthMode = false;
-      this.isTritonVaMode = false;
-      this.activeTritonVaProg = null;
-      this.isDualLayerActive = false;
-      this.layers = JSON.parse(JSON.stringify(this.activeCombi.layers));
-      this.layers.forEach(layer => {
-        if (layer.inst && layer.inst.startsWith("va:")) {
-          const prog = getTritonProgramById(layer.inst.slice(3));
-          if (prog) layer.vaProg = prog;
-        } else if (layer.inst && this.pcmEngine) {
-          this.pcmEngine.preloadInstrument(this.resolveBankKey(layer.inst));
-        }
-      });
-      this.init();
-      this.syncLayerFx();
-      if (audioCore.fxRack) {
-        if (this.activeCombi.fxPreset) {
-          audioCore.fxRack.applyPreset(this.activeCombi.fxPreset);
-        } else {
-          audioCore.fxRack.applyPreset(null);
-        }
+    this.activeCombi = newCombi;
+    this.isCombiMode = true;
+    this.isSplitMode = false;
+    this.isSynthMode = false;
+    this.isTritonVaMode = false;
+    this.activeTritonVaProg = null;
+    this.isDualLayerActive = false;
+    this.layers = JSON.parse(JSON.stringify(this.activeCombi.layers));
+    
+    // Fire-and-forget preloads - don't block UI thread
+    for (let i = 0; i < this.layers.length; i++) {
+      const layer = this.layers[i];
+      if (layer.inst && layer.inst.startsWith("va:")) {
+        const prog = getTritonProgramById(layer.inst.slice(3));
+        if (prog) layer.vaProg = prog;
+      } else if (layer.inst && this.pcmEngine) {
+        this.pcmEngine.preloadInstrument(this.resolveBankKey(layer.inst)).catch(() => {});
       }
-      if (INSTRUMENT_PATCHES[presetId]) {
-        synthEngine.activePatch = INSTRUMENT_PATCHES[presetId];
-      }
-      this.notifyLayerChange();
-      this.notifySplitChange();
     }
+    
+    // Only init if engine not ready (first load)
+    if (!this.pcmEngine || !this._workletReady) {
+      this.init();
+    }
+    
+    // Only sync layer FX if layers changed
+    this.syncLayerFx();
+    
+    // Only apply FX preset if it actually changed
+    if (audioCore.fxRack && fxPresetChanged) {
+      if (this.activeCombi.fxPreset) {
+        audioCore.fxRack.applyPreset(this.activeCombi.fxPreset);
+      } else {
+        audioCore.fxRack.applyPreset(null);
+      }
+    }
+    
+    if (INSTRUMENT_PATCHES[presetId]) {
+      synthEngine.activePatch = INSTRUMENT_PATCHES[presetId];
+    }
+    this.notifyLayerChange();
+    this.notifySplitChange();
   }
 
   setLayerFx(layerIndex, fxId) {

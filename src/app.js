@@ -81,6 +81,9 @@ class MidiKeyEliteApp {
       navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
 
+    // Lazy-render flags
+    this._viewsRendered = new Set();
+
     // 0. Pre-arm AudioContext and pre-decode PCM buffers into RAM on page boot
     try {
       audioCore.init();
@@ -237,72 +240,78 @@ class MidiKeyEliteApp {
       console.warn("Volume restore:", e);
     }
 
-    // 4. Korg Triton Hardware TouchView Console
+    // 4. Korg Triton Hardware TouchView Console (render immediately - default view)
     try {
       this.tritonConsole = new TritonWorkstationUI("triton-workstation-mount");
       registerComponent("tritonConsole", this.tritonConsole);
+      this._viewsRendered.add("triton");
     } catch (e) {
       console.warn("TritonWorkstationUI init:", e);
     }
 
-    // 5. Combi 4-Timbre Multi-Layer Mixer
-    try {
-      this.multiLayerConsole = new MultiLayerUI("multi-layer-mount");
-      registerComponent("multiLayerConsole", this.multiLayerConsole);
-    } catch (e) {
-      console.warn("MultiLayerUI init:", e);
-    }
-
-    // 5b. Split Keyboard Console (dedicated assignment view)
-    try {
-      this.splitConsole = new SplitConsoleUI("split-console-mount");
-    } catch (e) {
-      console.warn("SplitConsoleUI init:", e);
-    }
-
-    // 6. Middle Station: Chord Pads & Clip Looper
-    try {
-      this.chordPads = new ChordPadsUI("chord-pads-mount");
-      this.looper = new ClipLooper("looper-mount");
-    } catch (e) {
-      console.warn("ChordPads / Looper init:", e);
-    }
-
-    // 6b. Demo Station: 30s Interactive Song Clips
-    try {
-      this.demoStation = new DemoStationUI("demo-station-mount");
-    } catch (e) {
-      console.warn("DemoStationUI init:", e);
-    }
-
-    // 6c. Groove Station & SFX Performance Soundboard
-    try {
-      this.grooveStation = new GroovePlayerUI("groove-station-mount");
-    } catch (e) {
-      console.warn("GroovePlayerUI init:", e);
-    }
-
-    // 6d. Media Player Deck (Audio/Video playback with persistent playlist)
-    try {
-      this.mediaPlayer = new MediaPlayerUI("media-player-mount");
-      this.mediaPlayer.render();
-    } catch (e) {
-      console.warn("MediaPlayerUI init:", e);
-    }
-
-    // 7. Ableton Device FX Rack
-    try {
-      this.fxRack = new FxRackUI("fx-rack-mount");
-    } catch (e) {
-      console.warn("FxRackUI init:", e);
-    }
-
-    // 8. Elite Virtual Keyboard Instrument
+    // Virtual Keyboard - render immediately (always visible at bottom)
     try {
       this.virtualKeyboard = new VirtualKeyboardUI("virtual-keyboard-mount");
+      this._viewsRendered.add("keys");
     } catch (e) {
       console.warn("VirtualKeyboardUI init:", e);
     }
+
+    // Other views - lazy init on first activation
+    this._lazyViews = {
+      combi: () => {
+        if (this._viewsRendered.has("combi")) return;
+        try {
+          this.multiLayerConsole = new MultiLayerUI("multi-layer-mount");
+          registerComponent("multiLayerConsole", this.multiLayerConsole);
+          this._viewsRendered.add("combi");
+        } catch (e) { console.warn("MultiLayerUI lazy init:", e); }
+      },
+      split: () => {
+        if (this._viewsRendered.has("split")) return;
+        try {
+          this.splitConsole = new SplitConsoleUI("split-console-mount");
+          this._viewsRendered.add("split");
+        } catch (e) { console.warn("SplitConsoleUI lazy init:", e); }
+      },
+      chords: () => {
+        if (this._viewsRendered.has("chords")) return;
+        try {
+          this.chordPads = new ChordPadsUI("chord-pads-mount");
+          this.looper = new ClipLooper("looper-mount");
+          this._viewsRendered.add("chords");
+        } catch (e) { console.warn("ChordPads/Looper lazy init:", e); }
+      },
+      demo: () => {
+        if (this._viewsRendered.has("demo")) return;
+        try {
+          this.demoStation = new DemoStationUI("demo-station-mount");
+          this._viewsRendered.add("demo");
+        } catch (e) { console.warn("DemoStationUI lazy init:", e); }
+      },
+      grooves: () => {
+        if (this._viewsRendered.has("grooves")) return;
+        try {
+          this.grooveStation = new GroovePlayerUI("groove-station-mount");
+          this._viewsRendered.add("grooves");
+        } catch (e) { console.warn("GroovePlayerUI lazy init:", e); }
+      },
+      player: () => {
+        if (this._viewsRendered.has("player")) return;
+        try {
+          this.mediaPlayer = new MediaPlayerUI("media-player-mount");
+          this.mediaPlayer.render();
+          this._viewsRendered.add("player");
+        } catch (e) { console.warn("MediaPlayerUI lazy init:", e); }
+      },
+      fx: () => {
+        if (this._viewsRendered.has("fx")) return;
+        try {
+          this.fxRack = new FxRackUI("fx-rack-mount");
+          this._viewsRendered.add("fx");
+        } catch (e) { console.warn("FxRackUI lazy init:", e); }
+      }
+    };
 
     // 9. Non-blocking Web MIDI API Background Connect
     midiManager.init().catch(err => console.warn("MIDI init:", err));
@@ -327,6 +336,11 @@ class MidiKeyEliteApp {
         const wsSelect = document.getElementById("hud-ws-tabs-select");
         if (wsSelect && wsSelect.value !== view) {
           wsSelect.value = view;
+        }
+
+        // Lazy-render the view on first activation
+        if (this._lazyViews && this._lazyViews[view]) {
+          this._lazyViews[view]();
         }
 
         if (appRoot) {
@@ -369,6 +383,9 @@ class MidiKeyEliteApp {
     // Restore last tab if enabled
     if (multiLayerEngine.settings.tabRestore) {
       const lastTab = multiLayerEngine.settings.lastTab;
+      if (this._lazyViews && this._lazyViews[lastTab]) {
+        this._lazyViews[lastTab]();
+      }
       const restoreBtn = document.querySelector(`.ws-tab-btn[data-view="${lastTab}"]`);
       if (restoreBtn) restoreBtn.click();
     }
