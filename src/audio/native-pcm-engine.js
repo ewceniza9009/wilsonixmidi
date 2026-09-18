@@ -744,6 +744,54 @@ export const LAYER_FX_OPTIONS = {
   },
 };
 
+// P2.3: Lazy materialization for the LayerInsertProcessor grids. A Proxy that
+// only instantiates a bus the first time a caller actually reads that slot, so
+// an engine that never uses layer FX / looper buses allocates zero insert nodes
+// (22 processors x ~5 gain nodes idle was always in the graph before).
+// NOTE: retrieving the raw backing store via LAZY_INSERT_RAW or calling
+// forEach() NEVER materializes new buses - iteration only sees what exists.
+const LAZY_INSERT_RAW = Symbol("lazyInsertRaw");
+function createLazyInsertGrid(build, size) {
+  const rows = [];
+  const proxy = new Proxy(rows, {
+    get(target, prop) {
+      if (prop === LAZY_INSERT_RAW) return target;
+      const idx = Number(prop);
+      if (Number.isInteger(idx) && idx >= 0) {
+        if (size !== undefined && idx >= size) return undefined;
+        return target[idx] ?? (target[idx] = build(idx));
+      }
+      if (prop === "forEach") {
+        return (cb) => {
+          for (let i = 0; i < rows.length; i++) {
+            if (rows[i] !== undefined) cb(rows[i], i);
+          }
+        };
+      }
+      return Reflect.get(target, prop);
+    },
+    has(target, prop) {
+      return Reflect.has(target, prop);
+    },
+  });
+  return proxy;
+}
+function createLazySplitZone(build) {
+  const raw = {};
+  const proxy = new Proxy(raw, {
+    get(target, prop) {
+      return target[prop] ?? (target[prop] = build(prop));
+    },
+    ownKeys() {
+      return Reflect.ownKeys(raw);
+    },
+    getOwnPropertyDescriptor() {
+      return { configurable: true, enumerable: true };
+    },
+  });
+  return proxy;
+}
+
 export class LayerInsertProcessor {
   constructor(ctx, destinationNode) {
     this.ctx = ctx;
@@ -1590,28 +1638,23 @@ export class NativePcmEngine {
     this.destination = destinationNode;
     this.sfxGenerator = new SfxSoundGenerator(ctx, destinationNode);
 
-    this.layerInserts = [
-      new LayerInsertProcessor(ctx, destinationNode),
-      new LayerInsertProcessor(ctx, destinationNode),
-      new LayerInsertProcessor(ctx, destinationNode),
-      new LayerInsertProcessor(ctx, destinationNode),
-    ];
+    this.layerInserts = createLazyInsertGrid(
+      () => new LayerInsertProcessor(ctx, destinationNode),
+      4,
+    );
 
-    this.splitZoneInserts = {
-      lower: new LayerInsertProcessor(ctx, destinationNode),
-      upper: new LayerInsertProcessor(ctx, destinationNode),
-    };
+    this.splitZoneInserts = createLazySplitZone(
+      () => new LayerInsertProcessor(ctx, destinationNode),
+    );
 
-    this.looperInserts = [];
-    for (let t = 0; t < 4; t++) {
-      const trackBuses = [];
-      for (let l = 0; l < 4; l++) {
+    this.looperInserts = createLazyInsertGrid(
+      () => createLazyInsertGrid(() => {
         const bus = new LayerInsertProcessor(ctx, destinationNode);
         bus.engine = this;
-        trackBuses.push(bus);
-      }
-      this.looperInserts.push(trackBuses);
-    }
+        return bus;
+      }, 4),
+      4,
+    );
 
     this.decodedBuffers = new Map();
     this.activeVoices = new Map();
@@ -1765,9 +1808,13 @@ export class NativePcmEngine {
 
   _findLooperBusByDest(destNode) {
     if (!this.looperInserts || !destNode) return null;
-    for (let t = 0; t < this.looperInserts.length; t++) {
-      for (let l = 0; l < this.looperInserts[t].length; l++) {
-        const bus = this.looperInserts[t][l];
+    const tracks = this.looperInserts[LAZY_INSERT_RAW];
+    for (let t = 0; t < tracks.length; t++) {
+      const row = tracks[t];
+      if (!row) continue;
+      const buses = row[LAZY_INSERT_RAW];
+      for (let l = 0; l < buses.length; l++) {
+        const bus = buses[l];
         if (bus && bus.input === destNode) return bus;
       }
     }

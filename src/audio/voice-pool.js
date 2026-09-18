@@ -293,9 +293,10 @@ export class PolyphonicVoice {
 }
 
 export class VoicePoolManager {
-  constructor(ctx, poolSize = 16, destinationNode = null, heldNotes = null) {
+  constructor(ctx, poolSize = 16, destinationNode = null, heldNotes = null, initialSize = null) {
     this.ctx = ctx;
     this.poolSize = poolSize;
+    this.initialSize = initialSize ?? poolSize;
     this.destination = destinationNode || ctx.destination;
     this.heldNotes = heldNotes; // Set of currently HELD midi notes (protected from stealing)
     this.voices = [];
@@ -307,9 +308,24 @@ export class VoicePoolManager {
   }
 
   initPool() {
-    for (let i = 0; i < this.poolSize; i++) {
+    // P2.2: only allocate the "hot" voices up front. A piano/EP/pad needs a
+    // handful at a time; the pool grows on demand toward poolSize when a real
+    // dense passage actually needs more. This keeps the always-rendering
+    // oscillator count low for multi-VA combis (48 osc/slot was the norm).
+    const hot = Math.max(1, Math.min(this.poolSize, this.initialSize));
+    for (let i = 0; i < hot; i++) {
       this.voices.push(new PolyphonicVoice(this.ctx, i, this.destination));
     }
+  }
+
+  // P2.2: grow the pool by one voice on demand. Safe mid-performance: a new
+  // voice's envelope starts whisper-silent and there is no node teardown, so
+  // no existing note, sustain, or tail is ever interrupted.
+  growPool() {
+    if (this.voices.length >= this.poolSize) return null;
+    const voice = new PolyphonicVoice(this.ctx, this.voices.length, this.destination);
+    this.voices.push(voice);
+    return voice;
   }
 
   acquireVoice(midiNote) {
@@ -318,6 +334,12 @@ export class VoicePoolManager {
 
     const idle = this.voices.find(v => !v.isBusy);
     if (idle) return idle;
+
+    // P2.2: grow before stealing so a genuinely dense moment (16-voice chord,
+    // gliss storm) allocates its full capacity instead of cutting the oldest
+    // ringing tail. Growth never stops/restarts an active oscillator.
+    const grown = this.growPool();
+    if (grown) return grown;
 
     const held = this.heldNotes;
     const isHeld = note => !!held && held.has(note);

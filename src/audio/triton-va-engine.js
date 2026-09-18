@@ -32,12 +32,13 @@ export class TritonVirtualAnalogEngine {
     if (!ctx) return;
     // Route through the master FX Rack so program IFX/MFX still apply on top.
     const dest = audioCore.fxRack?.input || ctx.destination;
-    this.pool = new VoicePoolManager(ctx, 16, dest, this.heldNotes);
+    // P2.2: cap the packed pool at 8 hot voices; it grows on demand toward
+    // 16 inside acquireVoice. Multi-VA combis no longer render 48 osc/slot.
+    this.pool = new VoicePoolManager(ctx, 16, dest, this.heldNotes, 8);
   }
 
   setProgram(prog) {
     if (!prog) return;
-    this.init();
     this.activeProgram = prog;
 
     const osc1 = safeWave(prog.osc1 || "sawtooth");
@@ -158,8 +159,11 @@ export class TritonVirtualAnalogEngine {
   }
 
   noteOn(midiNote, velocity = 95, when = 0) {
-    if (!this.pool || !this.config) return;
+    if (!this.config) return;
+    // P2.2: the voice pool is built lazily on the first actual trigger, not
+    // when a program is merely selected — an idle VA slot allocates nothing.
     this.init();
+    if (!this.pool) return;
 
     // Voice polyphony ceiling: limits simultaneous voices to avoid DSP overflow under sustain
     const maxActive = this.config.isLead ? 8 : 16;
