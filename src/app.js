@@ -7,18 +7,10 @@ import { audioCore } from "./audio/audio-core.js";
 import { synthEngine } from "./audio/synth-engine.js";
 import { midiManager } from "./midi/midi-manager.js";
 import { GigHudUI } from "./components/gig-hud.js";
-import { FxRackUI } from "./components/fx-rack-ui.js";
-import { ChordPadsUI } from "./components/chord-pads.js";
-import { ClipLooper } from "./components/looper.js";
 import { VirtualKeyboardUI } from "./components/virtual-keyboard.js";
 import { LicenseModalUI } from "./components/license-modal.js";
 import { licenseManager } from "./security/license-manager.js";
 import { TritonWorkstationUI } from "./components/triton-workstation-ui.js";
-import { MultiLayerUI } from "./components/multi-layer-ui.js";
-import { SplitConsoleUI } from "./components/split-console-ui.js";
-import { GroovePlayerUI } from "./components/groove-player-ui.js";
-import { DemoStationUI } from "./components/demo-station.js";
-import { MediaPlayerUI } from "./components/media-player-ui.js";
 import { multiLayerEngine } from "./audio/multi-layer-engine.js";
 import { registerComponent } from "./components/component-registry.js";
 import { initMobileDevice } from "./mobile/device.js";
@@ -257,56 +249,64 @@ class MidiKeyEliteApp {
       console.warn("VirtualKeyboardUI init:", e);
     }
 
-    // Other views - lazy init on first activation
+    // Other views - lazy init on first activation with dynamic imports
     this._lazyViews = {
-      combi: () => {
+      combi: async () => {
         if (this._viewsRendered.has("combi")) return;
         try {
+          const { MultiLayerUI } = await import("./components/multi-layer-ui.js");
           this.multiLayerConsole = new MultiLayerUI("multi-layer-mount");
           registerComponent("multiLayerConsole", this.multiLayerConsole);
           this._viewsRendered.add("combi");
         } catch (e) { console.warn("MultiLayerUI lazy init:", e); }
       },
-      split: () => {
+      split: async () => {
         if (this._viewsRendered.has("split")) return;
         try {
+          const { SplitConsoleUI } = await import("./components/split-console-ui.js");
           this.splitConsole = new SplitConsoleUI("split-console-mount");
           this._viewsRendered.add("split");
         } catch (e) { console.warn("SplitConsoleUI lazy init:", e); }
       },
-      chords: () => {
+      chords: async () => {
         if (this._viewsRendered.has("chords")) return;
         try {
+          const { ChordPadsUI } = await import("./components/chord-pads.js");
+          const { ClipLooper } = await import("./components/looper.js");
           this.chordPads = new ChordPadsUI("chord-pads-mount");
           this.looper = new ClipLooper("looper-mount");
           this._viewsRendered.add("chords");
         } catch (e) { console.warn("ChordPads/Looper lazy init:", e); }
       },
-      demo: () => {
+      demo: async () => {
         if (this._viewsRendered.has("demo")) return;
         try {
+          const { DemoStationUI } = await import("./components/demo-station.js");
           this.demoStation = new DemoStationUI("demo-station-mount");
           this._viewsRendered.add("demo");
         } catch (e) { console.warn("DemoStationUI lazy init:", e); }
       },
-      grooves: () => {
+      grooves: async () => {
         if (this._viewsRendered.has("grooves")) return;
         try {
+          const { GroovePlayerUI } = await import("./components/groove-player-ui.js");
           this.grooveStation = new GroovePlayerUI("groove-station-mount");
           this._viewsRendered.add("grooves");
         } catch (e) { console.warn("GroovePlayerUI lazy init:", e); }
       },
-      player: () => {
+      player: async () => {
         if (this._viewsRendered.has("player")) return;
         try {
+          const { MediaPlayerUI } = await import("./components/media-player-ui.js");
           this.mediaPlayer = new MediaPlayerUI("media-player-mount");
           this.mediaPlayer.render();
           this._viewsRendered.add("player");
         } catch (e) { console.warn("MediaPlayerUI lazy init:", e); }
       },
-      fx: () => {
+      fx: async () => {
         if (this._viewsRendered.has("fx")) return;
         try {
+          const { FxRackUI } = await import("./components/fx-rack-ui.js");
           this.fxRack = new FxRackUI("fx-rack-mount");
           this._viewsRendered.add("fx");
         } catch (e) { console.warn("FxRackUI lazy init:", e); }
