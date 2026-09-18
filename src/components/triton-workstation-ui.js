@@ -6,6 +6,7 @@
  */
 
 import { TRITON_BANKS } from "../triton/triton-soundbanks.js";
+import { resolveTritonProgram } from "../triton/combi-timbres.js";
 import { synthEngine } from "../audio/synth-engine.js";
 import { audioCore } from "../audio/audio-core.js";
 import { multiLayerEngine, COMBI_PRESETS } from "../audio/multi-layer-engine.js";
@@ -805,45 +806,15 @@ export class TritonWorkstationUI {
       return;
     }
 
-    const isDedicatedPcm =
-      prog.instId ||
-      prog.id === "A036" ||
-      prog.id === "A037" ||
-      prog.id === "A042" ||
-      prog.id === "A043" ||
-      prog.id === "A044" ||
-      prog.id === "B007";
-
-    if (isDedicatedPcm) {
-      let instKey = "acoustic_grand_piano";
-      if (prog.instId) instKey = prog.instId;
-      else if (prog.id === "A036") instKey = "acoustic_grand_piano";
-      else if (prog.id === "A037") instKey = "overdriven_guitar";
-      else if (prog.id === "A042") instKey = "distortion_guitar";
-      else if (prog.id === "A043") instKey = "abletunes_fm_piano";
-      else if (prog.id === "A044") instKey = "abletunes_upright";
-      else if (prog.id === "B007") instKey = "acoustic_guitar_nylon";
-
-      multiLayerEngine.setSingleInstrument(instKey);
-      if (audioCore.fxRack) {
-        this.applyIfxMfx(prog);
-      }
-      return;
-    }
-
-    // All other Triton Classic User A, B, C, D programs have their OWN unique oscillator timbres & IFX/MFX
-    if (prog.osc1 || prog.osc2) {
+    const resolved = resolveTritonProgram(prog);
+    if (resolved && resolved.type === "pcm") {
+      multiLayerEngine.setSingleInstrument(resolved.instKey);
+    } else if (resolved && resolved.type === "va") {
       multiLayerEngine.setTritonVaProgram(prog);
-      if (audioCore.fxRack) {
-        this.applyIfxMfx(prog);
-      }
-      return;
-    }
-
-    let instKey = "acoustic_grand_piano";
-    multiLayerEngine.setSingleInstrument(instKey);
-    if (audioCore.fxRack) {
-      this.applyIfxMfx(prog);
+    } else if (prog.osc1 || prog.osc2) {
+      multiLayerEngine.setTritonVaProgram(prog);
+    } else {
+      multiLayerEngine.setSingleInstrument("acoustic_grand_piano");
     }
 
     // Configure matched KORG TRITON IFX & MFX Routing

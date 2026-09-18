@@ -75,6 +75,7 @@ class WorkletVoice {
         // by sustainTau in the render loop until the pedal lifts.
         this.pedalHeld = true;
       } else {
+        this.pedalHeld = false;
         this.envStage = 4; // Release
       }
     }
@@ -117,14 +118,16 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
     // Default synthesis parameters
     this.waveType1 = 0; // 0=Saw, 1=Square, 2=Triangle, 3=Sine
     this.waveType2 = 1;
+    this.ratio1 = 1.0;
+    this.ratio2 = 1.0;
     this.detune2 = 0.05; // Semitones
     this.detune2Ratio = Math.pow(2.0, this.detune2 / 12.0); // Precomputed
-    this.subLevel = 0.20;
+    this.subLevel = 0.0;
     this.pulseWidth = 0.50;
 
     // Filter parameters
-    this.cutoff = 4500.0;
-    this.resonance = 1.8;
+    this.cutoff = 8500.0;
+    this.resonance = 1.2;
 
     // ADSR Envelope (seconds)
     this.attack = 0.005;
@@ -154,6 +157,12 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
     if (!data) return;
     if (data.type === "midi") {
       this.processMidiEvent(data.status, data.note, data.velocity);
+    } else if (data.type === "allNotesOff") {
+      this.pedalDown = false;
+      for (let i = 0; i < MAX_VOICES; i++) {
+        this.voices[i].forceStop();
+      }
+      this.heldNotes.clear();
     } else if (data.type === "param") {
       if (data.name === "cutoff") this.cutoff = data.value;
       else if (data.name === "resonance") this.resonance = data.value;
@@ -164,6 +173,8 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
       else if (data.name === "subLevel") this.subLevel = data.value;
       else if (data.name === "wave1") this.waveType1 = data.value;
       else if (data.name === "wave2") this.waveType2 = data.value;
+      else if (data.name === "ratio1") this.ratio1 = Math.max(0.125, Number(data.value) || 1.0);
+      else if (data.name === "ratio2") this.ratio2 = Math.max(0.125, Number(data.value) || 1.0);
       else if (data.name === "detune2") { this.detune2 = data.value; this.detune2Ratio = Math.pow(2.0, data.value / 12.0); }
       else if (data.name === "sustainTau") this.sustainTau = data.value;
     } else if (data.type === "sustain") {
@@ -192,10 +203,6 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
       // Clean up heldNotes if no active voices remain for this note
       if (!this.voices.some(v => v.active && v.note === data.note)) {
         this.heldNotes.delete(data.note);
-      }
-    } else if (data.type === "allNotesOff") {
-      for (let i = 0; i < MAX_VOICES; i++) {
-        this.voices[i].forceStop();
       }
     }
   }
@@ -247,8 +254,9 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
           this.voices[i].noteOff(this.pedalDown);
         }
       }
-    } else if (cmd === 0xb0 && note === 123) {
-      // All Notes Off
+    } else if (cmd === 0xb0 && (note === 123 || note === 120)) {
+      // All Notes Off / Panic
+      this.pedalDown = false;
       for (let i = 0; i < MAX_VOICES; i++) {
         this.voices[i].forceStop();
       }
@@ -329,8 +337,8 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
       const voice = this.voices[v];
       if (!voice.active) continue;
 
-      const dt1 = voice.freq * this.invSampleRate;
-      const dt2 = (voice.freq * this.detune2Ratio) * this.invSampleRate;
+      const dt1 = (voice.freq * (this.ratio1 || 1.0)) * this.invSampleRate;
+      const dt2 = (voice.freq * (this.ratio2 || 1.0) * this.detune2Ratio) * this.invSampleRate;
       const dtSub = (voice.freq * 0.5) * this.invSampleRate;
 
       for (let i = 0; i < numFrames; i++) {

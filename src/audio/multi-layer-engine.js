@@ -1117,9 +1117,13 @@ export class MultiLayerEngine {
     const wave2 = WAVE_MAP[prog.osc2] ?? 1;
     this._workletNode.setParam("wave1", wave1);
     this._workletNode.setParam("wave2", wave2);
-    if (prog.cutoff != null) this._workletNode.setParam("cutoff", Math.min(9500, prog.cutoff));
-    if (prog.Q != null) this._workletNode.setParam("resonance", Math.min(5.0, prog.Q * 2.5));
-    if (prog.attack != null) this._workletNode.setParam("attack", Math.max(0.005, prog.attack));
+    this._workletNode.setParam("ratio1", prog.r1 || 1.0);
+    this._workletNode.setParam("ratio2", prog.r2 || 1.0);
+    const isBass = /(bass|sub)/i.test((prog.category || "") + " " + (prog.name || ""));
+    this._workletNode.setParam("subLevel", isBass ? 0.35 : 0.0);
+    if (prog.cutoff != null) this._workletNode.setParam("cutoff", Math.min(18000, Math.max(800, prog.cutoff * 1.5)));
+    if (prog.Q != null) this._workletNode.setParam("resonance", Math.min(4.0, Math.max(0.5, prog.Q * 1.5)));
+    if (prog.attack != null) this._workletNode.setParam("attack", Math.max(0.003, prog.attack));
     if (prog.decay != null) this._workletNode.setParam("decay", prog.decay);
     if (prog.sustain != null) this._workletNode.setParam("sustain", prog.sustain);
     if (prog.release != null) this._workletNode.setParam("release", Math.max(0.06, prog.release));
@@ -1138,15 +1142,17 @@ export class MultiLayerEngine {
       supersaw_lead: "brass_section",
       abletunes_fm_dx7: "abletunes_fm_piano",
       fat_brass_horns: "brass_section",
-      alto_sax: "tenor_sax",
-      breathy_alto_sax: "tenor_sax",
-      sax_genuine_solo: "tenor_sax",
-      sax_sensual: "tenor_sax",
+      alto_sax: "alto_sax",
+      breathy_alto_sax: "alto_sax",
+      sax_genuine_solo: "alto_sax",
+      sax_sensual: "alto_sax",
       sax_blues_growl: "tenor_sax",
-      sax_funk_stab: "tenor_sax",
-      sax_fall: "tenor_sax",
-      sax_scoop: "tenor_sax",
-      sax_solo: "tenor_sax",
+      sax_funk_stab: "alto_sax",
+      sax_fall: "alto_sax",
+      sax_scoop: "alto_sax",
+      sax_solo: "alto_sax",
+      trombone: "trombone",
+      harmonica: "alto_sax",
       m1_fresh_air: "electric_piano_1",
       m1_universe: "string_ensemble_1",
       m1_choir: "choir_aahs",
@@ -1306,6 +1312,7 @@ export class MultiLayerEngine {
     this.setSustainPedal(false);
     if (this.pcmEngine) this.pcmEngine.allNotesOff(true);
     tritonVaEngine.allNotesOff();
+    tritonVaEngine.sustainPedal = false;
     this.vaAllNotesOff();
     synthEngine.panic();
     this._clearHeldNoteState();
@@ -1764,11 +1771,10 @@ export class MultiLayerEngine {
     }
 
     if (this.isTritonVaMode && this.activeTritonVaProg) {
-      if (when === 0 && this._workletReady && this._workletNode) {
+      if (this._workletReady && this._workletNode) {
         this._workletNode.noteOff(midiNote);
-      } else {
-        tritonVaEngine.noteOff(midiNote, when);
       }
+      tritonVaEngine.noteOff(midiNote, when);
       return;
     }
     if (this.isSynthMode) {
@@ -1964,11 +1970,7 @@ export class MultiLayerEngine {
       this._workletNode.setSustainPedal(isDown);
     }
     if (this.isTritonVaMode && this.activeTritonVaProg) {
-      if (when === 0 && this._workletReady && this._workletNode) {
-        // Worklet handles sustain internally; main-thread VA skips
-      } else {
-        tritonVaEngine.setSustainPedal(isDown, when);
-      }
+      tritonVaEngine.setSustainPedal(isDown, when);
     } else if (this.pcmEngine) {
       this.pcmEngine.setSustainPedal(isDown, when);
       if (this.isCombiMode) {
@@ -2059,6 +2061,7 @@ export class MultiLayerEngine {
     // 4. Silence all synth & VA voices
     synthEngine.panic();
     tritonVaEngine.allNotesOff();
+    tritonVaEngine.sustainPedal = false;
     this.vaAllNotesOff();
     if (this._workletReady && this._workletNode) this._workletNode.allNotesOff();
     this._clearHeldNoteState();

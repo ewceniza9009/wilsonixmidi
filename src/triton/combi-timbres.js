@@ -48,46 +48,65 @@ const M1_INST = {
   freshair: "electric_piano_1",
 };
 
-// Mirror of applyTritonProgram(): trait of a VA oscillator program
-function isSynthTimbre(prog) {
-  if (prog.instId) return false;
+// Mirror of applyTritonProgram(): trait of a genuine VA oscillator program
+export function isSynthTimbre(prog) {
+  if (!prog || prog.instId) return false;
   const cat = (prog.category || "").toLowerCase();
   const name = (prog.name || "").toLowerCase();
   const hasOsc = !!prog.osc1 || !!prog.osc2;
+  if (!hasOsc) return false;
+
+  // Never classify acoustic/electro-mechanical rompler instruments as VA
+  if (
+    cat.includes("organ") ||
+    cat.includes("electric piano") ||
+    cat.includes("keyboard") ||
+    cat.includes("piano") ||
+    cat.includes("brass") ||
+    cat.includes("woodwind") ||
+    cat.includes("sax") ||
+    cat.includes("harmonica") ||
+    cat.includes("guitar") ||
+    cat.includes("bass") ||
+    name.includes("organ") ||
+    name.includes("ep") ||
+    name.includes("tine") ||
+    name.includes("rhodes") ||
+    name.includes("piano") ||
+    name.includes("trombone") ||
+    name.includes("trumpet") ||
+    name.includes("sax") ||
+    name.includes("harmonica") ||
+    name.includes("flute") ||
+    name.includes("clarinet") ||
+    name.includes("guitar")
+  ) {
+    return false;
+  }
+
   return (
-    hasOsc &&
-    (cat.includes("lead") ||
-      cat.includes("fast synth") ||
-      cat.includes("synthesizer") ||
-      cat.includes("motion") ||
-      cat.includes("synth pad") ||
-      cat.includes("hit") ||
-      cat.includes("stab") ||
-      cat.includes("bells & pad") ||
-      cat.includes("bells") ||
-      cat.includes("electric piano") ||
-      cat.includes("organ") ||
-      cat.includes("strings") ||
-      cat.includes("bass & sub") ||
-      name.includes("trance") ||
-      name.includes("lead") ||
-      name.includes("saw") ||
-      name.includes("scream") ||
-      name.includes("sweeper") ||
-      name.includes("vox") ||
-      name.includes("throats") ||
-      name.includes("techno") ||
-      name.includes("hypersaw") ||
-      name.includes("synth") ||
-      name.includes("tine") ||
-      name.includes("rhodes") ||
-      name.includes("r&b") ||
-      name.includes("fm piano"))
+    cat.includes("lead") ||
+    cat.includes("fast synth") ||
+    cat.includes("synthesizer") ||
+    cat.includes("motion") ||
+    cat.includes("synth pad") ||
+    cat.includes("hit") ||
+    cat.includes("stab") ||
+    name.includes("trance") ||
+    name.includes("sine lead") ||
+    name.includes("saw") ||
+    name.includes("scream") ||
+    name.includes("sweeper") ||
+    name.includes("hypersaw") ||
+    name.includes("sync") ||
+    name.includes("techno") ||
+    name.includes("stab")
   );
 }
 
 // Mirror of applyTritonProgram() category/name -> PCM instKey cascade
-function resolvePcmByProgram(prog) {
+export function resolvePcmByProgram(prog) {
+  if (!prog) return "acoustic_grand_piano";
   const cat = (prog.category || "").toLowerCase();
   const name = (prog.name || "").toLowerCase();
   const ifx = (prog.ifx || "").toLowerCase();
@@ -102,18 +121,48 @@ function resolvePcmByProgram(prog) {
   if (name.includes("nylon") || (isGuitar && cat.includes("acoustic")) || prog.id === "B007") return "acoustic_guitar_nylon";
   if (isGuitar) return "electric_guitar_clean";
   if (isBass || cat.includes("bass")) return "synth_bass_1";
-  if (cat.includes("organ") || name.includes("organ") || ifx.includes("rotary")) return "drawbar_organ";
-  if (cat.includes("electric piano") || cat.includes("ep") || name.includes("ep") || name.includes("tine") || name.includes("r&b") || name.includes("fm piano")) return "electric_piano_1";
-  if (name.includes("kalimba") || cat.includes("kalimba") || name.includes("mbira")) return "kalimba";
+
+  // Trombone & Brass
+  if (name.includes("trombone") || prog.id === "A030") return "trombone";
+  if (name.includes("trumpet")) return "trumpet";
+  if (cat.includes("brass") || name.includes("brass") || name.includes("horn")) return "brass_section";
+
+  // Organs
+  if (name.includes("dark jazz") || ifx.includes("rotary") || name.includes("b3")) return "drawbar_organ";
+  if (name.includes("vox") || name.includes("rock organ") || prog.id === "A023") return "rock_organ";
+  if (name.includes("church") || name.includes("cathedral organ")) return "church_organ";
+  if (cat.includes("organ") || name.includes("organ")) return "drawbar_organ";
+
+  // Electric Pianos
+  if (name.includes("phantom of tine") || prog.id === "A025") return "eos_tx816";
+  if (name.includes("fm piano") || prog.id === "A043") return "eos_tx816";
+  if (name.includes("r&b") || prog.id === "A015") return "eos_deeproads";
+  if (name.includes("studio stage") || prog.id === "A020") return "eos_oldroads";
+  if (name.includes("suit") || name.includes("stage ep") || prog.id === "A028") return "electric_piano_1";
+  if (name.includes("dyno")) return "eos_deeproads";
+  if (cat.includes("electric piano") || cat.includes("ep") || name.includes("ep") || name.includes("rhodes")) return "eos_oldroads";
+
+  // Saxophones & Woodwinds
+  if (name.includes("breathy") || name.includes("alto sax") || prog.id === "A026" || prog.id === "SAX02") return "alto_sax";
+  if (name.includes("soprano")) return "soprano_sax";
+  if (name.includes("tenor") || name.includes("blues growl")) return "tenor_sax";
+  if (name.includes("harmonica") || prog.id === "A033") return "alto_sax";
   if (name.includes("flute") || cat.includes("flute")) return "flute";
   if (name.includes("clarinet") || cat.includes("clarinet")) return "clarinet";
-  if (cat.includes("woodwind") || name.includes("sax") || name.includes("harmonica")) return "alto_sax";
-  if (cat.includes("brass") || name.includes("brass") || name.includes("trombone")) return "brass_section";
-  if (cat.includes("lead") || cat.includes("fast synth") || cat.includes("synthesizer") || cat.includes("hit") || name.includes("lead") || name.includes("trance") || name.includes("saw")) return "brass_section";
-  if (cat.includes("choir") || cat.includes("vocal") || name.includes("choir") || name.includes("voice") || name.includes("vox") || name.includes("ooh") || name.includes("ahh")) return "choir_aahs";
-  if (cat.includes("strings") || cat.includes("pad")) return "string_ensemble_1";
-  if (cat.includes("percussion") || cat.includes("drum")) return "tr808_kit";
+  if (cat.includes("woodwind") || name.includes("sax")) return "alto_sax";
+
+  // Pianos & Piano Pads
+  if (name.includes("piano pad") || name.includes("icy piano") || prog.id === "A013" || prog.id === "A018") return "acoustic_grand_piano";
+  if (name.includes("upright") || prog.id === "A044") return "abletunes_upright";
   if (cat.includes("piano") || cat.includes("keyboard")) return "acoustic_grand_piano";
+
+  // Choirs & Strings
+  if (cat.includes("choir") || cat.includes("vocal") || name.includes("choir") || name.includes("voice") || name.includes("vox") || name.includes("ooh") || name.includes("ahh")) return "choir_aahs";
+  if (cat.includes("strings") || cat.includes("pad") || name.includes("chair of light") || prog.id === "A000") return "string_ensemble_1";
+
+  // Miscellaneous
+  if (name.includes("kalimba") || cat.includes("kalimba") || name.includes("mbira")) return "kalimba";
+  if (cat.includes("percussion") || cat.includes("drum")) return "tr808_kit";
   return "acoustic_grand_piano";
 }
 
