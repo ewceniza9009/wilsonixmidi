@@ -33,11 +33,13 @@ export class SynthWorkletNode {
       this.writer = new MidiRingBufferWriter(this.sharedBuffer);
 
       // 2. Load the processor module using Blob URL for bulletproof bundler & dev-server portability
-      const blob = new Blob([processorCode], { type: "application/javascript" });
-      const moduleUrl = URL.createObjectURL(blob);
-
-      await this.ctx.audioWorklet.addModule(moduleUrl);
-      URL.revokeObjectURL(moduleUrl);
+      if (!this.ctx.audioWorklet._wilsonixSynthRegistered) {
+        const blob = new Blob([processorCode], { type: "application/javascript" });
+        const moduleUrl = URL.createObjectURL(blob);
+        await this.ctx.audioWorklet.addModule(moduleUrl);
+        URL.revokeObjectURL(moduleUrl);
+        this.ctx.audioWorklet._wilsonixSynthRegistered = true;
+      }
 
       // 3. Instantiate AudioWorkletNode
       this.node = new AudioWorkletNode(this.ctx, "wilsonix-synth-processor", {

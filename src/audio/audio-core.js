@@ -237,6 +237,22 @@ export class AudioCore {
     } catch (e) {}
   }
 
+  suspend() {
+    if (!this.ctx) return;
+    if (this.ctx.state === "running") {
+      this._suspendedByApp = true;
+      this.ctx.suspend().catch(() => {});
+    }
+  }
+
+  async resume() {
+    if (!this.ctx) return;
+    if (this.ctx.state === "suspended" && this._suspendedByApp) {
+      await this.ctx.resume().catch(() => {});
+      this._suspendedByApp = false;
+    }
+  }
+
   hardSilence() {
     if (!this.ctx) return;
     const now = this.ctx.currentTime;

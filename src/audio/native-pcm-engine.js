@@ -2055,67 +2055,18 @@ export class NativePcmEngine {
   }
 
   async initBuffers() {
-    // Eager boot decode — v2.0.4 behavior: every bank instrument is decoded
-    // BEFORE the engine is marked ready, so first notes always play the real
-    // instrument (never a substitute) with no mid-play load/decode jank.
+    // Boot decode only what the DEFAULT preset (ballad_master) needs, so the
+    // heap stays bounded. Every other instrument decodes lazily on first use
+    // via preloadInstrument() (wired in preset selection) / findNearestAnchor.
     const eagerInsts = [
       "acoustic_grand_piano",
       "electric_piano_1",
-      "choir_aahs",
-      "eos_dreamn",
-      "eos_deeproads",
-      "eos_oldroads",
-      "eos_wah_clavi",
-      "eos_cp80",
-      "eos_tx816",
-      "eos_lofi_piano",
-      "eos_midi_grand",
-      "eos_vibes",
-      "eos_saw900",
-      "eos_extacy",
-      "eos_thicksaw",
-      "eos_square2",
-      "eos_seq_ana",
-      "eos_sweeppad",
-      "eos_warmpad",
-      "eos_vocoder",
-      "eos_analog_brass",
-      "eos_synth_brass",
-      "eos_organ_60s",
-      "eos_rubber_bass",
-      "eos_seq_bass",
-      "eos_synbass101",
-      "eos_jazz_guitar",
-      "eos_upright_bass",
-      "tekk_hit1",
-      "tekk_hit2",
-      "tekk_hit3",
-      // Omega Premium Elite Collection
-      "eos_fantasia",
-      "eos_jp_strings",
-      "eos_ob_strings",
-      "eos_euro_hit",
-      "eos_acid_bass",
-      "eos_funk_gtr",
-      "eos_silky_pad",
-      "eos_space_voice",
-      "eos_rotary_organ",
-      "eos_mg_square",
-      "eos_slow_strings",
-      "eos_oct_brass",
-      // USER BANK B, C, D (Initial Lead Preload)
-      "edm_house_piano",
-      "korg_techno_organ",
-      "edm_iconic_lead1",
-      "edm_supersaw_jp80",
-      "edm_warehouse_saw",
+      "string_ensemble_1",
+      "distortion_guitar",
     ];
-    await Promise.all([
-      ...eagerInsts.map((id) => this.decodeEmbeddedAnchors(id)),
-      this.loadSoundfont("alto_sax"),
-      this.loadSoundfont("tenor_sax"),
-      this.loadSoundfont("trombone"),
-    ]);
+    await Promise.all(
+      eagerInsts.map((id) => this.decodeEmbeddedAnchors(id)),
+    );
     this._createReedChiffBuffer();
     this.isReady = true;
     this._dbgMainThreadVoices = 0;
@@ -2134,84 +2085,31 @@ export class NativePcmEngine {
           `activeVoices=${this.activeVoices.size}`,
       );
     }, 4000);
-    animalEdmLoader.preloadTopShots(this.ctx, this.decodedBuffers);
-    bloomEdmLoader.preloadTopShots(this.ctx, this.decodedBuffers);
+    // Small, memory-aware progressive preload of the most common core
+    // instruments, staggered, stopping early if the heap gets heavy.
     const idlePreload = async () => {
-      const embeddedDeferred = [
-        "eos_dreamn",
-        "eos_deeproads",
-        "eos_oldroads",
-        "eos_wah_clavi",
-        "eos_cp80",
-        "eos_tx816",
-        "eos_lofi_piano",
-        "eos_midi_grand",
-        "eos_vibes",
-        "eos_saw900",
-        "eos_extacy",
-        "eos_thicksaw",
-        "eos_square2",
-        "eos_seq_ana",
-        "eos_sweeppad",
-        "eos_warmpad",
-        "eos_vocoder",
-        "eos_analog_brass",
-        "eos_synth_brass",
-        "eos_organ_60s",
-        "eos_rubber_bass",
-        "eos_seq_bass",
-        "eos_synbass101",
-        "eos_jazz_guitar",
-        "eos_upright_bass",
-        "tekk_hit1",
-        "tekk_hit2",
-        "tekk_hit3",
-        // Omega Premium Elite Collection
-        "eos_fantasia",
-        "eos_jp_strings",
-        "eos_ob_strings",
-        "eos_euro_hit",
-        "eos_acid_bass",
-        "eos_funk_gtr",
-        "eos_silky_pad",
-        "eos_space_voice",
-        "eos_rotary_organ",
-        "eos_mg_square",
-        "eos_slow_strings",
-        "eos_oct_brass",
-        // USER BANK B, C, D (Deferred Lead Preload)
-        "edm_house_piano",
-        "korg_techno_organ",
-        "edm_iconic_lead1",
-        "edm_supersaw_jp80",
-        "edm_warehouse_saw",
-      ];
-      const coreInstruments = [
-        "electric_piano_2",
-        "electric_guitar_clean",
-        "acoustic_guitar_nylon",
-        "acoustic_guitar_steel",
+      const isMobile = typeof navigator !== "undefined" && /Android|iPhone|iPad/i.test(navigator.userAgent);
+      const softCap = isMobile ? 256 * 1024 * 1024 : 700 * 1024 * 1024;
+      const warm = [
         "drawbar_organ",
+        "choir_aahs",
         "synth_bass_1",
-        "soprano_sax",
-        "string_ensemble_1",
         "brass_section",
-        "flute",
-        "distortion_guitar",
-        "overdriven_guitar",
+        "alto_sax",
+        "tenor_sax",
         "drum_kick_r",
         "drum_snare_r",
         "drum_hhclosed_r",
         "drum_hhopen_r",
         "drum_crash_r",
       ];
-      for (const inst of embeddedDeferred) {
-        await this.decodeEmbeddedAnchors(inst);
-        await new Promise((r) => setTimeout(r, 120));
-      }
-      for (const inst of coreInstruments) {
-        await this.loadSoundfont(inst);
-        await new Promise((r) => setTimeout(r, 120));
+      for (const inst of warm) {
+        const mem = typeof performance !== "undefined" && performance.memory
+          ? performance.memory.usedJSHeapSize
+          : 0;
+        if (mem > softCap) break;
+        try { await this.preloadInstrument(inst); } catch (e) {}
+        await new Promise((r) => setTimeout(r, 250));
       }
     };
     if (typeof window !== "undefined" && "requestIdleCallback" in window) {
@@ -2301,6 +2199,9 @@ export class NativePcmEngine {
     } catch (err) {
       logger.warn("PCM", `Failed to load soundfont: ${instId}`, err);
     }
+    // Allow the instrument to be loaded again later (e.g. after cold eviction
+    // frees it). Without this, an evicted soundfont could never re-decode.
+    this.loadingSoundfonts.delete(instId);
     this._maybeEvictDecodedBuffers();
   }
 
@@ -2518,15 +2419,28 @@ export class NativePcmEngine {
     return isMobile ? 256 * 1024 * 1024 : 512 * 1024 * 1024;
   }
 
+  _getActiveInstIds() {
+    const ids = new Set();
+    if (this.playNoteUsing && this.playNoteUsing.size > 0) {
+      for (const id of this.playNoteUsing) ids.add(id);
+    }
+    if (this.activeVoices && this.activeVoices.size > 0) {
+      for (const [, v] of this.activeVoices) {
+        if (v && v.instId) ids.add(v.instId);
+      }
+    }
+    return ids;
+  }
+
   _maybeEvictDecodedBuffers() {
-    // DISARMED — audio-regression fix (v2.0.4 parity restored).
+    // DISARMED - audio-regression fix (v2.0.4 parity restored).
     // Auto-eviction caused mid-play decode churn once a session crossed the
     // budget: scheduled (song) notes hit findNearestAnchor, found the map
     // evicted, and re-decoded instruments ON THE MAIN THREAD during playback
-    // (lag + hiss + NULL notes + churn on ALL presets — worst on desktop,
+    // (lag + hiss + NULL notes + churn on ALL presets - worst on desktop,
     // where the whole catalog is resident). v2.0.4 never evicted decodes.
-    // Decoded banks stay resident for the session; FLAC already cut the
-    // footprint. Re-enable ONLY via a safe redesign: cold-only candidates,
+    // Decoded banks stay resident for the session.
+    // Re-enable ONLY via a safe redesign: cold-only candidates,
     // never-during-active-transport, and worklet-catalog-aware.
     return;
   }

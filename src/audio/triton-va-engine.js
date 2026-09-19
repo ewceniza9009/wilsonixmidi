@@ -7,6 +7,7 @@
 
 import { VoicePoolManager } from "./voice-pool.js";
 import { audioCore } from "./audio-core.js";
+import { getDeviceConfig } from "./device-capabilities.js";
 
 const WAVEFORMS = ["sawtooth", "square", "triangle", "sine"];
 
@@ -32,9 +33,12 @@ export class TritonVirtualAnalogEngine {
     if (!ctx) return;
     // Route through the master FX Rack so program IFX/MFX still apply on top.
     const dest = audioCore.fxRack?.input || ctx.destination;
-    // P2.2: cap the packed pool at 8 hot voices; it grows on demand toward
-    // 16 inside acquireVoice. Multi-VA combis no longer render 48 osc/slot.
-    this.pool = new VoicePoolManager(ctx, 16, dest, this.heldNotes, 8);
+    const deviceConfig = getDeviceConfig();
+    // P2.2: cap the packed pool at hot voices; it grows on demand toward
+    // maxVoices inside acquireVoice. Multi-VA combis no longer render 48 osc/slot.
+    const maxVoices = deviceConfig.maxSynthVoices;
+    const hotVoices = Math.max(4, Math.min(8, Math.floor(maxVoices / 2)));
+    this.pool = new VoicePoolManager(ctx, maxVoices, dest, this.heldNotes, hotVoices);
   }
 
   setProgram(prog) {

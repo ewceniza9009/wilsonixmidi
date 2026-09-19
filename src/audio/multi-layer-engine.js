@@ -908,6 +908,24 @@ export class MultiLayerEngine {
   }
 
   // ---- Crash/refresh-proof session: autosaved working state, restored on boot ----
+  markCleanShutdown() {
+    try {
+      if (typeof localStorage === "undefined") return;
+      localStorage.setItem("wilsonix_clean_prev", "1");
+    } catch (e) {}
+  }
+
+  checkCrashRecovery() {
+    try {
+      if (typeof localStorage === "undefined") return false;
+      const clean = localStorage.getItem("wilsonix_clean_prev") === "1";
+      localStorage.removeItem("wilsonix_clean_prev");
+      return !clean;
+    } catch (e) {
+      return false;
+    }
+  }
+
   saveSessionSoon() {
     try {
       clearTimeout(this._sessTimer);

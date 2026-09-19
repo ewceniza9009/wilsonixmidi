@@ -16,6 +16,7 @@ export class DemoStationUI {
     this.container = document.getElementById(containerId);
     this.currentSong = null;
     this.isPlaying = false;
+    this._isStarting = false;
     this.startTime = 0;
     this.timers = [];
     this.progressInterval = null;
@@ -248,95 +249,123 @@ export class DemoStationUI {
     if (this.isPlaying) {
       this.stop();
     }
-
-    // Nuclear cleanup: discard ALL demo authors to prevent bleed from previous songs
-    // (discard only removes queued events; already-dispatched noteOffs still fire)
-    noteScheduler.queue = noteScheduler.queue.filter(
-      ev => !String(ev.author).startsWith("demo-")
-    );
-
-    // Always silence any lingering engine state before a new clip
-    try {
-      multiLayerEngine.panic();
-    } catch (e) {}
+    console.log("[Demo] play()", song?.id);
+    if (this._isStarting) return;
+    this._isStarting = true;
 
     try {
-      const ctx = audioCore.init();
-      if (ctx && ctx.state === "suspended") {
-        await ctx.resume();
-      }
-      audioCore.unlock();
-      multiLayerEngine.init();
-      multiLayerEngine.toggleCombiMode(true);
-      multiLayerEngine.setCombiPreset(song.combi);
-      if (audioCore.fxRack && song.fxPreset) {
-        audioCore.fxRack.applyPreset(song.fxPreset);
-      }
+      // Nuclear cleanup: discard ALL demo authors to prevent bleed from previous songs
+      // (discard only removes queued events; already-dispatched noteOffs still fire)
+      noteScheduler.queue = noteScheduler.queue.filter(
+        ev => !String(ev.author).startsWith("demo-")
+      );
 
-      // Fire-and-forget preloads - don't block UI thread
-      if (multiLayerEngine.pcmEngine) {
-        const pcm = multiLayerEngine.pcmEngine;
-        const insts = [];
-        if (multiLayerEngine.layers) {
-          multiLayerEngine.layers.forEach((layer) => {
-            if (layer.enabled && layer.inst && !layer.inst.startsWith("va:")) {
-              insts.push(multiLayerEngine.resolveBankKey(layer.inst));
+      // Always silence any lingering engine state before a new clip
+      try {
+        multiLayerEngine.panic();
+      } catch (e) {}
+
+      try {
+        const ctx = audioCore.init();
+        if (ctx && ctx.state === "suspended") {
+          try { await ctx.resume(); } catch (e) {}
+        }
+        audioCore.unlock();
+        multiLayerEngine.init();
+        multiLayerEngine.toggleCombiMode(true);
+        multiLayerEngine.setCombiPreset(song.combi);
+        if (audioCore.fxRack && song.fxPreset) {
+          audioCore.fxRack.applyPreset(song.fxPreset);
+        }
+
+        // Wait until EVERY instrument this song touches is decoded before we
+        // schedule a single note. Fire-and-forget preloads let playback overtake
+        // decodeEmbeddedAnchors, so a heavy layered demo (Dancing Queen, etc.)
+        // hits findNearestAnchor mid-decode -> main-thread decode -> hiss/lag/
+        // wrong notes. AllSettled means one bad instrument can't block the song.
+        const ready = async (promise) => {
+          try { await promise; } catch (e) {}
+        };
+        const allPromises = [];
+        if (multiLayerEngine.pcmEngine) {
+          const pcm = multiLayerEngine.pcmEngine;
+          const insts = [];
+          if (multiLayerEngine.layers) {
+            multiLayerEngine.layers.forEach((layer) => {
+              if (layer.enabled && layer.inst && !layer.inst.startsWith("va:")) {
+                insts.push(multiLayerEngine.resolveBankKey(layer.inst));
+              }
+            });
+          }
+          (song.embeddedInsts || []).forEach((inst) => insts.push(inst));
+          (song.soundfontInsts || []).forEach((inst) => insts.push(inst));
+          const unique = [...new Set(insts)];
+          unique.forEach((inst) => {
+            if (inst.startsWith("soundfont:") || inst.endsWith("-mp3")) {
+              allPromises.push(ready(pcm.loadSoundfont(inst)));
+            } else {
+              allPromises.push(ready(pcm.preloadInstrument(inst)));
             }
           });
         }
-        (song.embeddedInsts || []).forEach((inst) => insts.push(inst));
-        (song.soundfontInsts || []).forEach((inst) => insts.push(inst));
-        const unique = [...new Set(insts)];
-        unique.forEach((inst) => {
-          if (inst.startsWith("soundfont:") || inst.endsWith("-mp3")) {
-            pcm.loadSoundfont(inst).catch(() => {});
-          } else {
-            pcm.preloadInstrument(inst).catch(() => {});
-          }
-        });
+        // Race the preloads against a hard deadline: heavy demos decode fully
+        // before the first note (~1-2s desktop), but a stuck fetch/dynamic bank
+        // load must NEVER block playback forever.
+        const deadline = new Promise(resolve => setTimeout(resolve, 4500));
+        await Promise.race([Promise.all(allPromises), deadline]);
+      } catch (e) {
+        console.warn("Demo player audio setup:", e);
       }
+
+      // NOTE: no `if (!this._isStarting) return;` here — the start-of-play
+      // engine panic() fires the panic hook -> this.stop(false), which would
+      // clear _isStarting and abort the play that's just beginning. The preload
+      // is already capped by the deadline, and a second click during preload is
+      // blocked by the _isStarting guard above.
+      this.currentSong = song.id;
+      this.isPlaying = true;
+      const ctx = audioCore.ctx;
+      const songStart = (ctx ? ctx.currentTime : 0) + 0.08;
+      this.startTime = ctx ? ctx.currentTime : performance.now() / 1000;
+      this.activeMidiNotes.clear();
+      this.clearTimers();
+      this.updateButtons();
+
+      const volRatio = typeof this.volume === "number" ? this.volume : 0.70;
+
+      song.events.forEach((ev) => {
+        if (ev.type === "pedal") {
+          const at = songStart + ev.time / 1000;
+          noteScheduler.pedal(ev.down, at, "demo-" + song.id);
+        } else if (ev.note) {
+          const at = songStart + ev.time / 1000;
+          const scaledVel = Math.max(1, Math.min(127, Math.round((ev.vel || 80) * volRatio)));
+          noteScheduler.noteOn(ev.note, scaledVel, at, "demo-" + song.id);
+          this.activeMidiNotes.add(ev.note);
+          const offAt = songStart + (ev.time + (ev.dur || 600)) / 1000;
+          noteScheduler.noteOff(ev.note, offAt, "demo-" + song.id);
+        }
+      });
+
+      noteScheduler.start();
+
+      this.progressInterval = setInterval(() => {
+        if (!this.isPlaying) return;
+        const elapsed = ((ctx ? ctx.currentTime : 0) - this.startTime) * 1000;
+        if (elapsed >= song.durationMs) {
+          this.stop();
+          return;
+        }
+        this.updateProgress(song.id, elapsed, song.durationMs);
+      }, 100);
+
+      this.updateProgress(song.id, 0, song.durationMs);
+      console.log("[Demo] play() scheduled", song.events.length, "events");
     } catch (e) {
-      console.warn("Demo player audio setup:", e);
+      console.error("[Demo] play() failed:", e);
+    } finally {
+      this._isStarting = false;
     }
-
-    this.currentSong = song.id;
-    this.isPlaying = true;
-    const ctx = audioCore.ctx;
-    const songStart = (ctx ? ctx.currentTime : 0) + 0.08;
-    this.startTime = ctx ? ctx.currentTime : performance.now() / 1000;
-    this.activeMidiNotes.clear();
-    this.clearTimers();
-    this.updateButtons();
-
-    const volRatio = typeof this.volume === "number" ? this.volume : 0.70;
-
-    song.events.forEach((ev) => {
-      if (ev.type === "pedal") {
-        const at = songStart + ev.time / 1000;
-        noteScheduler.pedal(ev.down, at, "demo-" + song.id);
-      } else if (ev.note) {
-        const at = songStart + ev.time / 1000;
-        const scaledVel = Math.max(1, Math.min(127, Math.round((ev.vel || 80) * volRatio)));
-        noteScheduler.noteOn(ev.note, scaledVel, at, "demo-" + song.id);
-        this.activeMidiNotes.add(ev.note);
-        const offAt = songStart + (ev.time + (ev.dur || 600)) / 1000;
-        noteScheduler.noteOff(ev.note, offAt, "demo-" + song.id);
-      }
-    });
-
-    noteScheduler.start();
-
-    this.progressInterval = setInterval(() => {
-      if (!this.isPlaying) return;
-      const elapsed = ((ctx ? ctx.currentTime : 0) - this.startTime) * 1000;
-      if (elapsed >= song.durationMs) {
-        this.stop();
-        return;
-      }
-      this.updateProgress(song.id, elapsed, song.durationMs);
-    }, 100);
-
-    this.updateProgress(song.id, 0, song.durationMs);
   }
 
   stop(triggerEnginePanic = true) {

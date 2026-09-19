@@ -6,6 +6,7 @@
 
 import { VoicePoolManager } from "./voice-pool.js";
 import { audioCore } from "./audio-core.js";
+import { getDeviceConfig } from "./device-capabilities.js";
 
 export const INSTRUMENT_PATCHES = {
   whitney_ballad: {
@@ -466,8 +467,9 @@ export class SynthEngine {
       this._muteNode = ctx.createGain();
       this._muteNode.gain.value = 0.0;
       this._muteNode.connect(ctx.destination);
-      this.voicePool = new VoicePoolManager(ctx, 32, this._muteNode);
-      // This pool's 96 oscillators are permanently inaudible (hard-wired to the
+      const deviceConfig = getDeviceConfig();
+      this.voicePool = new VoicePoolManager(ctx, deviceConfig.maxSynthVoices, this._muteNode);
+      // This pool's oscillators are permanently inaudible (hard-wired to the
       // muted node above) yet still rendered every quantum. Stop them outright
       // to free the audio render thread; the Triton VA pool is untouched.
       this.voicePool.voices.forEach(v => v.stopOscillators());

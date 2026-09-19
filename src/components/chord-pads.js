@@ -389,6 +389,7 @@ export class ChordPadsUI {
             multiLayerEngine.noteOff(m);
           }
         });
+        this.emitKeyVisual(notes, false);
       } else {
         notes.forEach(m => multiLayerEngine.noteOff(m));
       }

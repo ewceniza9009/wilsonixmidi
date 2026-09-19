@@ -248,6 +248,11 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
         }
         this.heldNotes.clear();
         break;
+      case "dropInstrument":
+        if (this.bufferCatalog && data.instId) {
+          this.bufferCatalog.delete(data.instId);
+        }
+        break;
       case "pitchBend":
         // Handled per-note via noteOn messages from main thread
         break;
@@ -527,4 +532,7 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
   }
 }
 
-registerProcessor("wilsonix-pcm-processor", WilsonixPcmProcessor);
+if (typeof globalThis.registerProcessor === "function" && !globalThis.__wilsonixPcmRegistered) {
+  globalThis.__wilsonixPcmRegistered = true;
+  registerProcessor("wilsonix-pcm-processor", WilsonixPcmProcessor);
+}

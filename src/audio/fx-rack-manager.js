@@ -162,13 +162,27 @@ export class FxRackManager {
 
     // Route every setBypass caller (rack presets, FX UI, engine patches) through
     // a single point that rebuilds the dynamic series chain.
+    this._bypassBatch = false;
+    this._bypassBatchQueue = [];
+
     chain.forEach(effect => {
       const orig = effect.setBypass ? effect.setBypass.bind(effect) : null;
       effect.setBypass = bypassed => {
         if (orig) orig(bypassed);
-        this._updateChainRouting();
+        if (this._bypassBatch) {
+          this._bypassBatchQueue.push(effect);
+        } else {
+          this._updateChainRouting();
+        }
       };
     });
+
+    this._flushBypassBatch = () => {
+      if (this._bypassBatchQueue.length > 0) {
+        this._bypassBatchQueue = [];
+        this._updateChainRouting();
+      }
+    };
 
     // Defer wiring until all defaults are applied, so the fast path engages once.
     this._bootstrapping = true;
@@ -235,6 +249,14 @@ export class FxRackManager {
         this.input.gain.setValueAtTime(0, now);
       }
     } catch (e) {}
+    // Defer chain rebuild to next tick
+    if (!this._deferredRebuild) {
+      this._deferredRebuild = true;
+      setTimeout(() => {
+        this._deferredRebuild = false;
+        if (!this._bootstrapping) this._updateChainRouting();
+      }, 0);
+    }
   }
 
   unmuteOutput() {
@@ -249,6 +271,13 @@ export class FxRackManager {
         this.input.gain.setTargetAtTime(1.0, now, 0.015);
       }
     } catch (e) {}
+    if (!this._deferredRebuild) {
+      this._deferredRebuild = true;
+      setTimeout(() => {
+        this._deferredRebuild = false;
+        if (!this._bootstrapping) this._updateChainRouting();
+      }, 0);
+    }
   }
 
   // Reset all effect parameters to safe defaults — prevents old preset bleed
@@ -305,16 +334,18 @@ export class FxRackManager {
     this.pianoAcoustics?.setSoundboardBloom(0);
   }
 
-  applyPreset(presetName) {
+  async applyPreset(presetName) {
     // Hard-cut output to prevent old FX tails bleeding into new preset
     this.muteOutput();
 
     this._bootstrapping = true;
+    this._bypassBatch = true;
+    this._bypassBatchQueue = [];
     try {
       // Reset all effect parameters to safe defaults before enabling new ones
       this.resetAllEffects();
 
-      // Reset all modulation/time-based units
+      // Reset all modulation/time-based units (batched)
       this.compressor.setBypass(true);
       this.autoWah.setBypass(true);
       this.talkbox.setBypass(true);
@@ -329,6 +360,9 @@ export class FxRackManager {
       this.shimmerReverb.setBypass(true);
       this.gatedReverb.setBypass(true);
       this.tapeSat.setBypass(true);
+
+      // Yield to main thread to prevent blocking
+      await new Promise(r => setTimeout(r, 0));
 
       switch (presetName) {
         case "dub_space_echo":
@@ -632,7 +666,8 @@ export class FxRackManager {
     } finally {
       this._currentPreset = presetName;
       this._bootstrapping = false;
-      this._updateChainRouting();
+      this._bypassBatch = false;
+      this._flushBypassBatch();
       // Unmute after chain is rebuilt — old tails are gone, new preset is clean
       this.unmuteOutput();
     }

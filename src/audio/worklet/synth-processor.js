@@ -413,4 +413,7 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
   }
 }
 
-registerProcessor("wilsonix-synth-processor", WilsonixSynthProcessor);
+if (typeof globalThis.registerProcessor === "function" && !globalThis.__wilsonixSynthRegistered) {
+  globalThis.__wilsonixSynthRegistered = true;
+  registerProcessor("wilsonix-synth-processor", WilsonixSynthProcessor);
+}

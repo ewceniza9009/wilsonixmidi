@@ -36,6 +36,8 @@ export class ClipLooper {
       this._blankTrack(3),
     ];
 
+    this.MAX_EVENTS_PER_TRACK = 2000;
+
     this.recordingTrackId = null;
     this.recordStartTime = 0;
     this.countInNodes = [];
@@ -278,12 +280,11 @@ export class ClipLooper {
         if (!ctx) return;
         const offset = ctx.currentTime - this.recordStartTime;
         if (offset >= 0) {
-          this.tracks[this.recordingTrackId].events.push({
-            type: "on",
-            note,
-            vel,
-            time: offset,
-          });
+          const track = this.tracks[this.recordingTrackId];
+          track.events.push({ type: "on", note, vel, time: offset });
+          if (track.events.length > this.MAX_EVENTS_PER_TRACK) {
+            track.events = track.events.slice(-this.MAX_EVENTS_PER_TRACK);
+          }
         }
       }
     };
@@ -295,11 +296,11 @@ export class ClipLooper {
         if (!ctx) return;
         const offset = ctx.currentTime - this.recordStartTime;
         if (offset >= 0) {
-          this.tracks[this.recordingTrackId].events.push({
-            type: "off",
-            note,
-            time: offset,
-          });
+          const track = this.tracks[this.recordingTrackId];
+          track.events.push({ type: "off", note, time: offset });
+          if (track.events.length > this.MAX_EVENTS_PER_TRACK) {
+            track.events = track.events.slice(-this.MAX_EVENTS_PER_TRACK);
+          }
         }
       }
     };
@@ -330,11 +331,11 @@ export class ClipLooper {
         if (!ctx) return;
         const offset = ctx.currentTime - this.recordStartTime;
         if (offset >= 0) {
-          this.tracks[this.recordingTrackId].events.push({
-            type: "sustain",
-            down,
-            time: offset,
-          });
+          const track = this.tracks[this.recordingTrackId];
+          track.events.push({ type: "sustain", down, time: offset });
+          if (track.events.length > this.MAX_EVENTS_PER_TRACK) {
+            track.events = track.events.slice(-this.MAX_EVENTS_PER_TRACK);
+          }
         }
       }
     };

@@ -14,6 +14,8 @@ import { TritonWorkstationUI } from "./components/triton-workstation-ui.js";
 import { multiLayerEngine } from "./audio/multi-layer-engine.js";
 import { registerComponent } from "./components/component-registry.js";
 import { initMobileDevice } from "./mobile/device.js";
+import { initMemoryMonitor, emergencyFlushAll } from "./audio/memory-manager.js";
+import { onMemoryPressure } from "./audio/memory-manager.js";
 
 class MidiKeyEliteApp {
   constructor() {
@@ -68,6 +70,19 @@ class MidiKeyEliteApp {
     this.installGlobalErrorReporter();
     initMobileDevice();
 
+    // Memory pressure monitor - MUST start early to catch OOM
+    try { initMemoryMonitor(); } catch (e) { console.warn("Memory monitor:", e); }
+    // Free cold decoded instruments on pressure so the heap never balloons
+    // into GC thrash (scrolling/switching lag).
+    try {
+      onMemoryPressure((/* level */) => {
+        const pcm = multiLayerEngine.pcmEngine;
+        if (pcm && typeof pcm._maybeEvictDecodedBuffers === "function") {
+          pcm._maybeEvictDecodedBuffers();
+        }
+      });
+    } catch (e) {};
+
     // P3.5: Register Service Worker for PWA offline support
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});
@@ -84,13 +99,24 @@ class MidiKeyEliteApp {
       console.warn("Pre-arm audio:", e);
     }
 
+    // Emergency flush on unload
+    window.addEventListener("pagehide", () => emergencyFlushAll());
+    window.addEventListener("beforeunload", () => emergencyFlushAll());
+
     // 0b. Restore working session (survives accidental refresh mid-gig)
     let restoredSession = null;
+    const wasCrashed = multiLayerEngine.checkCrashRecovery();
+    if (wasCrashed) {
+      console.warn("[App] Detected previous crash - attempting session recovery");
+    }
     try {
       restoredSession = multiLayerEngine.restoreSession();
     } catch (e) {
       console.warn("Session restore:", e);
     }
+
+    // Mark clean shutdown on unload
+    window.addEventListener("beforeunload", () => multiLayerEngine.markCleanShutdown());
 
     // 1. Immediate Audio Unlock & Auto-Close Setup
     const unlockGesture = () => {
@@ -434,6 +460,18 @@ class MidiKeyEliteApp {
     });
 
     console.log("MidiKey Elite Ready. Zero-lag pipeline armed.");
+
+    // Background suspend/resume for Android/iOS
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        audioCore.suspend();
+        if (multiLayerEngine.looper) multiLayerEngine.looper.stopAllPlayback();
+      } else {
+        audioCore.resume();
+      }
+    });
+    window.addEventListener("pagehide", () => audioCore.suspend());
+    window.addEventListener("pageshow", () => audioCore.resume());
 
     // Dismiss startup stage boot loader smoothly
     setTimeout(() => {

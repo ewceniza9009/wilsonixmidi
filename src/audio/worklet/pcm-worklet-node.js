@@ -32,10 +32,13 @@ export class PcmWorkletNode {
       this.sharedBuffer = MidiRingBufferWriter.createSharedBuffer();
       this.writer = new MidiRingBufferWriter(this.sharedBuffer);
 
-      const blob = new Blob([processorCode], { type: "application/javascript" });
-      const moduleUrl = URL.createObjectURL(blob);
-      await this.ctx.audioWorklet.addModule(moduleUrl);
-      URL.revokeObjectURL(moduleUrl);
+      if (!this.ctx.audioWorklet._wilsonixPcmRegistered) {
+        const blob = new Blob([processorCode], { type: "application/javascript" });
+        const moduleUrl = URL.createObjectURL(blob);
+        await this.ctx.audioWorklet.addModule(moduleUrl);
+        URL.revokeObjectURL(moduleUrl);
+        this.ctx.audioWorklet._wilsonixPcmRegistered = true;
+      }
 
       this.node = new AudioWorkletNode(this.ctx, "wilsonix-pcm-processor", {
         numberOfInputs: 0,
