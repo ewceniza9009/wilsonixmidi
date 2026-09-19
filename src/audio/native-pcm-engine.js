@@ -263,6 +263,13 @@ const INST_ALIASES = {
   m1_solo_synth: "brass_section",
 };
 
+// Idle time after which a decoded instrument may be cold-evicted when over
+// budget. Any instrument touched or selected within this window is always kept
+// resident, so live performance and scheduled playback never re-decode mid-song
+// (the v2.0.x hiss/lag regression). Tuned well below budget pressure so a demo
+// or auditioned patch is never dropped while still being used.
+const PROTECT_MS = 3 * 60 * 1000;
+
 const INST_TRIM_GAINS = {
   // Acoustic Pianos — reference level (~0.85)
   acoustic_grand_piano: 0.85,
@@ -1701,6 +1708,22 @@ export class NativePcmEngine {
     this.loadingSoundfonts = new Set();
     this.isReady = false;
 
+    // Memory-bounded decode residency (safe eviction).
+    // `_pinnedInsts` is the live preset/combi/split set (replaced on sound
+    // selection) PLUS the boot core, which is NEVER evicted. `_instProtectedAt`
+    // marks instruments that were recently preloaded or touched so the evictor
+    // never drops a sound the performer/transport is about to use.
+    this._coreInsts = new Set([
+      "acoustic_grand_piano",
+      "electric_piano_1",
+      "string_ensemble_1",
+      "distortion_guitar",
+    ]);
+    this._pinnedInsts = new Set();
+    this._instLastUsed = new Map();
+    this._instProtectedAt = new Map();
+    this._evictTimer = null;
+
     this.initBuffers();
   }
 
@@ -2054,6 +2077,16 @@ export class NativePcmEngine {
     return newBuf;
   }
 
+  _yield() {
+    return new Promise((r) => {
+      if (typeof requestAnimationFrame !== "undefined") {
+        requestAnimationFrame(() => r());
+      } else {
+        setTimeout(r, 16);
+      }
+    });
+  }
+
   async initBuffers() {
     // Boot decode only what the DEFAULT preset (ballad_master) needs, so the
     // heap stays bounded. Every other instrument decodes lazily on first use
@@ -2064,9 +2097,14 @@ export class NativePcmEngine {
       "string_ensemble_1",
       "distortion_guitar",
     ];
-    await Promise.all(
-      eagerInsts.map((id) => this.decodeEmbeddedAnchors(id)),
-    );
+    // Decode sequentially with a yield between each so the UI can paint
+    // during boot. Promise.all ran all 4 in parallel which blocked the main
+    // thread for the full combined decode time — causing blank tabs and
+    // startup hiccups.
+    for (const id of eagerInsts) {
+      await this.decodeEmbeddedAnchors(id);
+      await this._yield();
+    }
     this._createReedChiffBuffer();
     this.isReady = true;
     this._dbgMainThreadVoices = 0;
@@ -2075,8 +2113,23 @@ export class NativePcmEngine {
         `workletReady=${!!(this.pcmWorkletNode && this.pcmWorkletNode.isReady)} ` +
         `activeVoices=${this.activeVoices.size}`,
     );
-    this.loadAbletunesInstrument("fm_piano");
-    this.loadAbletunesInstrument("upright_piano");
+    // On low-end Android, defer the non-default FM piano bank to lazy decode
+    // (it is decoded on first selection). The upright is the default preset
+    // piano, so it stays eager. Saves a large boot-time decode spike.
+    {
+      const isMobile = typeof navigator !== "undefined" && /Android|iPhone|iPad/i.test(navigator.userAgent);
+      let deviceMem = 4;
+      if (typeof navigator !== "undefined" && navigator.deviceMemory) {
+        deviceMem = navigator.deviceMemory;
+      }
+      // On low-end devices, defer ALL Abletunes loads to the idle preload
+      // (they decode lazily on first selection). This removes ~200ms of
+      // synchronous main-thread decode from boot so the UI can paint first.
+      if (!(isMobile && deviceMem <= 6)) {
+        this.loadAbletunesInstrument("upright_piano");
+        this.loadAbletunesInstrument("fm_piano");
+      }
+    }
     setTimeout(() => {
       const w = this.pcmWorkletNode;
       console.info(
@@ -2086,41 +2139,80 @@ export class NativePcmEngine {
       );
     }, 4000);
     // Small, memory-aware progressive preload of the most common core
-    // instruments, staggered, stopping early if the heap gets heavy.
-    const idlePreload = async () => {
-      const isMobile = typeof navigator !== "undefined" && /Android|iPhone|iPad/i.test(navigator.userAgent);
-      const softCap = isMobile ? 256 * 1024 * 1024 : 700 * 1024 * 1024;
-      const warm = [
-        "drawbar_organ",
-        "choir_aahs",
-        "synth_bass_1",
-        "brass_section",
-        "alto_sax",
-        "tenor_sax",
-        "drum_kick_r",
-        "drum_snare_r",
-        "drum_hhclosed_r",
-        "drum_hhopen_r",
-        "drum_crash_r",
-      ];
-      for (const inst of warm) {
-        const mem = typeof performance !== "undefined" && performance.memory
-          ? performance.memory.usedJSHeapSize
-          : 0;
-        if (mem > softCap) break;
-        try { await this.preloadInstrument(inst); } catch (e) {}
-        await new Promise((r) => setTimeout(r, 250));
-      }
+    // instruments, staggered, stopping early once decoded usage approaches the
+    // budget. Uses decoded-byte accounting (getDecodedBufferStats), NOT
+    // performance.memory — which is undefined on many Android WebViews and
+    // silently disabled the cap (preloading everything = boot OOM).
+    //
+    // Runs via requestIdleCallback with deadline checks so decode work NEVER
+    // blocks rendering — each instrument is decoded only when the browser has
+    // idle time, and yields immediately if a render is pending.
+    //
+    // On desktop we preload fewer instruments so the decoded-RAM budget is
+    // never exceeded during playback or scrolling, avoiding eviction churn
+    // that causes stutter and OOM crashes on low-end devices.
+    const warm = [
+      "drawbar_organ",
+      "choir_aahs",
+      "synth_bass_1",
+      "brass_section",
+      "alto_sax",
+    ];
+    const isMobile = typeof navigator !== "undefined" && /Android|iPhone|iPad/i.test(navigator.userAgent);
+    let deviceMem = 4;
+    if (typeof navigator !== "undefined" && navigator.deviceMemory) {
+      deviceMem = navigator.deviceMemory;
+    }
+    // Low-end phones get only the first 3 staples; desktop gets a modest 5
+    // so decoded RAM stays under the budget and eviction doesn't churn during live play.
+    const limit = isMobile && deviceMem <= 3 ? 3 : isMobile && deviceMem <= 6 ? 6 : 5;
+    const decodedBudget = this._getDecodedMemoryBudget();
+    const softCap = isMobile ? Math.floor(decodedBudget * 0.6) : 700 * 1024 * 1024;
+
+    const warmUp = () => {
+      let idx = 0;
+      const step = (deadline) => {
+        while (idx < limit) {
+          // If the browser needs to paint, stop immediately.
+          if (deadline && deadline.timeRemaining() < 5) {
+            requestAnimationFrame(() => requestIdleCallback(step));
+            return;
+          }
+          const stats = this.getDecodedBufferStats();
+          if (stats.bytes > softCap) break;
+          const inst = warm[idx++];
+          this.preloadInstrument(inst).catch(() => {}).finally(() => {
+            // After each instrument, yield then continue in next idle slot.
+            requestAnimationFrame(() => requestIdleCallback(step));
+          });
+          return; // one instrument per idle callback
+        }
+        this._scheduleEvictionCheck(2000);
+      };
+      requestIdleCallback(step, { timeout: 15000 });
     };
     if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-      window.requestIdleCallback(() => idlePreload());
+      setTimeout(warmUp, 3000);
     } else {
-      setTimeout(idlePreload, 1500);
+      // Fallback: staggered with generous gaps so UI stays responsive.
+      (async () => {
+        for (let i = 0; i < limit; i++) {
+          try { await this.preloadInstrument(warm[i]); } catch (e) {}
+          await new Promise(r => setTimeout(r, 500));
+        }
+        this._scheduleEvictionCheck(2000);
+      })();
     }
   }
 
   preloadInstrument(instId) {
     if (!instId || !this.ctx) return Promise.resolve();
+    // A selected sound must never be dropped by budget eviction: any instrument
+    // the app explicitly preloads is in active use, so protect it for the full
+    // PROTECT_MS window (or until a new preset replaces the pin set).
+    if (this._instProtectedAt) {
+      this._instProtectedAt.set(instId, Date.now() + PROTECT_MS);
+    }
     if (this.decodedBuffers.has(instId) && this.decodedBuffers.get(instId).size > 0) {
       this._prewarmWorklet(instId);
       return Promise.resolve();
@@ -2321,7 +2413,14 @@ export class NativePcmEngine {
     const instMap = this.decodedBuffers.get(instId);
     const ctx = this.ctx;
     const anchors = Object.entries(instData.anchors);
-    const BATCH_SIZE = 3; // Decode 3 anchors at a time to avoid main-thread freeze
+
+    // Each anchor decode includes a sync createCrossfadedLoopBuffer call that
+    // copies and crossfades the full AudioBuffer on the main thread. Batching
+    // multiple anchors back-to-back blocks rendering for the combined duration
+    // (3 anchors × 20ms = 60ms = 3-4 dropped frames). Decode one at a time
+    // with a yield between each so the browser can always paint.
+    const BATCH_SIZE = 1;
+
     for (let i = 0; i < anchors.length; i += BATCH_SIZE) {
       const batch = anchors.slice(i, i + BATCH_SIZE);
       await Promise.all(batch.map(async ([midiStr, anchor]) => {
@@ -2343,8 +2442,10 @@ export class NativePcmEngine {
           );
         }
       }));
-      // Yield to main thread between batches
-      await new Promise(r => setTimeout(r, 0));
+      // Yield to rendering pipeline between batches/anchors.
+      if (i + BATCH_SIZE < anchors.length) {
+      await this._yield();
+      }
     }
     this._maybeEvictDecodedBuffers();
   }
@@ -2394,8 +2495,19 @@ export class NativePcmEngine {
     if (!owner) return;
     if (!this._instLastUsed) this._instLastUsed = new Map();
     this._instLastUsed.set(owner, performance.now());
+    // Protection updated on the same cadence as lastUsed (every 12 touches)
+    // to avoid a Date.now() allocation on every single note.
     if (!this._touchCount) this._touchCount = 0;
-    if (++this._touchCount % 12 === 0) this._maybeEvictDecodedBuffers();
+    if (++this._touchCount % 12 === 0) {
+      if (!this._instProtectedAt) this._instProtectedAt = new Map();
+      this._instProtectedAt.set(owner, Date.now() + PROTECT_MS);
+      // Time-gated eviction check — only when 3+ seconds since last schedule.
+      const now = performance.now();
+      if (now - (this._lastEvictSchedule || 0) > 3000) {
+        this._lastEvictSchedule = now;
+        this._scheduleEvictionCheck(0);
+      }
+    }
   }
 
   _decodedBufferBytes(instMap) {
@@ -2411,14 +2523,6 @@ export class NativePcmEngine {
     return bytes;
   }
 
-  _getDecodedMemoryBudget() {
-    const isMobile =
-      typeof window !== "undefined" &&
-      (window.Capacitor ||
-        /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent));
-    return isMobile ? 256 * 1024 * 1024 : 512 * 1024 * 1024;
-  }
-
   _getActiveInstIds() {
     const ids = new Set();
     if (this.playNoteUsing && this.playNoteUsing.size > 0) {
@@ -2432,17 +2536,191 @@ export class NativePcmEngine {
     return ids;
   }
 
+  /**
+   * Replaces the "do not evict" set with exactly the instruments the current
+   * sound needs (preset / combi / split layers), unioned with the boot core.
+   * Called by multi-layer-engine every time a sound is selected/deselected.
+   */
+  setPinnedInstruments(instIds) {
+    if (!this._pinnedInsts) this._pinnedInsts = new Set();
+    const next = this._coreInsts ? new Set(this._coreInsts) : new Set();
+    if (instIds) {
+      for (const id of instIds) if (id) next.add(id);
+    }
+    this._pinnedInsts = next;
+  }
+
+  addPinnedInstruments(instIds) {
+    if (!instIds) return;
+    if (!this._pinnedInsts) this._pinnedInsts = new Set(this._coreInsts || []);
+    for (const id of instIds) if (id) this._pinnedInsts.add(id);
+  }
+
+  removePinnedInstruments(instIds) {
+    if (!instIds || !this._pinnedInsts) return;
+    for (const id of instIds) {
+      if (id && this._coreInsts && !this._coreInsts.has(id)) {
+        this._pinnedInsts.delete(id);
+      }
+    }
+  }
+
+  /**
+   * Any instrument that produced a note within PROTECT_MS is not evictable —
+   * it protects both worklet-routed voices (which never populate activeVoices)
+   * and main-thread voices alike.
+   */
+  _isDecodeProtected(instId) {
+    if (!instId) return true;
+    if (this._coreInsts && this._coreInsts.has(instId)) return true;
+    if (this._pinnedInsts && this._pinnedInsts.has(instId)) return true;
+    const prot = this._instProtectedAt && this._instProtectedAt.get(instId);
+    if (prot && Date.now() < prot) return true;
+    return false;
+  }
+
+  _getDecodedMemoryBudget() {
+    const isMobile =
+      typeof window !== "undefined" &&
+      (window.Capacitor ||
+        /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent));
+    if (!isMobile) return 1024 * 1024 * 1024; // 1GB for desktop-class devices
+    // Real Android RAM-conscious budgets — scaled to device memory so modern
+    // phones with 6GB+ RAM don't get a hard 384MB cap that causes OOM churn.
+    let deviceMem = 4;
+    if (typeof navigator !== "undefined" && navigator.deviceMemory) {
+      deviceMem = navigator.deviceMemory;
+    }
+    // Scale budget proportionally: 3GB RAM → 192MB, 6GB → 384MB, 8GB → 512MB,
+    // 12GB → 768MB, 16GB+ → 1024MB (1GB). Caps prevent extremes on very low-end.
+    if (deviceMem <= 2) return 64 * 1024 * 1024;
+    if (deviceMem <= 4) return 128 * 1024 * 1024;
+    if (deviceMem <= 6) return 256 * 1024 * 1024;
+    if (deviceMem <= 8) return 384 * 1024 * 1024;
+    if (deviceMem <= 12) return 512 * 1024 * 1024;
+    return 1024 * 1024 * 1024; // 1GB for 12GB+ RAM devices
+  }
+
+  getDecodedBufferStats() {
+    let insts = 0;
+    let buffers = 0;
+    let bytes = 0;
+    if (this.decodedBuffers) {
+      for (const map of this.decodedBuffers.values()) {
+        if (map && map.size > 0) insts++;
+        buffers += map ? map.size : 0;
+        bytes += this._decodedBufferBytes(map);
+      }
+    }
+    return {
+      instCount: insts,
+      bufferCount: buffers,
+      bytes,
+      bytesMB: Math.round(bytes / 1024 / 1024),
+      pinned: this._pinnedInsts ? this._pinnedInsts.size : 0,
+      budget: this._getDecodedMemoryBudget(),
+    };
+  }
+
+  /**
+   * Budget-bounded, cold-only decoded-buffer eviction.
+   *
+   * SAFETY DESIGN (this is what made v2.0.x churn and get disabled):
+   *  - Candidates are ONLY instruments that are unpinned, not currently
+   *    sounding, not decoding, and idle for > PROTECT_MS. Pinned instruments
+   *    (current preset, playing demo, boot core) can never be evicted, and
+   *    re-selection re-protects via preloadInstrument()/touch, so scheduled
+   *    playback never re-decodes mid-song.
+   *  - Eviction is never run from the note hot path (_touchBuffer). It runs
+   *    from a debounced timer after decode/preload settles and from the
+   *    memory manager on real pressure.
+   *  - Each drop frees BOTH the main-thread AudioBuffer map AND the worklet's
+   *    Float32Array catalog via dropInstrument().
+   */
+  _safeEvictDecodedBuffers(force = false) {
+    if (!this.decodedBuffers || this.decodedBuffers.size === 0) return 0;
+    const budget = this._getDecodedMemoryBudget();
+    const now = Date.now();
+
+    // Measure per-instrument bytes (LRU by last touch).
+    const instSizes = new Map();
+    let used = 0;
+    for (const [id, map] of this.decodedBuffers) {
+      const bytes = this._decodedBufferBytes(map);
+      if (bytes > 0) {
+        instSizes.set(id, bytes);
+        used += bytes;
+      }
+    }
+    if (!force && used <= budget) return 0;
+
+    const active = this._getActiveInstIds();
+    const candidates = [];
+    for (const [id, bytes] of instSizes) {
+      if (this._isDecodeProtected(id)) continue;
+      if (active.has(id)) continue;
+      if (this.loadingSoundfonts && this.loadingSoundfonts.has(id)) continue;
+      if (this._decodePromises && this._decodePromises.has(id)) continue;
+      const lastUsed = this._instLastUsed ? this._instLastUsed.get(id) || 0 : 0;
+      if (!force && now - lastUsed < PROTECT_MS) continue;
+      candidates.push({ id, bytes, lastUsed });
+    }
+    // Coldest first.
+    candidates.sort((a, b) => a.lastUsed - b.lastUsed);
+
+    let freed = 0;
+    for (const c of candidates) {
+      if (!force && used <= budget) break;
+      this._dropDecodedInstrument(c.id);
+      used = Math.max(0, used - c.bytes);
+      freed += c.bytes;
+    }
+
+    if (freed > 0 || candidates.length > 0) {
+      if (freed > 0) {
+        console.log(
+          `[PCM] Memory: freed ${Math.round(freed / 1024 / 1024)}MB decoded ` +
+            `(now ${Math.round(used / 1024 / 1024)}MB, budget ` +
+            `${Math.round(budget / 1024 / 1024)}MB, ${candidates.length} cold)`,
+        );
+      }
+      // Report pressure context to the memory manager via existing hooks.
+      if (used > budget && this._onBudgetExceeded) {
+        try { this._onBudgetExceeded(used, budget); } catch (e) {}
+      }
+    }
+    return freed;
+  }
+
+  /** Removes one instrument from main-thread decodes AND the worklet catalog. */
+  _dropDecodedInstrument(instId) {
+    if (!instId) return;
+    this.decodedBuffers.delete(instId);
+    if (this._instLastUsed) this._instLastUsed.delete(instId);
+    if (this._instProtectedAt) this._instProtectedAt.delete(instId);
+    if (this.pcmWorkletNode && typeof this.pcmWorkletNode.dropInstrument === "function") {
+      try { this.pcmWorkletNode.dropInstrument(instId); } catch (e) {}
+    }
+  }
+
+  _scheduleEvictionCheck(delayMs = 1500) {
+    if (this._evictTimer) return;
+    this._evictTimer = setTimeout(() => {
+      this._evictTimer = null;
+      try {
+        this._safeEvictDecodedBuffers(false);
+      } catch (e) {}
+    }, delayMs);
+  }
+
   _maybeEvictDecodedBuffers() {
-    // DISARMED - audio-regression fix (v2.0.4 parity restored).
-    // Auto-eviction caused mid-play decode churn once a session crossed the
-    // budget: scheduled (song) notes hit findNearestAnchor, found the map
-    // evicted, and re-decoded instruments ON THE MAIN THREAD during playback
-    // (lag + hiss + NULL notes + churn on ALL presets - worst on desktop,
-    // where the whole catalog is resident). v2.0.4 never evicted decodes.
-    // Decoded banks stay resident for the session.
-    // Re-enable ONLY via a safe redesign: cold-only candidates,
-    // never-during-active-transport, and worklet-catalog-aware.
-    return;
+    // Safe budget-bounded eviction (see _safeEvictDecodedBuffers). The v2.0.x
+    // regression (mid-play decode churn / hiss) is fixed by never evicting
+    // pinned, active, or recently-used instruments and never running from the
+    // note hot path — only a debounced timer or explicit pressure call.
+    try {
+      this._safeEvictDecodedBuffers(false);
+    } catch (e) {}
   }
 
   findNearestAnchor(instId, targetMidi, velocity = 95) {

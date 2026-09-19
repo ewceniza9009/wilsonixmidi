@@ -14,8 +14,7 @@ import { TritonWorkstationUI } from "./components/triton-workstation-ui.js";
 import { multiLayerEngine } from "./audio/multi-layer-engine.js";
 import { registerComponent } from "./components/component-registry.js";
 import { initMobileDevice } from "./mobile/device.js";
-import { initMemoryMonitor, emergencyFlushAll } from "./audio/memory-manager.js";
-import { onMemoryPressure } from "./audio/memory-manager.js";
+import { initMemoryMonitor, emergencyFlushAll, onMemoryPressure } from "./audio/memory-manager.js";
 
 class MidiKeyEliteApp {
   constructor() {

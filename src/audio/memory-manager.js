@@ -9,16 +9,67 @@ import { getDeviceConfig } from "./device-capabilities.js";
 let memoryCheckInterval = null;
 let lastHeapUsed = 0;
 let pressureCallbacks = [];
+let evictionCallbacks = [];
 let isMonitoring = false;
+
+/**
+ * Engines register a provider that reports current decoded-RAM usage so the
+ * monitor can act even where performance.memory does not exist (Android
+ * System WebView). Each provider returns { bytes } or { bytes, budget } or null.
+ */
+const budgetProviders = [];
+
+export function registerBudgetProvider(providerFn) {
+  if (typeof providerFn === "function" && !budgetProviders.includes(providerFn)) {
+    budgetProviders.push(providerFn);
+  }
+  return () => {
+    const i = budgetProviders.indexOf(providerFn);
+    if (i !== -1) budgetProviders.splice(i, 1);
+  };
+}
+
+function providerUsage() {
+  let bytes = 0;
+  let budget = 0;
+  let hasProvider = false;
+  for (const fn of budgetProviders) {
+    try {
+      const r = fn();
+      if (r && Number.isFinite(r.bytes)) {
+        hasProvider = true;
+        bytes += r.bytes;
+        if (Number.isFinite(r.budget)) budget += r.budget;
+      }
+    } catch (e) {}
+  }
+  return hasProvider ? { bytes, budget } : null;
+}
+
+/** Registers a callback invoked on warning/critical pressure (cold evict). */
+export function onMemoryEvict(callback) {
+  evictionCallbacks.push(callback);
+  return () => {
+    const i = evictionCallbacks.indexOf(callback);
+    if (i !== -1) evictionCallbacks.splice(i, 1);
+  };
+}
+
+function triggerEvictionCallbacks() {
+  for (const cb of evictionCallbacks) {
+    try { cb(); } catch (e) { console.error("[MemoryManager] Evict callback error:", e); }
+  }
+}
 
 export function initMemoryMonitor() {
   if (isMonitoring) return;
-  if (typeof performance === "undefined" || !performance.memory) {
-    console.warn("[MemoryManager] performance.memory not available");
-    return;
-  }
 
   isMonitoring = true;
+  const hasHeapMonitor = typeof performance !== "undefined" && performance.memory;
+  if (!hasHeapMonitor) {
+    console.warn("[MemoryManager] performance.memory not available — using provider-based decoded-RAM monitoring");
+  }
+
   const config = getDeviceConfig();
   // Limits tuned to the lazy-decode baseline (boot decodes only the default
   // preset's 3-4 instruments). Mobile stays strict to avoid OOM crash;
@@ -44,7 +95,22 @@ export function initMemoryMonitor() {
   // only act if usage STAYS high.
   let checksSinceStart = 0;
 
-  memoryCheckInterval = setInterval(() => {
+  const heapCap = () => [warningThreshold, criticalThreshold];
+
+  const providerCheck = () => {
+    const usage = providerUsage();
+    if (!usage || usage.budget <= 0) return;
+    const bytes = usage.bytes;
+    if (bytes > usage.budget) {
+      // Decoded PCM is over engine budget even before heap pressure registers —
+      // evict cold decoded instruments (never hot/pinned ones).
+      console.warn(`[MemoryManager] Decoded RAM ${Math.round(bytes / 1024 / 1024)}MB over budget ${Math.round(usage.budget / 1024 / 1024)}MB — evicting cold decoded instruments`);
+      triggerPressureCallbacks("warning");
+      triggerEvictionCallbacks();
+    }
+  };
+
+  const heapCheck = () => {
     const mem = performance.memory;
     const used = mem.usedJSHeapSize;
 
@@ -58,6 +124,7 @@ export function initMemoryMonitor() {
       if (used > warningThreshold) {
         console.warn(`[MemoryManager] HIGH: ${Math.round(used / 1024 / 1024)}MB (evicting cold decoded instruments)`);
         triggerPressureCallbacks("warning");
+        triggerEvictionCallbacks();
       }
       return;
     }
@@ -67,9 +134,17 @@ export function initMemoryMonitor() {
       return;
     }
 
-    checkMemory(warningThreshold, criticalThreshold, () => {
+    const [warnT, critT] = heapCap();
+    checkMemory(warnT, critT, () => {
       lastEmergencyFlush = Date.now();
     });
+  };
+
+  memoryCheckInterval = setInterval(() => {
+    // Provider check runs everywhere (WebView doesn't expose performance.memory).
+    providerCheck();
+    // Heap check only where the signal exists.
+    if (hasHeapMonitor) heapCheck();
   }, 30000); // Check every 30s instead of 10s
 
   if (typeof window !== "undefined") {
@@ -121,11 +196,12 @@ export async function emergencyFlushAll() {
     await sampleCache.purgeMemoryCache();
     await sampleCache.clearCache();
   } catch (e) {}
-  
-  // DO NOT flush worklet catalog - kills sound
-  // DO NOT flush main thread decoded buffers - kills sound
-  // Just clear sample cache memory
-  
+
+  // Real memory return: evict COLD decoded instruments (main-thread map +
+  // worklet catalog). Hot/pinned instruments are never touched by the engine's
+  // safe eviction, so this cannot drop currently-sounding or preset sounds.
+  triggerEvictionCallbacks();
+
   triggerPressureCallbacks("emergency");
 }
 

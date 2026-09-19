@@ -195,6 +195,30 @@ export class PcmWorkletNode {
     this.node.port.postMessage({ type: "allNotesOff" });
   }
 
+  /**
+   * Drops every uploaded anchor of an instrument from the audio thread and
+   * forgets it locally so the next note re-uploads a fresh copy. This is the
+   * only way decoded PCM memory is actually returned to the system on Android
+   * (the processor deletes the map entry, freeing its Float32Arrays).
+   */
+  dropInstrument(instId) {
+    if (!instId) return;
+    const prefix = `${instId}:`;
+    if (this._bufferRegistry) {
+      for (const key of [...this._bufferRegistry.keys()]) {
+        if (key.startsWith(prefix)) this._bufferRegistry.delete(key);
+      }
+    }
+    if (this._loadedBuffers) {
+      for (const key of [...this._loadedBuffers]) {
+        if (key.startsWith(prefix)) this._loadedBuffers.delete(key);
+      }
+    }
+    if (this.isReady && this.node) {
+      this.node.port.postMessage({ type: "dropInstrument", instId });
+    }
+  }
+
   disconnect() {
     if (this.node) {
       try { this.node.disconnect(); } catch (e) {}

@@ -14,6 +14,10 @@ import { SynthWorkletNode } from "./worklet/synth-worklet-node.js";
 import { PcmWorkletNode } from "./worklet/pcm-worklet-node.js";
 import { HD_SOUNDBANKS } from "./soundbanks.js";
 import { midiOutManager } from "../midi/midi-out.js";
+import {
+  registerBudgetProvider,
+  onMemoryEvict,
+} from "./memory-manager.js";
 
 export { HD_SOUNDBANKS };
 
@@ -1004,6 +1008,7 @@ export class MultiLayerEngine {
       if (ctx) {
         // Route through FX Rack Input so Tube Overdrive, Distortion, Chorus, Rotary work on ALL sounds!
         this.pcmEngine = new NativePcmEngine(ctx, audioCore.fxRack.input);
+        this._wireMemoryProviders();
       }
     }
     if (this.pcmEngine) {
@@ -1028,6 +1033,33 @@ export class MultiLayerEngine {
     // the main thread, which chokes under layered/combi or swept material
     // (choppy + dropped notes). Idempotent, so safe to call repeatedly.
     this._initWorklet().catch((e) => console.warn("[MLE] _initWorklet failed:", e));
+  }
+
+  /**
+   * Registers the PCM engine with the memory manager so decoded sample RAM is
+   * actually reclaimed under pressure (and monitored even without
+   * performance.memory). The engine's own safe eviction guarantees only cold,
+   * unpinned instruments are dropped — never the current preset or sounding
+   * voices — so this adds no hiss/lag risk.
+   */
+  _wireMemoryProviders() {
+    if (this._memoryWired) return;
+    this._memoryWired = true;
+    const getEngine = () => this.pcmEngine;
+    const provider = () => {
+      const eng = getEngine();
+      if (!eng || typeof eng.getDecodedBufferStats !== "function") return null;
+      const s = eng.getDecodedBufferStats();
+      return { bytes: s.bytes, budget: s.budget };
+    };
+    const onEvict = (force = true) => {
+      const eng = getEngine();
+      if (!eng || typeof eng._safeEvictDecodedBuffers !== "function") return;
+      try { eng._safeEvictDecodedBuffers(!!force); } catch (e) {}
+    };
+    registerBudgetProvider(provider);
+    onMemoryEvict(() => onEvict(true));
+    this.memoryProvider = provider;
   }
 
   async _initWorklet() {
@@ -1240,6 +1272,7 @@ export class MultiLayerEngine {
       this.isCombiMode = false;
     }
 
+    this.syncPinnedInstruments();
     this.init();
     this.notifyLayerChange();
     this.notifySplitChange();
@@ -1283,6 +1316,7 @@ export class MultiLayerEngine {
       this.isCombiMode = false;
     }
 
+    this.syncPinnedInstruments();
     this.init();
     this.notifyLayerChange();
   }
@@ -1433,6 +1467,7 @@ export class MultiLayerEngine {
     if (INSTRUMENT_PATCHES[presetId]) {
       synthEngine.activePatch = INSTRUMENT_PATCHES[presetId];
     }
+    this.syncPinnedInstruments();
     this.notifyLayerChange();
     this.notifySplitChange();
   }
@@ -1457,6 +1492,7 @@ export class MultiLayerEngine {
       this.layers[layerIndex].enabled = enabled !== undefined ? enabled : !this.layers[layerIndex].enabled;
       this.isCombiMode = true;
       this.isSynthMode = false;
+      this.syncPinnedInstruments();
       this.init();
       this.notifyLayerChange();
     }
@@ -1500,6 +1536,7 @@ export class MultiLayerEngine {
       }
       this.isCombiMode = true;
       this.isSynthMode = false;
+      this.syncPinnedInstruments();
       this.init();
       this.notifyLayerChange();
     }
@@ -1530,6 +1567,36 @@ export class MultiLayerEngine {
 
   splitZone(zoneKey) {
     return this.splitZones[zoneKey === "upper" ? "upper" : "lower"];
+  }
+
+  /**
+   * Recomputes the PCM engine's "never evict" pin set from whatever sound is
+   * currently selected (single instrument, combi layers, split zones). This is
+   * what guarantees the budget evictor never drops the sound being performed —
+   * only long-idle instruments — so no hiss/lag/decoded-notes regressions.
+   */
+  syncPinnedInstruments() {
+    if (!this.pcmEngine || typeof this.pcmEngine.setPinnedInstruments !== "function") return;
+    const ids = new Set();
+    if (this.activeSingleInst) {
+      ids.add(this.resolveBankKey(this.activeSingleInst));
+    }
+    if (this.isCombiMode && this.layers) {
+      for (const layer of this.layers) {
+        if (layer && layer.enabled && layer.inst && !layer.inst.startsWith("va:")) {
+          ids.add(this.resolveBankKey(layer.inst));
+        }
+      }
+    }
+    if (this.isSplitMode && this.splitZones) {
+      for (const key of Object.keys(this.splitZones)) {
+        const zone = this.splitZones[key];
+        if (zone && zone.inst && !zone.inst.startsWith("va:")) {
+          ids.add(this.resolveBankKey(zone.inst));
+        }
+      }
+    }
+    this.pcmEngine.setPinnedInstruments(ids);
   }
 
   setSplitPointMidi(midi) {

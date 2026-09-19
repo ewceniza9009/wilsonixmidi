@@ -324,6 +324,23 @@ export class DemoStationUI {
       // blocked by the _isStarting guard above.
       this.currentSong = song.id;
       this.isPlaying = true;
+
+      // Pin all instruments this song touches so the budget evictor never
+      // drops them mid-playback (the v2.0.x hiss/lag regression source).
+      this._pinnedDemoInsts = new Set();
+      if (multiLayerEngine.layers) {
+        multiLayerEngine.layers.forEach((layer) => {
+          if (layer.enabled && layer.inst && !layer.inst.startsWith("va:")) {
+            this._pinnedDemoInsts.add(multiLayerEngine.resolveBankKey(layer.inst));
+          }
+        });
+      }
+      (song.embeddedInsts || []).forEach((i) => this._pinnedDemoInsts.add(i));
+      (song.soundfontInsts || []).forEach((i) => this._pinnedDemoInsts.add(i));
+      if (multiLayerEngine.pcmEngine && typeof multiLayerEngine.pcmEngine.addPinnedInstruments === "function") {
+        multiLayerEngine.pcmEngine.addPinnedInstruments(this._pinnedDemoInsts);
+      }
+
       const ctx = audioCore.ctx;
       const songStart = (ctx ? ctx.currentTime : 0) + 0.08;
       this.startTime = ctx ? ctx.currentTime : performance.now() / 1000;
@@ -396,6 +413,12 @@ export class DemoStationUI {
           multiLayerEngine.setSustainPedal(false);
           multiLayerEngine.panic();
         } catch (e) {}
+      }
+
+      // Release demo pins so previously-played instruments are evictable again.
+      if (this._pinnedDemoInsts && multiLayerEngine.pcmEngine && typeof multiLayerEngine.pcmEngine.removePinnedInstruments === "function") {
+        multiLayerEngine.pcmEngine.removePinnedInstruments(this._pinnedDemoInsts);
+        this._pinnedDemoInsts = null;
       }
 
       this.updateButtons();
