@@ -17,6 +17,7 @@ export class PcmWorkletNode {
     this.sharedBuffer = null;
     this._pendingBuffers = [];
     this._loadedBuffers = new Set();
+    this._loadedBufferMaxSize = 60; // max anchors held in worklet to prevent memory bloat
     this._bufferRegistry = new Map();
     this._sustainSettings = null;
   }
@@ -128,6 +129,15 @@ export class PcmWorkletNode {
     if (!audioBuffer) return false;
     const key = `${instId}:${anchorMidi}`;
     if (this._bufferRegistry.get(key) === audioBuffer) return false;
+    // Enforce max buffer size with LRU eviction
+    this._loadedBuffers.delete(key);
+    if (this._loadedBuffers.size >= this._loadedBufferMaxSize) {
+      const oldestKey = this._loadedBuffers.keys().next().value;
+      if (oldestKey) {
+        this._loadedBuffers.delete(oldestKey);
+        this._bufferRegistry.delete(oldestKey);
+      }
+    }
     this._bufferRegistry.set(key, audioBuffer);
     this._loadedBuffers.add(key);
     this.loadBuffer(instId, anchorMidi, audioBuffer);
