@@ -526,6 +526,10 @@ export class MediaPlayerUI {
   }
 
   _tick() {
+    if (document.hidden) {
+      this._raf = requestAnimationFrame(() => this._tick());
+      return;
+    }
     const now = performance.now();
     const isPlaying = mediaPlayer && mediaPlayer.isPlaying;
     const interval = isPlaying ? 33.0 : 200.0;

@@ -1459,6 +1459,16 @@ export class MultiLayerEngine {
     this.vaAllNotesOff();
     synthEngine.panic();
     if (this._workletReady && this._workletNode) this._workletNode.allNotesOff();
+    // Force worklet re-initialization on combi change to prevent state drift
+    // that causes grainy/awful sound over time.
+    if (this._workletNode) {
+      this._workletNode = null;
+      this._workletReady = false;
+    }
+    if (this._pcmWorkletNode) {
+      this._pcmWorkletNode = null;
+      this._pcmWorkletReady = false;
+    }
     this._clearHeldNoteState();
 
     this.activeCombi = newCombi;

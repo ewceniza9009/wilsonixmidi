@@ -1685,6 +1685,14 @@ export class NativePcmEngine {
     // Set by multi-layer-engine._initWorklet(); null means fallback to main-thread.
     this.pcmWorkletNode = null;
 
+    // Crossfade worker for off-main-thread loop buffer processing
+    this._crossfadeWorker = null;
+    this._crossfadeWorkerReady = false;
+    this._crossfadeWorkerId = 0;
+    this._crossfadePending = new Map();
+
+    this._initCrossfadeWorker();
+
     this._spinePools = new Map();
     this._hammerPools = new Map();
     this._chiffPools = new Map();
@@ -1723,8 +1731,41 @@ export class NativePcmEngine {
     this._instLastUsed = new Map();
     this._instProtectedAt = new Map();
     this._evictTimer = null;
+    // Cache for findNearestAnchor: key = "instId:midi:vel", value = {anchorMidi, buffer}
+    this._anchorCache = new Map();
+    this._anchorCacheMaxSize = 1024;
 
     this.initBuffers();
+  }
+
+  _initCrossfadeWorker() {
+    try {
+      // Use dynamic import for worker to support Vite/ESM
+      this._crossfadeWorker = new Worker(
+        new URL('./workers/crossfade-worker.js', import.meta.url),
+        { type: 'module' }
+      );
+      this._crossfadeWorker.onmessage = (e) => {
+        const { type: _type, payload: _payload, id } = e.data;
+        const pending = this._crossfadePending.get(id);
+        if (!pending) return;
+        this._crossfadePending.delete(id);
+        if (e.data.type === 'result') {
+          pending.resolve(e.data.payload);
+        } else if (e.data.type === 'error') {
+          pending.reject(new Error(e.data.error));
+        }
+      };
+      this._crossfadeWorker.onerror = (e) => {
+        console.warn('[PCM] Crossfade worker error:', e);
+        this._crossfadeWorkerReady = false;
+      };
+      this._crossfadeWorkerReady = true;
+    } catch (e) {
+      console.warn('[PCM] Crossfade worker unavailable, falling back to main thread:', e);
+      this._crossfadeWorker = null;
+      this._crossfadeWorkerReady = false;
+    }
   }
 
   playLooperNote(
@@ -1963,6 +2004,79 @@ export class NativePcmEngine {
   }
 
   createCrossfadedLoopBuffer(ctx, originalBuf, instId) {
+    if (!originalBuf) return originalBuf;
+    const isDroneInstrument =
+      instId &&
+      (instId.includes("string") ||
+        instId.includes("pad") ||
+        instId.includes("choir") ||
+        instId.includes("organ") ||
+        instId.includes("voice") ||
+        instId.includes("vox") ||
+        instId.includes("universe") ||
+        instId.includes("sax") ||
+        instId.includes("bass") ||
+        instId.includes("flute") ||
+        instId.includes("clarinet") ||
+        instId.includes("trumpet") ||
+        instId.includes("trombone") ||
+        instId.includes("violin") ||
+        instId.includes("cello") ||
+        instId.includes("brass") ||
+        instId.includes("saw") ||
+        instId.includes("extacy") ||
+        instId.includes("vocoder") ||
+        instId.includes("synth") ||
+        instId.includes("lead") ||
+        instId.includes("square") ||
+        instId.includes("thicksaw") ||
+        instId.includes("sweeppad") ||
+        instId.includes("warmpad") ||
+        instId.includes("seq_") ||
+        instId.includes("dreamn"));
+    if (
+      instId.startsWith("tekk_") ||
+      !isDroneInstrument ||
+      originalBuf.duration < 0.8
+    )
+      return this.fadeBufferEnd(originalBuf, 0.4);
+
+    // Try to use worker for off-main-thread processing
+    if (this._crossfadeWorkerReady && this._crossfadeWorker) {
+      return this._createCrossfadedLoopBufferWorker(ctx, originalBuf, instId);
+    }
+
+    // Fallback to main-thread implementation
+    return this._createCrossfadedLoopBufferMainThread(ctx, originalBuf, instId);
+  }
+
+  async _createCrossfadedLoopBufferWorker(ctx, originalBuf, instId) {
+    const audioData = {
+      numberOfChannels: originalBuf.numberOfChannels,
+      length: originalBuf.length,
+      sampleRate: originalBuf.sampleRate,
+      duration: originalBuf.duration,
+      instId,
+    };
+    // Extract channel data for transfer
+    const channelData = [];
+    for (let ch = 0; ch < originalBuf.numberOfChannels; ch++) {
+      channelData.push(originalBuf.getChannelData(ch));
+    }
+    audioData.channelData = channelData;
+
+    const id = ++this._crossfadeWorkerId;
+    return new Promise((resolve, reject) => {
+      this._crossfadePending.set(id, { resolve, reject });
+      this._crossfadeWorker.postMessage({
+        type: 'process',
+        id,
+        payload: audioData
+      }, channelData.map(d => d.buffer));
+    });
+  }
+
+  _createCrossfadedLoopBufferMainThread(ctx, originalBuf, instId) {
     if (!originalBuf) return originalBuf;
     const isDroneInstrument =
       instId &&
@@ -2705,6 +2819,14 @@ export class NativePcmEngine {
     this.decodedBuffers.delete(instId);
     if (this._instLastUsed) this._instLastUsed.delete(instId);
     if (this._instProtectedAt) this._instProtectedAt.delete(instId);
+    // Invalidate anchor cache for this instrument
+    if (this._anchorCache) {
+      for (const key of this._anchorCache.keys()) {
+        if (key.startsWith(instId + ":")) {
+          this._anchorCache.delete(key);
+        }
+      }
+    }
     if (this.pcmWorkletNode && typeof this.pcmWorkletNode.dropInstrument === "function") {
       try { this.pcmWorkletNode.dropInstrument(instId); } catch (e) {}
     }
@@ -2735,6 +2857,11 @@ export class NativePcmEngine {
       return null;
     if (instId && INST_ALIASES[instId]) instId = INST_ALIASES[instId];
 
+    // Check cache first
+    const cacheKey = `${instId}:${targetMidi}:${velocity}`;
+    const cached = this._anchorCache.get(cacheKey);
+    if (cached) return cached;
+
     const yamahaBank = bankData("yamaha");
     const userBank = bankData("user");
     if (
@@ -2749,7 +2876,9 @@ export class NativePcmEngine {
       }
       const eosMap = this.decodedBuffers.get(instId);
       if (eosMap && eosMap.size > 0) {
-        return this.findAnchorInMap(eosMap, targetMidi);
+        const result = this.findAnchorInMap(eosMap, targetMidi);
+        this._anchorCache.set(cacheKey, result);
+        return result;
       }
     } else if (!yamahaBank && !userBank) {
       ensureBankForInst(instId).catch(() => {});
@@ -2764,17 +2893,24 @@ export class NativePcmEngine {
       ) {
         this.loadAbletunesInstrument(bankKey);
         const pianoMap = this.decodedBuffers.get("acoustic_grand_piano");
-        if (pianoMap && pianoMap.size > 0)
-          return this.findAnchorInMap(pianoMap, targetMidi);
+        if (pianoMap && pianoMap.size > 0) {
+          const result = this.findAnchorInMap(pianoMap, targetMidi);
+          this._anchorCache.set(cacheKey, result);
+          return result;
+        }
         return null;
       }
       const instMap = this.decodedBuffers.get(instId);
       const vl = velocity < 55 ? "vl1" : velocity < 98 ? "vl2" : "vl3";
       const exactKey = `${targetMidi}_${vl}`;
-      if (instMap.has(exactKey))
+      if (instMap.has(exactKey)) {
+        this._anchorCache.set(cacheKey, { anchorMidi: targetMidi, buffer: instMap.get(exactKey) });
         return { anchorMidi: targetMidi, buffer: instMap.get(exactKey) };
-      if (instMap.has(targetMidi))
+      }
+      if (instMap.has(targetMidi)) {
+        this._anchorCache.set(cacheKey, { anchorMidi: targetMidi, buffer: instMap.get(targetMidi) });
         return { anchorMidi: targetMidi, buffer: instMap.get(targetMidi) };
+      }
       let closestMidi = null;
       let minDiff = Infinity;
       for (const key of instMap.keys()) {
@@ -2789,10 +2925,16 @@ export class NativePcmEngine {
       if (closestMidi !== null) {
         const buf =
           instMap.get(`${closestMidi}_${vl}`) || instMap.get(closestMidi);
-        if (buf) return { anchorMidi: closestMidi, buffer: buf };
+        if (buf) {
+          const result2 = { anchorMidi: closestMidi, buffer: buf };
+          this._anchorCache.set(cacheKey, result2);
+          return result2;
+        }
       }
       const pianoMap = this.decodedBuffers.get("acoustic_grand_piano");
-      return this.findAnchorInMap(pianoMap, targetMidi);
+      const result2 = this.findAnchorInMap(pianoMap, targetMidi);
+      this._anchorCache.set(cacheKey, result2);
+      return result2;
     }
 
     if (instId && instId.startsWith("animal_")) {
@@ -2804,7 +2946,9 @@ export class NativePcmEngine {
         return null;
       }
       const instMap = this.decodedBuffers.get(instId);
-      return this.findAnchorInMap(instMap, targetMidi);
+      const result = this.findAnchorInMap(instMap, targetMidi);
+      this._anchorCache.set(cacheKey, result);
+      return result;
     }
 
     if (instId && instId.startsWith("bloom_")) {
@@ -2816,7 +2960,9 @@ export class NativePcmEngine {
         return null;
       }
       const instMap = this.decodedBuffers.get(instId);
-      return this.findAnchorInMap(instMap, targetMidi);
+      const result = this.findAnchorInMap(instMap, targetMidi);
+      this._anchorCache.set(cacheKey, result);
+      return result;
     }
 
     let instMap = this.decodedBuffers.get(instId);
@@ -2877,7 +3023,9 @@ export class NativePcmEngine {
       }
     }
     if (!instMap || instMap.size === 0) return null;
-    return this.findAnchorInMap(instMap, targetMidi);
+    const result2 = this.findAnchorInMap(instMap, targetMidi);
+    this._anchorCache.set(cacheKey, result2);
+    return result2;
   }
 
   findAnchorInMap(map, targetMidi) {
