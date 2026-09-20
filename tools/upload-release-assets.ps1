@@ -1,10 +1,14 @@
 # Upload release assets directly via curl.exe for high-speed streaming with reliable clobber
+param(
+    [string]$Tag = "v2.1.0"
+)
+
 $ErrorActionPreference = "Stop"
 
 $token = (gh auth token).Trim()
-$releaseId = (gh api repos/ewceniza9009/wilsonixmidi/releases/tags/v2.0.3 --jq ".id").Trim()
+$releaseId = (gh api "repos/ewceniza9009/wilsonixmidi/releases/tags/$Tag" --jq ".id").Trim()
 
-Write-Host "Target GitHub Release ID: $releaseId (v2.0.3)" -ForegroundColor Cyan
+Write-Host "Target GitHub Release ID: $releaseId ($Tag)" -ForegroundColor Cyan
 
 function Upload-AssetWithClobber($filePath, $assetName, $contentType) {
     if (-not (Test-Path $filePath)) {
@@ -38,7 +42,11 @@ function Upload-AssetWithClobber($filePath, $assetName, $contentType) {
 Upload-AssetWithClobber "dist-apk/wilsonix-midikey.apk" "wilsonix-midikey.apk" "application/vnd.android.package-archive"
 
 # 2. Windows Installer
-Upload-AssetWithClobber "dist-installer/WILSONIX.MIDIKEY_2.0.3_x64-setup.exe" "WILSONIX.MIDIKEY_2.0.3_x64-setup.exe" "application/octet-stream"
+if (Test-Path "dist-installer/WILSONIX.MIDIKEY_2.1.0_x64-setup.exe") {
+    Upload-AssetWithClobber "dist-installer/WILSONIX.MIDIKEY_2.1.0_x64-setup.exe" "WILSONIX.MIDIKEY_2.1.0_x64-setup.exe" "application/octet-stream"
+} elseif (Test-Path "src-tauri/target/release/bundle/nsis/WILSONIX MIDIKEY_2.1.0_x64-setup.exe") {
+    Upload-AssetWithClobber "src-tauri/target/release/bundle/nsis/WILSONIX MIDIKEY_2.1.0_x64-setup.exe" "WILSONIX.MIDIKEY_2.1.0_x64-setup.exe" "application/octet-stream"
+}
 
 Write-Host "`nVerifying release assets on GitHub..." -ForegroundColor Cyan
-gh release view v2.0.3
+gh release view $Tag
