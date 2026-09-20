@@ -38,6 +38,21 @@ class MidiKeyEliteApp {
     const report = (msg) => {
       if (!msg) return;
       console.error("[MIDIKEY]", msg);
+      // Persist crash detail SYNCHRONOUSLY to localStorage — if the crash kills
+      // the WebView right after, the Performance Logger can still retrieve it
+      // on the next app open (window.* dies with the WebView; disk does not).
+      try {
+        if (!window.__midikeyCrashLog) window.__midikeyCrashLog = [];
+        const entry = {
+          ts: new Date().toLocaleTimeString(),
+          msg: String(msg).slice(0, 300),
+          heap: (() => { try { return Math.round(performance.memory?.usedJSHeapSize / 1024 / 1024) || null; } catch (e) { return null; } })(),
+          sound: (() => { try { return multiLayerEngine?.activeSingleInst || multiLayerEngine?.activeCombi?.id || null; } catch (e) { return null; } })(),
+        };
+        window.__midikeyCrashLog.push(entry);
+        if (window.__midikeyCrashLog.length > 50) window.__midikeyCrashLog.shift();
+        localStorage.setItem("wilsonix_crash_log", JSON.stringify(window.__midikeyCrashLog));
+      } catch (e) {}
       const now = Date.now();
       if (
         this._lastErrorMsg === msg &&

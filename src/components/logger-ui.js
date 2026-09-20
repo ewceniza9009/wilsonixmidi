@@ -8,9 +8,12 @@
 import { getMemoryStats } from "../audio/memory-manager.js";
 import { audioCore } from "../audio/audio-core.js";
 import { getDeviceConfig } from "../audio/device-capabilities.js";
+import { synthEngine } from "../audio/synth-engine.js";
+import { multiLayerEngine } from "../audio/multi-layer-engine.js";
 
 const LOG_MAX_ROWS = 500;
 const SAMPLE_INTERVAL_MS = 1000;
+const PRUNE_INTERVAL_MS = 20 * 60 * 1000; // auto-clean non-critical logs every 20 min
 
 export class LoggerUI {
   constructor(containerId) {
@@ -23,9 +26,34 @@ export class LoggerUI {
     this._isRunning = false;
     this._interval = null;
     this.deviceConfig = getDeviceConfig();
+    this._loadCrashLog();
     this.render();
     this.bind();
     this.start();
+  }
+
+  // Loads crash details persisted SYNCHRONOUSLY by the global error reporter
+  // (localStorage "wilsonix_crash_log"). Survives WebView kills — so on the
+  // next app open the previous session's errors appear here with full
+  // context (timestamp, heap MB, active sound).
+  _loadCrashLog() {
+    let saved = [];
+    try {
+      saved = JSON.parse(localStorage.getItem("wilsonix_crash_log")) || [];
+    } catch (e) {}
+    if (Array.isArray(saved) && saved.length > 0) {
+      for (const c of saved.slice(-50).reverse()) {
+        this.logs.push({
+          ts: c.ts || "—",
+          message:
+            `CRASH (prev session): ${c.msg}` +
+            (c.heap ? ` | heap ${c.heap}MB` : "") +
+            (c.sound ? ` | sound ${c.sound}` : ""),
+          level: "error",
+        });
+      }
+      this._hadPrevCrash = true;
+    }
   }
 
   render() {
@@ -66,6 +94,7 @@ export class LoggerUI {
         <div class="logger-header">
           <span class="logger-badge">PERFORMANCE LOGGER</span>
           <div class="logger-meta">
+            ${this._hadPrevCrash ? `<span class="logger-badge" style="background:#f87171;color:#000;" title="Errors from the previous session — click CLEAR after review">⚠ PREV CRASH</span>` : ""}
             <span id="logger-device">${this.deviceConfig.isAndroid ? "ANDROID" : this.deviceConfig.isMobile ? "MOBILE" : "DESKTOP"}</span>
             <span id="logger-tier">${this.deviceConfig.tier.toUpperCase()}</span>
             <button id="logger-copy" class="logger-btn">COPY</button>
@@ -136,6 +165,9 @@ export class LoggerUI {
     this.container.querySelector("#logger-clear")?.addEventListener("click", () => {
       this.logs = [];
       this._samples = [];
+      try { localStorage.removeItem("wilsonix_crash_log"); } catch (e) {}
+      const badge = this.container.querySelector(".logger-badge[style*='f87171']");
+      if (badge) badge.remove();
       this._renderLog();
     });
     this.container.querySelector("#logger-export")?.addEventListener("click", () => this.exportLogs());
@@ -186,6 +218,9 @@ export class LoggerUI {
     this._lastFrame = performance.now();
     this._frameLoop();
     this._interval = setInterval(() => this.sample(), SAMPLE_INTERVAL_MS);
+    if (!this._pruneTimer) {
+      this._pruneTimer = setInterval(() => this._pruneOldLogs(), PRUNE_INTERVAL_MS);
+    }
     this._setupLongTaskObserver();
     this.log("Logger started", "info");
   }
@@ -194,6 +229,10 @@ export class LoggerUI {
     this._isRunning = false;
     if (this._rafId) cancelAnimationFrame(this._rafId);
     if (this._interval) clearInterval(this._interval);
+    if (this._pruneTimer) {
+      clearInterval(this._pruneTimer);
+      this._pruneTimer = null;
+    }
     if (this._longTaskObserver) {
       this._longTaskObserver.disconnect();
       this._longTaskObserver = null;
@@ -350,6 +389,15 @@ export class LoggerUI {
     ctx.stroke();
   }
 
+  // Auto-clean every 20 minutes: removes info/warn noise but PRESERVES all
+  // critical error/crash entries (and the persisted localStorage crash log,
+  // which is only wiped by the CLEAR button).
+  _pruneOldLogs() {
+    this.logs = this.logs.filter((l) => l.level === "error");
+    this._renderLog();
+    this.log("Log auto-cleaned (20 min) — crash/error entries preserved", "info");
+  }
+
   log(message, level="info") {
     const ts = new Date().toLocaleTimeString();
     const entry = { ts, message, level };
@@ -363,7 +411,7 @@ export class LoggerUI {
     if (!body) return;
     const term = (this._searchTerm || "").toLowerCase();
     const filtered = term ? this.logs.filter(l => l.message.toLowerCase().includes(term) || l.level.toLowerCase().includes(term) || l.ts.toLowerCase().includes(term)) : this.logs;
-    body.innerHTML = filtered.map((l,i)=>`
+    body.innerHTML = filtered.map((l)=>`
       <div class="logger-row logger-${l.level}" data-idx="${this.logs.indexOf(l)}">
         <span class="logger-ts">${l.ts}</span>
         <span class="logger-msg">${this.escapeHtml(l.message)}</span>

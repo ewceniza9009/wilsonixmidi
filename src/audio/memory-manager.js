@@ -152,6 +152,12 @@ export function initMemoryMonitor() {
     window.addEventListener("beforeunload", emergencyFlushAll);
   }
 
+  // Expose provider usage to the Performance Logger (LoggerUI reads this for
+  // the DECODED RAM stat — without this assignment the stat shows "—" forever).
+  if (typeof window !== "undefined") {
+    window.__midikeyMemoryProvider = providerUsage;
+  }
+
   console.log(`[MemoryManager] Monitoring started. Heap limit: ${Math.round(heapLimit / 1024 / 1024)}MB`);
 }
 

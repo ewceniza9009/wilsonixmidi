@@ -1062,6 +1062,15 @@ export class MultiLayerEngine {
     this.memoryProvider = provider;
   }
 
+  /** Total active PCM voices (used by the Performance Logger's spike context). */
+  getActiveVoiceCount() {
+    try {
+      return this.pcmEngine?.activeVoices?.size || 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+
   async _initWorklet() {
     if (this._workletReady || this._workletNode) return this._workletNode;
     const ctx = audioCore.ctx;
