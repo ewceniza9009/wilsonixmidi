@@ -1708,6 +1708,64 @@ select.midi-out-select[multiple] option:disabled {
   box-shadow: 0 0 10px var(--accent-amber-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
+/* Memory Logger pill — live decoded-RAM vs budget readout in the tab bar */
+.hud-mem-logger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family-studio);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  background: rgba(18, 22, 32, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  flex-shrink: 0 !important;
+  user-select: none;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.hud-mem-logger:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.hud-mem-logger.logger-open {
+  border-color: var(--accent-amber);
+  color: #ffffff;
+  box-shadow: 0 0 10px var(--accent-amber-glow);
+}
+
+.hud-mem-logger.good {
+  color: #4ade80;
+  border-color: rgba(74, 222, 128, 0.45);
+}
+
+.hud-mem-logger.warn {
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.5);
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.25);
+}
+
+.hud-mem-logger.error {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.6);
+  box-shadow: 0 0 10px rgba(248, 113, 113, 0.35);
+  animation: mem-logger-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes mem-logger-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
 .ws-tab-btn.keys-toggle-btn {
   color: var(--accent-cyan-bright);
   border-color: rgba(56, 189, 248, 0.3);

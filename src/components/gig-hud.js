@@ -26,6 +26,7 @@ import {
 } from "../version.js";
 import { getComponent } from "./component-registry.js";
 import { escapeHtml } from "../utils/escape-html.js";
+import { LoggerUI } from "./logger-ui.js";
 
 export class GigHudUI {
   constructor(containerId, onOpenLicenseModal) {
@@ -78,6 +79,7 @@ export class GigHudUI {
     if (!this.gigMode) {
       this.startVuMonitor();
     }
+    this.startMemoryLogger();
   }
 
   refresh() {
@@ -714,6 +716,7 @@ export class GigHudUI {
                 <button class="ws-tab-btn" data-view="grooves" title="Backing Grooves">GROOVES</button>
                 <button class="ws-tab-btn" data-view="demo" title="30s Interactive Song Clips">DEMO</button>
                 <button class="ws-tab-btn" data-view="player" title="Media Player">PLAYER</button>
+                <span class="hud-mem-logger" id="hud-mem-logger" title="Memory Logger: decoded sample RAM vs budget (green = healthy, yellow = warning, red = over budget)">MEM --</span>
               </div>
             </nav>
           </div>
@@ -1051,6 +1054,8 @@ export class GigHudUI {
       }
       const combiId = selectedId.slice(6);
       multiLayerEngine.setCombiPreset(combiId);
+      this.syncSoundDisplay();
+      getComponent("tritonConsole")?.syncLcdFromRigSelection?.();
       return;
     }
 
@@ -1093,6 +1098,8 @@ export class GigHudUI {
         multiLayerEngine.setSplitZoneInstrument("lower", "synth_bass_1");
         multiLayerEngine.setSplitZoneInstrument("upper", "va:A017");
       }
+      this.syncSoundDisplay();
+      getComponent("tritonConsole")?.syncLcdFromRigSelection?.();
       return;
     }
 
@@ -1103,6 +1110,7 @@ export class GigHudUI {
         multiLayerEngine.setTritonVaProgram(prog);
         getComponent("tritonConsole")?.selectProgramById?.(progId);
       }
+      this.syncSoundDisplay();
       return;
     }
 
@@ -1110,22 +1118,29 @@ export class GigHudUI {
       const instId = selectedId.slice(5);
       multiLayerEngine.setSingleInstrument(instId);
       synthEngine.setPatch(instId);
+      this.syncSoundDisplay();
+      getComponent("tritonConsole")?.syncLcdFromRigSelection?.();
       return;
     }
 
     // Direct fallback
     if (COMBI_PRESETS[selectedId]) {
       multiLayerEngine.setCombiPreset(selectedId);
+      this.syncSoundDisplay();
+      getComponent("tritonConsole")?.syncLcdFromRigSelection?.();
       return;
     }
     const tritonProg = getTritonProgramById(selectedId);
     if (tritonProg) {
       multiLayerEngine.setTritonVaProgram(tritonProg);
       getComponent("tritonConsole")?.selectProgramById?.(selectedId);
+      this.syncSoundDisplay();
       return;
     }
     multiLayerEngine.setSingleInstrument(selectedId);
     synthEngine.setPatch(selectedId);
+    this.syncSoundDisplay();
+    getComponent("tritonConsole")?.syncLcdFromRigSelection?.();
   }
 
   syncSoundDisplay() {
@@ -1179,7 +1194,78 @@ export class GigHudUI {
     });
   }
 
+  updateMemoryLogger() {
+    const pill = document.getElementById("hud-mem-logger");
+    if (!pill) return;
+    let usedMB = null;
+    let budgetMB = null;
+    try {
+      const s = multiLayerEngine.pcmEngine?.getDecodedBufferStats?.();
+      if (s && Number.isFinite(s.bytes) && Number.isFinite(s.budget) && s.budget > 0) {
+        usedMB = Math.round(s.bytes / 1024 / 1024);
+        budgetMB = Math.round(s.budget / 1024 / 1024);
+      }
+    } catch (e) {}
+    if (usedMB === null) {
+      pill.textContent = "MEM --";
+      pill.className = pill.classList.contains("logger-open")
+        ? "hud-mem-logger logger-open"
+        : "hud-mem-logger";
+      return;
+    }
+    const pct = (usedMB / budgetMB) * 100;
+    const state = pct > 100 ? "error" : pct > 70 ? "warn" : "good";
+    pill.textContent = `MEM ${usedMB}/${budgetMB}MB`;
+    pill.className = pill.classList.contains("logger-open")
+      ? `hud-mem-logger logger-open ${state}`
+      : `hud-mem-logger ${state}`;
+  }
+
+  startMemoryLogger() {
+    if (this._memLoggerTimer) return;
+    this.updateMemoryLogger();
+    this._memLoggerTimer = setInterval(() => this.updateMemoryLogger(), 2000);
+  }
+
+  toggleLoggerPanel() {
+    let overlay = document.getElementById("logger-panel-overlay");
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.id = "logger-panel-overlay";
+      overlay.style.cssText =
+        "position:fixed;inset:0;background:rgba(0,0,0,0.78);display:none;align-items:center;justify-content:center;z-index:9998;padding:24px;";
+      const close = document.createElement("div");
+      close.textContent = "\u00d7";
+      close.style.cssText =
+        "position:absolute;top:10px;right:22px;color:#e5e7eb;font-size:30px;cursor:pointer;z-index:9999;line-height:1;";
+      close.addEventListener("click", () => this.toggleLoggerPanel());
+      const mount = document.createElement("div");
+      mount.id = "logger-mount";
+      mount.style.cssText =
+        "width:min(1500px,98vw);height:min(950px,96vh);";
+      overlay.appendChild(close);
+      overlay.appendChild(mount);
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) this.toggleLoggerPanel();
+      });
+      document.body.appendChild(overlay);
+      this._loggerUI = new LoggerUI("logger-mount");
+    }
+    const isOpen = overlay.style.display !== "none";
+    overlay.style.display = isOpen ? "none" : "flex";
+    const pill = document.getElementById("hud-mem-logger");
+    if (pill) pill.classList.toggle("logger-open", !isOpen);
+  }
+
   bindPillInteractions() {
+    // 0. Memory Logger pill — opens the Performance Logger panel
+    document
+      .getElementById("hud-mem-logger")
+      ?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.toggleLoggerPanel();
+      });
+
     // 1. License modal
     document
       .getElementById("hud-license-btn")

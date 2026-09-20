@@ -246,6 +246,12 @@ export class DemoStationUI {
   }
 
   async play(song) {
+    // Release any previously pinned demo instruments so they can be evicted
+    // between songs (prevents permanent pin accumulation / OOM).
+    if (this._pinnedDemoInsts && this.pcmEngine && typeof this.pcmEngine.removePinnedInstruments === "function") {
+      this.pcmEngine.removePinnedInstruments(this._pinnedDemoInsts);
+    }
+    this._pinnedDemoInsts = new Set();
     if (this.isPlaying) {
       this.stop();
     }

@@ -1243,6 +1243,7 @@ export class MultiLayerEngine {
     tritonVaEngine.allNotesOff();
     this.vaAllNotesOff();
     synthEngine.panic();
+    if (this._workletReady && this._workletNode) this._workletNode.allNotesOff();
     this._clearHeldNoteState();
 
     this.isSplitMode = false;
@@ -1251,8 +1252,17 @@ export class MultiLayerEngine {
     this.activeTritonVaProg = null;
     const resolved = this.resolveBankKey(instKey);
     this.activeSingleInst = resolved;
+    // Budget guard: if decoded RAM is near budget, skip the eager preload and
+    // let this instrument lazy-decode on first note (prevents OOM on low-RAM).
+    let preloadEnabled = true;
+    if (this.pcmEngine && typeof this.pcmEngine.getDecodedBufferStats === "function") {
+      const stats = this.pcmEngine.getDecodedBufferStats();
+      const currentBytes = stats?.bytes || 0;
+      const budget = stats?.budget || this.pcmEngine._getDecodedMemoryBudget();
+      if (currentBytes + 1024 * 1024 > budget * 0.8) preloadEnabled = false;
+    }
     // Fire-and-forget preload - don't block UI thread
-    if (this.pcmEngine) {
+    if (preloadEnabled && this.pcmEngine) {
       this.pcmEngine.preloadInstrument(resolved).catch(() => {});
     }
 
@@ -1440,14 +1450,26 @@ export class MultiLayerEngine {
     this.isDualLayerActive = false;
     this.layers = JSON.parse(JSON.stringify(this.activeCombi.layers));
     
+    // Budget guard: if decoded RAM is near budget, skip eager preloads and
+    // let layer instruments lazy-decode on first note (prevents OOM on low-RAM).
+    let preloadEnabled = true;
+    if (this.pcmEngine && typeof this.pcmEngine.getDecodedBufferStats === "function") {
+      const stats = this.pcmEngine.getDecodedBufferStats();
+      const currentBytes = stats?.bytes || 0;
+      const budget = stats?.budget || this.pcmEngine._getDecodedMemoryBudget();
+      const pcmLayers = this.layers.filter((l) => l.inst && !l.inst.startsWith("va:")).length;
+      if (currentBytes + pcmLayers * 1024 * 1024 > budget * 0.8) preloadEnabled = false;
+    }
     // Fire-and-forget preloads - don't block UI thread
-    for (let i = 0; i < this.layers.length; i++) {
-      const layer = this.layers[i];
-      if (layer.inst && layer.inst.startsWith("va:")) {
-        const prog = getTritonProgramById(layer.inst.slice(3));
-        if (prog) layer.vaProg = prog;
-      } else if (layer.inst && this.pcmEngine) {
-        this.pcmEngine.preloadInstrument(this.resolveBankKey(layer.inst)).catch(() => {});
+    if (preloadEnabled) {
+      for (let i = 0; i < this.layers.length; i++) {
+        const layer = this.layers[i];
+        if (layer.inst && layer.inst.startsWith("va:")) {
+          const prog = getTritonProgramById(layer.inst.slice(3));
+          if (prog) layer.vaProg = prog;
+        } else if (layer.inst && this.pcmEngine) {
+          this.pcmEngine.preloadInstrument(this.resolveBankKey(layer.inst)).catch(() => {});
+        }
       }
     }
     

@@ -10,6 +10,7 @@ import { resolveTritonProgram } from "../triton/combi-timbres.js";
 import { synthEngine } from "../audio/synth-engine.js";
 import { audioCore } from "../audio/audio-core.js";
 import { multiLayerEngine, COMBI_PRESETS } from "../audio/multi-layer-engine.js";
+import { HD_SOUNDBANKS } from "../audio/soundbanks.js";
 
 export class TritonWorkstationUI {
   constructor(containerId) {
@@ -157,6 +158,47 @@ export class TritonWorkstationUI {
       this.container.querySelectorAll(".triton-prog-cell").forEach(c => {
         const match = c.getAttribute("data-prog-id") === progId;
         c.classList.toggle("active", match);
+      });
+    }
+  }
+
+  /**
+   * Called when a rig slot / HUD picker loads a preset outside the Triton
+   * console: updates the LCD preset description to the loaded sound and
+   * CLEARS the browse grid highlight so no stale program cell stays selected.
+   */
+  syncLcdFromRigSelection() {
+    let name = null;
+    let bankStr = "BANK: RIG";
+    let catStr = null;
+    if (multiLayerEngine.isCombiMode && multiLayerEngine.activeCombi) {
+      name = multiLayerEngine.activeCombi.name || multiLayerEngine.activeCombi.id;
+      bankStr = "BANK: COMBI";
+      catStr = multiLayerEngine.activeCombi.category || "COMBI";
+    } else if (multiLayerEngine.isSplitMode) {
+      name = "SPLIT MODE";
+      bankStr = "BANK: SPLIT";
+      catStr = "SPLIT";
+    } else if (multiLayerEngine.activeSingleInst) {
+      const meta = HD_SOUNDBANKS[multiLayerEngine.activeSingleInst];
+      name = meta?.name || multiLayerEngine.activeSingleInst;
+      bankStr = "BANK: RIG";
+      catStr = meta?.category || "";
+    }
+    if (!name) return;
+
+    const lcdTitle = document.getElementById("triton-lcd-title");
+    const lcdBankCat = document.getElementById("triton-lcd-bank-cat");
+    const lcdCat = document.getElementById("triton-lcd-category");
+    if (lcdTitle && name) lcdTitle.innerText = name;
+    if (lcdBankCat && bankStr) lcdBankCat.innerText = bankStr;
+    if (lcdCat && catStr) lcdCat.innerText = `CATEGORY: ${String(catStr).toUpperCase()}`;
+
+    // Rig presets are not Triton programs — clear the browse grid highlight so
+    // no stale program cell stays lit in the BROWSE bank.
+    if (this.container) {
+      this.container.querySelectorAll(".triton-prog-cell").forEach(c => {
+        c.classList.remove("active");
       });
     }
   }

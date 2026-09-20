@@ -258,6 +258,11 @@ export class RegistrationManager {
         multiLayerEngine.toggleSplitMode(false);
       }
 
+      // 4b. Sync Triton LCD description + clear stale browse highlight
+      try {
+        getComponent("tritonConsole")?.syncLcdFromRigSelection?.();
+      } catch (e) {}
+
       // 5. Toast Feedback
       if (audioCore && typeof audioCore._diagToast === "function") {
         audioCore._diagToast(`Rig ${bank}-${slotNumber}: ${item.name || "Active"}`);
