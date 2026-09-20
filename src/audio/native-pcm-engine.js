@@ -1727,7 +1727,44 @@ export class NativePcmEngine {
     this._anchorCache = new Map();
     this._anchorCacheMaxSize = 1024;
 
+    // Crossfade worker for off-main-thread loop buffer processing
+    this._crossfadeWorker = null;
+    this._crossfadeWorkerReady = false;
+    this._crossfadeWorkerId = 0;
+    this._crossfadePending = new Map();
+    this._initCrossfadeWorker();
+
     this.initBuffers();
+  }
+
+  _initCrossfadeWorker() {
+    try {
+      if (typeof Worker === "undefined") return;
+      this._crossfadeWorker = new Worker(
+        new URL("./workers/crossfade-worker.js", import.meta.url),
+        { type: "module" }
+      );
+      this._crossfadeWorker.onmessage = (e) => {
+        const { type, payload, id, error } = e.data || {};
+        const pending = this._crossfadePending.get(id);
+        if (!pending) return;
+        this._crossfadePending.delete(id);
+        if (type === "result") {
+          pending.resolve(payload);
+        } else {
+          pending.reject(new Error(error || "Worker processing failed"));
+        }
+      };
+      this._crossfadeWorker.onerror = (e) => {
+        console.warn("[PCM] Crossfade worker error:", e);
+        this._crossfadeWorkerReady = false;
+      };
+      this._crossfadeWorkerReady = true;
+    } catch (e) {
+      console.warn("[PCM] Crossfade worker unavailable, falling back to main thread:", e);
+      this._crossfadeWorker = null;
+      this._crossfadeWorkerReady = false;
+    }
   }
 
 
@@ -1966,7 +2003,60 @@ export class NativePcmEngine {
     return buf;
   }
 
-  createCrossfadedLoopBuffer(ctx, originalBuf, instId) {
+  async createCrossfadedLoopBuffer(ctx, originalBuf, instId) {
+    if (!originalBuf) return originalBuf;
+    if (this._crossfadeWorkerReady && this._crossfadeWorker) {
+      try {
+        return await this._createCrossfadedLoopBufferWorker(ctx, originalBuf, instId);
+      } catch (err) {
+        console.warn("[PCM] Worker crossfade fallback to main thread:", err);
+      }
+    }
+    return this._createCrossfadedLoopBufferMainThread(ctx, originalBuf, instId);
+  }
+
+  async _createCrossfadedLoopBufferWorker(ctx, originalBuf, instId) {
+    const numChannels = Math.max(1, originalBuf.numberOfChannels);
+    const channelData = [];
+    for (let ch = 0; ch < numChannels; ch++) {
+      const src = originalBuf.getChannelData(ch);
+      const copy = new Float32Array(src.length);
+      copy.set(src);
+      channelData.push(copy);
+    }
+
+    const id = ++this._crossfadeWorkerId;
+    const payload = {
+      numChannels,
+      length: originalBuf.length,
+      sampleRate: originalBuf.sampleRate,
+      instId,
+      channelData,
+    };
+
+    const result = await new Promise((resolve, reject) => {
+      this._crossfadePending.set(id, { resolve, reject });
+      this._crossfadeWorker.postMessage(
+        { type: "process", id, payload },
+        channelData.map((d) => d.buffer)
+      );
+    });
+
+    const newBuf = ctx.createBuffer(
+      result.numChannels,
+      result.length,
+      result.sampleRate
+    );
+    for (let ch = 0; ch < result.numChannels; ch++) {
+      newBuf.getChannelData(ch).set(result.channelData[ch]);
+    }
+    newBuf._isLoopable = !!result.isLoopable;
+    newBuf._loopStartSec = result.loopStartSec || 0;
+    newBuf._loopEndSec = result.loopEndSec || 0;
+    return newBuf;
+  }
+
+  _createCrossfadedLoopBufferMainThread(ctx, originalBuf, instId) {
     if (!originalBuf) return originalBuf;
     const isDroneInstrument =
       instId &&
@@ -2275,7 +2365,7 @@ export class NativePcmEngine {
                 sampleCache.setSample(cacheKey, arrayBuf, { instId, midi });
               }
               const audioBuf = await this.decodeAudioBuffer(ctx, arrayBuf);
-              const processedBuf = this.createCrossfadedLoopBuffer(
+              const processedBuf = await this.createCrossfadedLoopBuffer(
                 ctx,
                 audioBuf,
                 instId,
@@ -2381,7 +2471,7 @@ export class NativePcmEngine {
                 }
               }
             }
-            const processedBuf = this.createCrossfadedLoopBuffer(
+            const processedBuf = await this.createCrossfadedLoopBuffer(
               ctx,
               audioBuf,
               instId,
@@ -2432,7 +2522,7 @@ export class NativePcmEngine {
         try {
           const arrayBuf = await this.fetchEmbeddedAnchor(anchor);
           const audioBuf = await this.decodeAudioBuffer(ctx, arrayBuf);
-          const processedBuf = this.createCrossfadedLoopBuffer(
+          const processedBuf = await this.createCrossfadedLoopBuffer(
             ctx,
             audioBuf,
             instId,
