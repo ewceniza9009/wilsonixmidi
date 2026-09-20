@@ -331,22 +331,30 @@ export class ChordPadsUI {
         },
         { passive: false }
       );
+
+      pad.addEventListener(
+        "touchcancel",
+        e => {
+          if (e.cancelable) e.preventDefault();
+          triggerOff();
+        },
+        { passive: false }
+      );
     });
 
-    // Single shared window-level release: re-renders replace the pad nodes, so a
-    // per-pad window listener would leak one handler per pad per render. This is
-    // bound once for the life of the component and releases the active pad (at
-    // most one can be active, since playChord() releases all others first).
+    // Global window-level release to handle pointer release outside the pad or window blur
     if (!this._globalPadMouseUp) {
       this._globalPadMouseUp = () => {
-        const active = this.container.querySelector(".chord-pad.active");
-        if (!active) return;
-        const idx = parseInt(active.getAttribute("data-index"));
-        this.releaseChord(idx);
-        active.classList.remove("active");
-        active.setAttribute("aria-pressed", "false");
+        if (this.activeNotesMap && this.activeNotesMap.size > 0) {
+          this.releaseAllChords(false);
+        }
       };
       window.addEventListener("mouseup", this._globalPadMouseUp);
+      window.addEventListener("pointerup", this._globalPadMouseUp);
+      window.addEventListener("pointercancel", this._globalPadMouseUp);
+      window.addEventListener("touchend", this._globalPadMouseUp, { passive: true });
+      window.addEventListener("touchcancel", this._globalPadMouseUp, { passive: true });
+      window.addEventListener("blur", this._globalPadMouseUp);
     }
   }
 
@@ -389,10 +397,10 @@ export class ChordPadsUI {
             multiLayerEngine.noteOff(m);
           }
         });
-        this.emitKeyVisual(notes, false);
-      } else {
+      } else if (multiLayerEngine) {
         notes.forEach(m => multiLayerEngine.noteOff(m));
       }
+      this.emitKeyVisual(notes, false);
       const pad = this.container?.querySelector(`#chord-pad-${idx}`);
       if (pad) {
         pad.classList.remove("active");
