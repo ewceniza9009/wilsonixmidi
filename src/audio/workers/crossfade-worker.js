@@ -23,6 +23,7 @@ function fadeEndInPlace(channelData, numChannels, totalSamples, sampleRate, seco
   if (fadeLen < 32) return;
   for (let c = 0; c < numChannels; c++) {
     const d = channelData[c];
+    if (!d) continue;
     for (let i = 0; i < fadeLen; i++) {
       const t = i / fadeLen;
       d[totalSamples - fadeLen + i] *= 0.5 * (1 + Math.cos(t * Math.PI));
@@ -35,9 +36,9 @@ self.onmessage = (e) => {
   if (type === "process" && payload) {
     try {
       const {
-        numChannels,
+        numChannels = 2,
         length: totalSamples,
-        sampleRate,
+        sampleRate = 44100,
         instId,
         channelData, // Array of Float32Array transferred from main thread
       } = payload;
@@ -46,17 +47,19 @@ self.onmessage = (e) => {
         throw new Error("Missing channelData in crossfade worker payload");
       }
 
+      const channelsCount = Math.max(1, numChannels || channelData.length || 1);
+
       // 1. Check if this is a drone instrument
       const isDrone = isDroneInstrument(instId);
       if (!isDrone || totalSamples / sampleRate < 0.8) {
-        fadeEndInPlace(channelData, numChannels, totalSamples, sampleRate, 0.4);
+        fadeEndInPlace(channelData, channelsCount, totalSamples, sampleRate, 0.4);
         self.postMessage(
           {
             type: "result",
             id,
             payload: {
               channelData,
-              numChannels,
+              numChannels: channelsCount,
               length: totalSamples,
               sampleRate,
               isLoopable: false,
@@ -83,14 +86,14 @@ self.onmessage = (e) => {
       const searchTo = loopEndSample - minLoopLen;
 
       if (searchTo <= searchFrom || fadeSamples < 64) {
-        fadeEndInPlace(channelData, numChannels, totalSamples, sampleRate, 0.3);
+        fadeEndInPlace(channelData, channelsCount, totalSamples, sampleRate, 0.3);
         self.postMessage(
           {
             type: "result",
             id,
             payload: {
               channelData,
-              numChannels,
+              numChannels: channelsCount,
               length: totalSamples,
               sampleRate,
               isLoopable: false,
@@ -112,14 +115,14 @@ self.onmessage = (e) => {
       }
       const rms = Math.sqrt(sum / Math.max(1, cnt));
       if (rms < 0.001) {
-        fadeEndInPlace(channelData, numChannels, totalSamples, sampleRate, 0.3);
+        fadeEndInPlace(channelData, channelsCount, totalSamples, sampleRate, 0.3);
         self.postMessage(
           {
             type: "result",
             id,
             payload: {
               channelData,
-              numChannels,
+              numChannels: channelsCount,
               length: totalSamples,
               sampleRate,
               isLoopable: false,
@@ -151,14 +154,14 @@ self.onmessage = (e) => {
       }
 
       if (loopStartSample < 0) {
-        fadeEndInPlace(channelData, numChannels, totalSamples, sampleRate, 0.3);
+        fadeEndInPlace(channelData, channelsCount, totalSamples, sampleRate, 0.3);
         self.postMessage(
           {
             type: "result",
             id,
             payload: {
               channelData,
-              numChannels,
+              numChannels: channelsCount,
               length: totalSamples,
               sampleRate,
               isLoopable: false,
@@ -173,7 +176,7 @@ self.onmessage = (e) => {
 
       // 3. Build crossfaded output channels
       const outChannels = [];
-      for (let ch = 0; ch < numChannels; ch++) {
+      for (let ch = 0; ch < channelsCount; ch++) {
         const srcCh = Math.min(ch, channelData.length - 1);
         const src = channelData[srcCh];
         const dst = new Float32Array(loopEndSample);
@@ -219,7 +222,7 @@ self.onmessage = (e) => {
           id,
           payload: {
             channelData: outChannels,
-            numChannels,
+            numChannels: outChannels.length,
             length: loopEndSample,
             sampleRate,
             isLoopable: true,

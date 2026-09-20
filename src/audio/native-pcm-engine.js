@@ -2016,7 +2016,7 @@ export class NativePcmEngine {
   }
 
   async _createCrossfadedLoopBufferWorker(ctx, originalBuf, instId) {
-    const numChannels = Math.max(1, originalBuf.numberOfChannels);
+    const numChannels = Math.max(1, originalBuf.numberOfChannels || 1);
     const channelData = [];
     for (let ch = 0; ch < numChannels; ch++) {
       const src = originalBuf.getChannelData(ch);
@@ -2042,17 +2042,28 @@ export class NativePcmEngine {
       );
     });
 
-    const newBuf = ctx.createBuffer(
-      result.numChannels,
-      result.length,
-      result.sampleRate
+    const outChannels = Math.max(
+      1,
+      result?.numChannels ||
+        (result?.channelData && result.channelData.length) ||
+        numChannels ||
+        1
     );
-    for (let ch = 0; ch < result.numChannels; ch++) {
-      newBuf.getChannelData(ch).set(result.channelData[ch]);
+    const outLength = Math.max(1, result?.length || originalBuf.length || 1);
+    const outRate = result?.sampleRate || originalBuf.sampleRate || 44100;
+
+    const newBuf = ctx.createBuffer(outChannels, outLength, outRate);
+    if (result && Array.isArray(result.channelData)) {
+      for (let ch = 0; ch < outChannels; ch++) {
+        const data = result.channelData[ch] || result.channelData[0];
+        if (data && data instanceof Float32Array) {
+          newBuf.getChannelData(ch).set(data);
+        }
+      }
     }
-    newBuf._isLoopable = !!result.isLoopable;
-    newBuf._loopStartSec = result.loopStartSec || 0;
-    newBuf._loopEndSec = result.loopEndSec || 0;
+    newBuf._isLoopable = !!result?.isLoopable;
+    newBuf._loopStartSec = result?.loopStartSec || 0;
+    newBuf._loopEndSec = result?.loopEndSec || 0;
     return newBuf;
   }
 
