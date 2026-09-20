@@ -1261,6 +1261,17 @@ export class MultiLayerEngine {
     this.activeTritonVaProg = null;
     const resolved = this.resolveBankKey(instKey);
     this.activeSingleInst = resolved;
+    // Force worklet re-initialization on preset change to prevent state drift
+    // that causes grainy/awful sound over time. Reset the worklet node so it
+    // starts fresh with the new preset's parameters.
+    if (this._workletNode) {
+      this._workletNode = null;
+      this._workletReady = false;
+    }
+    if (this._pcmWorkletNode) {
+      this._pcmWorkletNode = null;
+      this._pcmWorkletReady = false;
+    }
     // Budget guard: if decoded RAM is near budget, skip the eager preload and
     // let this instrument lazy-decode on first note (prevents OOM on low-RAM).
     let preloadEnabled = true;

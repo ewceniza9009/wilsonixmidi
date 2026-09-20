@@ -2587,10 +2587,17 @@ export class NativePcmEngine {
     if (!isMobile) return 1024 * 1024 * 1024; // 1GB for desktop-class devices
     // Real Android RAM-conscious budgets — scaled to device memory so modern
     // phones with 6GB+ RAM don't get a hard 384MB cap that causes OOM churn.
-    let deviceMem = 4;
+    let deviceMem = 0;
     if (typeof navigator !== "undefined" && navigator.deviceMemory) {
       deviceMem = navigator.deviceMemory;
+    } else if (typeof navigator !== "undefined" && navigator.hardwareConcurrency) {
+      // navigator.deviceMemory is often UNAVAILABLE on Android browsers — the
+      // old default of 4 gave an 8GB Xiaomi Pad 6 a stifling 128MB budget.
+      // Proxy by CPU cores instead: 6+ cores ≈ mid/high device (Pad 6 = 8).
+      deviceMem = navigator.hardwareConcurrency >= 6 ? 8 : 4;
     }
+    // Unknown Android fallback: 256MB (safer than the old 128MB, still OOM-safe).
+    if (deviceMem <= 0) return 256 * 1024 * 1024;
     // Scale budget proportionally: 3GB RAM → 192MB, 6GB → 384MB, 8GB → 512MB,
     // 12GB → 768MB, 16GB+ → 1024MB (1GB). Caps prevent extremes on very low-end.
     if (deviceMem <= 2) return 64 * 1024 * 1024;
