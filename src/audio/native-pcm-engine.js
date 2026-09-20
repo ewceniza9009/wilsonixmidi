@@ -1685,14 +1685,6 @@ export class NativePcmEngine {
     // Set by multi-layer-engine._initWorklet(); null means fallback to main-thread.
     this.pcmWorkletNode = null;
 
-    // Crossfade worker for off-main-thread loop buffer processing
-    this._crossfadeWorker = null;
-    this._crossfadeWorkerReady = false;
-    this._crossfadeWorkerId = 0;
-    this._crossfadePending = new Map();
-
-    this._initCrossfadeWorker();
-
     this._spinePools = new Map();
     this._hammerPools = new Map();
     this._chiffPools = new Map();
@@ -1738,35 +1730,6 @@ export class NativePcmEngine {
     this.initBuffers();
   }
 
-  _initCrossfadeWorker() {
-    try {
-      // Use dynamic import for worker to support Vite/ESM
-      this._crossfadeWorker = new Worker(
-        new URL('./workers/crossfade-worker.js', import.meta.url),
-        { type: 'module' }
-      );
-      this._crossfadeWorker.onmessage = (e) => {
-        const { type: _type, payload: _payload, id } = e.data;
-        const pending = this._crossfadePending.get(id);
-        if (!pending) return;
-        this._crossfadePending.delete(id);
-        if (e.data.type === 'result') {
-          pending.resolve(e.data.payload);
-        } else if (e.data.type === 'error') {
-          pending.reject(new Error(e.data.error));
-        }
-      };
-      this._crossfadeWorker.onerror = (e) => {
-        console.warn('[PCM] Crossfade worker error:', e);
-        this._crossfadeWorkerReady = false;
-      };
-      this._crossfadeWorkerReady = true;
-    } catch (e) {
-      console.warn('[PCM] Crossfade worker unavailable, falling back to main thread:', e);
-      this._crossfadeWorker = null;
-      this._crossfadeWorkerReady = false;
-    }
-  }
 
   playLooperNote(
     trackIndex,
@@ -2004,79 +1967,6 @@ export class NativePcmEngine {
   }
 
   createCrossfadedLoopBuffer(ctx, originalBuf, instId) {
-    if (!originalBuf) return originalBuf;
-    const isDroneInstrument =
-      instId &&
-      (instId.includes("string") ||
-        instId.includes("pad") ||
-        instId.includes("choir") ||
-        instId.includes("organ") ||
-        instId.includes("voice") ||
-        instId.includes("vox") ||
-        instId.includes("universe") ||
-        instId.includes("sax") ||
-        instId.includes("bass") ||
-        instId.includes("flute") ||
-        instId.includes("clarinet") ||
-        instId.includes("trumpet") ||
-        instId.includes("trombone") ||
-        instId.includes("violin") ||
-        instId.includes("cello") ||
-        instId.includes("brass") ||
-        instId.includes("saw") ||
-        instId.includes("extacy") ||
-        instId.includes("vocoder") ||
-        instId.includes("synth") ||
-        instId.includes("lead") ||
-        instId.includes("square") ||
-        instId.includes("thicksaw") ||
-        instId.includes("sweeppad") ||
-        instId.includes("warmpad") ||
-        instId.includes("seq_") ||
-        instId.includes("dreamn"));
-    if (
-      instId.startsWith("tekk_") ||
-      !isDroneInstrument ||
-      originalBuf.duration < 0.8
-    )
-      return this.fadeBufferEnd(originalBuf, 0.4);
-
-    // Try to use worker for off-main-thread processing
-    if (this._crossfadeWorkerReady && this._crossfadeWorker) {
-      return this._createCrossfadedLoopBufferWorker(ctx, originalBuf, instId);
-    }
-
-    // Fallback to main-thread implementation
-    return this._createCrossfadedLoopBufferMainThread(ctx, originalBuf, instId);
-  }
-
-  async _createCrossfadedLoopBufferWorker(ctx, originalBuf, instId) {
-    const audioData = {
-      numberOfChannels: originalBuf.numberOfChannels,
-      length: originalBuf.length,
-      sampleRate: originalBuf.sampleRate,
-      duration: originalBuf.duration,
-      instId,
-    };
-    // Extract channel data for transfer
-    const channelData = [];
-    for (let ch = 0; ch < originalBuf.numberOfChannels; ch++) {
-      channelData.push(originalBuf.getChannelData(ch));
-    }
-    audioData.channelData = channelData;
-
-    const id = ++this._crossfadeWorkerId;
-    return new Promise((resolve, reject) => {
-      this._crossfadePending.set(id, { resolve, reject });
-      this._crossfadeWorker.postMessage({
-        type: 'process',
-        id,
-        payload: audioData
-      }, channelData.map(d => d.buffer));
-    });
-  }
-
-  _createCrossfadedLoopBufferMainThread(ctx, originalBuf, instId) {
     if (!originalBuf) return originalBuf;
     const isDroneInstrument =
       instId &&
