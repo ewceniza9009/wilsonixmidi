@@ -8,16 +8,21 @@
 import { NativePcmEngine } from "./native-pcm-engine.js";
 import { audioCore } from "./audio-core.js";
 import { synthEngine, INSTRUMENT_PATCHES } from "./synth-engine.js";
-import { tritonVaEngine, TritonVirtualAnalogEngine } from "./triton-va-engine.js";
-import { getTritonProgramById, getTritonBankName, getTritonPcmEntries, getTritonVaPrograms } from "../triton/combi-timbres.js";
+import {
+  tritonVaEngine,
+  TritonVirtualAnalogEngine,
+} from "./triton-va-engine.js";
+import {
+  getTritonProgramById,
+  getTritonBankName,
+  getTritonPcmEntries,
+  getTritonVaPrograms,
+} from "../triton/combi-timbres.js";
 import { SynthWorkletNode } from "./worklet/synth-worklet-node.js";
 import { PcmWorkletNode } from "./worklet/pcm-worklet-node.js";
 import { HD_SOUNDBANKS } from "./soundbanks.js";
 import { midiOutManager } from "../midi/midi-out.js";
-import {
-  registerBudgetProvider,
-  onMemoryEvict,
-} from "./memory-manager.js";
+import { registerBudgetProvider, onMemoryEvict } from "./memory-manager.js";
 
 export { HD_SOUNDBANKS };
 
@@ -27,10 +32,17 @@ export { HD_SOUNDBANKS };
 // picker UI read from one source of truth.
 export const COMBI_TIMBRES = (() => {
   const out = [];
-  Object.values(HD_SOUNDBANKS).forEach(inst => {
-    out.push({ value: inst.id, name: inst.name, category: inst.category, bank: "PCM WORKSTATION", kind: "pcm", code: "" });
+  Object.values(HD_SOUNDBANKS).forEach((inst) => {
+    out.push({
+      value: inst.id,
+      name: inst.name,
+      category: inst.category,
+      bank: "PCM WORKSTATION",
+      kind: "pcm",
+      code: "",
+    });
   });
-  getTritonPcmEntries().forEach(entry => {
+  getTritonPcmEntries().forEach((entry) => {
     if (HD_SOUNDBANKS[entry.instKey]) return;
     out.push({
       value: entry.instKey,
@@ -41,7 +53,7 @@ export const COMBI_TIMBRES = (() => {
       code: entry.id,
     });
   });
-  getTritonVaPrograms().forEach(prog => {
+  getTritonVaPrograms().forEach((prog) => {
     out.push({
       value: "va:" + prog.id,
       name: prog.name,
@@ -60,10 +72,54 @@ export const COMBI_PRESETS = {
     name: "🏄 Synthesizer You - 80s Surf & Beach Rock Stack",
     category: "Synthesizer You Signature",
     layers: [
-      { id: 0, name: "Strat Clean Lead (Spring Drip)", inst: "electric_guitar_clean", fx: "spring_surf", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Juno Stereo Synth Pad", inst: "m1_universe", fx: "analog_juno_chorus", gain: 0.65, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Analog Synth Bass (Tape Sat)", inst: "synth_bass_1", fx: "tape_sat_master", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "80s Gated Snare Drum Kit", inst: "tr808_kit", fx: "gated_cannon", gain: 0.80, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Strat Clean Lead (Spring Drip)",
+        inst: "electric_guitar_clean",
+        fx: "spring_surf",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Juno Stereo Synth Pad",
+        inst: "m1_universe",
+        fx: "analog_juno_chorus",
+        gain: 0.65,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Analog Synth Bass (Tape Sat)",
+        inst: "synth_bass_1",
+        fx: "tape_sat_master",
+        gain: 0.85,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "80s Gated Snare Drum Kit",
+        inst: "tr808_kit",
+        fx: "gated_cannon",
+        gain: 0.8,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   synthesizer_you_pad: {
@@ -71,10 +127,54 @@ export const COMBI_PRESETS = {
     name: "✨ Synthesizer You - Lush Juno & Vocal Echo Stack",
     category: "Synthesizer You Signature",
     layers: [
-      { id: 0, name: "Juno Analog Poly Synth", inst: "m1_universe", fx: "analog_juno_chorus", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Slapback Vocal Shout", inst: "vox_yeah", fx: "slapback_vocal", gain: 0.75, pan: 0.05, oct: 0, minVel: 40, maxVel: 127, enabled: true },
-      { id: 2, name: "Optical Tremolo Synth Pulse", inst: "synth_bass_1", fx: "opto_tremolo_16th", gain: 0.70, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Korg M1 Fresh Air Shimmer", inst: "m1_fresh_air", fx: "spring_surf", gain: 0.50, pan: 0, oct: 1, minVel: 60, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Juno Analog Poly Synth",
+        inst: "m1_universe",
+        fx: "analog_juno_chorus",
+        gain: 0.85,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Slapback Vocal Shout",
+        inst: "vox_yeah",
+        fx: "slapback_vocal",
+        gain: 0.75,
+        pan: 0.05,
+        oct: 0,
+        minVel: 40,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Optical Tremolo Synth Pulse",
+        inst: "synth_bass_1",
+        fx: "opto_tremolo_16th",
+        gain: 0.7,
+        pan: -0.05,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Korg M1 Fresh Air Shimmer",
+        inst: "m1_fresh_air",
+        fx: "spring_surf",
+        gain: 0.5,
+        pan: 0,
+        oct: 1,
+        minVel: 60,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   animal_festival_stack: {
@@ -82,10 +182,54 @@ export const COMBI_PRESETS = {
     name: "🦁 Animal Festival Anthem (Drop Pluck + Festival Lead + Sub)",
     category: "EDM Festival",
     layers: [
-      { id: 0, name: "Animal Drop Pluck 1", inst: "animal_drop_pluck_1", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Animal Festival Lead 1", inst: "animal_festival_lead_1", fx: "reverb_hall", gain: 0.70, pan: 0, oct: 0, minVel: 30, maxVel: 127, enabled: true },
-      { id: 2, name: "Animal Sub Drop Bass", inst: "animal_sub_drop_bass_1", fx: "warm_eq", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Animal Bounce Lead", inst: "animal_bounce_lead", fx: "clean", gain: 0.60, pan: 0.05, oct: 1, minVel: 60, maxVel: 127, enabled: false },
+      {
+        id: 0,
+        name: "Animal Drop Pluck 1",
+        inst: "animal_drop_pluck_1",
+        fx: "clean",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Animal Festival Lead 1",
+        inst: "animal_festival_lead_1",
+        fx: "reverb_hall",
+        gain: 0.7,
+        pan: 0,
+        oct: 0,
+        minVel: 30,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Animal Sub Drop Bass",
+        inst: "animal_sub_drop_bass_1",
+        fx: "warm_eq",
+        gain: 0.85,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Animal Bounce Lead",
+        inst: "animal_bounce_lead",
+        fx: "clean",
+        gain: 0.6,
+        pan: 0.05,
+        oct: 1,
+        minVel: 60,
+        maxVel: 127,
+        enabled: false,
+      },
     ],
   },
   bloom_future_bass_stack: {
@@ -93,10 +237,54 @@ export const COMBI_PRESETS = {
     name: "🌸 Bloom Chainsmokers Anthem (Closer Lead + Inside Out + Paris Pad + Reese)",
     category: "EDM Future Bass",
     layers: [
-      { id: 0, name: "Bloom LEAD - Closer", inst: "bloom_closer_lead", fx: "reverb_hall", gain: 0.95, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Bloom LEAD - Inside Out", inst: "bloom_inside_out_lead", fx: "stereo_chorus", gain: 0.85, pan: 0.05, oct: 0, minVel: 20, maxVel: 127, enabled: true },
-      { id: 2, name: "Bloom PAD - Paris", inst: "bloom_paris_pad", fx: "clean", gain: 0.80, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Bloom BASS - Breakdown", inst: "bloom_breakdown_bass", fx: "warm_eq", gain: 0.90, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Bloom LEAD - Closer",
+        inst: "bloom_closer_lead",
+        fx: "reverb_hall",
+        gain: 0.95,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Bloom LEAD - Inside Out",
+        inst: "bloom_inside_out_lead",
+        fx: "stereo_chorus",
+        gain: 0.85,
+        pan: 0.05,
+        oct: 0,
+        minVel: 20,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Bloom PAD - Paris",
+        inst: "bloom_paris_pad",
+        fx: "clean",
+        gain: 0.8,
+        pan: -0.05,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Bloom BASS - Breakdown",
+        inst: "bloom_breakdown_bass",
+        fx: "warm_eq",
+        gain: 0.9,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   whitney_ballad: {
@@ -104,10 +292,54 @@ export const COMBI_PRESETS = {
     name: "★ Whitney 1992 - I Have Nothing (Foster Rig)",
     category: "Power Ballad",
     layers: [
-      { id: 0, name: "David Foster Concert Grand", inst: "acoustic_grand_piano", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Hollywood Warm Strings", inst: "string_ensemble_1", fx: "clean", gain: 0.65, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Dyno 80s Bell Tine (Foster Ding)", inst: "electric_piano_1", fx: "clean", gain: 0.50, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Foster Shimmer Chime (+12)", inst: "electric_piano_1", fx: "reverb_hall", gain: 0.40, pan: -0.05, oct: 1, minVel: 75, maxVel: 127, enabled: false },
+      {
+        id: 0,
+        name: "David Foster Concert Grand",
+        inst: "acoustic_grand_piano",
+        fx: "clean",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Hollywood Warm Strings",
+        inst: "string_ensemble_1",
+        fx: "clean",
+        gain: 0.65,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Dyno 80s Bell Tine (Foster Ding)",
+        inst: "electric_piano_1",
+        fx: "clean",
+        gain: 0.5,
+        pan: 0.05,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Foster Shimmer Chime (+12)",
+        inst: "electric_piano_1",
+        fx: "reverb_hall",
+        gain: 0.4,
+        pan: -0.05,
+        oct: 1,
+        minVel: 75,
+        maxVel: 127,
+        enabled: false,
+      },
     ],
   },
   ballad_master: {
@@ -115,10 +347,54 @@ export const COMBI_PRESETS = {
     name: "★ Ballad Master (Synthage + Triton Strings + Tine)",
     category: "Worship / Ballad",
     layers: [
-      { id: 0, name: "Velo Piano Grand", inst: "acoustic_grand_piano", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Triton Warm Strings", inst: "string_ensemble_1", fx: "clean", gain: 0.65, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Dyno Bell Tine", inst: "electric_piano_1", fx: "clean", gain: 0.55, pan: 0.05, oct: 0, minVel: 30, maxVel: 127, enabled: true },
-      { id: 3, name: "Shreddage Lead Guitar", inst: "distortion_guitar", fx: "tube_warm", gain: 0.75, pan: 0, oct: 0, minVel: 95, maxVel: 127, enabled: false },
+      {
+        id: 0,
+        name: "Velo Piano Grand",
+        inst: "acoustic_grand_piano",
+        fx: "clean",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Triton Warm Strings",
+        inst: "string_ensemble_1",
+        fx: "clean",
+        gain: 0.65,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Dyno Bell Tine",
+        inst: "electric_piano_1",
+        fx: "clean",
+        gain: 0.55,
+        pan: 0.05,
+        oct: 0,
+        minVel: 30,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Shreddage Lead Guitar",
+        inst: "distortion_guitar",
+        fx: "tube_warm",
+        gain: 0.75,
+        pan: 0,
+        oct: 0,
+        minVel: 95,
+        maxVel: 127,
+        enabled: false,
+      },
     ],
   },
   celestial_worship: {
@@ -126,10 +402,54 @@ export const COMBI_PRESETS = {
     name: "★ Celestial Worship (Piano + Universe + Choir)",
     category: "Worship / Ambient",
     layers: [
-      { id: 0, name: "Velo Piano Concert Grand", inst: "acoustic_grand_piano", fx: "air_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Triton Warm Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.65, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Korg M1 Ooh-Ahh Vocal Choir", inst: "choir_aahs", fx: "chorus_lush", gain: 0.75, pan: 0.05, oct: 0, minVel: 20, maxVel: 127, enabled: true },
-      { id: 3, name: "Dyno Bell Tine", inst: "electric_piano_1", fx: "clean", gain: 0.45, pan: 0, oct: 1, minVel: 50, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Velo Piano Concert Grand",
+        inst: "acoustic_grand_piano",
+        fx: "air_eq",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Triton Warm Strings",
+        inst: "string_ensemble_1",
+        fx: "reverb_hall",
+        gain: 0.65,
+        pan: -0.05,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Korg M1 Ooh-Ahh Vocal Choir",
+        inst: "choir_aahs",
+        fx: "chorus_lush",
+        gain: 0.75,
+        pan: 0.05,
+        oct: 0,
+        minVel: 20,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Dyno Bell Tine",
+        inst: "electric_piano_1",
+        fx: "clean",
+        gain: 0.45,
+        pan: 0,
+        oct: 1,
+        minVel: 50,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   m1_90s_house: {
@@ -137,10 +457,54 @@ export const COMBI_PRESETS = {
     name: "★ 90s House Anthem (M1 Piano 16' + Organ 2 + Strings)",
     category: "90s Dance / House",
     layers: [
-      { id: 0, name: "Concert Grand Piano", inst: "acoustic_grand_piano", fx: "punch_comp", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "B3 Rock Organ (Bass)", inst: "drawbar_organ", fx: "clean", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Symphony Strings", inst: "string_ensemble_1", fx: "clean", gain: 0.55, pan: 0.05, oct: 0, minVel: 30, maxVel: 127, enabled: true },
-      { id: 3, name: "Moog Synth Bass", inst: "synth_bass_1", fx: "warm_eq", gain: 0.65, pan: -0.05, oct: -1, minVel: 75, maxVel: 127, enabled: false },
+      {
+        id: 0,
+        name: "Concert Grand Piano",
+        inst: "acoustic_grand_piano",
+        fx: "punch_comp",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "B3 Rock Organ (Bass)",
+        inst: "drawbar_organ",
+        fx: "clean",
+        gain: 0.85,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Symphony Strings",
+        inst: "string_ensemble_1",
+        fx: "clean",
+        gain: 0.55,
+        pan: 0.05,
+        oct: 0,
+        minVel: 30,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Moog Synth Bass",
+        inst: "synth_bass_1",
+        fx: "warm_eq",
+        gain: 0.65,
+        pan: -0.05,
+        oct: -1,
+        minVel: 75,
+        maxVel: 127,
+        enabled: false,
+      },
     ],
   },
   clean_electric_piano: {
@@ -148,10 +512,55 @@ export const COMBI_PRESETS = {
     name: "★ Clean Stage Electric Piano (Suit & Stage EP + Bell)",
     category: "Electric Piano",
     layers: [
-      { id: 0, name: "Suit & Stage EP", inst: "electric_piano_1", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "FM Bell Tine", inst: "electric_piano_2", fx: "clean", gain: 0.45, pan: 0.05, oct: 0, minVel: 50, maxVel: 127, enabled: true },
-      { id: 2, name: "Warm Soft Strings", inst: "string_ensemble_1", fx: "clean", gain: 0.35, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Pocket Bass", inst: "synth_bass_1", fx: "clean", gain: 0.65, pan: -0.05, oct: -1, minVel: 1, maxVel: 127, maxNote: 59, enabled: true },
+      {
+        id: 0,
+        name: "Suit & Stage EP",
+        inst: "electric_piano_1",
+        fx: "clean",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "FM Bell Tine",
+        inst: "electric_piano_2",
+        fx: "clean",
+        gain: 0.45,
+        pan: 0.05,
+        oct: 0,
+        minVel: 50,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Warm Soft Strings",
+        inst: "string_ensemble_1",
+        fx: "clean",
+        gain: 0.35,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Pocket Bass",
+        inst: "synth_bass_1",
+        fx: "clean",
+        gain: 0.65,
+        pan: -0.05,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        maxNote: 59,
+        enabled: true,
+      },
     ],
   },
   smooth_rnb: {
@@ -159,10 +568,54 @@ export const COMBI_PRESETS = {
     name: "★ Smooth R&B Soul (Stage EP + Breathy Sax + Strings)",
     category: "R&B / Soul",
     layers: [
-      { id: 0, name: "Suit & Stage EP", inst: "electric_piano_1", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Breathy Alto Sax", inst: "alto_sax", fx: "reverb_room", gain: 0.85, pan: 0, oct: 0, minVel: 40, maxVel: 127, enabled: true },
-      { id: 2, name: "Triton Stereo Strings", inst: "string_ensemble_1", fx: "clean", gain: 0.55, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Punch Bass (Left)", inst: "synth_bass_1", fx: "punch_comp", gain: 0.70, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: false },
+      {
+        id: 0,
+        name: "Suit & Stage EP",
+        inst: "electric_piano_1",
+        fx: "clean",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Breathy Alto Sax",
+        inst: "alto_sax",
+        fx: "reverb_room",
+        gain: 0.85,
+        pan: 0,
+        oct: 0,
+        minVel: 40,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Triton Stereo Strings",
+        inst: "string_ensemble_1",
+        fx: "clean",
+        gain: 0.55,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Punch Bass (Left)",
+        inst: "synth_bass_1",
+        fx: "punch_comp",
+        gain: 0.7,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: false,
+      },
     ],
   },
   rooftop_cathedral: {
@@ -171,10 +624,54 @@ export const COMBI_PRESETS = {
     category: "Electric Piano",
     fxPreset: "rooftop_cathedral",
     layers: [
-      { id: 0, name: "DX7 E.Piano 1 Bell", inst: "electric_piano_2", fx: "chorus_lush", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Hall Wash Return", inst: "electric_piano_2", fx: "reverb_hall", gain: 0.55, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Analog Ensemble Double", inst: "electric_piano_2", fx: "chorus_vintage", gain: 0.24, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Angelic String Shimmer", inst: "string_ensemble_1", fx: "reverb_plate", gain: 0.18, pan: 0.03, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "DX7 E.Piano 1 Bell",
+        inst: "electric_piano_2",
+        fx: "chorus_lush",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Hall Wash Return",
+        inst: "electric_piano_2",
+        fx: "reverb_hall",
+        gain: 0.55,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Analog Ensemble Double",
+        inst: "electric_piano_2",
+        fx: "chorus_vintage",
+        gain: 0.24,
+        pan: -0.05,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Angelic String Shimmer",
+        inst: "string_ensemble_1",
+        fx: "reverb_plate",
+        gain: 0.18,
+        pan: 0.03,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   neo_soul_chill: {
@@ -182,10 +679,55 @@ export const COMBI_PRESETS = {
     name: "★ Neo-Soul Chill (Studio Rhodes + Universe Pad + Nylon + Sub)",
     category: "R&B / Neo-Soul",
     layers: [
-      { id: 0, name: "Studio DX7 FM / Stage Rhodes", inst: "abletunes_fm_piano", fx: "autopan_wide", gain: 0.70, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Celestial Universe Pad", inst: "m1_universe", fx: "reverb_hall", gain: 0.45, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Warm Nylon Comping Chords", inst: "acoustic_guitar_nylon", fx: "clean", gain: 0.70, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Moog Analog Sub Bass", inst: "synth_bass_1", fx: "clean", gain: 0.75, pan: -0.05, oct: -1, minVel: 1, maxVel: 127, maxNote: 59, enabled: true },
+      {
+        id: 0,
+        name: "Studio DX7 FM / Stage Rhodes",
+        inst: "abletunes_fm_piano",
+        fx: "autopan_wide",
+        gain: 0.7,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Celestial Universe Pad",
+        inst: "m1_universe",
+        fx: "reverb_hall",
+        gain: 0.45,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Warm Nylon Comping Chords",
+        inst: "acoustic_guitar_nylon",
+        fx: "clean",
+        gain: 0.7,
+        pan: 0.05,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Moog Analog Sub Bass",
+        inst: "synth_bass_1",
+        fx: "clean",
+        gain: 0.75,
+        pan: -0.05,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        maxNote: 59,
+        enabled: true,
+      },
     ],
   },
   reggae_bubble: {
@@ -194,10 +736,54 @@ export const COMBI_PRESETS = {
     category: "Reggae & Dub",
     fxPreset: "reggae_dub",
     layers: [
-      { id: 0, name: "Percussive B3 Bubble Organ", inst: "drawbar_organ", fx: "rotary_fast", gain: 0.95, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Staccato Grand Chop", inst: "acoustic_grand_piano", fx: "clean", gain: 0.90, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Muted Clean Guitar Skank", inst: "electric_guitar_clean", fx: "punch_comp", gain: 0.70, pan: 0.1, oct: 0, minVel: 20, maxVel: 127, enabled: true },
-      { id: 3, name: "Dub Sub Bass", inst: "synth_bass_1", fx: "warm_eq", gain: 0.70, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Percussive B3 Bubble Organ",
+        inst: "drawbar_organ",
+        fx: "rotary_fast",
+        gain: 0.95,
+        pan: -0.05,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Staccato Grand Chop",
+        inst: "acoustic_grand_piano",
+        fx: "clean",
+        gain: 0.9,
+        pan: 0.05,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Muted Clean Guitar Skank",
+        inst: "electric_guitar_clean",
+        fx: "punch_comp",
+        gain: 0.7,
+        pan: 0.1,
+        oct: 0,
+        minVel: 20,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Dub Sub Bass",
+        inst: "synth_bass_1",
+        fx: "warm_eq",
+        gain: 0.7,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   shimmer_worship_celestial: {
@@ -206,10 +792,54 @@ export const COMBI_PRESETS = {
     category: "Worship & Ambient",
     fxPreset: "shimmer_ethereal",
     layers: [
-      { id: 0, name: "Concert Grand Piano", inst: "acoustic_grand_piano", fx: "air_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Ethereal Shimmer Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.75, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Dyno 80s Bell Tine", inst: "electric_piano_1", fx: "clean", gain: 0.50, pan: 0.05, oct: 1, minVel: 30, maxVel: 127, enabled: true },
-      { id: 3, name: "Korg M1 Ooh-Ahh Formant", inst: "choir_aahs", fx: "chorus_lush", gain: 0.45, pan: 0, oct: 0, minVel: 20, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Concert Grand Piano",
+        inst: "acoustic_grand_piano",
+        fx: "air_eq",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Ethereal Shimmer Strings",
+        inst: "string_ensemble_1",
+        fx: "reverb_hall",
+        gain: 0.75,
+        pan: -0.05,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Dyno 80s Bell Tine",
+        inst: "electric_piano_1",
+        fx: "clean",
+        gain: 0.5,
+        pan: 0.05,
+        oct: 1,
+        minVel: 30,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Korg M1 Ooh-Ahh Formant",
+        inst: "choir_aahs",
+        fx: "chorus_lush",
+        gain: 0.45,
+        pan: 0,
+        oct: 0,
+        minVel: 20,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   talkbox_funk_master: {
@@ -218,10 +848,54 @@ export const COMBI_PRESETS = {
     category: "Funk & Groove",
     fxPreset: "talkbox_vocal",
     layers: [
-      { id: 0, name: "Roger Talkbox Lead (Zapp)", inst: "va:A045", fx: "tube_warm", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Korg M1 Slap Bass", inst: "m1_slap_bass", fx: "punch_comp", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: false },
-      { id: 2, name: "Funky Clavinet D6", inst: "electric_piano_1", fx: "clean", gain: 0.65, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: false },
-      { id: 3, name: "Fat Brass Horns", inst: "brass_section", fx: "air_eq", gain: 0.60, pan: -0.05, oct: 0, minVel: 60, maxVel: 127, enabled: false },
+      {
+        id: 0,
+        name: "Roger Talkbox Lead (Zapp)",
+        inst: "va:A045",
+        fx: "tube_warm",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Korg M1 Slap Bass",
+        inst: "m1_slap_bass",
+        fx: "punch_comp",
+        gain: 0.85,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: false,
+      },
+      {
+        id: 2,
+        name: "Funky Clavinet D6",
+        inst: "electric_piano_1",
+        fx: "clean",
+        gain: 0.65,
+        pan: 0.05,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: false,
+      },
+      {
+        id: 3,
+        name: "Fat Brass Horns",
+        inst: "brass_section",
+        fx: "air_eq",
+        gain: 0.6,
+        pan: -0.05,
+        oct: 0,
+        minVel: 60,
+        maxVel: 127,
+        enabled: false,
+      },
     ],
   },
   lofi_vinyl_ep: {
@@ -229,10 +903,55 @@ export const COMBI_PRESETS = {
     name: "★ Lo-Fi Vintage Tape Rhodes (Vintage EP + Kalimba + Wow & Flutter)",
     category: "Lo-Fi & Vintage",
     layers: [
-      { id: 0, name: "Vintage Stage Rhodes", inst: "rhodes_stage_mp3", fx: "lofi_vinyl", gain: 0.90, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Organic Kalimba Bell", inst: "kalimba", fx: "reverb_room", gain: 0.55, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Mellow Upright Bass", inst: "acoustic_bass", fx: "warm_eq", gain: 0.70, pan: -0.05, oct: -1, minVel: 1, maxVel: 127, maxNote: 59, enabled: true },
-      { id: 3, name: "Vinyl String Pad", inst: "string_ensemble_1", fx: "clean", gain: 0.25, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Vintage Stage Rhodes",
+        inst: "rhodes_stage_mp3",
+        fx: "lofi_vinyl",
+        gain: 0.9,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Organic Kalimba Bell",
+        inst: "kalimba",
+        fx: "reverb_room",
+        gain: 0.55,
+        pan: 0.05,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Mellow Upright Bass",
+        inst: "acoustic_bass",
+        fx: "warm_eq",
+        gain: 0.7,
+        pan: -0.05,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        maxNote: 59,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Vinyl String Pad",
+        inst: "string_ensemble_1",
+        fx: "clean",
+        gain: 0.25,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   gospel_praise: {
@@ -240,10 +959,54 @@ export const COMBI_PRESETS = {
     name: "★ Gospel Praise (Grand Piano + B3 Organ + Brass)",
     category: "Gospel & Praise",
     layers: [
-      { id: 0, name: "Concert Grand", inst: "acoustic_grand_piano", fx: "air_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "B3 Rock Organ", inst: "drawbar_organ", fx: "clean", gain: 0.75, pan: 0, oct: 0, minVel: 20, maxVel: 127, enabled: true },
-      { id: 2, name: "Triton Stereo Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.55, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Fat Brass Horns", inst: "brass_section", fx: "tube_warm", gain: 0.65, pan: 0, oct: 0, minVel: 75, maxVel: 127, enabled: false },
+      {
+        id: 0,
+        name: "Concert Grand",
+        inst: "acoustic_grand_piano",
+        fx: "air_eq",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "B3 Rock Organ",
+        inst: "drawbar_organ",
+        fx: "clean",
+        gain: 0.75,
+        pan: 0,
+        oct: 0,
+        minVel: 20,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Triton Stereo Strings",
+        inst: "string_ensemble_1",
+        fx: "reverb_hall",
+        gain: 0.55,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Fat Brass Horns",
+        inst: "brass_section",
+        fx: "tube_warm",
+        gain: 0.65,
+        pan: 0,
+        oct: 0,
+        minVel: 75,
+        maxVel: 127,
+        enabled: false,
+      },
     ],
   },
   ambient_space: {
@@ -251,10 +1014,54 @@ export const COMBI_PRESETS = {
     name: "★ Deep Space Ambient (Universe + Fresh Air + Choir)",
     category: "Ambient / Cinematic",
     layers: [
-      { id: 0, name: "Triton Stereo Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.85, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Dyno Bell Chime", inst: "electric_piano_1", fx: "clean", gain: 0.65, pan: 0, oct: 1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Korg M1 Ooh-Ahh Vocal Choir", inst: "choir_aahs", fx: "reverb_hall", gain: 0.80, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Stage Electric Piano", inst: "electric_piano_1", fx: "clean", gain: 0.55, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Triton Stereo Strings",
+        inst: "string_ensemble_1",
+        fx: "reverb_hall",
+        gain: 0.85,
+        pan: -0.05,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Dyno Bell Chime",
+        inst: "electric_piano_1",
+        fx: "clean",
+        gain: 0.65,
+        pan: 0,
+        oct: 1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Korg M1 Ooh-Ahh Vocal Choir",
+        inst: "choir_aahs",
+        fx: "reverb_hall",
+        gain: 0.8,
+        pan: 0.05,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Stage Electric Piano",
+        inst: "electric_piano_1",
+        fx: "clean",
+        gain: 0.55,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   stadium_synth: {
@@ -262,10 +1069,54 @@ export const COMBI_PRESETS = {
     name: "★ 80s Stadium Anthem (Fat Brass + Dyno EP + Bass)",
     category: "Pop & Synth",
     layers: [
-      { id: 0, name: "Fat Brass", inst: "brass_section", fx: "air_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Dyno Tine EP", inst: "electric_piano_1", fx: "clean", gain: 0.65, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Prodigy Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.75, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Triton Warm Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.50, pan: 0, oct: 1, minVel: 1, maxVel: 127, enabled: false },
+      {
+        id: 0,
+        name: "Fat Brass",
+        inst: "brass_section",
+        fx: "air_eq",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Dyno Tine EP",
+        inst: "electric_piano_1",
+        fx: "clean",
+        gain: 0.65,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Prodigy Bass",
+        inst: "synth_bass_1",
+        fx: "punch_comp",
+        gain: 0.75,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Triton Warm Strings",
+        inst: "string_ensemble_1",
+        fx: "reverb_hall",
+        gain: 0.5,
+        pan: 0,
+        oct: 1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: false,
+      },
     ],
   },
   hard_rock_shred: {
@@ -273,10 +1124,54 @@ export const COMBI_PRESETS = {
     name: "★ Hard Rock Shred (Distortion Lead + Overdrive + Bass)",
     category: "Rock / Metal",
     layers: [
-      { id: 0, name: "Distortion Guitar Lead", inst: "distortion_guitar", fx: "tube_lead", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Heavy Overdrive Rhythm", inst: "overdriven_guitar", fx: "tube_warm", gain: 0.80, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Punch Rock Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "B3 Rock Organ Pad", inst: "drawbar_organ", fx: "clean", gain: 0.60, pan: 0, oct: 0, minVel: 30, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Distortion Guitar Lead",
+        inst: "distortion_guitar",
+        fx: "tube_lead",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Heavy Overdrive Rhythm",
+        inst: "overdriven_guitar",
+        fx: "tube_warm",
+        gain: 0.8,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Punch Rock Bass",
+        inst: "synth_bass_1",
+        fx: "punch_comp",
+        gain: 0.85,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "B3 Rock Organ Pad",
+        inst: "drawbar_organ",
+        fx: "clean",
+        gain: 0.6,
+        pan: 0,
+        oct: 0,
+        minVel: 30,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   smooth_latin_jazz: {
@@ -284,10 +1179,54 @@ export const COMBI_PRESETS = {
     name: "★ Smooth Latin Jazz (Nylon Guitar + Breathy Sax + Grand)",
     category: "Jazz / Fusion",
     layers: [
-      { id: 0, name: "Fantom Nylon Guitar", inst: "acoustic_guitar_nylon", fx: "reverb_room", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Breathy Alto Sax", inst: "alto_sax", fx: "reverb_room", gain: 0.85, pan: 0, oct: 0, minVel: 40, maxVel: 127, enabled: true },
-      { id: 2, name: "Concert Grand Chords", inst: "acoustic_grand_piano", fx: "clean", gain: 0.70, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Acoustic Sub Bass", inst: "synth_bass_1", fx: "warm_eq", gain: 0.65, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Fantom Nylon Guitar",
+        inst: "acoustic_guitar_nylon",
+        fx: "reverb_room",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Breathy Alto Sax",
+        inst: "alto_sax",
+        fx: "reverb_room",
+        gain: 0.85,
+        pan: 0,
+        oct: 0,
+        minVel: 40,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Concert Grand Chords",
+        inst: "acoustic_grand_piano",
+        fx: "clean",
+        gain: 0.7,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Acoustic Sub Bass",
+        inst: "synth_bass_1",
+        fx: "warm_eq",
+        gain: 0.65,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   synthwave_80s_drive: {
@@ -295,10 +1234,54 @@ export const COMBI_PRESETS = {
     name: "★ Cyberpunk Synthwave (Fat Brass + FM Tine + Moog Bass)",
     category: "Synthwave / Retro",
     layers: [
-      { id: 0, name: "Fat Brass Lead", inst: "brass_section", fx: "air_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "FM 80s Crystal Bell", inst: "electric_piano_1", fx: "clean", gain: 0.70, pan: 0, oct: 1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Moog Prodigy Punch Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Stereo Chorus Strings", inst: "string_ensemble_1", fx: "clean", gain: 0.55, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Fat Brass Lead",
+        inst: "brass_section",
+        fx: "air_eq",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "FM 80s Crystal Bell",
+        inst: "electric_piano_1",
+        fx: "clean",
+        gain: 0.7,
+        pan: 0,
+        oct: 1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Moog Prodigy Punch Bass",
+        inst: "synth_bass_1",
+        fx: "punch_comp",
+        gain: 0.85,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Stereo Chorus Strings",
+        inst: "string_ensemble_1",
+        fx: "clean",
+        gain: 0.55,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   acoustic_cafe_lounge: {
@@ -306,10 +1289,54 @@ export const COMBI_PRESETS = {
     name: "★ Acoustic Cafe Lounge (Nylon Guitar + Sax + Upright)",
     category: "Acoustic / Lounge",
     layers: [
-      { id: 0, name: "Acoustic Nylon Guitar", inst: "acoustic_guitar_nylon", fx: "reverb_room", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Abletunes Upright Piano", inst: "abletunes_upright", fx: "warm_eq", gain: 0.90, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Breathy Alto Saxophone", inst: "alto_sax", fx: "reverb_room", gain: 0.80, pan: 0, oct: 0, minVel: 40, maxVel: 127, enabled: true },
-      { id: 3, name: "Soft Strings Background", inst: "string_ensemble_1", fx: "clean", gain: 0.45, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Acoustic Nylon Guitar",
+        inst: "acoustic_guitar_nylon",
+        fx: "reverb_room",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Abletunes Upright Piano",
+        inst: "abletunes_upright",
+        fx: "warm_eq",
+        gain: 0.9,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Breathy Alto Saxophone",
+        inst: "alto_sax",
+        fx: "reverb_room",
+        gain: 0.8,
+        pan: 0,
+        oct: 0,
+        minVel: 40,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Soft Strings Background",
+        inst: "string_ensemble_1",
+        fx: "clean",
+        gain: 0.45,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   vintage_funk_fusion: {
@@ -317,10 +1344,54 @@ export const COMBI_PRESETS = {
     name: "★ Vintage Funk Fusion (M1 Slap Bass + Rock Organ + Strat)",
     category: "Funk / Fusion",
     layers: [
-      { id: 0, name: "Fender Strat Clean Guitar", inst: "electric_guitar_clean", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Korg M1 B3 Rock Organ", inst: "drawbar_organ", fx: "clean", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Punch Slap Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Fat Horn Stabs", inst: "brass_section", fx: "tube_warm", gain: 0.70, pan: 0, oct: 0, minVel: 75, maxVel: 127, enabled: false },
+      {
+        id: 0,
+        name: "Fender Strat Clean Guitar",
+        inst: "electric_guitar_clean",
+        fx: "clean",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Korg M1 B3 Rock Organ",
+        inst: "drawbar_organ",
+        fx: "clean",
+        gain: 0.85,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Punch Slap Bass",
+        inst: "synth_bass_1",
+        fx: "punch_comp",
+        gain: 0.85,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Fat Horn Stabs",
+        inst: "brass_section",
+        fx: "tube_warm",
+        gain: 0.7,
+        pan: 0,
+        oct: 0,
+        minVel: 75,
+        maxVel: 127,
+        enabled: false,
+      },
     ],
   },
   power_ballad_1989: {
@@ -328,10 +1399,54 @@ export const COMBI_PRESETS = {
     name: "★ Power Ballad 1989 (Foster Piano + Dyno EP + Warm Strings)",
     category: "Power Ballad",
     layers: [
-      { id: 0, name: "Concert Grand Piano", inst: "acoustic_grand_piano", fx: "air_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Dyno 80s Stage EP", inst: "electric_piano_1", fx: "clean", gain: 0.70, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Triton Warm Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.65, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Strat Clean Arp", inst: "electric_guitar_clean", fx: "clean", gain: 0.55, pan: 0, oct: 0, minVel: 40, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Concert Grand Piano",
+        inst: "acoustic_grand_piano",
+        fx: "air_eq",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Dyno 80s Stage EP",
+        inst: "electric_piano_1",
+        fx: "clean",
+        gain: 0.7,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Triton Warm Strings",
+        inst: "string_ensemble_1",
+        fx: "reverb_hall",
+        gain: 0.65,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Strat Clean Arp",
+        inst: "electric_guitar_clean",
+        fx: "clean",
+        gain: 0.55,
+        pan: 0,
+        oct: 0,
+        minVel: 40,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   gospel_cathedral: {
@@ -339,10 +1454,54 @@ export const COMBI_PRESETS = {
     name: "★ Gospel Cathedral (M1 Organ 2 + Choir + Grand)",
     category: "Gospel & Praise",
     layers: [
-      { id: 0, name: "Concert Grand Piano", inst: "acoustic_grand_piano", fx: "air_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Korg M1 / B3 Gospel Organ", inst: "drawbar_organ", fx: "clean", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Korg M1 Ooh-Ahh Vocal Choir", inst: "choir_aahs", fx: "reverb_hall", gain: 0.75, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Fat Brass Fanfare", inst: "brass_section", fx: "tube_warm", gain: 0.60, pan: 0, oct: 0, minVel: 85, maxVel: 127, enabled: false },
+      {
+        id: 0,
+        name: "Concert Grand Piano",
+        inst: "acoustic_grand_piano",
+        fx: "air_eq",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Korg M1 / B3 Gospel Organ",
+        inst: "drawbar_organ",
+        fx: "clean",
+        gain: 0.85,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Korg M1 Ooh-Ahh Vocal Choir",
+        inst: "choir_aahs",
+        fx: "reverb_hall",
+        gain: 0.75,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Fat Brass Fanfare",
+        inst: "brass_section",
+        fx: "tube_warm",
+        gain: 0.6,
+        pan: 0,
+        oct: 0,
+        minVel: 85,
+        maxVel: 127,
+        enabled: false,
+      },
     ],
   },
   cyberpunk_arena: {
@@ -350,10 +1509,54 @@ export const COMBI_PRESETS = {
     name: "★ Cyberpunk 2077 Arena (Distortion + Moog Bass + Fresh Air)",
     category: "Rock / Synth",
     layers: [
-      { id: 0, name: "Distortion Heavy Lead", inst: "distortion_guitar", fx: "distortion_metal", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Moog Prodigy Punch Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.90, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Fat Brass Swell", inst: "brass_section", fx: "air_eq", gain: 0.65, pan: 0, oct: 0, minVel: 30, maxVel: 127, enabled: true },
-      { id: 3, name: "Stereo Tine Chime", inst: "electric_piano_1", fx: "clean", gain: 0.55, pan: 0, oct: 1, minVel: 1, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Distortion Heavy Lead",
+        inst: "distortion_guitar",
+        fx: "distortion_metal",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Moog Prodigy Punch Bass",
+        inst: "synth_bass_1",
+        fx: "punch_comp",
+        gain: 0.9,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Fat Brass Swell",
+        inst: "brass_section",
+        fx: "air_eq",
+        gain: 0.65,
+        pan: 0,
+        oct: 0,
+        minVel: 30,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Stereo Tine Chime",
+        inst: "electric_piano_1",
+        fx: "clean",
+        gain: 0.55,
+        pan: 0,
+        oct: 1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   cinematic_symphony: {
@@ -361,10 +1564,54 @@ export const COMBI_PRESETS = {
     name: "★ Cinematic Symphony (Stereo Strings + Fat Brass + Grand)",
     category: "Cinematic / Film",
     layers: [
-      { id: 0, name: "Triton Stereo Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Fat Brass Horns", inst: "brass_section", fx: "air_eq", gain: 0.80, pan: 0, oct: 0, minVel: 30, maxVel: 127, enabled: true },
-      { id: 2, name: "Velo Piano Accent", inst: "acoustic_grand_piano", fx: "clean", gain: 0.80, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Breathy Alto Saxophone", inst: "alto_sax", fx: "reverb_room", gain: 0.75, pan: 0, oct: 0, minVel: 50, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Triton Stereo Strings",
+        inst: "string_ensemble_1",
+        fx: "reverb_hall",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Fat Brass Horns",
+        inst: "brass_section",
+        fx: "air_eq",
+        gain: 0.8,
+        pan: 0,
+        oct: 0,
+        minVel: 30,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Velo Piano Accent",
+        inst: "acoustic_grand_piano",
+        fx: "clean",
+        gain: 0.8,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Breathy Alto Saxophone",
+        inst: "alto_sax",
+        fx: "reverb_room",
+        gain: 0.75,
+        pan: 0,
+        oct: 0,
+        minVel: 50,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   chicago_blues_rock: {
@@ -372,10 +1619,54 @@ export const COMBI_PRESETS = {
     name: "★ Chicago Blues & Rock (Clean Strat + B3 Organ + Bass)",
     category: "Blues / Rock",
     layers: [
-      { id: 0, name: "Fender Strat Clean Guitar", inst: "electric_guitar_clean", fx: "tube_warm", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Korg M1 B3 Rock Organ", inst: "drawbar_organ", fx: "clean", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Punch Blues Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Breathy Blues Sax", inst: "alto_sax", fx: "reverb_room", gain: 0.80, pan: 0, oct: 0, minVel: 40, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Fender Strat Clean Guitar",
+        inst: "electric_guitar_clean",
+        fx: "tube_warm",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Korg M1 B3 Rock Organ",
+        inst: "drawbar_organ",
+        fx: "clean",
+        gain: 0.85,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Punch Blues Bass",
+        inst: "synth_bass_1",
+        fx: "punch_comp",
+        gain: 0.85,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Breathy Blues Sax",
+        inst: "alto_sax",
+        fx: "reverb_room",
+        gain: 0.8,
+        pan: 0,
+        oct: 0,
+        minVel: 40,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   tokyo_city_pop: {
@@ -383,10 +1674,54 @@ export const COMBI_PRESETS = {
     name: "★ Tokyo City Pop (FM Piano + Clean Strat + Sax + EP)",
     category: "Pop / Funk",
     layers: [
-      { id: 0, name: "Abletunes FM Piano", inst: "abletunes_fm_piano", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Fender Strat Clean", inst: "electric_guitar_clean", fx: "clean", gain: 0.75, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Breathy Alto Sax Solo", inst: "alto_sax", fx: "reverb_room", gain: 0.85, pan: 0, oct: 0, minVel: 40, maxVel: 127, enabled: true },
-      { id: 3, name: "Punch Synth Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.80, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Abletunes FM Piano",
+        inst: "abletunes_fm_piano",
+        fx: "clean",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Fender Strat Clean",
+        inst: "electric_guitar_clean",
+        fx: "clean",
+        gain: 0.75,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Breathy Alto Sax Solo",
+        inst: "alto_sax",
+        fx: "reverb_room",
+        gain: 0.85,
+        pan: 0,
+        oct: 0,
+        minVel: 40,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Punch Synth Bass",
+        inst: "synth_bass_1",
+        fx: "punch_comp",
+        gain: 0.8,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   neo_classical_ambient: {
@@ -394,10 +1729,54 @@ export const COMBI_PRESETS = {
     name: "★ Neo-Classical Ambient (Grand + Nylon + Strings)",
     category: "Neo-Classical",
     layers: [
-      { id: 0, name: "Velo Piano Concert Grand", inst: "acoustic_grand_piano", fx: "air_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Fantom Acoustic Nylon", inst: "acoustic_guitar_nylon", fx: "reverb_hall", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Triton Stereo Strings", inst: "string_ensemble_1", fx: "clean", gain: 0.65, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Breathy Alto Sax", inst: "alto_sax", fx: "reverb_room", gain: 0.70, pan: 0, oct: 0, minVel: 50, maxVel: 127, enabled: false },
+      {
+        id: 0,
+        name: "Velo Piano Concert Grand",
+        inst: "acoustic_grand_piano",
+        fx: "air_eq",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Fantom Acoustic Nylon",
+        inst: "acoustic_guitar_nylon",
+        fx: "reverb_hall",
+        gain: 0.85,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Triton Stereo Strings",
+        inst: "string_ensemble_1",
+        fx: "clean",
+        gain: 0.65,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Breathy Alto Sax",
+        inst: "alto_sax",
+        fx: "reverb_room",
+        gain: 0.7,
+        pan: 0,
+        oct: 0,
+        minVel: 50,
+        maxVel: 127,
+        enabled: false,
+      },
     ],
   },
   acid_jazz_groove: {
@@ -405,10 +1784,54 @@ export const COMBI_PRESETS = {
     name: "Acid Jazz Groove (FM Tine + Slap Bass + B3 + Sax)",
     category: "Jazz / Acid Jazz",
     layers: [
-      { id: 0, name: "Dyno FM Tine", inst: "electric_piano_1", fx: "chorus_lush", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Korg M1 Slap Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "B3 Groove Organ", inst: "drawbar_organ", fx: "rotary_slow", gain: 0.70, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Breathy Sax Stabs", inst: "alto_sax", fx: "reverb_room", gain: 0.70, pan: 0, oct: 0, minVel: 80, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Dyno FM Tine",
+        inst: "electric_piano_1",
+        fx: "chorus_lush",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Korg M1 Slap Bass",
+        inst: "synth_bass_1",
+        fx: "punch_comp",
+        gain: 0.85,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "B3 Groove Organ",
+        inst: "drawbar_organ",
+        fx: "rotary_slow",
+        gain: 0.7,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Breathy Sax Stabs",
+        inst: "alto_sax",
+        fx: "reverb_room",
+        gain: 0.7,
+        pan: 0,
+        oct: 0,
+        minVel: 80,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   blue_note_trio: {
@@ -416,10 +1839,54 @@ export const COMBI_PRESETS = {
     name: "Blue Note Trio (Upright + Nylon + Walking Bass)",
     category: "Jazz / Straight-Ahead",
     layers: [
-      { id: 0, name: "Upright Acoustic Piano", inst: "abletunes_upright", fx: "warm_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Nylon Comping Guitar", inst: "acoustic_guitar_nylon", fx: "reverb_room", gain: 0.70, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Walking Sub Bass", inst: "synth_bass_1", fx: "warm_eq", gain: 0.75, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Late Night Sax", inst: "alto_sax", fx: "reverb_plate", gain: 0.65, pan: 0, oct: 0, minVel: 45, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Upright Acoustic Piano",
+        inst: "abletunes_upright",
+        fx: "warm_eq",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Nylon Comping Guitar",
+        inst: "acoustic_guitar_nylon",
+        fx: "reverb_room",
+        gain: 0.7,
+        pan: 0.05,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Walking Sub Bass",
+        inst: "synth_bass_1",
+        fx: "warm_eq",
+        gain: 0.75,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Late Night Sax",
+        inst: "alto_sax",
+        fx: "reverb_plate",
+        gain: 0.65,
+        pan: 0,
+        oct: 0,
+        minVel: 45,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   jazz_funk_soul: {
@@ -427,10 +1894,54 @@ export const COMBI_PRESETS = {
     name: "Jazz-Funk Soul (Suitcase EP + Moog Bass + Horns)",
     category: "Jazz / Funk",
     layers: [
-      { id: 0, name: "Suitcase Stage EP", inst: "electric_piano_1", fx: "autopan_wide", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Moog Funk Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Fat Horn Stabs", inst: "brass_section", fx: "tube_warm", gain: 0.70, pan: 0, oct: 0, minVel: 75, maxVel: 127, enabled: true },
-      { id: 3, name: "Gospel B3 Swell", inst: "drawbar_organ", fx: "clean", gain: 0.55, pan: 0, oct: 0, minVel: 30, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Suitcase Stage EP",
+        inst: "electric_piano_1",
+        fx: "autopan_wide",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Moog Funk Bass",
+        inst: "synth_bass_1",
+        fx: "punch_comp",
+        gain: 0.85,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Fat Horn Stabs",
+        inst: "brass_section",
+        fx: "tube_warm",
+        gain: 0.7,
+        pan: 0,
+        oct: 0,
+        minVel: 75,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Gospel B3 Swell",
+        inst: "drawbar_organ",
+        fx: "clean",
+        gain: 0.55,
+        pan: 0,
+        oct: 0,
+        minVel: 30,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   bossa_nova_sunset: {
@@ -438,10 +1949,56 @@ export const COMBI_PRESETS = {
     name: "★ Bossa Nova Sunset (Nylon Guitar + Grand + Vibraphone)",
     category: "Latin / Bossa Nova",
     layers: [
-      { id: 0, name: "Nylon Fingerstyle Lead", inst: "acoustic_guitar_nylon", fx: "reverb_room", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Warm Acoustic Piano", inst: "abletunes_upright", fx: "clean", gain: 0.70, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Vibraphone Chime", inst: "vibraphone", fx: "chorus_vintage", gain: 0.45, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, minNote: 60, enabled: true },
-      { id: 3, name: "Upright Acoustic Bass", inst: "acoustic_bass", fx: "warm_eq", gain: 0.80, pan: 0, oct: -1, minVel: 1, maxVel: 127, maxNote: 59, enabled: true },
+      {
+        id: 0,
+        name: "Nylon Fingerstyle Lead",
+        inst: "acoustic_guitar_nylon",
+        fx: "reverb_room",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Warm Acoustic Piano",
+        inst: "abletunes_upright",
+        fx: "clean",
+        gain: 0.7,
+        pan: -0.05,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Vibraphone Chime",
+        inst: "vibraphone",
+        fx: "chorus_vintage",
+        gain: 0.45,
+        pan: 0.05,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        minNote: 60,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Upright Acoustic Bass",
+        inst: "acoustic_bass",
+        fx: "warm_eq",
+        gain: 0.8,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        maxNote: 59,
+        enabled: true,
+      },
     ],
   },
   sun_rai_street: {
@@ -449,10 +2006,54 @@ export const COMBI_PRESETS = {
     name: "San Francisco Street (Sun Rai Rhodes Bed)",
     category: "Soul-Pop / R&B",
     layers: [
-      { id: 0, name: "Suitcase Rhodes 73", inst: "rhodes_stage_mp3", fx: "autopan_wide", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Rhodes Shimmer Chorus", inst: "rhodes_stage_mp3", fx: "chorus_lush", gain: 0.25, pan: 0, oct: 1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Pocket Bass Guitar", inst: "synth_bass_1", fx: "warm_eq", gain: 0.75, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Night Air Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.20, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Suitcase Rhodes 73",
+        inst: "rhodes_stage_mp3",
+        fx: "autopan_wide",
+        gain: 0.85,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Rhodes Shimmer Chorus",
+        inst: "rhodes_stage_mp3",
+        fx: "chorus_lush",
+        gain: 0.25,
+        pan: 0,
+        oct: 1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Pocket Bass Guitar",
+        inst: "synth_bass_1",
+        fx: "warm_eq",
+        gain: 0.75,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Night Air Strings",
+        inst: "string_ensemble_1",
+        fx: "reverb_hall",
+        gain: 0.2,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   acid_jazz_afterhours: {
@@ -460,10 +2061,56 @@ export const COMBI_PRESETS = {
     name: "★ Acid Jazz Groove (Rhodes + B3 Rotary + Slap Bass)",
     category: "Jazz / Acid Jazz",
     layers: [
-      { id: 0, name: "Vintage Stage Rhodes", inst: "rhodes_stage_mp3", fx: "delay_tape", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Korg M1 Slap Bass", inst: "m1_slap_bass", fx: "punch_comp", gain: 0.85, pan: -0.05, oct: -1, minVel: 1, maxVel: 127, maxNote: 59, enabled: true },
-      { id: 2, name: "Midnight B3 Bed", inst: "drawbar_organ", fx: "rotary_slow", gain: 0.55, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Sensual Alto Sax", inst: "alto_sax", fx: "reverb_plate", gain: 0.80, pan: 0.05, oct: 0, minVel: 85, maxVel: 127, minNote: 60, enabled: true },
+      {
+        id: 0,
+        name: "Vintage Stage Rhodes",
+        inst: "rhodes_stage_mp3",
+        fx: "delay_tape",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Korg M1 Slap Bass",
+        inst: "m1_slap_bass",
+        fx: "punch_comp",
+        gain: 0.85,
+        pan: -0.05,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        maxNote: 59,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Midnight B3 Bed",
+        inst: "drawbar_organ",
+        fx: "rotary_slow",
+        gain: 0.55,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Sensual Alto Sax",
+        inst: "alto_sax",
+        fx: "reverb_plate",
+        gain: 0.8,
+        pan: 0.05,
+        oct: 0,
+        minVel: 85,
+        maxVel: 127,
+        minNote: 60,
+        enabled: true,
+      },
     ],
   },
   bebop_quartet: {
@@ -471,10 +2118,55 @@ export const COMBI_PRESETS = {
     name: "★ Blue Note Trio (Upright + Nylon + Upright Bass)",
     category: "Jazz / Blue Note",
     layers: [
-      { id: 0, name: "Abletunes Studio Upright", inst: "abletunes_upright", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Celestial Universe Pad", inst: "m1_universe", fx: "reverb_hall", gain: 0.35, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Warm Upright Bass", inst: "acoustic_bass", fx: "warm_eq", gain: 0.80, pan: -0.05, oct: -1, minVel: 1, maxVel: 127, maxNote: 59, enabled: true },
-      { id: 3, name: "Warm Nylon Comping", inst: "acoustic_guitar_nylon", fx: "clean", gain: 0.35, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Abletunes Studio Upright",
+        inst: "abletunes_upright",
+        fx: "clean",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Celestial Universe Pad",
+        inst: "m1_universe",
+        fx: "reverb_hall",
+        gain: 0.35,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Warm Upright Bass",
+        inst: "acoustic_bass",
+        fx: "warm_eq",
+        gain: 0.8,
+        pan: -0.05,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        maxNote: 59,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Warm Nylon Comping",
+        inst: "acoustic_guitar_nylon",
+        fx: "clean",
+        gain: 0.35,
+        pan: 0.05,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   smooth_jazz_radio: {
@@ -482,10 +2174,54 @@ export const COMBI_PRESETS = {
     name: "Smooth Jazz Radio (FM Lead + Sax Melody + Silk Pad)",
     category: "Jazz / Smooth",
     layers: [
-      { id: 0, name: "Silk FM Lead", inst: "abletunes_fm_piano", fx: "chorus_vintage", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Soprano-Style Sax Melody", inst: "alto_sax", fx: "reverb_hall", gain: 0.80, pan: 0, oct: 1, minVel: 40, maxVel: 127, enabled: true },
-      { id: 2, name: "Silk Pad Underneath", inst: "string_ensemble_1", fx: "clean", gain: 0.50, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Smooth Sub Bass", inst: "synth_bass_1", fx: "warm_eq", gain: 0.70, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Silk FM Lead",
+        inst: "abletunes_fm_piano",
+        fx: "chorus_vintage",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Soprano-Style Sax Melody",
+        inst: "alto_sax",
+        fx: "reverb_hall",
+        gain: 0.8,
+        pan: 0,
+        oct: 1,
+        minVel: 40,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Silk Pad Underneath",
+        inst: "string_ensemble_1",
+        fx: "clean",
+        gain: 0.5,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Smooth Sub Bass",
+        inst: "synth_bass_1",
+        fx: "warm_eq",
+        gain: 0.7,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   jazz_waltz_3am: {
@@ -493,10 +2229,54 @@ export const COMBI_PRESETS = {
     name: "3AM Jazz Waltz (Upright + Strings + Nylon Lullaby)",
     category: "Jazz / Ballad",
     layers: [
-      { id: 0, name: "3AM Upright Piano", inst: "abletunes_upright", fx: "reverb_hall", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Lullaby Strings", inst: "string_ensemble_1", fx: "clean", gain: 0.60, pan: -0.05, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Nylon Whisper", inst: "acoustic_guitar_nylon", fx: "reverb_room", gain: 0.60, pan: 0.05, oct: 0, minVel: 20, maxVel: 127, enabled: true },
-      { id: 3, name: "Distant Sax Memory", inst: "alto_sax", fx: "reverb_plate", gain: 0.55, pan: 0, oct: 0, minVel: 60, maxVel: 127, enabled: false },
+      {
+        id: 0,
+        name: "3AM Upright Piano",
+        inst: "abletunes_upright",
+        fx: "reverb_hall",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Lullaby Strings",
+        inst: "string_ensemble_1",
+        fx: "clean",
+        gain: 0.6,
+        pan: -0.05,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Nylon Whisper",
+        inst: "acoustic_guitar_nylon",
+        fx: "reverb_room",
+        gain: 0.6,
+        pan: 0.05,
+        oct: 0,
+        minVel: 20,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Distant Sax Memory",
+        inst: "alto_sax",
+        fx: "reverb_plate",
+        gain: 0.55,
+        pan: 0,
+        oct: 0,
+        minVel: 60,
+        maxVel: 127,
+        enabled: false,
+      },
     ],
   },
   funk_brothers: {
@@ -504,10 +2284,54 @@ export const COMBI_PRESETS = {
     name: "Funk Brothers (Strat Wah + Slap Bass + B3 + Horns)",
     category: "Funk / Soul",
     layers: [
-      { id: 0, name: "Wah Strat Rhythm", inst: "electric_guitar_clean", fx: "autopan_fast", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Slap Funk Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.90, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "B3 Funk Comp", inst: "drawbar_organ", fx: "rotary_fast", gain: 0.70, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Tower Horn Stabs", inst: "brass_section", fx: "tube_warm", gain: 0.75, pan: 0, oct: 0, minVel: 75, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Wah Strat Rhythm",
+        inst: "electric_guitar_clean",
+        fx: "autopan_fast",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Slap Funk Bass",
+        inst: "synth_bass_1",
+        fx: "punch_comp",
+        gain: 0.9,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "B3 Funk Comp",
+        inst: "drawbar_organ",
+        fx: "rotary_fast",
+        gain: 0.7,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Tower Horn Stabs",
+        inst: "brass_section",
+        fx: "tube_warm",
+        gain: 0.75,
+        pan: 0,
+        oct: 0,
+        minVel: 75,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   soul_train_70s: {
@@ -515,10 +2339,54 @@ export const COMBI_PRESETS = {
     name: "Soul Train 70s (FM Soul EP + Strings + Brass + B3)",
     category: "Soul / 70s",
     layers: [
-      { id: 0, name: "70s Soul FM EP", inst: "abletunes_fm_piano", fx: "tremolo_pulse", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Philly Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.65, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Soul Brass Section", inst: "brass_section", fx: "clean", gain: 0.70, pan: 0, oct: 0, minVel: 60, maxVel: 127, enabled: true },
-      { id: 3, name: "Church B3 Underneath", inst: "drawbar_organ", fx: "clean", gain: 0.55, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "70s Soul FM EP",
+        inst: "abletunes_fm_piano",
+        fx: "tremolo_pulse",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Philly Strings",
+        inst: "string_ensemble_1",
+        fx: "reverb_hall",
+        gain: 0.65,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Soul Brass Section",
+        inst: "brass_section",
+        fx: "clean",
+        gain: 0.7,
+        pan: 0,
+        oct: 0,
+        minVel: 60,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Church B3 Underneath",
+        inst: "drawbar_organ",
+        fx: "clean",
+        gain: 0.55,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   lofi_study_beats: {
@@ -526,10 +2394,56 @@ export const COMBI_PRESETS = {
     name: "★ Lo-Fi Study Beats (Felt Upright Piano + Vibraphone + Upright Bass)",
     category: "Lo-Fi / Chill",
     layers: [
-      { id: 0, name: "Abletunes Felt Upright Piano", inst: "abletunes_upright", fx: "clean", gain: 0.90, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Cool Jazzy Vibraphone", inst: "vibraphone", fx: "reverb_room", gain: 0.55, pan: 0.05, oct: 0, minVel: 1, maxVel: 127, minNote: 60, enabled: true },
-      { id: 2, name: "Mellow Upright Bass", inst: "acoustic_bass", fx: "warm_eq", gain: 0.65, pan: -0.05, oct: -1, minVel: 1, maxVel: 127, maxNote: 59, enabled: true },
-      { id: 3, name: "Korg M1 Universe Air", inst: "m1_universe", fx: "clean", gain: 0.50, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Abletunes Felt Upright Piano",
+        inst: "abletunes_upright",
+        fx: "clean",
+        gain: 0.9,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Cool Jazzy Vibraphone",
+        inst: "vibraphone",
+        fx: "reverb_room",
+        gain: 0.55,
+        pan: 0.05,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        minNote: 60,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Mellow Upright Bass",
+        inst: "acoustic_bass",
+        fx: "warm_eq",
+        gain: 0.65,
+        pan: -0.05,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        maxNote: 59,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Korg M1 Universe Air",
+        inst: "m1_universe",
+        fx: "clean",
+        gain: 0.5,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   gospel_shout: {
@@ -537,10 +2451,54 @@ export const COMBI_PRESETS = {
     name: "Gospel Shout (Shouting B3 + Piano + Brass + Choir)",
     category: "Gospel / Shout",
     layers: [
-      { id: 0, name: "Shouting B3 Organ", inst: "drawbar_organ", fx: "rotary_fast", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Gospel Piano Drive", inst: "acoustic_grand_piano", fx: "punch_comp", gain: 0.85, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Shout Brass Fanfare", inst: "brass_section", fx: "tube_warm", gain: 0.75, pan: 0, oct: 0, minVel: 70, maxVel: 127, enabled: true },
-      { id: 3, name: "Mass Choir Lift", inst: "m1_choir", fx: "reverb_hall", gain: 0.65, pan: 0, oct: 0, minVel: 40, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Shouting B3 Organ",
+        inst: "drawbar_organ",
+        fx: "rotary_fast",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Gospel Piano Drive",
+        inst: "acoustic_grand_piano",
+        fx: "punch_comp",
+        gain: 0.85,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Shout Brass Fanfare",
+        inst: "brass_section",
+        fx: "tube_warm",
+        gain: 0.75,
+        pan: 0,
+        oct: 0,
+        minVel: 70,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Mass Choir Lift",
+        inst: "m1_choir",
+        fx: "reverb_hall",
+        gain: 0.65,
+        pan: 0,
+        oct: 0,
+        minVel: 40,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   yamaha_cfx_stage: {
@@ -548,10 +2506,54 @@ export const COMBI_PRESETS = {
     name: "CFX Stage Grand (Bright Grand + Strings + Shimmer)",
     category: "Piano / Stage",
     layers: [
-      { id: 0, name: "Bright Stage Grand", inst: "acoustic_grand_piano", fx: "air_eq", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Live Concert Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.60, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "FM Sparkle Top", inst: "abletunes_fm_piano", fx: "clean", gain: 0.40, pan: 0.05, oct: 1, minVel: 50, maxVel: 127, enabled: true },
-      { id: 3, name: "Stage Sub Bass", inst: "acoustic_bass", fx: "warm_eq", gain: 0.70, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Bright Stage Grand",
+        inst: "acoustic_grand_piano",
+        fx: "air_eq",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Live Concert Strings",
+        inst: "string_ensemble_1",
+        fx: "reverb_hall",
+        gain: 0.6,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "FM Sparkle Top",
+        inst: "abletunes_fm_piano",
+        fx: "clean",
+        gain: 0.4,
+        pan: 0.05,
+        oct: 1,
+        minVel: 50,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Stage Sub Bass",
+        inst: "acoustic_bass",
+        fx: "warm_eq",
+        gain: 0.7,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   sweet_soprano_ballad: {
@@ -559,10 +2561,54 @@ export const COMBI_PRESETS = {
     name: "Sweet Soprano Ballad (Soprano Lead + Grand + Pad)",
     category: "Ballad / Smooth",
     layers: [
-      { id: 0, name: "Concert Grand Bed", inst: "acoustic_grand_piano", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Sweet Soprano Lead", inst: "soprano_sax", fx: "reverb_hall", gain: 0.85, pan: 0, oct: 0, minVel: 40, maxVel: 127, enabled: true },
-      { id: 2, name: "Velvet Warm Pad", inst: "string_ensemble_1", fx: "clean", gain: 0.50, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Upright Bass Walk", inst: "acoustic_bass", fx: "warm_eq", gain: 0.70, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Concert Grand Bed",
+        inst: "acoustic_grand_piano",
+        fx: "clean",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Sweet Soprano Lead",
+        inst: "soprano_sax",
+        fx: "reverb_hall",
+        gain: 0.85,
+        pan: 0,
+        oct: 0,
+        minVel: 40,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Velvet Warm Pad",
+        inst: "string_ensemble_1",
+        fx: "clean",
+        gain: 0.5,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Upright Bass Walk",
+        inst: "acoustic_bass",
+        fx: "warm_eq",
+        gain: 0.7,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   unplugged_morning: {
@@ -570,10 +2616,54 @@ export const COMBI_PRESETS = {
     name: "Unplugged Morning (Steel Guitar + Upright Bass + Nylon)",
     category: "Acoustic / Unplugged",
     layers: [
-      { id: 0, name: "Steel-String Strum", inst: "acoustic_guitar_steel", fx: "reverb_room", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Upright Bass Root", inst: "acoustic_bass", fx: "warm_eq", gain: 0.80, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Nylon Fingerpick", inst: "acoustic_guitar_nylon", fx: "clean", gain: 0.60, pan: 0.05, oct: 0, minVel: 30, maxVel: 127, enabled: true },
-      { id: 3, name: "Morning Flute Air", inst: "flute", fx: "reverb_hall", gain: 0.50, pan: 0, oct: 1, minVel: 60, maxVel: 127, enabled: false },
+      {
+        id: 0,
+        name: "Steel-String Strum",
+        inst: "acoustic_guitar_steel",
+        fx: "reverb_room",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Upright Bass Root",
+        inst: "acoustic_bass",
+        fx: "warm_eq",
+        gain: 0.8,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Nylon Fingerpick",
+        inst: "acoustic_guitar_nylon",
+        fx: "clean",
+        gain: 0.6,
+        pan: 0.05,
+        oct: 0,
+        minVel: 30,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Morning Flute Air",
+        inst: "flute",
+        fx: "reverb_hall",
+        gain: 0.5,
+        pan: 0,
+        oct: 1,
+        minVel: 60,
+        maxVel: 127,
+        enabled: false,
+      },
     ],
   },
   sunday_pipe_praise: {
@@ -581,10 +2671,54 @@ export const COMBI_PRESETS = {
     name: "Sunday Pipe Praise (Pipe Organ + Choir + Trumpet)",
     category: "Gospel / Worship",
     layers: [
-      { id: 0, name: "Cathedral Pipe Organ", inst: "church_organ", fx: "reverb_hall", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Aahs Choir Swell", inst: "choir_aahs", fx: "reverb_hall", gain: 0.70, pan: 0, oct: 0, minVel: 20, maxVel: 127, enabled: true },
-      { id: 2, name: "Grand Piano Accent", inst: "acoustic_grand_piano", fx: "clean", gain: 0.70, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Trumpet Fanfare Lift", inst: "trumpet", fx: "clean", gain: 0.65, pan: 0, oct: 0, minVel: 75, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Cathedral Pipe Organ",
+        inst: "church_organ",
+        fx: "reverb_hall",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Aahs Choir Swell",
+        inst: "choir_aahs",
+        fx: "reverb_hall",
+        gain: 0.7,
+        pan: 0,
+        oct: 0,
+        minVel: 20,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Grand Piano Accent",
+        inst: "acoustic_grand_piano",
+        fx: "clean",
+        gain: 0.7,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Trumpet Fanfare Lift",
+        inst: "trumpet",
+        fx: "clean",
+        gain: 0.65,
+        pan: 0,
+        oct: 0,
+        minVel: 75,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   yacht_rock_79: {
@@ -592,10 +2726,54 @@ export const COMBI_PRESETS = {
     name: "Yacht Rock 79 (FM EP + Steel Guitar + Muted Horns)",
     category: "Pop / Yacht Rock",
     layers: [
-      { id: 0, name: "Yacht FM EP", inst: "abletunes_fm_piano", fx: "chorus_lush", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Steel Guitar Licks", inst: "acoustic_guitar_steel", fx: "clean", gain: 0.65, pan: 0.05, oct: 0, minVel: 30, maxVel: 127, enabled: true },
-      { id: 2, name: "Muted Horn Stabs", inst: "muted_trumpet", fx: "reverb_room", gain: 0.65, pan: 0, oct: 0, minVel: 75, maxVel: 127, enabled: true },
-      { id: 3, name: "Slap Pocket Bass", inst: "slap_bass_1", fx: "punch_comp", gain: 0.80, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Yacht FM EP",
+        inst: "abletunes_fm_piano",
+        fx: "chorus_lush",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Steel Guitar Licks",
+        inst: "acoustic_guitar_steel",
+        fx: "clean",
+        gain: 0.65,
+        pan: 0.05,
+        oct: 0,
+        minVel: 30,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Muted Horn Stabs",
+        inst: "muted_trumpet",
+        fx: "reverb_room",
+        gain: 0.65,
+        pan: 0,
+        oct: 0,
+        minVel: 75,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Slap Pocket Bass",
+        inst: "slap_bass_1",
+        fx: "punch_comp",
+        gain: 0.8,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
   shreddage_arena: {
@@ -603,10 +2781,54 @@ export const COMBI_PRESETS = {
     name: "Shreddage Arena (High-Gain Lead + Rhythm + Punch Bass)",
     category: "Rock / Metal",
     layers: [
-      { id: 0, name: "Shreddage Lead Guitar", inst: "distortion_guitar", fx: "shred_stack", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Overdrive Rhythm Double", inst: "overdriven_guitar", fx: "tube_warm", gain: 0.80, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Punch Arena Bass", inst: "synth_bass_1", fx: "punch_comp", gain: 0.85, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "Arena Rock Organ Pad", inst: "drawbar_organ", fx: "clean", gain: 0.50, pan: 0, oct: 0, minVel: 30, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Shreddage Lead Guitar",
+        inst: "distortion_guitar",
+        fx: "shred_stack",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Overdrive Rhythm Double",
+        inst: "overdriven_guitar",
+        fx: "tube_warm",
+        gain: 0.8,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Punch Arena Bass",
+        inst: "synth_bass_1",
+        fx: "punch_comp",
+        gain: 0.85,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Arena Rock Organ Pad",
+        inst: "drawbar_organ",
+        fx: "clean",
+        gain: 0.5,
+        pan: 0,
+        oct: 0,
+        minVel: 30,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
 
@@ -615,10 +2837,55 @@ export const COMBI_PRESETS = {
     name: "★ Synthesizer You (Neo-Soul Rhodes Bed)",
     category: "Neo-Soul / Chill",
     layers: [
-      { id: 0, name: "Studio DX7 FM / Stage EP", inst: "abletunes_fm_piano", fx: "autopan_wide", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Celestial Universe Pad", inst: "m1_universe", fx: "reverb_hall", gain: 0.35, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Analog Sub Bass", inst: "synth_bass_1", fx: "clean", gain: 0.70, pan: -0.05, oct: -1, minVel: 1, maxVel: 127, maxNote: 59, enabled: true },
-      { id: 3, name: "Silky Ambient Strings", inst: "string_ensemble_1", fx: "reverb_hall", gain: 0.30, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: false },
+      {
+        id: 0,
+        name: "Studio DX7 FM / Stage EP",
+        inst: "abletunes_fm_piano",
+        fx: "autopan_wide",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Celestial Universe Pad",
+        inst: "m1_universe",
+        fx: "reverb_hall",
+        gain: 0.35,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Analog Sub Bass",
+        inst: "synth_bass_1",
+        fx: "clean",
+        gain: 0.7,
+        pan: -0.05,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        maxNote: 59,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Silky Ambient Strings",
+        inst: "string_ensemble_1",
+        fx: "reverb_hall",
+        gain: 0.3,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: false,
+      },
     ],
   },
 
@@ -627,8 +2894,30 @@ export const COMBI_PRESETS = {
     name: "🎸 The Final Countdown (Europe - Synth Lead & Pad)",
     category: "Synthesizer / Retro",
     layers: [
-      { id: 0, name: "Final Countdown Lead", inst: "supersaw_lead", fx: "synth_lead", gain: 0.75, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Final Countdown Pad", inst: "m1_universe", fx: "reverb_hall", gain: 0.60, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Final Countdown Lead",
+        inst: "supersaw_lead",
+        fx: "synth_lead",
+        gain: 0.75,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Final Countdown Pad",
+        inst: "m1_universe",
+        fx: "reverb_hall",
+        gain: 0.6,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
 
@@ -637,7 +2926,18 @@ export const COMBI_PRESETS = {
     name: "🪐 Europe Ambient (Choir Shimmer Pad)",
     category: "Synthesizer / Ambient",
     layers: [
-      { id: 0, name: "Final Countdown Pad", inst: "m1_universe", fx: "reverb_hall", gain: 0.65, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
+      {
+        id: 0,
+        name: "Final Countdown Pad",
+        inst: "m1_universe",
+        fx: "reverb_hall",
+        gain: 0.65,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
     ],
   },
 
@@ -646,10 +2946,54 @@ export const COMBI_PRESETS = {
     name: "🪘 Afro-Cuban Congas & Latin Percussion Stack",
     category: "Percussion & Drums",
     layers: [
-      { id: 0, name: "High & Low Congas", inst: "percussion_conga", fx: "clean", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Latin Shaker & Maracas", inst: "percussion_shaker", fx: "air_eq", gain: 0.65, pan: 0.15, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Brass Section Cowbell", inst: "percussion_cowbell", fx: "clean", gain: 0.70, pan: -0.15, oct: 0, minVel: 60, maxVel: 127, enabled: true },
-      { id: 3, name: "Mark Tree Wind Chimes", inst: "wind_chimes", fx: "reverb_hall", gain: 0.60, pan: 0.10, oct: 1, minVel: 85, maxVel: 127, enabled: false },
+      {
+        id: 0,
+        name: "High & Low Congas",
+        inst: "percussion_conga",
+        fx: "clean",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Latin Shaker & Maracas",
+        inst: "percussion_shaker",
+        fx: "air_eq",
+        gain: 0.65,
+        pan: 0.15,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Brass Section Cowbell",
+        inst: "percussion_cowbell",
+        fx: "clean",
+        gain: 0.7,
+        pan: -0.15,
+        oct: 0,
+        minVel: 60,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Mark Tree Wind Chimes",
+        inst: "wind_chimes",
+        fx: "reverb_hall",
+        gain: 0.6,
+        pan: 0.1,
+        oct: 1,
+        minVel: 85,
+        maxVel: 127,
+        enabled: false,
+      },
     ],
   },
 
@@ -658,10 +3002,54 @@ export const COMBI_PRESETS = {
     name: "🥁 Simmons SDSV Analog Synth Drum (80s Space)",
     category: "Percussion & Drums",
     layers: [
-      { id: 0, name: "Simmons SDSV Pitch-Sweep Drum", inst: "synth_drum", fx: "tape_sat_master", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "TR-808 Analog Kit", inst: "tr808_kit", fx: "clean", gain: 0.80, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 2, name: "Analog Synth Bassline", inst: "synth_bass_1", fx: "tape_sat_master", gain: 0.75, pan: 0, oct: -1, minVel: 1, maxVel: 127, enabled: true },
-      { id: 3, name: "White Noise Sweep Riser", inst: "noise_riser", fx: "reverb_hall", gain: 0.50, pan: 0, oct: 0, minVel: 90, maxVel: 127, enabled: false },
+      {
+        id: 0,
+        name: "Simmons SDSV Pitch-Sweep Drum",
+        inst: "synth_drum",
+        fx: "tape_sat_master",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "TR-808 Analog Kit",
+        inst: "tr808_kit",
+        fx: "clean",
+        gain: 0.8,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Analog Synth Bassline",
+        inst: "synth_bass_1",
+        fx: "tape_sat_master",
+        gain: 0.75,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "White Noise Sweep Riser",
+        inst: "noise_riser",
+        fx: "reverb_hall",
+        gain: 0.5,
+        pan: 0,
+        oct: 0,
+        minVel: 90,
+        maxVel: 127,
+        enabled: false,
+      },
     ],
   },
 
@@ -670,10 +3058,54 @@ export const COMBI_PRESETS = {
     name: "🥁 Real Studio Acoustic Drum Kit (Zero-Latency)",
     category: "Percussion & Drums",
     layers: [
-      { id: 0, name: "Acoustic Drum Kit Master", inst: "real_drum_kit", fx: "punch_comp", gain: 1.0, pan: 0, oct: 0, minVel: 1, maxVel: 127, enabled: true },
-      { id: 1, name: "Latin Cowbell & Ride Bell", inst: "percussion_cowbell", fx: "clean", gain: 0.75, pan: 0.15, oct: 0, minVel: 65, maxVel: 127, enabled: true },
-      { id: 2, name: "Afro-Cuban Congas", inst: "percussion_conga", fx: "clean", gain: 0.70, pan: -0.15, oct: 0, minVel: 45, maxVel: 127, enabled: true },
-      { id: 3, name: "Studio Wind Chimes", inst: "wind_chimes", fx: "reverb_hall", gain: 0.60, pan: 0.20, oct: 0, minVel: 85, maxVel: 127, enabled: false },
+      {
+        id: 0,
+        name: "Acoustic Drum Kit Master",
+        inst: "real_drum_kit",
+        fx: "punch_comp",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Latin Cowbell & Ride Bell",
+        inst: "percussion_cowbell",
+        fx: "clean",
+        gain: 0.75,
+        pan: 0.15,
+        oct: 0,
+        minVel: 65,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Afro-Cuban Congas",
+        inst: "percussion_conga",
+        fx: "clean",
+        gain: 0.7,
+        pan: -0.15,
+        oct: 0,
+        minVel: 45,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Studio Wind Chimes",
+        inst: "wind_chimes",
+        fx: "reverb_hall",
+        gain: 0.6,
+        pan: 0.2,
+        oct: 0,
+        minVel: 85,
+        maxVel: 127,
+        enabled: false,
+      },
     ],
   },
 };
@@ -689,7 +3121,7 @@ export class MultiLayerEngine {
     this.activeSingleInst = "acoustic_grand_piano";
     this.synthPatch = null;
     this.layers = JSON.parse(JSON.stringify(this.activeCombi.layers));
-    this.layers.forEach(layer => {
+    this.layers.forEach((layer) => {
       if (layer.inst && layer.inst.startsWith("va:")) {
         const prog = getTritonProgramById(layer.inst.slice(3));
         if (prog) layer.vaProg = prog;
@@ -704,7 +3136,13 @@ export class MultiLayerEngine {
     this.isSplitMode = false;
     this.splitPointMidi = 60; // Middle C split
     this.splitZones = {
-      lower: { inst: "synth_bass_1", name: "Moog Prodigy Punch Bass", fx: "clean", gain: 1.0, oct: 0 },
+      lower: {
+        inst: "synth_bass_1",
+        name: "Moog Prodigy Punch Bass",
+        fx: "clean",
+        gain: 1.0,
+        oct: 0,
+      },
       upper: { inst: null, name: null, fx: "clean", gain: 1.0, oct: 0 }, // inst null = follow current stack
     };
     this.onSplitChangeCallback = null;
@@ -736,7 +3174,8 @@ export class MultiLayerEngine {
     this.isPadDuckingEnabled = false;
     try {
       if (typeof localStorage !== "undefined") {
-        this.isPadDuckingEnabled = localStorage.getItem("wilsonix_pad_ducking") === "1";
+        this.isPadDuckingEnabled =
+          localStorage.getItem("wilsonix_pad_ducking") === "1";
       }
     } catch (e) {}
     this.activeLeadNotes = 0;
@@ -745,34 +3184,43 @@ export class MultiLayerEngine {
     // User settings (persisted to localStorage)
     this.settings = {
       // Sustain
-      sustainHoldSec: 7,      // pedal held: auto-release timeout (3–30s)
-      sustainDecayTau: 2.4,   // pedal held: decay rate (0.5–8s)
-      heldNoteSec: 15,        // NO pedal, key held: rings for this long, then fades (2–60s)
+      sustainHoldSec: 7, // pedal held: auto-release timeout (3–30s)
+      sustainDecayTau: 2.4, // pedal held: decay rate (0.5–8s)
+      heldNoteSec: 15, // NO pedal, key held: rings for this long, then fades (2–60s)
       // Audio
-      polyphonyCap: 128,       // max simultaneous voices (16–128)
-      masterVolumePct: 50,    // default master volume on load (0–100)
+      polyphonyCap: 128, // max simultaneous voices (16–128)
+      masterVolumePct: 50, // default master volume on load (0–100)
       // Keyboard
-      defaultOctave: 4,       // starting octave (1–7)
-      defaultVelocity: 95,    // default note velocity (1–127)
+      defaultOctave: 4, // starting octave (1–7)
+      defaultVelocity: 95, // default note velocity (1–127)
       // UI
-      theme: "dark",          // "dark" or "light"
-      tabRestore: true,       // remember last active tab on reload
-      lastTab: "keys",        // last active tab
+      theme: "dark", // "dark" or "light"
+      tabRestore: true, // remember last active tab on reload
+      lastTab: "keys", // last active tab
     };
     try {
       if (typeof localStorage !== "undefined") {
         const raw = JSON.parse(localStorage.getItem("wilsonix_settings"));
         if (raw && typeof raw === "object") {
           const s = this.settings;
-          if (typeof raw.sustainHoldSec === "number") s.sustainHoldSec = Math.max(3, Math.min(30, raw.sustainHoldSec));
-          if (typeof raw.sustainDecayTau === "number") s.sustainDecayTau = Math.max(0.5, Math.min(8, raw.sustainDecayTau));
-          if (typeof raw.heldNoteSec === "number") s.heldNoteSec = Math.max(2, Math.min(60, raw.heldNoteSec));
-          if (typeof raw.polyphonyCap === "number") s.polyphonyCap = Math.max(16, Math.min(128, raw.polyphonyCap));
-          if (typeof raw.masterVolumePct === "number") s.masterVolumePct = Math.max(0, Math.min(100, raw.masterVolumePct));
-          if (typeof raw.defaultOctave === "number") s.defaultOctave = Math.max(1, Math.min(7, raw.defaultOctave));
-          if (typeof raw.defaultVelocity === "number") s.defaultVelocity = Math.max(1, Math.min(127, raw.defaultVelocity));
-          if (raw.theme === "dark" || raw.theme === "light") s.theme = raw.theme;
-          if (typeof raw.tabRestore === "boolean") s.tabRestore = raw.tabRestore;
+          if (typeof raw.sustainHoldSec === "number")
+            s.sustainHoldSec = Math.max(3, Math.min(30, raw.sustainHoldSec));
+          if (typeof raw.sustainDecayTau === "number")
+            s.sustainDecayTau = Math.max(0.5, Math.min(8, raw.sustainDecayTau));
+          if (typeof raw.heldNoteSec === "number")
+            s.heldNoteSec = Math.max(2, Math.min(60, raw.heldNoteSec));
+          if (typeof raw.polyphonyCap === "number")
+            s.polyphonyCap = Math.max(16, Math.min(128, raw.polyphonyCap));
+          if (typeof raw.masterVolumePct === "number")
+            s.masterVolumePct = Math.max(0, Math.min(100, raw.masterVolumePct));
+          if (typeof raw.defaultOctave === "number")
+            s.defaultOctave = Math.max(1, Math.min(7, raw.defaultOctave));
+          if (typeof raw.defaultVelocity === "number")
+            s.defaultVelocity = Math.max(1, Math.min(127, raw.defaultVelocity));
+          if (raw.theme === "dark" || raw.theme === "light")
+            s.theme = raw.theme;
+          if (typeof raw.tabRestore === "boolean")
+            s.tabRestore = raw.tabRestore;
           if (typeof raw.lastTab === "string") s.lastTab = raw.lastTab;
         }
       }
@@ -782,16 +3230,36 @@ export class MultiLayerEngine {
   updateSetting(key, value) {
     const s = this.settings;
     switch (key) {
-      case "sustainHoldSec": s.sustainHoldSec = Math.max(3, Math.min(30, Number(value) || 7)); break;
-      case "sustainDecayTau": s.sustainDecayTau = Math.max(0.5, Math.min(8, Number(value) || 2.4)); break;
-      case "heldNoteSec": s.heldNoteSec = Math.max(2, Math.min(60, Number(value) || 15)); break;
-      case "polyphonyCap": s.polyphonyCap = Math.max(16, Math.min(128, Number(value) || 64)); break;
-      case "masterVolumePct": s.masterVolumePct = Math.max(0, Math.min(100, Number(value) || 50)); break;
-      case "defaultOctave": s.defaultOctave = Math.max(1, Math.min(7, Number(value) || 4)); break;
-      case "defaultVelocity": s.defaultVelocity = Math.max(1, Math.min(127, Number(value) || 95)); break;
-      case "theme": s.theme = value === "light" ? "light" : "dark"; break;
-      case "tabRestore": s.tabRestore = !!value; break;
-      case "lastTab": s.lastTab = String(value || "keys"); break;
+      case "sustainHoldSec":
+        s.sustainHoldSec = Math.max(3, Math.min(30, Number(value) || 7));
+        break;
+      case "sustainDecayTau":
+        s.sustainDecayTau = Math.max(0.5, Math.min(8, Number(value) || 2.4));
+        break;
+      case "heldNoteSec":
+        s.heldNoteSec = Math.max(2, Math.min(60, Number(value) || 15));
+        break;
+      case "polyphonyCap":
+        s.polyphonyCap = Math.max(16, Math.min(128, Number(value) || 64));
+        break;
+      case "masterVolumePct":
+        s.masterVolumePct = Math.max(0, Math.min(100, Number(value) || 50));
+        break;
+      case "defaultOctave":
+        s.defaultOctave = Math.max(1, Math.min(7, Number(value) || 4));
+        break;
+      case "defaultVelocity":
+        s.defaultVelocity = Math.max(1, Math.min(127, Number(value) || 95));
+        break;
+      case "theme":
+        s.theme = value === "light" ? "light" : "dark";
+        break;
+      case "tabRestore":
+        s.tabRestore = !!value;
+        break;
+      case "lastTab":
+        s.lastTab = String(value || "keys");
+        break;
     }
     try {
       if (typeof localStorage !== "undefined") {
@@ -800,20 +3268,36 @@ export class MultiLayerEngine {
     } catch (e) {}
     // Apply immediately where needed
     if (key === "masterVolumePct" && audioCore) {
-      try { audioCore.setMasterVolume(s.masterVolumePct / 100); } catch (e) {}
+      try {
+        audioCore.setMasterVolume(s.masterVolumePct / 100);
+      } catch (e) {}
     }
     if (key === "polyphonyCap" && this.pcmEngine) {
       this.pcmEngine.MAX_VOICES = s.polyphonyCap;
     }
     if (key === "sustainDecayTau" && this._workletReady && this._workletNode) {
-      try { this._workletNode.setParam("sustainTau", s.sustainDecayTau); } catch (e) {}
+      try {
+        this._workletNode.setParam("sustainTau", s.sustainDecayTau);
+      } catch (e) {}
     }
-    if (key === "sustainHoldSec" || key === "sustainDecayTau" || key === "heldNoteSec") {
+    if (
+      key === "sustainHoldSec" ||
+      key === "sustainDecayTau" ||
+      key === "heldNoteSec"
+    ) {
       if (this._pcmWorkletNode && this._pcmWorkletNode.setSustainSettings) {
-        this._pcmWorkletNode.setSustainSettings(s.sustainHoldSec, s.sustainDecayTau, s.heldNoteSec);
+        this._pcmWorkletNode.setSustainSettings(
+          s.sustainHoldSec,
+          s.sustainDecayTau,
+          s.heldNoteSec,
+        );
       }
       if (this.pcmEngine && this.pcmEngine.updateSustainSettings) {
-        this.pcmEngine.updateSustainSettings(s.sustainHoldSec, s.sustainDecayTau, s.heldNoteSec);
+        this.pcmEngine.updateSustainSettings(
+          s.sustainHoldSec,
+          s.sustainDecayTau,
+          s.heldNoteSec,
+        );
       }
     }
     if (key === "theme") {
@@ -822,26 +3306,45 @@ export class MultiLayerEngine {
   }
 
   togglePadDucking(enabled) {
-    this.isPadDuckingEnabled = enabled !== undefined ? !!enabled : !this.isPadDuckingEnabled;
+    this.isPadDuckingEnabled =
+      enabled !== undefined ? !!enabled : !this.isPadDuckingEnabled;
     try {
       if (typeof localStorage !== "undefined") {
-        localStorage.setItem("wilsonix_pad_ducking", this.isPadDuckingEnabled ? "1" : "0");
+        localStorage.setItem(
+          "wilsonix_pad_ducking",
+          this.isPadDuckingEnabled ? "1" : "0",
+        );
       }
     } catch (e) {}
 
     // If disabled while notes are sustained, restore layer 1 gain immediately
-    if (!this.isPadDuckingEnabled && this.pcmEngine && this.pcmEngine.layerInserts && this.pcmEngine.layerInserts[1]) {
+    if (
+      !this.isPadDuckingEnabled &&
+      this.pcmEngine &&
+      this.pcmEngine.layerInserts &&
+      this.pcmEngine.layerInserts[1]
+    ) {
       const ctx = audioCore.ctx;
       if (ctx) {
-        this.pcmEngine.layerInserts[1].input.gain.setTargetAtTime(1.0, ctx.currentTime, 0.05);
+        this.pcmEngine.layerInserts[1].input.gain.setTargetAtTime(
+          1.0,
+          ctx.currentTime,
+          0.05,
+        );
       }
     }
 
     if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("wilsonix-pad-ducking-changed", { detail: { enabled: this.isPadDuckingEnabled } }));
+      window.dispatchEvent(
+        new CustomEvent("wilsonix-pad-ducking-changed", {
+          detail: { enabled: this.isPadDuckingEnabled },
+        }),
+      );
     }
     for (const cb of this.padDuckingListeners) {
-      try { cb(this.isPadDuckingEnabled); } catch (e) {}
+      try {
+        cb(this.isPadDuckingEnabled);
+      } catch (e) {}
     }
   }
 
@@ -880,8 +3383,12 @@ export class MultiLayerEngine {
   }
 
   vaAllNotesOff() {
-    this._vaEngines.forEach(eng => {
-      try { eng.allNotesOff(); } catch (err) { /* voice pool may be mid-init */ }
+    this._vaEngines.forEach((eng) => {
+      try {
+        eng.allNotesOff();
+      } catch (err) {
+        /* voice pool may be mid-init */
+      }
     });
   }
 
@@ -895,10 +3402,14 @@ export class MultiLayerEngine {
 
   notifyLayerChange() {
     if (this.onLayerChangeCallback) {
-      try { this.onLayerChangeCallback(this.layers); } catch (e) {}
+      try {
+        this.onLayerChangeCallback(this.layers);
+      } catch (e) {}
     }
     for (const cb of this.layerChangeListeners) {
-      try { cb(this.layers); } catch (e) {}
+      try {
+        cb(this.layers);
+      } catch (e) {}
     }
     this.saveSessionSoon();
   }
@@ -940,19 +3451,22 @@ export class MultiLayerEngine {
   saveSessionNow() {
     try {
       if (typeof localStorage === "undefined") return;
-      localStorage.setItem("wilsonix_session_v1", JSON.stringify({
-        layers: this.layers,
-        isCombiMode: this.isCombiMode,
-        activeCombiId: this.activeCombi?.id || null,
-        activeCombiName: this.activeCombi?.name || null,
-        activeSingleInst: this.activeSingleInst,
-        masterPct: this._masterPct ?? 50,
-        split: {
-          enabled: this.isSplitMode,
-          pointMidi: this.splitPointMidi,
-          zones: this.splitZones,
-        },
-      }));
+      localStorage.setItem(
+        "wilsonix_session_v1",
+        JSON.stringify({
+          layers: this.layers,
+          isCombiMode: this.isCombiMode,
+          activeCombiId: this.activeCombi?.id || null,
+          activeCombiName: this.activeCombi?.name || null,
+          activeSingleInst: this.activeSingleInst,
+          masterPct: this._masterPct ?? 50,
+          split: {
+            enabled: this.isSplitMode,
+            pointMidi: this.splitPointMidi,
+            zones: this.splitZones,
+          },
+        }),
+      );
     } catch (e) {}
   }
 
@@ -963,9 +3477,9 @@ export class MultiLayerEngine {
       if (!raw) return null;
       const s = JSON.parse(raw);
       if (!s || !Array.isArray(s.layers) || s.layers.length !== 4) return null;
-      if (!s.layers.every(l => l && typeof l.inst === "string")) return null;
+      if (!s.layers.every((l) => l && typeof l.inst === "string")) return null;
       this.layers = s.layers;
-      this.layers.forEach(layer => {
+      this.layers.forEach((layer) => {
         if (layer.inst && layer.inst.startsWith("va:")) {
           const prog = getTritonProgramById(layer.inst.slice(3));
           if (prog) layer.vaProg = prog;
@@ -988,10 +3502,21 @@ export class MultiLayerEngine {
       if (s.split && typeof s.split === "object") {
         this.isSplitMode = !!s.split.enabled;
         if (typeof s.split.pointMidi === "number") {
-          this.splitPointMidi = Math.max(21, Math.min(108, Math.round(s.split.pointMidi)));
+          this.splitPointMidi = Math.max(
+            21,
+            Math.min(108, Math.round(s.split.pointMidi)),
+          );
         }
-        if (s.split.zones && s.split.zones.lower) this.splitZones.lower = { ...this.splitZones.lower, ...s.split.zones.lower };
-        if (s.split.zones && s.split.zones.upper) this.splitZones.upper = { ...this.splitZones.upper, ...s.split.zones.upper };
+        if (s.split.zones && s.split.zones.lower)
+          this.splitZones.lower = {
+            ...this.splitZones.lower,
+            ...s.split.zones.lower,
+          };
+        if (s.split.zones && s.split.zones.upper)
+          this.splitZones.upper = {
+            ...this.splitZones.upper,
+            ...s.split.zones.upper,
+          };
       }
       this.init();
       this.syncLayerFx();
@@ -1018,7 +3543,7 @@ export class MultiLayerEngine {
         this.pcmEngine.updateSustainSettings(
           this.settings.sustainHoldSec,
           this.settings.sustainDecayTau,
-          this.settings.heldNoteSec
+          this.settings.heldNoteSec,
         );
       }
       this.syncLayerFx();
@@ -1026,13 +3551,17 @@ export class MultiLayerEngine {
     }
     // Thread sustain settings to VA engines
     tritonVaEngine._sustainSettings = this.settings;
-    this._vaEngines.forEach(eng => { eng._sustainSettings = this.settings; });
+    this._vaEngines.forEach((eng) => {
+      eng._sustainSettings = this.settings;
+    });
 
     // Bring up the audio worklets (VA synth + native PCM) on the high-priority
     // audio thread. This MUST run or every PCM/VA note silently falls back to
     // the main thread, which chokes under layered/combi or swept material
     // (choppy + dropped notes). Idempotent, so safe to call repeatedly.
-    this._initWorklet().catch((e) => console.warn("[MLE] _initWorklet failed:", e));
+    this._initWorklet().catch((e) =>
+      console.warn("[MLE] _initWorklet failed:", e),
+    );
   }
 
   /**
@@ -1055,7 +3584,9 @@ export class MultiLayerEngine {
     const onEvict = (force = true) => {
       const eng = getEngine();
       if (!eng || typeof eng._safeEvictDecodedBuffers !== "function") return;
-      try { eng._safeEvictDecodedBuffers(!!force); } catch (e) {}
+      try {
+        eng._safeEvictDecodedBuffers(!!force);
+      } catch (e) {}
     };
     registerBudgetProvider(provider);
     onMemoryEvict(() => onEvict(true));
@@ -1093,7 +3624,12 @@ export class MultiLayerEngine {
       const ok = await this._workletNode.init();
       if (ok) {
         this._workletReady = true;
-        try { this._workletNode.setParam("sustainTau", this.settings.sustainDecayTau); } catch (e) {}
+        try {
+          this._workletNode.setParam(
+            "sustainTau",
+            this.settings.sustainDecayTau,
+          );
+        } catch (e) {}
       } else {
         this._workletNode = null;
       }
@@ -1116,7 +3652,7 @@ export class MultiLayerEngine {
         this._pcmWorkletNode.setSustainSettings(
           this.settings.sustainHoldSec,
           this.settings.sustainDecayTau,
-          this.settings.heldNoteSec
+          this.settings.heldNoteSec,
         );
         // Connect to NativePcmEngine so playNote routes to worklet
         if (this.pcmEngine) {
@@ -1125,7 +3661,7 @@ export class MultiLayerEngine {
             this.pcmEngine.updateSustainSettings(
               this.settings.sustainHoldSec,
               this.settings.sustainDecayTau,
-              this.settings.heldNoteSec
+              this.settings.heldNoteSec,
             );
           }
         }
@@ -1143,7 +3679,8 @@ export class MultiLayerEngine {
   }
 
   _loadBuffersToWorklet() {
-    if (!this._pcmWorkletReady || !this._pcmWorkletNode || !this.pcmEngine) return;
+    if (!this._pcmWorkletReady || !this._pcmWorkletNode || !this.pcmEngine)
+      return;
     try {
       const decodedBuffers = this.pcmEngine.decodedBuffers;
       if (!decodedBuffers) return;
@@ -1155,9 +3692,10 @@ export class MultiLayerEngine {
           // Layered maps carry STRING keys ("60_1") while the worklet looks up
           // by NUMERIC anchor midi. Normalize so layered instruments preload
           // correctly (otherwise every note transfers mid-play -> choppy).
-          const midiKey = typeof anchorKey === "number"
-            ? anchorKey
-            : parseInt(String(anchorKey).split("_")[0], 10);
+          const midiKey =
+            typeof anchorKey === "number"
+              ? anchorKey
+              : parseInt(String(anchorKey).split("_")[0], 10);
           if (!Number.isFinite(midiKey)) return;
           const dedupe = instId + ":" + midiKey;
           if (seen.has(dedupe)) return;
@@ -1179,14 +3717,45 @@ export class MultiLayerEngine {
     this._workletNode.setParam("wave2", wave2);
     this._workletNode.setParam("ratio1", prog.r1 || 1.0);
     this._workletNode.setParam("ratio2", prog.r2 || 1.0);
-    const isBass = /(bass|sub)/i.test((prog.category || "") + " " + (prog.name || ""));
+    const isBass = /(bass|sub)/i.test(
+      (prog.category || "") + " " + (prog.name || ""),
+    );
     this._workletNode.setParam("subLevel", isBass ? 0.35 : 0.0);
-    if (prog.cutoff != null) this._workletNode.setParam("cutoff", Math.min(18000, Math.max(800, prog.cutoff * 1.5)));
-    if (prog.Q != null) this._workletNode.setParam("resonance", Math.min(4.0, Math.max(0.5, prog.Q * 1.5)));
-    if (prog.attack != null) this._workletNode.setParam("attack", Math.max(0.003, prog.attack));
+    if (prog.cutoff != null)
+      this._workletNode.setParam(
+        "cutoff",
+        Math.min(18000, Math.max(800, prog.cutoff * 1.5)),
+      );
+    if (prog.Q != null)
+      this._workletNode.setParam(
+        "resonance",
+        Math.min(4.0, Math.max(0.5, prog.Q * 1.5)),
+      );
+    if (prog.attack != null)
+      this._workletNode.setParam("attack", Math.max(0.003, prog.attack));
     if (prog.decay != null) this._workletNode.setParam("decay", prog.decay);
-    if (prog.sustain != null) this._workletNode.setParam("sustain", prog.sustain);
-    if (prog.release != null) this._workletNode.setParam("release", Math.max(0.06, prog.release));
+    if (prog.sustain != null)
+      this._workletNode.setParam("sustain", prog.sustain);
+    if (prog.release != null)
+      this._workletNode.setParam("release", Math.max(0.06, prog.release));
+  }
+
+  _syncWorkletParamsByInst(instKey) {
+    if (!this._workletReady || !this._workletNode || !instKey) return;
+    const resolved = this.resolveBankKey(instKey);
+    const instDef = HD_SOUNDBANKS[resolved];
+    if (!instDef) return;
+    // Sync basic parameters from the instrument definition
+    if (instDef.category)
+      this._workletNode.setParam("category", instDef.category);
+    if (instDef.name) this._workletNode.setParam("name", instDef.name);
+    // Map common wave/params based on instrument category
+    const cat = (instDef.category || "").toLowerCase();
+    if (cat.includes("bass") || cat.includes("sub")) {
+      this._workletNode.setParam("subLevel", 0.35);
+    } else {
+      this._workletNode.setParam("subLevel", 0.0);
+    }
   }
 
   resolveBankKey(instKey) {
@@ -1252,7 +3821,8 @@ export class MultiLayerEngine {
     tritonVaEngine.allNotesOff();
     this.vaAllNotesOff();
     synthEngine.panic();
-    if (this._workletReady && this._workletNode) this._workletNode.allNotesOff();
+    if (this._workletReady && this._workletNode)
+      this._workletNode.allNotesOff();
     this._clearHeldNoteState();
 
     this.isSplitMode = false;
@@ -1261,21 +3831,13 @@ export class MultiLayerEngine {
     this.activeTritonVaProg = null;
     const resolved = this.resolveBankKey(instKey);
     this.activeSingleInst = resolved;
-    // Force worklet re-initialization on preset change to prevent state drift
-    // that causes grainy/awful sound over time. Reset the worklet node so it
-    // starts fresh with the new preset's parameters.
-    if (this._workletNode) {
-      this._workletNode = null;
-      this._workletReady = false;
-    }
-    if (this._pcmWorkletNode) {
-      this._pcmWorkletNode = null;
-      this._pcmWorkletReady = false;
-    }
     // Budget guard: if decoded RAM is near budget, skip the eager preload and
     // let this instrument lazy-decode on first note (prevents OOM on low-RAM).
     let preloadEnabled = true;
-    if (this.pcmEngine && typeof this.pcmEngine.getDecodedBufferStats === "function") {
+    if (
+      this.pcmEngine &&
+      typeof this.pcmEngine.getDecodedBufferStats === "function"
+    ) {
       const stats = this.pcmEngine.getDecodedBufferStats();
       const currentBytes = stats?.bytes || 0;
       const budget = stats?.budget || this.pcmEngine._getDecodedMemoryBudget();
@@ -1289,7 +3851,10 @@ export class MultiLayerEngine {
     // Synchronize Layer 0 with the active single instrument
     if (this.layers[0]) {
       this.layers[0].inst = resolved;
-      this.layers[0].name = HD_SOUNDBANKS[resolved]?.name || HD_SOUNDBANKS[instKey]?.name || resolved;
+      this.layers[0].name =
+        HD_SOUNDBANKS[resolved]?.name ||
+        HD_SOUNDBANKS[instKey]?.name ||
+        resolved;
       this.layers[0].enabled = true;
     }
 
@@ -1300,6 +3865,11 @@ export class MultiLayerEngine {
       if (this.layers[3]) this.layers[3].enabled = false;
     } else {
       this.isCombiMode = false;
+    }
+
+    // Sync worklet parameters to prevent state drift without full recreation
+    if (this._workletReady && this._workletNode && this.activeSingleInst) {
+      this._syncWorkletParamsByInst(this.activeSingleInst);
     }
 
     this.syncPinnedInstruments();
@@ -1316,13 +3886,16 @@ export class MultiLayerEngine {
     synthEngine.panic();
     this._clearHeldNoteState();
 
-    this.isDualLayerActive = enabled !== undefined ? !!enabled : !this.isDualLayerActive;
+    this.isDualLayerActive =
+      enabled !== undefined ? !!enabled : !this.isDualLayerActive;
     this.isSynthMode = false;
 
     if (this.isDualLayerActive) {
       // Ensure Layer 0 is enabled and matches current single instrument
       if (this.layers[0]) {
-        const primaryInst = this.resolveBankKey(this.activeSingleInst || "acoustic_grand_piano");
+        const primaryInst = this.resolveBankKey(
+          this.activeSingleInst || "acoustic_grand_piano",
+        );
         this.layers[0].inst = primaryInst;
         this.layers[0].name = HD_SOUNDBANKS[primaryInst]?.name || primaryInst;
         this.layers[0].enabled = true;
@@ -1364,7 +3937,10 @@ export class MultiLayerEngine {
       if (this.layers[1]) {
         this.layers[1].inst = resolved;
         delete this.layers[1].vaProg;
-        this.layers[1].name = HD_SOUNDBANKS[resolved]?.name || HD_SOUNDBANKS[instKey]?.name || resolved;
+        this.layers[1].name =
+          HD_SOUNDBANKS[resolved]?.name ||
+          HD_SOUNDBANKS[instKey]?.name ||
+          resolved;
       }
       if (this.pcmEngine) {
         this.pcmEngine.preloadInstrument(resolved);
@@ -1448,27 +4024,17 @@ export class MultiLayerEngine {
 
   async setCombiPreset(presetId) {
     if (!COMBI_PRESETS[presetId]) return;
-    
+
     const newCombi = COMBI_PRESETS[presetId];
-    const fxPresetChanged = this.activeCombi?.fxPreset !== newCombi.fxPreset;
-    
-    // Force-clear sustain pedal first — prevents sustained voices bleeding into new preset
+
+    // Clear sustain pedal first — prevents sustained voices bleeding into new preset
     this.setSustainPedal(false);
     if (this.pcmEngine) this.pcmEngine.allNotesOff(true);
     tritonVaEngine.allNotesOff();
     this.vaAllNotesOff();
     synthEngine.panic();
-    if (this._workletReady && this._workletNode) this._workletNode.allNotesOff();
-    // Force worklet re-initialization on combi change to prevent state drift
-    // that causes grainy/awful sound over time.
-    if (this._workletNode) {
-      this._workletNode = null;
-      this._workletReady = false;
-    }
-    if (this._pcmWorkletNode) {
-      this._pcmWorkletNode = null;
-      this._pcmWorkletReady = false;
-    }
+    if (this._workletReady && this._workletNode)
+      this._workletNode.allNotesOff();
     this._clearHeldNoteState();
 
     this.activeCombi = newCombi;
@@ -1478,17 +4044,25 @@ export class MultiLayerEngine {
     this.isTritonVaMode = false;
     this.activeTritonVaProg = null;
     this.isDualLayerActive = false;
+    // Preserve worklet nodes across combi changes — only update layer state,
+    // don't recreate worklets which causes 2-4s main-thread blocks on Android.
     this.layers = JSON.parse(JSON.stringify(this.activeCombi.layers));
-    
+
     // Budget guard: if decoded RAM is near budget, skip eager preloads and
     // let layer instruments lazy-decode on first note (prevents OOM on low-RAM).
     let preloadEnabled = true;
-    if (this.pcmEngine && typeof this.pcmEngine.getDecodedBufferStats === "function") {
+    if (
+      this.pcmEngine &&
+      typeof this.pcmEngine.getDecodedBufferStats === "function"
+    ) {
       const stats = this.pcmEngine.getDecodedBufferStats();
       const currentBytes = stats?.bytes || 0;
       const budget = stats?.budget || this.pcmEngine._getDecodedMemoryBudget();
-      const pcmLayers = this.layers.filter((l) => l.inst && !l.inst.startsWith("va:")).length;
-      if (currentBytes + pcmLayers * 1024 * 1024 > budget * 0.8) preloadEnabled = false;
+      const pcmLayers = this.layers.filter(
+        (l) => l.inst && !l.inst.startsWith("va:"),
+      ).length;
+      if (currentBytes + pcmLayers * 1024 * 1024 > budget * 0.8)
+        preloadEnabled = false;
     }
     // Fire-and-forget preloads - don't block UI thread
     if (preloadEnabled) {
@@ -1498,24 +4072,26 @@ export class MultiLayerEngine {
           const prog = getTritonProgramById(layer.inst.slice(3));
           if (prog) layer.vaProg = prog;
         } else if (layer.inst && this.pcmEngine) {
-          this.pcmEngine.preloadInstrument(this.resolveBankKey(layer.inst)).catch(() => {});
+          this.pcmEngine
+            .preloadInstrument(this.resolveBankKey(layer.inst))
+            .catch(() => {});
         }
       }
     }
-    
+
     // NO init() call - engine already initialized at startup
     // Only sync layer FX
     this.syncLayerFx();
-    
-    // Only apply FX preset if it actually changed
-    if (audioCore.fxRack && fxPresetChanged) {
+
+    // Always apply FX preset when switching combi presets
+    if (audioCore.fxRack) {
       if (this.activeCombi.fxPreset) {
         audioCore.fxRack.applyPreset(this.activeCombi.fxPreset);
       } else {
         audioCore.fxRack.applyPreset(null);
       }
     }
-    
+
     if (INSTRUMENT_PATCHES[presetId]) {
       synthEngine.activePatch = INSTRUMENT_PATCHES[presetId];
     }
@@ -1528,7 +4104,11 @@ export class MultiLayerEngine {
     if (this.layers[layerIndex]) {
       this.layers[layerIndex].fx = fxId || "clean";
       this.init();
-      if (this.pcmEngine && this.pcmEngine.layerInserts && this.pcmEngine.layerInserts[layerIndex]) {
+      if (
+        this.pcmEngine &&
+        this.pcmEngine.layerInserts &&
+        this.pcmEngine.layerInserts[layerIndex]
+      ) {
         this.pcmEngine.layerInserts[layerIndex].setEffect(fxId);
       }
       this.notifyLayerChange();
@@ -1541,7 +4121,8 @@ export class MultiLayerEngine {
       return;
     }
     if (this.layers[layerIndex]) {
-      this.layers[layerIndex].enabled = enabled !== undefined ? enabled : !this.layers[layerIndex].enabled;
+      this.layers[layerIndex].enabled =
+        enabled !== undefined ? enabled : !this.layers[layerIndex].enabled;
       this.isCombiMode = true;
       this.isSynthMode = false;
       this.syncPinnedInstruments();
@@ -1581,7 +4162,10 @@ export class MultiLayerEngine {
         const resolvedKey = this.resolveBankKey(instKey);
         this.layers[layerIndex].inst = resolvedKey;
         delete this.layers[layerIndex].vaProg;
-        this.layers[layerIndex].name = HD_SOUNDBANKS[resolvedKey]?.name || HD_SOUNDBANKS[instKey]?.name || instKey;
+        this.layers[layerIndex].name =
+          HD_SOUNDBANKS[resolvedKey]?.name ||
+          HD_SOUNDBANKS[instKey]?.name ||
+          instKey;
         if (this.pcmEngine) {
           this.pcmEngine.preloadInstrument(resolvedKey);
         }
@@ -1601,10 +4185,14 @@ export class MultiLayerEngine {
 
   notifySplitChange() {
     if (this.onSplitChangeCallback) {
-      try { this.onSplitChangeCallback(this.isSplitMode); } catch (e) {}
+      try {
+        this.onSplitChangeCallback(this.isSplitMode);
+      } catch (e) {}
     }
     for (const cb of this.splitChangeListeners) {
-      try { cb(this.isSplitMode); } catch (e) {}
+      try {
+        cb(this.isSplitMode);
+      } catch (e) {}
     }
     this.saveSessionSoon();
   }
@@ -1628,14 +4216,23 @@ export class MultiLayerEngine {
    * only long-idle instruments — so no hiss/lag/decoded-notes regressions.
    */
   syncPinnedInstruments() {
-    if (!this.pcmEngine || typeof this.pcmEngine.setPinnedInstruments !== "function") return;
+    if (
+      !this.pcmEngine ||
+      typeof this.pcmEngine.setPinnedInstruments !== "function"
+    )
+      return;
     const ids = new Set();
     if (this.activeSingleInst) {
       ids.add(this.resolveBankKey(this.activeSingleInst));
     }
     if (this.isCombiMode && this.layers) {
       for (const layer of this.layers) {
-        if (layer && layer.enabled && layer.inst && !layer.inst.startsWith("va:")) {
+        if (
+          layer &&
+          layer.enabled &&
+          layer.inst &&
+          !layer.inst.startsWith("va:")
+        ) {
           ids.add(this.resolveBankKey(layer.inst));
         }
       }
@@ -1670,7 +4267,10 @@ export class MultiLayerEngine {
       const resolved = this.resolveBankKey(instKey);
       zone.inst = resolved;
       delete zone.vaProg;
-      zone.name = HD_SOUNDBANKS[resolved]?.name || HD_SOUNDBANKS[instKey]?.name || instKey;
+      zone.name =
+        HD_SOUNDBANKS[resolved]?.name ||
+        HD_SOUNDBANKS[instKey]?.name ||
+        instKey;
     }
     this.init();
     this.notifySplitChange();
@@ -1691,7 +4291,11 @@ export class MultiLayerEngine {
     if (!zone) return;
     zone.fx = fxId || "clean";
     this.init();
-    if (this.pcmEngine && this.pcmEngine.splitZoneInserts && this.pcmEngine.splitZoneInserts[zoneKey]) {
+    if (
+      this.pcmEngine &&
+      this.pcmEngine.splitZoneInserts &&
+      this.pcmEngine.splitZoneInserts[zoneKey]
+    ) {
       this.pcmEngine.splitZoneInserts[zoneKey].setEffect(zone.fx);
     }
     this.notifySplitChange();
@@ -1713,7 +4317,7 @@ export class MultiLayerEngine {
 
   syncSplitFx() {
     if (this.pcmEngine && this.pcmEngine.splitZoneInserts) {
-      ["lower", "upper"].forEach(key => {
+      ["lower", "upper"].forEach((key) => {
         const zone = this.splitZones[key];
         if (zone && this.pcmEngine.splitZoneInserts[key]) {
           this.pcmEngine.splitZoneInserts[key].setEffect(zone.fx || "clean");
@@ -1726,31 +4330,50 @@ export class MultiLayerEngine {
     if (!this.pcmEngine) this.init();
     audioCore.ensureRunning();
 
-    try { midiOutManager.noteOn(midiOutManager.channel, midiNote, velocity); } catch (e) {}
+    try {
+      midiOutManager.noteOn(midiOutManager.channel, midiNote, velocity);
+    } catch (e) {}
 
     // 1:1 Instant Synchronous Visual Key Trigger (True 0.00ms touch-to-visual response)
     if (this.onNoteChangeCallback) {
       if (when === 0) {
-        try { this.onNoteChangeCallback(midiNote, true, velocity); } catch (e) {}
+        try {
+          this.onNoteChangeCallback(midiNote, true, velocity);
+        } catch (e) {}
       } else {
-        const delayMs = Math.max(0, (when - (audioCore.ctx ? audioCore.ctx.currentTime : 0)) * 1000);
+        const delayMs = Math.max(
+          0,
+          (when - (audioCore.ctx ? audioCore.ctx.currentTime : 0)) * 1000,
+        );
         setTimeout(() => {
-          try { this.onNoteChangeCallback(midiNote, true, velocity); } catch (e) {}
+          try {
+            this.onNoteChangeCallback(midiNote, true, velocity);
+          } catch (e) {}
         }, delayMs);
       }
     }
-    if (synthEngine.onNoteChangeCallback && synthEngine.onNoteChangeCallback !== this.onNoteChangeCallback) {
+    if (
+      synthEngine.onNoteChangeCallback &&
+      synthEngine.onNoteChangeCallback !== this.onNoteChangeCallback
+    ) {
       if (when === 0) {
-        try { synthEngine.onNoteChangeCallback(midiNote, true, velocity); } catch (e) {}
+        try {
+          synthEngine.onNoteChangeCallback(midiNote, true, velocity);
+        } catch (e) {}
       } else {
-        const delayMs = Math.max(0, (when - (audioCore.ctx ? audioCore.ctx.currentTime : 0)) * 1000);
+        const delayMs = Math.max(
+          0,
+          (when - (audioCore.ctx ? audioCore.ctx.currentTime : 0)) * 1000,
+        );
         setTimeout(() => {
-          try { synthEngine.onNoteChangeCallback(midiNote, true, velocity); } catch (e) {}
+          try {
+            synthEngine.onNoteChangeCallback(midiNote, true, velocity);
+          } catch (e) {}
         }, delayMs);
       }
     }
 
-    const now = when > 0 ? when : (audioCore.ctx ? audioCore.ctx.currentTime : 0);
+    const now = when > 0 ? when : audioCore.ctx ? audioCore.ctx.currentTime : 0;
 
     // Live held-note tracking: a key held with no sustain pedal rings for
     // heldNoteSec, then fades. Scheduled (when > 0) notes arm the timer at
@@ -1768,15 +4391,38 @@ export class MultiLayerEngine {
       const isLower = midiNote < this.splitPointMidi;
       const zone = this.splitZone(isLower ? "lower" : "upper");
 
-      if (zone && zone.inst !== null && zone.inst !== undefined && zone.inst !== "current_stack") {
-        const transposedMidi = Math.max(21, Math.min(108, midiNote + (zone.oct || 0) * 12));
+      if (
+        zone &&
+        zone.inst !== null &&
+        zone.inst !== undefined &&
+        zone.inst !== "current_stack"
+      ) {
+        const transposedMidi = Math.max(
+          21,
+          Math.min(108, midiNote + (zone.oct || 0) * 12),
+        );
         if (zone.vaProg) {
-          this.getVaEngineFor(zone.vaProg, zone.gain, isLower ? 4 : 5).noteOn(transposedMidi, velocity, when);
+          this.getVaEngineFor(zone.vaProg, zone.gain, isLower ? 4 : 5).noteOn(
+            transposedMidi,
+            velocity,
+            when,
+          );
         } else if (this.pcmEngine) {
-          const dest = (this.pcmEngine.splitZoneInserts && this.pcmEngine.splitZoneInserts[isLower ? "lower" : "upper"])
-            ? this.pcmEngine.splitZoneInserts[isLower ? "lower" : "upper"].input
-            : null;
-          this.pcmEngine.playNote(zone.inst, transposedMidi, velocity, zone.gain, null, dest, when);
+          const dest =
+            this.pcmEngine.splitZoneInserts &&
+            this.pcmEngine.splitZoneInserts[isLower ? "lower" : "upper"]
+              ? this.pcmEngine.splitZoneInserts[isLower ? "lower" : "upper"]
+                  .input
+              : null;
+          this.pcmEngine.playNote(
+            zone.inst,
+            transposedMidi,
+            velocity,
+            zone.gain,
+            null,
+            dest,
+            when,
+          );
         }
         return;
       }
@@ -1794,10 +4440,19 @@ export class MultiLayerEngine {
       // Pad sidechain ducking: when Layer 0 strikes, duck Layer 1 down by -6dB so lead melody is clean
       if (this.isPadDuckingEnabled && this.layers[0]?.enabled) {
         this.activeLeadNotes++;
-        if (this.activeLeadNotes === 1 && this.pcmEngine && this.pcmEngine.layerInserts && this.pcmEngine.layerInserts[1]) {
+        if (
+          this.activeLeadNotes === 1 &&
+          this.pcmEngine &&
+          this.pcmEngine.layerInserts &&
+          this.pcmEngine.layerInserts[1]
+        ) {
           const ctx = audioCore.ctx;
           if (ctx) {
-            this.pcmEngine.layerInserts[1].input.gain.setTargetAtTime(0.35, now, 0.025);
+            this.pcmEngine.layerInserts[1].input.gain.setTargetAtTime(
+              0.35,
+              now,
+              0.025,
+            );
           }
         }
       }
@@ -1812,14 +4467,18 @@ export class MultiLayerEngine {
         const layer = this.layers[i];
         if (!layer.enabled) continue;
         if (velocity < layer.minVel || velocity > layer.maxVel) continue;
-        totalLayerGain += (layer.gain ?? 1.0);
+        totalLayerGain += layer.gain ?? 1.0;
       }
-      const combiScale = totalLayerGain > 0
-        ? Math.min(1.0, 1.35 / Math.sqrt(totalLayerGain))
-        : 1.0;
+      const combiScale =
+        totalLayerGain > 0
+          ? Math.min(1.0, 1.35 / Math.sqrt(totalLayerGain))
+          : 1.0;
       // Headroom protection for dense Combi chords & sweeps:
       // Prevents 4-layer stacks from driving +20dB into the master limiter
-      const polyHeadroom = this.heldNotes.size > 2 ? Math.min(1.0, 1.45 / Math.sqrt(this.heldNotes.size)) : 1.0;
+      const polyHeadroom =
+        this.heldNotes.size > 2
+          ? Math.min(1.0, 1.45 / Math.sqrt(this.heldNotes.size))
+          : 1.0;
 
       // COMBI MODE: Synchronous sample-0 trigger on all enabled PCM layers
       for (let i = 0; i < this.layers.length; i++) {
@@ -1828,17 +4487,40 @@ export class MultiLayerEngine {
         if (velocity < layer.minVel || velocity > layer.maxVel) continue;
 
         const effectiveGain = (layer.gain ?? 1.0) * combiScale * polyHeadroom;
-        const transposedMidi = Math.max(21, Math.min(108, midiNote + layer.oct * 12));
+        const transposedMidi = Math.max(
+          21,
+          Math.min(108, midiNote + layer.oct * 12),
+        );
         if (layer.vaProg) {
-          this.getVaEngineFor(layer.vaProg, effectiveGain, i).noteOn(transposedMidi, velocity, when);
+          this.getVaEngineFor(layer.vaProg, effectiveGain, i).noteOn(
+            transposedMidi,
+            velocity,
+            when,
+          );
         } else if (this.pcmEngine) {
-          this.pcmEngine.playNote(layer.inst, transposedMidi, velocity, effectiveGain, i, null, when);
+          this.pcmEngine.playNote(
+            layer.inst,
+            transposedMidi,
+            velocity,
+            effectiveGain,
+            i,
+            null,
+            when,
+          );
         }
       }
     } else {
       // SINGLE PROGRAM MODE: Instant sample-0 playback of authentic PCM sound
       if (this.pcmEngine) {
-        this.pcmEngine.playNote(this.activeSingleInst, midiNote, velocity, 1.0, null, null, when);
+        this.pcmEngine.playNote(
+          this.activeSingleInst,
+          midiNote,
+          velocity,
+          1.0,
+          null,
+          null,
+          when,
+        );
       }
     }
   }
@@ -1846,26 +4528,45 @@ export class MultiLayerEngine {
   noteOff(midiNote, when = 0) {
     audioCore.ensureRunning();
 
-    try { midiOutManager.noteOff(midiOutManager.channel, midiNote); } catch (e) {}
+    try {
+      midiOutManager.noteOff(midiOutManager.channel, midiNote);
+    } catch (e) {}
 
     // 1:1 Instant Synchronous Visual Key Release
     if (this.onNoteChangeCallback) {
       if (when === 0) {
-        try { this.onNoteChangeCallback(midiNote, false, 0); } catch (e) {}
+        try {
+          this.onNoteChangeCallback(midiNote, false, 0);
+        } catch (e) {}
       } else {
-        const delayMs = Math.max(0, (when - (audioCore.ctx ? audioCore.ctx.currentTime : 0)) * 1000);
+        const delayMs = Math.max(
+          0,
+          (when - (audioCore.ctx ? audioCore.ctx.currentTime : 0)) * 1000,
+        );
         setTimeout(() => {
-          try { this.onNoteChangeCallback(midiNote, false, 0); } catch (e) {}
+          try {
+            this.onNoteChangeCallback(midiNote, false, 0);
+          } catch (e) {}
         }, delayMs);
       }
     }
-    if (synthEngine.onNoteChangeCallback && synthEngine.onNoteChangeCallback !== this.onNoteChangeCallback) {
+    if (
+      synthEngine.onNoteChangeCallback &&
+      synthEngine.onNoteChangeCallback !== this.onNoteChangeCallback
+    ) {
       if (when === 0) {
-        try { synthEngine.onNoteChangeCallback(midiNote, false, 0); } catch (e) {}
+        try {
+          synthEngine.onNoteChangeCallback(midiNote, false, 0);
+        } catch (e) {}
       } else {
-        const delayMs = Math.max(0, (when - (audioCore.ctx ? audioCore.ctx.currentTime : 0)) * 1000);
+        const delayMs = Math.max(
+          0,
+          (when - (audioCore.ctx ? audioCore.ctx.currentTime : 0)) * 1000,
+        );
         setTimeout(() => {
-          try { synthEngine.onNoteChangeCallback(midiNote, false, 0); } catch (e) {}
+          try {
+            synthEngine.onNoteChangeCallback(midiNote, false, 0);
+          } catch (e) {}
         }, delayMs);
       }
     }
@@ -1875,15 +4576,28 @@ export class MultiLayerEngine {
     this.heldNotes.delete(midiNote);
     this._clearHeldNoteTimer(midiNote);
 
-    const now = when > 0 ? when : (audioCore.ctx ? audioCore.ctx.currentTime : 0);
+    const now = when > 0 ? when : audioCore.ctx ? audioCore.ctx.currentTime : 0;
 
     // Pad sidechain ducking release: restore Layer 1 volume when all lead keys are released
-    if (this.isPadDuckingEnabled && this.isCombiMode && this.layers[0]?.enabled) {
+    if (
+      this.isPadDuckingEnabled &&
+      this.isCombiMode &&
+      this.layers[0]?.enabled
+    ) {
       this.activeLeadNotes = Math.max(0, this.activeLeadNotes - 1);
-      if (this.activeLeadNotes === 0 && this.pcmEngine && this.pcmEngine.layerInserts && this.pcmEngine.layerInserts[1]) {
+      if (
+        this.activeLeadNotes === 0 &&
+        this.pcmEngine &&
+        this.pcmEngine.layerInserts &&
+        this.pcmEngine.layerInserts[1]
+      ) {
         const ctx = audioCore.ctx;
         if (ctx) {
-          this.pcmEngine.layerInserts[1].input.gain.setTargetAtTime(1.0, now, 0.28);
+          this.pcmEngine.layerInserts[1].input.gain.setTargetAtTime(
+            1.0,
+            now,
+            0.28,
+          );
         }
       }
     }
@@ -1893,10 +4607,21 @@ export class MultiLayerEngine {
       const isLower = midiNote < this.splitPointMidi;
       const zone = this.splitZone(isLower ? "lower" : "upper");
 
-      if (zone && zone.inst !== null && zone.inst !== undefined && zone.inst !== "current_stack") {
-        const transposedMidi = Math.max(21, Math.min(108, midiNote + (zone.oct || 0) * 12));
+      if (
+        zone &&
+        zone.inst !== null &&
+        zone.inst !== undefined &&
+        zone.inst !== "current_stack"
+      ) {
+        const transposedMidi = Math.max(
+          21,
+          Math.min(108, midiNote + (zone.oct || 0) * 12),
+        );
         if (zone.vaProg) {
-          this.getVaEngineFor(zone.vaProg, zone.gain, isLower ? 4 : 5).noteOff(transposedMidi, when);
+          this.getVaEngineFor(zone.vaProg, zone.gain, isLower ? 4 : 5).noteOff(
+            transposedMidi,
+            when,
+          );
         } else if (this.pcmEngine) {
           this.pcmEngine.stopNote(zone.inst, transposedMidi, when);
         }
@@ -1920,9 +4645,15 @@ export class MultiLayerEngine {
       if (this.isCombiMode) {
         for (let i = 0; i < this.layers.length; i++) {
           const layer = this.layers[i];
-          const transposedMidi = Math.max(21, Math.min(108, midiNote + layer.oct * 12));
+          const transposedMidi = Math.max(
+            21,
+            Math.min(108, midiNote + layer.oct * 12),
+          );
           if (layer.vaProg) {
-            this.getVaEngineFor(layer.vaProg, layer.gain, i).noteOff(transposedMidi, when);
+            this.getVaEngineFor(layer.vaProg, layer.gain, i).noteOff(
+              transposedMidi,
+              when,
+            );
           } else {
             this.pcmEngine.stopNote(layer.inst, transposedMidi, when);
           }
@@ -1937,24 +4668,44 @@ export class MultiLayerEngine {
     audioCore.ensureRunning();
 
     if (this.onNoteChangeCallback) {
-      try { this.onNoteChangeCallback(midiNote, false, 0); } catch (e) {}
+      try {
+        this.onNoteChangeCallback(midiNote, false, 0);
+      } catch (e) {}
     }
-    if (synthEngine.onNoteChangeCallback && synthEngine.onNoteChangeCallback !== this.onNoteChangeCallback) {
-      try { synthEngine.onNoteChangeCallback(midiNote, false, 0); } catch (e) {}
+    if (
+      synthEngine.onNoteChangeCallback &&
+      synthEngine.onNoteChangeCallback !== this.onNoteChangeCallback
+    ) {
+      try {
+        synthEngine.onNoteChangeCallback(midiNote, false, 0);
+      } catch (e) {}
     }
 
     this.heldNotes.delete(midiNote);
     this._clearHeldNoteTimer(midiNote);
 
-    const now = when > 0 ? when : (audioCore.ctx ? audioCore.ctx.currentTime : 0);
+    const now = when > 0 ? when : audioCore.ctx ? audioCore.ctx.currentTime : 0;
 
     // Pad sidechain ducking release: restore Layer 1 volume when all lead keys are released
-    if (this.isPadDuckingEnabled && this.isCombiMode && this.layers[0]?.enabled) {
+    if (
+      this.isPadDuckingEnabled &&
+      this.isCombiMode &&
+      this.layers[0]?.enabled
+    ) {
       this.activeLeadNotes = Math.max(0, this.activeLeadNotes - 1);
-      if (this.activeLeadNotes === 0 && this.pcmEngine && this.pcmEngine.layerInserts && this.pcmEngine.layerInserts[1]) {
+      if (
+        this.activeLeadNotes === 0 &&
+        this.pcmEngine &&
+        this.pcmEngine.layerInserts &&
+        this.pcmEngine.layerInserts[1]
+      ) {
         const ctx = audioCore.ctx;
         if (ctx) {
-          this.pcmEngine.layerInserts[1].input.gain.setTargetAtTime(1.0, now, 0.28);
+          this.pcmEngine.layerInserts[1].input.gain.setTargetAtTime(
+            1.0,
+            now,
+            0.28,
+          );
         }
       }
     }
@@ -1964,10 +4715,21 @@ export class MultiLayerEngine {
       const isLower = midiNote < this.splitPointMidi;
       const zone = this.splitZone(isLower ? "lower" : "upper");
 
-      if (zone && zone.inst !== null && zone.inst !== undefined && zone.inst !== "current_stack") {
-        const transposedMidi = Math.max(21, Math.min(108, midiNote + (zone.oct || 0) * 12));
+      if (
+        zone &&
+        zone.inst !== null &&
+        zone.inst !== undefined &&
+        zone.inst !== "current_stack"
+      ) {
+        const transposedMidi = Math.max(
+          21,
+          Math.min(108, midiNote + (zone.oct || 0) * 12),
+        );
         if (zone.vaProg) {
-          this.getVaEngineFor(zone.vaProg, zone.gain, isLower ? 4 : 5).noteOff(transposedMidi, when);
+          this.getVaEngineFor(zone.vaProg, zone.gain, isLower ? 4 : 5).noteOff(
+            transposedMidi,
+            when,
+          );
         } else if (this.pcmEngine) {
           if (typeof this.pcmEngine.fastStopNote === "function") {
             this.pcmEngine.fastStopNote(zone.inst, transposedMidi, when);
@@ -1994,9 +4756,15 @@ export class MultiLayerEngine {
       if (this.isCombiMode) {
         for (let i = 0; i < this.layers.length; i++) {
           const layer = this.layers[i];
-          const transposedMidi = Math.max(21, Math.min(108, midiNote + layer.oct * 12));
+          const transposedMidi = Math.max(
+            21,
+            Math.min(108, midiNote + layer.oct * 12),
+          );
           if (layer.vaProg) {
-            this.getVaEngineFor(layer.vaProg, layer.gain, i).noteOff(transposedMidi, when);
+            this.getVaEngineFor(layer.vaProg, layer.gain, i).noteOff(
+              transposedMidi,
+              when,
+            );
           } else {
             if (typeof this.pcmEngine.fastStopNote === "function") {
               this.pcmEngine.fastStopNote(layer.inst, transposedMidi, when);
@@ -2021,9 +4789,18 @@ export class MultiLayerEngine {
     if (this.isSplitMode) {
       const isLower = midiNote < this.splitPointMidi;
       const zone = this.splitZone(isLower ? "lower" : "upper");
-      if (zone && zone.inst !== null && zone.inst !== undefined && zone.inst !== "current_stack") {
-        const transposedMidi = Math.max(21, Math.min(108, midiNote + (zone.oct || 0) * 12));
-        if (this.pcmEngine) this.pcmEngine.setNoteExpression(transposedMidi, relativeY);
+      if (
+        zone &&
+        zone.inst !== null &&
+        zone.inst !== undefined &&
+        zone.inst !== "current_stack"
+      ) {
+        const transposedMidi = Math.max(
+          21,
+          Math.min(108, midiNote + (zone.oct || 0) * 12),
+        );
+        if (this.pcmEngine)
+          this.pcmEngine.setNoteExpression(transposedMidi, relativeY);
         return;
       }
     }
@@ -2033,7 +4810,10 @@ export class MultiLayerEngine {
         for (let i = 0; i < this.layers.length; i++) {
           const layer = this.layers[i];
           if (!layer.enabled) continue;
-          const transposedMidi = Math.max(21, Math.min(108, midiNote + layer.oct * 12));
+          const transposedMidi = Math.max(
+            21,
+            Math.min(108, midiNote + layer.oct * 12),
+          );
           this.pcmEngine.setNoteExpression(transposedMidi, relativeY);
         }
       } else {
@@ -2050,14 +4830,28 @@ export class MultiLayerEngine {
     const sec = this.settings?.heldNoteSec;
     if (typeof sec !== "number" || !(sec > 0)) return;
     const ctxTime = audioCore.ctx ? audioCore.ctx.currentTime : 0;
-    const scheduledDelay = startTime != null && startTime > ctxTime ? (startTime - ctxTime) * 1000 : 0;
-    this._heldNoteTimers.set(midiNote, setTimeout(() => {
-      this._heldNoteTimers.delete(midiNote);
-      if (this.sustainPedalActive) return;
-      if (!this.heldNotes.has(midiNote)) return;
-      if (!audioCore.ctx || audioCore.ctx.state === "suspended" || audioCore.ctx.state === "interrupted") return;
-      this._stopNoteSound(midiNote, 0);
-    }, sec * 1000 + scheduledDelay));
+    const scheduledDelay =
+      startTime != null && startTime > ctxTime
+        ? (startTime - ctxTime) * 1000
+        : 0;
+    this._heldNoteTimers.set(
+      midiNote,
+      setTimeout(
+        () => {
+          this._heldNoteTimers.delete(midiNote);
+          if (this.sustainPedalActive) return;
+          if (!this.heldNotes.has(midiNote)) return;
+          if (
+            !audioCore.ctx ||
+            audioCore.ctx.state === "suspended" ||
+            audioCore.ctx.state === "interrupted"
+          )
+            return;
+          this._stopNoteSound(midiNote, 0);
+        },
+        sec * 1000 + scheduledDelay,
+      ),
+    );
   }
 
   _clearHeldNoteTimer(midiNote) {
@@ -2069,7 +4863,7 @@ export class MultiLayerEngine {
   }
 
   _clearAllHeldNoteTimers() {
-    this._heldNoteTimers.forEach(t => clearTimeout(t));
+    this._heldNoteTimers.forEach((t) => clearTimeout(t));
     this._heldNoteTimers.clear();
   }
 
@@ -2085,10 +4879,21 @@ export class MultiLayerEngine {
     if (this.isSplitMode) {
       const isLower = midiNote < this.splitPointMidi;
       const zone = this.splitZone(isLower ? "lower" : "upper");
-      if (zone && zone.inst !== null && zone.inst !== undefined && zone.inst !== "current_stack") {
-        const transposedMidi = Math.max(21, Math.min(108, midiNote + (zone.oct || 0) * 12));
+      if (
+        zone &&
+        zone.inst !== null &&
+        zone.inst !== undefined &&
+        zone.inst !== "current_stack"
+      ) {
+        const transposedMidi = Math.max(
+          21,
+          Math.min(108, midiNote + (zone.oct || 0) * 12),
+        );
         if (zone.vaProg) {
-          this.getVaEngineFor(zone.vaProg, zone.gain, isLower ? 4 : 5).noteOff(transposedMidi, when);
+          this.getVaEngineFor(zone.vaProg, zone.gain, isLower ? 4 : 5).noteOff(
+            transposedMidi,
+            when,
+          );
         } else if (this.pcmEngine) {
           this.pcmEngine.stopNote(zone.inst, transposedMidi, when);
         }
@@ -2106,9 +4911,15 @@ export class MultiLayerEngine {
         for (let i = 0; i < this.layers.length; i++) {
           const layer = this.layers[i];
           if (!layer.enabled) continue;
-          const transposedMidi = Math.max(21, Math.min(108, midiNote + layer.oct * 12));
+          const transposedMidi = Math.max(
+            21,
+            Math.min(108, midiNote + layer.oct * 12),
+          );
           if (layer.vaProg) {
-            this.getVaEngineFor(layer.vaProg, layer.gain, i).noteOff(transposedMidi, when);
+            this.getVaEngineFor(layer.vaProg, layer.gain, i).noteOff(
+              transposedMidi,
+              when,
+            );
           } else {
             this.pcmEngine.stopNote(layer.inst, transposedMidi, when);
           }
@@ -2128,7 +4939,7 @@ export class MultiLayerEngine {
     if (isDown) {
       this._clearAllHeldNoteTimers();
     } else {
-      this.heldNotes.forEach(n => this._armHeldNoteTimer(n));
+      this.heldNotes.forEach((n) => this._armHeldNoteTimer(n));
     }
     // Notify worklet for live VA sustain handling
     if (this._workletReady && this._workletNode) {
@@ -2140,12 +4951,18 @@ export class MultiLayerEngine {
     if (this.pcmEngine) {
       this.pcmEngine.setSustainPedal(isDown, when);
       if (this.isCombiMode) {
-        this._vaEngines.forEach(eng => { try { eng.setSustainPedal(isDown, when); } catch (err) {} });
+        this._vaEngines.forEach((eng) => {
+          try {
+            eng.setSustainPedal(isDown, when);
+          } catch (err) {}
+        });
       }
     }
     // Notify UI when sustain is force-cleared (e.g. during preset switch)
     if (!isDown && this.onSustainForceOffCallback) {
-      try { this.onSustainForceOffCallback(); } catch (e) {}
+      try {
+        this.onSustainForceOffCallback();
+      } catch (e) {}
     }
   }
 
@@ -2158,7 +4975,11 @@ export class MultiLayerEngine {
     if (this.pcmEngine) {
       this.pcmEngine.setPitchBend(semitones);
       if (this.isCombiMode) {
-        this._vaEngines.forEach(eng => { try { eng.setPitchBend(semitones); } catch (err) {} });
+        this._vaEngines.forEach((eng) => {
+          try {
+            eng.setPitchBend(semitones);
+          } catch (err) {}
+        });
       }
     }
   }
@@ -2189,17 +5010,23 @@ export class MultiLayerEngine {
 
     // Hard-mute master output immediately so zero residue/tails can leak
     if (audioCore?.hardSilence) {
-      try { audioCore.hardSilence(); } catch (e) {}
+      try {
+        audioCore.hardSilence();
+      } catch (e) {}
     }
 
     // 1. Notify all registered panic hooks (demo player, looper, schedulers, groove, etc.)
     if (this._panicHooks) {
       this._panicHooks.forEach((hook) => {
-        try { hook(); } catch (e) {}
+        try {
+          hook();
+        } catch (e) {}
       });
     }
     if (this.onPanicCallback) {
-      try { this.onPanicCallback(); } catch (e) {}
+      try {
+        this.onPanicCallback();
+      } catch (e) {}
     }
     if (typeof window !== "undefined") {
       try {
@@ -2210,15 +5037,22 @@ export class MultiLayerEngine {
     // 2. Clear visual note styling for all active keys
     if (this.onNoteChangeCallback) {
       this.heldNotes.forEach((note) => {
-        try { this.onNoteChangeCallback(note, false, 0); } catch (e) {}
+        try {
+          this.onNoteChangeCallback(note, false, 0);
+        } catch (e) {}
       });
     }
 
     // 3. Silence all PCM engine voices & stop SFX generator
     if (this.pcmEngine) {
       this.pcmEngine.allNotesOff(false);
-      if (this.pcmEngine.sfxGenerator && typeof this.pcmEngine.sfxGenerator.stopAll === "function") {
-        try { this.pcmEngine.sfxGenerator.stopAll(); } catch (e) {}
+      if (
+        this.pcmEngine.sfxGenerator &&
+        typeof this.pcmEngine.sfxGenerator.stopAll === "function"
+      ) {
+        try {
+          this.pcmEngine.sfxGenerator.stopAll();
+        } catch (e) {}
       }
       this.pcmEngine.pitchBendSemitones = 0;
       this.pcmEngine.modWheelAmount = 0;
@@ -2229,7 +5063,8 @@ export class MultiLayerEngine {
     tritonVaEngine.allNotesOff();
     tritonVaEngine.sustainPedal = false;
     this.vaAllNotesOff();
-    if (this._workletReady && this._workletNode) this._workletNode.allNotesOff();
+    if (this._workletReady && this._workletNode)
+      this._workletNode.allNotesOff();
     this._clearHeldNoteState();
 
     // 5. Instantly kill all FX Rack tails, delays, reverbs, and feedback loops
@@ -2239,25 +5074,34 @@ export class MultiLayerEngine {
         audioCore.fxRack.resetAllEffects();
         if (audioCore.fxRack._chainEffects) {
           audioCore.fxRack._chainEffects.forEach((fx) => {
-            try { fx.setBypass(true); } catch (e) {}
+            try {
+              fx.setBypass(true);
+            } catch (e) {}
           });
         }
         setTimeout(() => {
-          try { audioCore.fxRack.unmuteOutput(); } catch (e) {}
+          try {
+            audioCore.fxRack.unmuteOutput();
+          } catch (e) {}
         }, 35);
       } catch (e) {}
     }
 
     // 6. Recover audio graph if context crashed
     if (audioCore.recoverAudioGraph) {
-      try { audioCore.recoverAudioGraph(); } catch (e) {}
+      try {
+        audioCore.recoverAudioGraph();
+      } catch (e) {}
     }
   }
 
   // ---- User presets + gig setlist (localStorage: sync, offline, zero deps) ----
   getUserPresets() {
     try {
-      const raw = typeof localStorage !== "undefined" ? localStorage.getItem("wilsonix_user_presets") : null;
+      const raw =
+        typeof localStorage !== "undefined"
+          ? localStorage.getItem("wilsonix_user_presets")
+          : null;
       const arr = raw ? JSON.parse(raw) : [];
       return Array.isArray(arr) ? arr : [];
     } catch (e) {
@@ -2288,7 +5132,7 @@ export class MultiLayerEngine {
   }
 
   applyUserPreset(id) {
-    const found = this.getUserPresets().find(p => p.id === id);
+    const found = this.getUserPresets().find((p) => p.id === id);
     if (!found || !Array.isArray(found.layers)) return false;
     this.activeCombi = { id: found.id, name: found.name, layers: found.layers };
     this.isCombiMode = true;
@@ -2301,13 +5145,16 @@ export class MultiLayerEngine {
   }
 
   deleteUserPreset(id) {
-    this.saveUserPresets(this.getUserPresets().filter(p => p.id !== id));
+    this.saveUserPresets(this.getUserPresets().filter((p) => p.id !== id));
     this.notifyLayerChange();
   }
 
   getSetlist() {
     try {
-      const raw = typeof localStorage !== "undefined" ? localStorage.getItem("wilsonix_setlist") : null;
+      const raw =
+        typeof localStorage !== "undefined"
+          ? localStorage.getItem("wilsonix_setlist")
+          : null;
       const arr = raw ? JSON.parse(raw) : [];
       return Array.isArray(arr) ? arr : [];
     } catch (e) {
@@ -2326,7 +5173,10 @@ export class MultiLayerEngine {
 
   currentStackSnapshot() {
     const activeId = this.activeCombi?.id || "";
-    const isUser = this.isCombiMode && typeof activeId === "string" && activeId.startsWith("user_");
+    const isUser =
+      this.isCombiMode &&
+      typeof activeId === "string" &&
+      activeId.startsWith("user_");
     if (isUser) {
       return { kind: "user", id: activeId, name: this.activeCombi.name };
     }
@@ -2357,7 +5207,13 @@ export class MultiLayerEngine {
   moveSetlistEntry(fromIdx, delta) {
     const list = this.getSetlist();
     const toIdx = fromIdx + delta;
-    if (fromIdx < 0 || fromIdx >= list.length || toIdx < 0 || toIdx >= list.length) return;
+    if (
+      fromIdx < 0 ||
+      fromIdx >= list.length ||
+      toIdx < 0 ||
+      toIdx >= list.length
+    )
+      return;
     const [item] = list.splice(fromIdx, 1);
     list.splice(toIdx, 0, item);
     this.saveSetlist(list);

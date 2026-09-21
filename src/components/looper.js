@@ -237,15 +237,23 @@ export class ClipLooper {
 
   _applyPresetToLooperBuses(trackId, preset) {
     const pcm = multiLayerEngine.pcmEngine;
-    if (!pcm || !pcm.setLooperTrackFx) return;
+    if (!pcm) return;
+    if (typeof pcm.setLooperTrackFx !== "function") {
+      console.warn("[Looper] pcmEngine missing setLooperTrackFx");
+      return;
+    }
     for (let slot = 0; slot < 4; slot++) {
       const L = preset.layers[slot];
       const fx = L ? L.fx : "clean";
       const g = L ? L.gain : 0.0;
       try {
         pcm.setLooperTrackFx(trackId, slot, fx);
-        pcm.setLooperTrackGain(trackId, slot, g);
-      } catch (e) {}
+        if (pcm.setLooperTrackGain) {
+          pcm.setLooperTrackGain(trackId, slot, g);
+        }
+      } catch (e) {
+        console.warn("[Looper] _applyPresetToLooperBuses error", e);
+      }
     }
   }
 
@@ -597,6 +605,13 @@ export class ClipLooper {
     this.stopPlayback(trackId);
     if (!audioCore.ctx) return;
     if (!track.preset) track.preset = this._snapshotPreset();
+
+    // Reset looper bus sustain state to avoid drift from prior presets
+    // (worklet nodes persist across preset changes; this ensures a clean start)
+    const pcm = multiLayerEngine.pcmEngine;
+    if (pcm && typeof pcm.setLooperTrackSustain === "function") {
+      pcm.setLooperTrackSustain(trackId, false);
+    }
 
     const loopLen = track.loopLen > 0 ? track.loopLen : this.barSec();
     const events = track.events.slice();
