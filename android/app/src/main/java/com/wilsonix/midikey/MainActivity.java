@@ -16,7 +16,12 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
+
+        // Native MIDI bridge: Android WebView lacks the Web MIDI API, so this
+        // plugin (android.media.midi) streams USB/Bluetooth MIDI into the web
+        // pipeline — same behavior as desktop WebView/Tauri.
+        registerPlugin(MidiBridgePlugin.class);
+
         // FLAG_SECURE: blocks MIUI 3-finger screenshot & screen capture
         if (getWindow() != null) {
             getWindow().setFlags(

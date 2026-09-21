@@ -5,6 +5,7 @@
  * MIDI Learn controller mapping, and Program Change registration switching.
  */
 
+import { Capacitor } from "@capacitor/core";
 import { synthEngine } from "../audio/synth-engine.js";
 import { multiLayerEngine } from "../audio/multi-layer-engine.js";
 import { shapeVelocity } from "./velocity-curve.js";
@@ -14,6 +15,7 @@ import { registrationManager } from "../components/registration-manager.js";
 import { scaleLock } from "./scale-lock.js";
 import { arpeggiator } from "../audio/arpeggiator.js";
 import { midiOutManager } from "./midi-out.js";
+import { nativeMidiBridge } from "./native-midi-bridge.js";
 
 export class MidiManager {
   constructor() {
@@ -26,6 +28,24 @@ export class MidiManager {
 
   async init() {
     if (!this.isSupported) {
+      // Android System WebView has NO Web MIDI API — use the native Capacitor
+      // MIDI bridge (android.media.midi) feeding this SAME handleMidiMessage
+      // pipeline, so USB/Bluetooth MIDI keyboards work exactly like desktop
+      // WebView and Tauri.
+      if (Capacitor.isNativePlatform()) {
+        const ok = await nativeMidiBridge.init((devices) => {
+          this.connectedDevices = devices;
+          if (this.onDeviceChangeCallback) {
+            this.onDeviceChangeCallback(devices);
+          }
+        });
+        if (ok) {
+          nativeMidiBridge.setHandler((event) => this.handleMidiMessage(event));
+          // MIDI OUT: native output ports (android.media.midi)
+          await midiOutManager.init();
+          return true;
+        }
+      }
       console.warn("Web MIDI API not supported in this browser environment.");
       return false;
     }

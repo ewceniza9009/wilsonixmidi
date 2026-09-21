@@ -3,6 +3,9 @@
  * Handles MIDI output ports, message sending, and MIDI Clock sync.
  */
 
+import { Capacitor } from "@capacitor/core";
+import { nativeMidiBridge } from "./native-midi-bridge.js";
+
 export class MidiOutManager {
   constructor() {
     this.midiAccess = null;
@@ -20,7 +23,18 @@ export class MidiOutManager {
   }
 
   async init() {
-    if (!this.isSupported) return false;
+    if (!this.isSupported) {
+      // Android System WebView has NO Web MIDI API — use the native MIDI
+      // bridge's output ports (android.media.midi) for full MIDI OUT parity.
+      if (Capacitor.isNativePlatform()) {
+        const ok = await nativeMidiBridge.initOutputs(() => this.updateOutputList());
+        if (ok) {
+          this.nativeOutputs = await nativeMidiBridge.enumerateOutputs();
+          return true;
+        }
+      }
+      return false;
+    }
     try {
       this.midiAccess = await navigator.requestMIDIAccess({ sysex: false });
       this.updateOutputList();
@@ -33,6 +47,12 @@ export class MidiOutManager {
   }
 
   updateOutputList() {
+    if (this.nativeOutputs) {
+      nativeMidiBridge.enumerateOutputs().then((list) => {
+        this.nativeOutputs = list;
+      }).catch(() => {});
+      return;
+    }
     if (!this.midiAccess) return;
     const newOutputs = new Map();
     for (const output of this.midiAccess.outputs.values()) {
@@ -46,6 +66,7 @@ export class MidiOutManager {
   }
 
   getOutputList() {
+    if (this.nativeOutputs) return this.nativeOutputs;
     return Array.from(this.outputs.values()).map((o) => ({
       id: o.id,
       name: o.name || `MIDI Output ${o.id}`,
@@ -56,7 +77,9 @@ export class MidiOutManager {
 
   selectOutput(id, add = false) {
     if (!add) this.selectedOutputIds.clear();
-    if (this.outputs.has(id)) this.selectedOutputIds.add(id);
+    const exists = this.outputs.has(id) ||
+      (this.nativeOutputs && this.nativeOutputs.some((o) => o.id === id));
+    if (exists) this.selectedOutputIds.add(id);
   }
 
   deselectOutput(id) {
@@ -75,6 +98,10 @@ export class MidiOutManager {
 
   // Low-level send
   _send(data) {
+    if (this.nativeOutputs) {
+      nativeMidiBridge.sendRaw(data, Array.from(this.selectedOutputIds));
+      return;
+    }
     for (const output of this.getSelectedOutputs()) {
       try {
         output.send(data);
