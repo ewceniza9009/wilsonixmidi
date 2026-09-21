@@ -1667,6 +1667,7 @@ export class NativePcmEngine {
     this.activeVoices = new Map();
     this.sustainedVoices = new Map();
     this._allActiveVoices = new Set();
+    this._looperPinned = new Set();
 
     this.sustainPedal = false;
     this.sustainHoldSec = 7.0;
@@ -2274,7 +2275,18 @@ export class NativePcmEngine {
                 arrayBuf = this.base64ToArrayBuffer(base64Uri);
                 sampleCache.setSample(cacheKey, arrayBuf, { instId, midi });
               }
-              const audioBuf = await this.decodeAudioBuffer(ctx, arrayBuf);
+              let audioBuf = null;
+              try {
+                audioBuf = await this.decodeAudioBuffer(ctx, arrayBuf);
+              } catch (firstErr) {
+                // Corrupt IndexedDB cache (a known WebView failure mode): retry
+                // with a freshly decoded copy and HEAL the cache entry, so the
+                // instrument recovers permanently instead of falling back to a
+                // wrong-instrument substitute forever.
+                const fresh = this.base64ToArrayBuffer(base64Uri);
+                audioBuf = await this.decodeAudioBuffer(ctx, fresh);
+                sampleCache.setSample(cacheKey, fresh, { instId, midi });
+              }
               const processedBuf = this.createCrossfadedLoopBuffer(
                 ctx,
                 audioBuf,
@@ -2551,7 +2563,44 @@ export class NativePcmEngine {
     if (instIds) {
       for (const id of instIds) if (id) next.add(id);
     }
+    // Looper pins survive preset switches — a recorded clip's frozen preset
+    // instruments are NOT part of the live set and must never be evicted
+    // (eviction dropped them mid-session → silent clip playback, measured).
+    if (this._looperPinned) {
+      for (const id of this._looperPinned) next.add(id);
+    }
     this._pinnedInsts = next;
+  }
+
+  /** Pins instruments for recorded clip presets (survives preset switches). */
+  pinLooperInstruments(instIds) {
+    if (!instIds) return;
+    if (!this._looperPinned) this._looperPinned = new Set();
+    const fresh = [];
+    for (const id of instIds) {
+      if (id && !this._looperPinned.has(id)) {
+        this._looperPinned.add(id);
+        fresh.push(id);
+      }
+    }
+    if (fresh.length && this._pinnedInsts) {
+      for (const id of fresh) this._pinnedInsts.add(id);
+    }
+  }
+
+  unpinLooperInstruments(instIds) {
+    if (!instIds || !this._looperPinned) return;
+    for (const id of instIds) {
+      if (!id) continue;
+      this._looperPinned.delete(id);
+      if (
+        this._pinnedInsts &&
+        !this._looperPinned.has(id) &&
+        !(this._coreInsts && this._coreInsts.has(id))
+      ) {
+        this._pinnedInsts.delete(id);
+      }
+    }
   }
 
   addPinnedInstruments(instIds) {
@@ -2785,13 +2834,9 @@ export class NativePcmEngine {
         !this.decodedBuffers.has(instId) ||
         this.decodedBuffers.get(instId).size === 0
       ) {
+        // Still loading — kick the load and return null (silence) instead of
+        // a grand piano substitute on the first note.
         this.loadAbletunesInstrument(bankKey);
-        const pianoMap = this.decodedBuffers.get("acoustic_grand_piano");
-        if (pianoMap && pianoMap.size > 0) {
-          const result = this.findAnchorInMap(pianoMap, targetMidi);
-          this._anchorCache.set(cacheKey, result);
-          return result;
-        }
         return null;
       }
       const instMap = this.decodedBuffers.get(instId);
@@ -2861,62 +2906,15 @@ export class NativePcmEngine {
 
     let instMap = this.decodedBuffers.get(instId);
     if (!instMap || instMap.size === 0) {
-      // Ensure the real instrument loads so the keyword-based substitute below
-      // is only a transient "ready-gated fallback": decodeEmbeddedAnchors
-      // resolves bank (korg/eos/user) ids AND falls back to loadSoundfont for
-      // GM ids, so a first note / post-eviction note always brings back the
-      // actual sound (byte-identical to the eager boot decode in v2.0.4),
-      // never a permanent piano/EP/sax substitute.
+      // No decoded data for this instrument yet — kick the async decode and
+      // return null (silence). MEASURED FIX: the old keyword-based substitute
+      // (choir/sax/piano map) played a WRONG instrument on the first note and
+      // FOREVER for instruments whose samples failed to decode — the grand
+      // piano "ding" from vox/vocal pads. Silence for the first hit (while
+      // the soundfont decodes) beats a wrong-instrument sound every time.
       this.decodeEmbeddedAnchors(instId).catch(() => {});
-      const str = String(instId || "").toLowerCase();
-      if (
-        str.includes("choir") ||
-        str.includes("ooh") ||
-        str.includes("ahh") ||
-        str.includes("voice")
-      ) {
-        instMap = this.decodedBuffers.get("choir_aahs");
-      } else if (
-        str.includes("tenor_sax") ||
-        str.includes("sensual") ||
-        str.includes("blues_growl")
-      ) {
-        instMap =
-          this.decodedBuffers.get("tenor_sax") ||
-          this.decodedBuffers.get("alto_sax");
-      } else if (str.includes("soprano_sax") || str.includes("soprano")) {
-        instMap =
-          this.decodedBuffers.get("soprano_sax") ||
-          this.decodedBuffers.get("alto_sax");
-      } else if (str.includes("sax")) {
-        instMap =
-          this.decodedBuffers.get("alto_sax") ||
-          this.decodedBuffers.get("tenor_sax");
-      } else if (str.includes("flute") || str.includes("pan_flute")) {
-        instMap = this.decodedBuffers.get("flute");
-      } else if (str.includes("woodwind") || str.includes("clarinet")) {
-        instMap =
-          this.decodedBuffers.get("clarinet") ||
-          this.decodedBuffers.get("alto_sax");
-      } else if (str.includes("string") || str.includes("pad")) {
-        instMap = this.decodedBuffers.get("string_ensemble_1");
-      } else if (str.includes("electric") || str.includes("dx")) {
-        instMap =
-          this.decodedBuffers.get("electric_piano_2") ||
-          this.decodedBuffers.get("electric_piano_1");
-      }
-      if (!instMap || instMap.size === 0)
-        instMap = this.decodedBuffers.get("acoustic_grand_piano");
+      return null;
     }
-    if (!instMap || instMap.size === 0) {
-      for (const map of this.decodedBuffers.values()) {
-        if (map && map.size > 0) {
-          instMap = map;
-          break;
-        }
-      }
-    }
-    if (!instMap || instMap.size === 0) return null;
     const result2 = this.findAnchorInMap(instMap, targetMidi);
     this._anchorCache.set(cacheKey, result2);
     return result2;

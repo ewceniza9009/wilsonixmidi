@@ -462,6 +462,17 @@ export class ClipLooper {
     // FREEZE THE PRESET NOW — this is what the loop will always sound like.
     track.preset = this._snapshotPreset();
 
+    // PIN the frozen preset's instruments so budget-bounded eviction can never
+    // drop them mid-session (evicted instruments → silent clip playback).
+    const pcmEngineForPin = multiLayerEngine.pcmEngine;
+    const pinnedIds = (track.preset.layers || [])
+      .map((l) => l && l.inst)
+      .filter(Boolean);
+    track.pinnedInsts = pinnedIds;
+    if (pcmEngineForPin && typeof pcmEngineForPin.pinLooperInstruments === "function") {
+      pcmEngineForPin.pinLooperInstruments(pinnedIds);
+    }
+
     // Initial sustain state.
     let initialSustain = false;
     if (typeof multiLayerEngine.getSustainPedal === "function") {
@@ -606,6 +617,13 @@ export class ClipLooper {
     if (!audioCore.ctx) return;
     if (!track.preset) track.preset = this._snapshotPreset();
 
+    // Re-pin (idempotent) — a clip played later must keep its instruments
+    // protected from eviction too.
+    if (track.pinnedInsts && multiLayerEngine.pcmEngine &&
+        typeof multiLayerEngine.pcmEngine.pinLooperInstruments === "function") {
+      multiLayerEngine.pcmEngine.pinLooperInstruments(track.pinnedInsts);
+    }
+
     // Reset looper bus sustain state to avoid drift from prior presets
     // (worklet nodes persist across preset changes; this ensures a clean start)
     const pcm = multiLayerEngine.pcmEngine;
@@ -619,6 +637,15 @@ export class ClipLooper {
 
     // Push the frozen preset FX + gains into this track's dedicated buses.
     this._applyPresetToLooperBuses(trackId, preset);
+
+    // Playback start diagnostics: logs the frozen preset composition once per
+    // playback so silent-playback reports can be traced to a specific layer.
+    try {
+      const sum = (preset.layers || [])
+        .map((l, i) => `${i}:${l && l.enabled ? l.inst : "off"}@${l && typeof l.gain === "number" ? l.gain.toFixed(2) : "0"}`)
+        .join(" ");
+      console.log(`[Looper] playback start: track ${trackId}, combi=${!!preset.isCombiMode}, loop=${loopLen.toFixed(2)}s — ${sum}`);
+    } catch (e) {}
 
     const lead = Math.min(
       this.startLeadSec,
@@ -690,7 +717,7 @@ export class ClipLooper {
         Math.min(108, midiNote + (L.oct || 0) * 12),
       );
       try {
-        pcm.playLooperNote(
+        const voice = pcm.playLooperNote(
           trackId,
           slot,
           L.inst,
@@ -699,6 +726,21 @@ export class ClipLooper {
           L.gain * this.looperGain,
           at,
         );
+        // Silent-note detector: null = the looper bus is missing or the
+        // instrument has no decoded anchor. Logged (throttled) so silent
+        // playback can be traced to a specific inst id.
+        if (!voice) {
+          this._silentCount = (this._silentCount || 0) + 1;
+          const now = Date.now();
+          if (!this._silentLogAt || now - this._silentLogAt > 5000) {
+            this._silentLogAt = now;
+            const insts = (preset.layers || [])
+              .filter((l) => l && l.enabled)
+              .map((l) => l.inst)
+              .join(", ");
+            console.warn(`[Looper] SILENT: ${this._silentCount} notes got no voice — track ${trackId} preset [${insts}] (bus missing or no decoded anchor; VA timbres are not replayable by the PCM looper bus)`);
+          }
+        }
       } catch (e) {}
     }
   }
@@ -768,6 +810,11 @@ export class ClipLooper {
       track.countIn = null;
     }
     this._stopCountInClicks();
+    if (track.pinnedInsts && multiLayerEngine.pcmEngine &&
+        typeof multiLayerEngine.pcmEngine.unpinLooperInstruments === "function") {
+      multiLayerEngine.pcmEngine.unpinLooperInstruments(track.pinnedInsts);
+    }
+    track.pinnedInsts = null;
     track.events = [];
     track.loopLen = 0;
     track.preset = null;
