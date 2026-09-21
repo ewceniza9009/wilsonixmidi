@@ -1,7 +1,9 @@
 # WILSONIX MIDIKEY 🎹✨
 
 > **Professional Zero-Latency Live Performance Digital Audio Workstation, Hybrid Rompler & Synthesizer**  
-> _Engineered for high-pressure live stage gigs, church worship, recording studios, and mobile performance across Windows Desktop and Androi[![Platform: Windows](<https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011%20(x64)-0078D6?style=for-the-badge&logo=windows>)](https://github.com/ewceniza9009/wilsonixmidi/releases)
+> _Engineered for high-pressure live stage gigs, church worship, recording studios, and mobile performance across Windows Desktop and Android
+
+[![Platform: Windows](<https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011%20(x64)-0078D6?style=for-the-badge&logo=windows>)](https://github.com/ewceniza9009/wilsonixmidi/releases)
 [![Platform: Android](https://img.shields.io/badge/Platform-Android%208.0%2B%20%7C%20ARM64-3DDC84?style=for-the-badge&logo=android)](https://github.com/ewceniza9009/wilsonixmidi/releases)
 [![Audio: Web Audio API](https://img.shields.io/badge/Audio-Direct%20PCM%20%2B%20VA%20Engine-FF6F00?style=for-the-badge&logo=audio)](https://github.com/ewceniza9009/wilsonixmidi)
 [![Framework: Tauri v2 + Vite](https://img.shields.io/badge/Framework-Tauri%20v2%20%7C%20Rust-673AB7?style=for-the-badge)](https://tauri.app/)
