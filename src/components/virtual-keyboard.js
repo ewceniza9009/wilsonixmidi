@@ -495,9 +495,14 @@ export class VirtualKeyboardUI {
 
     // Robust Multi-Touch Engine for Mobile, Tablets & Android Touchscreens
     // Xiaomi/HyperOS firmware drops touch IDs mid-press (touchcancel without
-    // finger lift). Deferred release: cancelled touches get 200ms grace period
-    // before noteOff fires. If the same finger reappears within that window
-    // the deferred release is cancelled and the note stays held.
+    // finger lift). Deferred release: cancelled touches get a 1500ms grace
+    // period before noteOff fires. MEASURED on Pad 6: after the system cancel
+    // the native input stream pauses ~300-700ms before resuming — a 200ms
+    // grace fired MID-HOLD (notes died then retriggered ~0.5s later). 1500ms
+    // outlasts the pause: the resuming native MOVE (or re-delivered touchstart)
+    // cancels the deferral and the note stays held. If the user truly lifts
+    // during the dead window the note hangs at most until the timer, and the
+    // resumed stream's reconcile cleans it sooner.
     this._cancelledTouchTimers = new Map();
 
     track.addEventListener(
@@ -608,7 +613,15 @@ export class VirtualKeyboardUI {
         }
 
         if (isCancel) {
-          // Defer release — Xiaomi firmware may re-emit this touch within 200ms
+          // Defer release — Xiaomi firmware may re-emit this touch within 1500ms
+          // (see grace-period note above — the stream pauses before resuming).
+          // CRITICAL: clear any PREVIOUS timer for this touch first — set()
+          // alone overwrites the map entry but LEAKS the old timer, which still
+          // fires and kills the note mid-hold even while the cancel storm keeps
+          // re-arming (measured: notes died every ~1200ms while held and stuck
+          // after release).
+          const existingTimer = this._cancelledTouchTimers.get(touchId);
+          if (existingTimer) clearTimeout(existingTimer);
           const timer = setTimeout(() => {
             this._cancelledTouchTimers.delete(touchId);
             if (this.activeTouches.has(touchId)) {
@@ -622,7 +635,7 @@ export class VirtualKeyboardUI {
               });
               this.activeTouches.delete(touchId);
             }
-          }, 200);
+          }, 1500);
           this._cancelledTouchTimers.set(touchId, timer);
         } else {
           // Real finger lift — release immediately
@@ -647,7 +660,15 @@ export class VirtualKeyboardUI {
 
       // Reconcile stuck touches if all fingers were lifted or system gesture cancelled touches
       if (e.touches) {
-        if (e.touches.length === 0 && this.activeTouches.size > 0) {
+        // CRITICAL: only treat e.touches.length===0 as "user lifted everything"
+        // when this is a REAL touchend. A full-stream touchcancel ALSO reports
+        // 0 active touches — clearing the deferred releases there made the
+        // 200ms Xiaomi grace period dead code and killed 3-finger chords
+        // instantly (measured on Pad 6: continuous CANCEL, 0 still active).
+        // For touchcancel the deferred timers stay armed: reappearance via a
+        // re-delivered touchstart (or a native-bridge MOVE) cancels them and
+        // the notes survive.
+        if (e.touches.length === 0 && this.activeTouches.size > 0 && !isCancel) {
           // Cancel all pending deferred releases — user lifted everything
           for (const [timerId] of this._cancelledTouchTimers) {
             clearTimeout(this._cancelledTouchTimers.get(timerId));
@@ -697,6 +718,64 @@ export class VirtualKeyboardUI {
     track.addEventListener("touchcancel", handleTouchRelease, { passive: false });
     this._onWindow(window, "touchend", handleTouchRelease, { passive: false });
     this._onWindow(window, "touchcancel", handleTouchRelease, { passive: false });
+
+    // Native touch bridge: MainActivity.dispatchTouchEvent forwards the raw
+    // input stream here (window.__nativeTouch). The piano is then driven from
+    // native events — immune to the Xiaomi/HyperOS cancel storm that kills the
+    // WebView's page-touch pipeline. Android pointer ids are IDENTICAL to web
+    // touch identifiers (WebView maps 1:1), so dedup is by id: a native DOWN
+    // for a touch the web stream already triggered is filtered out — no
+    // double-voices. A native MOVE proves the finger is still down, so it
+    // cancels any deferred release and keeps notes alive through the storm.
+    window.__nativeTouch = (data) => {
+      if (!data || !Array.isArray(data.pointers)) return;
+      const pts = data.pointers;
+      const action = data.action;
+      const idx = typeof data.i === "number" ? data.i : -1;
+
+      const synth = (type, changedList, touchesList) => {
+        try {
+          const target = track;
+          const toTouch = t => new Touch({ identifier: t.identifier, target, clientX: t.clientX, clientY: t.clientY });
+          const ev = new TouchEvent(type, {
+            changedTouches: changedList.map(toTouch),
+            touches: (touchesList || changedList).map(toTouch),
+            cancelable: false,
+            bubbles: true,
+          });
+          target.dispatchEvent(ev);
+        } catch (e) {}
+      };
+
+      if (action === "DOWN" || action === "POINTER_DOWN") {
+        const fresh = pts.filter(p => !this.activeTouches.has(p.id) && !this._cancelledTouchTimers.has(p.id));
+        if (fresh.length) synth("touchstart", fresh);
+      } else if (action === "MOVE") {
+        const moved = [];
+        const lost = [];
+        for (const p of pts) {
+          const timer = this._cancelledTouchTimers.get(p.id);
+          if (timer) {
+            clearTimeout(timer);
+            this._cancelledTouchTimers.delete(p.id);
+          }
+          if (this.activeTouches.has(p.id)) moved.push({ identifier: p.id, clientX: p.x, clientY: p.y });
+          else lost.push(p);
+        }
+        if (lost.length) synth("touchstart", lost);
+        if (moved.length) synth("touchmove", moved, pts.map(p => ({ identifier: p.id, clientX: p.x, clientY: p.y })));
+      } else if (action === "UP" || action === "POINTER_UP") {
+        const lifted = (action === "UP") ? pts.slice() : pts.filter((p, i2) => i2 === idx);
+        if (lifted.length) {
+          this._cancelledTouchTimers.forEach((t, id) => {
+            if (lifted.some(p => p.id === id)) this._cancelledTouchTimers.delete(id);
+          });
+          synth("touchend", lifted, pts.filter(p => !lifted.includes(p)));
+        }
+      } else if (action === "CANCEL") {
+        synth("touchcancel", pts, []);
+      }
+    };
   }
 
   bindWheels() {

@@ -30,6 +30,35 @@ export class LoggerUI {
     this.render();
     this.bind();
     this.start();
+    this._setupTouchDiagnostics();
+  }
+
+  // Multitouch diagnostics: tracks the max simultaneous pointers the WEB layer
+  // receives (capture phase — the keyboard's stopPropagation() cannot hide
+  // piano touches from this). Pair with logcat tag MIDIKEY_TOUCH (native
+  // dispatchTouchEvent) to locate where a 3rd finger dies:
+  //   - Native sees 3+, web sees 2 → WebView/input layer eats it (fixable in app)
+  //   - Native never sees 3 → Xiaomi/HyperOS system-level interception
+  //     (no app API can bypass it — Game Turbo / system settings only)
+  _setupTouchDiagnostics() {
+    if (typeof window === "undefined" || !("ontouchstart" in window)) return;
+    this._maxTouch = 0;
+    window.addEventListener("touchstart", (e) => {
+      const count = e.touches?.length ?? 0;
+      if (count > this._maxTouch) {
+        this._maxTouch = count;
+        const el = document.getElementById("stat-maxtouch");
+        if (el) el.textContent = String(this._maxTouch);
+        if (this._maxTouch >= 3) {
+          this.log(`Multitouch OK: ${this._maxTouch} simultaneous touches reached the app`, "info");
+        }
+      }
+    }, { capture: true, passive: true });
+    window.addEventListener("touchcancel", (e) => {
+      const changed = e.changedTouches?.length ?? 0;
+      const stillActive = e.touches?.length ?? 0;
+      this.log(`Touch CANCEL: ${changed} touch(es) cancelled by system, ${stillActive} still active`, "warn");
+    }, { capture: true, passive: true });
   }
 
   // Loads crash details persisted SYNCHRONOUSLY by the global error reporter
@@ -118,11 +147,12 @@ export class LoggerUI {
             <div class="stat-label">JS HEAP</div>
             <div class="stat-value" id="stat-heap">—</div>
             <div class="stat-sub" id="stat-heap-sub">used / limit</div>
+            <div class="stat-sub" id="stat-heap-split">—</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">DECODED RAM</div>
             <div class="stat-value" id="stat-decoded">—</div>
-            <div class="stat-sub">PCM buffers</div>
+            <div class="stat-sub" id="stat-decoded-sub">PCM buffers</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">AUDIO LATENCY</div>
@@ -143,6 +173,11 @@ export class LoggerUI {
             <div class="stat-label">SPikes</div>
             <div class="stat-value" id="stat-spikes">0</div>
             <div class="stat-sub">>50ms frames</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">MAX TOUCH</div>
+            <div class="stat-value" id="stat-maxtouch">0</div>
+            <div class="stat-sub">simultaneous pointers</div>
           </div>
         </div>
 
@@ -282,7 +317,15 @@ export class LoggerUI {
         else suggestion = 'Long frame task';
       } catch(e){}
       const stackSnippet = (new Error().stack?.split('\n').slice(2,5).join(' | ') || '—');
-      this.log(`CPU spike ${dt.toFixed(1)}ms | heap ${heap}MB | latency ${lat}ms | fps ${(1000/dt).toFixed(0)} | sound ${soundInfo} | voices ${voiceInfo} | why ${suggestion} | stack ${stackSnippet}`, "warn");
+      let decMB = 0, churnMB = 0;
+      try {
+        const provider = window.__midikeyMemoryProvider?.();
+        if (provider && Number.isFinite(provider.bytes)) {
+          decMB = Math.round(provider.bytes / 1024 / 1024);
+          churnMB = mem.available ? Math.round(Math.max(0, mem.used - provider.bytes) / 1024 / 1024) : 0;
+        }
+      } catch(e){}
+      this.log(`CPU spike ${dt.toFixed(1)}ms | heap ${heap}MB | decoded ${decMB}MB | churn ${churnMB}MB | latency ${lat}ms | fps ${(1000/dt).toFixed(0)} | sound ${soundInfo} | voices ${voiceInfo} | why ${suggestion} | stack ${stackSnippet}`, "warn");
     }
 
     this._updateFrameStats();
@@ -308,13 +351,21 @@ export class LoggerUI {
     const heapUsed = mem.usedMB ?? 0;
     const heapLimit = mem.limitMB ?? 0;
 
-    // Decoded RAM estimate via window.__memoryManager? Fall back to provider usage.
-    let decodedMB = "—";
+    // Heap breakdown: decoded PCM (main-thread AudioBuffers + worklet catalog)
+    // vs everything else ("churn" = JS objects, caches, GC overhead). A large
+    // churn share is the GC-thrash signature on Android WebView; a large
+    // decoded share means the sample catalog itself is filling the heap.
+    let decodedBytes = 0;
+    let instInfo = "";
     try {
       const provider = window.__midikeyMemoryProvider?.();
-      if (provider && provider.bytes) decodedMB = Math.round(provider.bytes/1024/1024);
+      if (provider && Number.isFinite(provider.bytes)) decodedBytes = provider.bytes;
+      const stats = multiLayerEngine?.pcmEngine?.getDecodedBufferStats?.();
+      if (stats) instInfo = `${stats.instCount} inst / ${stats.bufferCount} bufs / pin ${stats.pinned}`;
     } catch(e){}
-    // fallback: try to read from sampleCache? skip.
+    const decodedMB = decodedBytes ? Math.round(decodedBytes / 1024 / 1024) : "—";
+    const churnBytes = (mem.available && decodedBytes) ? Math.max(0, mem.used - decodedBytes) : null;
+    const churnTxt = churnBytes !== null ? `${Math.round(churnBytes / 1024 / 1024)}MB` : "—";
 
     const latencyMs = latency.measuredMs ?? latency.reportedMs ?? 0;
     const sample = {
@@ -332,8 +383,9 @@ export class LoggerUI {
         let why = 'Heap growth';
         try { soundInfo = synthEngine?.getActiveSoundId?.() || multiLayerEngine?.layers?.[0]?.inst || '—'; } catch(e){}
         if (decodedMB !== '—' && typeof decodedMB === 'number' && decodedMB > 80) why = 'Large decoded samples';
+        else if (typeof churnBytes === 'number' && churnBytes > 200 * 1024 * 1024) why = 'Object churn (GC)';
         else why = 'Allocation burst';
-        this.log(`Memory spike +${(heapUsed - prev.heapUsed).toFixed(0)}MB → ${heapUsed}MB | decoded ${decodedMB}MB | sound ${soundInfo} | why ${why}`, "warn");
+        this.log(`Memory spike +${(heapUsed - prev.heapUsed).toFixed(0)}MB → ${heapUsed}MB | decoded ${decodedMB}MB | churn ${churnTxt} | sound ${soundInfo} | why ${why}`, "warn");
       }
       if (latencyMs && prev.latencyMs && (latencyMs - prev.latencyMs) > 10) {
         this.log(`Audio latency jump +${(latencyMs - prev.latencyMs).toFixed(1)}ms → ${latencyMs.toFixed(1)}ms | why buffer pressure`, "warn");
@@ -344,7 +396,11 @@ export class LoggerUI {
 
     document.getElementById("stat-heap").textContent = `${heapUsed} MB`;
     document.getElementById("stat-heap-sub").textContent = heapLimit ? `/${heapLimit} MB` : "";
+    const splitEl = document.getElementById("stat-heap-split");
+    if (splitEl) splitEl.textContent = `pcm ${typeof decodedMB === "number" ? decodedMB : "—"} · churn ${churnTxt}`;
     document.getElementById("stat-decoded").textContent = typeof decodedMB === "number" ? `${decodedMB} MB` : decodedMB;
+    const decodedSubEl = document.getElementById("stat-decoded-sub");
+    if (decodedSubEl && instInfo) decodedSubEl.textContent = instInfo;
     document.getElementById("stat-latency").textContent = latencyMs ? `${latencyMs.toFixed(1)}` : "—";
 
     this._drawChart();

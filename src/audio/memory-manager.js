@@ -61,6 +61,30 @@ function triggerEvictionCallbacks() {
   }
 }
 
+/** App-level memory budget (shared by the monitor thresholds and the HUD pill). */
+let cachedBudget = null;
+
+export function getAppMemoryBudget() {
+  if (cachedBudget) return cachedBudget;
+  const config = getDeviceConfig();
+  let bytes;
+  if (config.tier === "low") {
+    bytes = 150 * 1024 * 1024;
+  } else if (config.tier === "high" && !config.isMobile) {
+    bytes = 2200 * 1024 * 1024; // 2.2GB for desktop — decoded catalog fits
+  } else if (config.isMobile) {
+    // 900MB for Android/iOS high-tier — WebView reports a conservative V8
+    // estimate (~376MB) that the real renderer demonstrably exceeds because
+    // decoded AudioBuffers live outside the V8 heap.
+    bytes = config.isAndroid ? 900 * 1024 * 1024 : 700 * 1024 * 1024;
+  } else {
+    // Mid tier: 900MB for Android, 400MB for others
+    bytes = config.isAndroid ? 900 * 1024 * 1024 : 400 * 1024 * 1024;
+  }
+  cachedBudget = bytes;
+  return bytes;
+}
+
 export function initMemoryMonitor() {
   if (isMonitoring) return;
 
@@ -72,19 +96,9 @@ export function initMemoryMonitor() {
 
   const config = getDeviceConfig();
   // Limits tuned to the lazy-decode baseline (boot decodes only the default
-  // preset's 3-4 instruments). Mobile stays strict to avoid OOM crash;
+  // preset's 3-4 instruments). Low-tier stays strict to avoid OOM crash;
   // desktop (16GB) can hold a much larger decoded catalog safely.
-  let heapLimit;
-  if (config.tier === "low") {
-    heapLimit = 150 * 1024 * 1024;
-  } else if (config.tier === "high" && !config.isMobile) {
-    heapLimit = 2200 * 1024 * 1024; // 2.2GB for desktop — decoded catalog fits
-  } else if (config.tier === "high") {
-    heapLimit = 700 * 1024 * 1024; // 700MB for high-tier Android
-  } else {
-    // Mid tier: 500MB for Android, 400MB for others
-    heapLimit = config.isAndroid ? 500 * 1024 * 1024 : 400 * 1024 * 1024;
-  }
+  const heapLimit = getAppMemoryBudget();
   const warningThreshold = heapLimit * 0.85;
   const criticalThreshold = heapLimit * 0.95;
 
@@ -216,13 +230,19 @@ export function getMemoryStats() {
     return { available: false };
   }
   const mem = performance.memory;
+  // Chromium's jsHeapSizeLimit is a conservative V8 estimate baked into the
+  // WebView renderer (read-only, unaffected by largeHeap). The app budget is
+  // the honest ceiling — report whichever is larger so the pill's denominator
+  // reflects the real usable memory on Android.
+  const budget = getAppMemoryBudget();
+  const limit = Math.max(mem.jsHeapSizeLimit || 0, budget);
   return {
     used: mem.usedJSHeapSize,
     total: mem.totalJSHeapSize,
-    limit: mem.jsHeapSizeLimit,
+    limit,
     usedMB: Math.round(mem.usedJSHeapSize / 1024 / 1024),
     totalMB: Math.round(mem.totalJSHeapSize / 1024 / 1024),
-    limitMB: Math.round(mem.jsHeapSizeLimit / 1024 / 1024),
+    limitMB: Math.round(limit / 1024 / 1024),
   };
 }
 

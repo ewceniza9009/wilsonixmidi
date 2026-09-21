@@ -3,6 +3,7 @@ package com.wilsonix.midikey;
 import android.graphics.Rect;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewParent;
@@ -71,6 +72,40 @@ public class MainActivity extends BridgeActivity {
         }
     }
 
+    // Touch diagnostics: logs pointer-count transitions + system cancels to
+    // logcat (tag MIDIKEY_TOUCH). Tells us definitively whether Xiaomi/HyperOS
+    // swallows the 3rd finger BEFORE the app (native never sees it) or the
+    // events arrive and something else eats them. Logs only on pointer-count
+    // changes / ACTION_CANCEL — negligible cost, no hot-path spam.
+    private int mLastLoggedPointerCount = -1;
+
+    // Native → web touch forwarding: feeds the raw dispatchTouchEvent stream to
+    // the page (window.__nativeTouch) so the piano can be driven from native
+    // events — immune to the Xiaomi/HyperOS cancel storm that kills the
+    // WebView's page-touch pipeline. Pointer ids match web touch identifiers
+    // (WebView maps Android pointers 1:1). MOVEs throttle to ~125Hz; other
+    // actions forward immediately.
+    private android.webkit.WebView mBridgeWebView;
+    private long mLastMoveForward = 0;
+
+    private void forwardTouchToWeb(MotionEvent ev, String actionName, int actionIndex) {
+        if (mBridgeWebView == null) return;
+        try {
+            int pc = ev.getPointerCount();
+            StringBuilder sb = new StringBuilder("{\"action\":\"").append(actionName)
+                .append("\",\"i\":").append(actionIndex).append(",\"pointers\":[");
+            for (int i = 0; i < pc; i++) {
+                if (i > 0) sb.append(',');
+                sb.append("{\"id\":").append(ev.getPointerId(i))
+                  .append(",\"x\":").append(ev.getX(i))
+                  .append(",\"y\":").append(ev.getY(i)).append('}');
+            }
+            sb.append("]}");
+            mBridgeWebView.evaluateJavascript(
+                "window.__nativeTouch&&window.__nativeTouch(" + sb + ")", null);
+        } catch (Exception ignored) {}
+    }
+
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
         // Prevent system or parent views from intercepting multi-finger chord playing
@@ -81,6 +116,48 @@ public class MainActivity extends BridgeActivity {
                 if (parent != null) {
                     parent.requestDisallowInterceptTouchEvent(true);
                 }
+            }
+        }
+
+        int pc = ev.getPointerCount();
+        int action = ev.getActionMasked();
+        int actionIndex = ev.getActionIndex();
+
+        // Touch diagnostic logging (throttled to pointer-count transitions)
+        if (action == MotionEvent.ACTION_CANCEL || pc != mLastLoggedPointerCount) {
+            mLastLoggedPointerCount = (action == MotionEvent.ACTION_CANCEL) ? 0 : pc;
+            String actionName;
+            switch (action) {
+                case MotionEvent.ACTION_DOWN: actionName = "DOWN"; break;
+                case MotionEvent.ACTION_POINTER_DOWN: actionName = "POINTER_DOWN"; break;
+                case MotionEvent.ACTION_MOVE: actionName = "MOVE"; break;
+                case MotionEvent.ACTION_UP: actionName = "UP"; break;
+                case MotionEvent.ACTION_POINTER_UP: actionName = "POINTER_UP"; break;
+                case MotionEvent.ACTION_CANCEL: actionName = "CANCEL"; break;
+                default: actionName = "0x" + Integer.toHexString(action); break;
+            }
+            Log.d("MIDIKEY_TOUCH", "pointers=" + pc + " action=" + actionName);
+        }
+
+        // Forward the raw stream to the web layer (native touch bridge)
+        if (mBridgeWebView == null && getBridge() != null) {
+            mBridgeWebView = getBridge().getWebView();
+        }
+        String fwdName;
+        switch (action) {
+            case MotionEvent.ACTION_DOWN: fwdName = "DOWN"; break;
+            case MotionEvent.ACTION_POINTER_DOWN: fwdName = "POINTER_DOWN"; break;
+            case MotionEvent.ACTION_MOVE: fwdName = "MOVE"; break;
+            case MotionEvent.ACTION_UP: fwdName = "UP"; break;
+            case MotionEvent.ACTION_POINTER_UP: fwdName = "POINTER_UP"; break;
+            case MotionEvent.ACTION_CANCEL: fwdName = "CANCEL"; break;
+            default: fwdName = null; break;
+        }
+        if (fwdName != null) {
+            long now = android.os.SystemClock.uptimeMillis();
+            if (action != MotionEvent.ACTION_MOVE || (now - mLastMoveForward) >= 8) {
+                if (action == MotionEvent.ACTION_MOVE) mLastMoveForward = now;
+                forwardTouchToWeb(ev, fwdName, actionIndex);
             }
         }
         return super.dispatchTouchEvent(ev);

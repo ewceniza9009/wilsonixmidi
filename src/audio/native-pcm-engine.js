@@ -2602,13 +2602,17 @@ export class NativePcmEngine {
     }
     // Unknown Android fallback: 256MB (safer than the old 128MB, still OOM-safe).
     if (deviceMem <= 0) return 256 * 1024 * 1024;
-    // Scale budget proportionally: 3GB RAM → 192MB, 6GB → 384MB, 8GB → 512MB,
-    // 12GB → 768MB, 16GB+ → 1024MB (1GB). Caps prevent extremes on very low-end.
+    // Scale budget proportionally to device RAM. Decoded PCM lives in NATIVE
+    // memory (outside the V8 heap), so the ceiling that matters here is device
+    // RAM, not jsHeapSizeLimit. MEASURED on an 8GB Pad 6: the old 384MB cap
+    // sat BELOW the 753MB working set of heavy presets, so cold-eviction fired
+    // constantly (churn + dropouts). 900MB holds the working set; low tiers
+    // stay strict for OOM safety.
     if (deviceMem <= 2) return 64 * 1024 * 1024;
     if (deviceMem <= 4) return 128 * 1024 * 1024;
     if (deviceMem <= 6) return 256 * 1024 * 1024;
-    if (deviceMem <= 8) return 384 * 1024 * 1024;
-    if (deviceMem <= 12) return 512 * 1024 * 1024;
+    if (deviceMem <= 8) return 900 * 1024 * 1024;
+    if (deviceMem <= 12) return 1024 * 1024 * 1024;
     return 1024 * 1024 * 1024; // 1GB for 12GB+ RAM devices
   }
 
