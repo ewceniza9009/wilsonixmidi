@@ -4,6 +4,7 @@
  */
 
 import { audioCore } from "../audio/audio-core.js";
+import { multiLayerEngine } from "../audio/multi-layer-engine.js";
 
 /**
  * Formats a knob value for its unit, shared by both the global sync path
@@ -63,7 +64,9 @@ export class FxRackUI {
         <div class="fx-rack-header">
           <span class="rack-title">WORKSTATION DEVICE RACK</span>
           <span class="rack-tag">ZERO-BUFFER ARCHITECTURE</span>
+          <span class="rack-preset-tag" id="rack-active-preset">MASTER FX: DEFAULT</span>
         </div>
+        <div class="rack-layer-fx-line" id="rack-layer-fx-line"></div>
 
         <div class="devices-scroll-bay">
           <!-- Device 0: Grand Piano Physical Acoustics & Resonance Modeling -->
@@ -844,6 +847,27 @@ export class FxRackUI {
   syncWithRack() {
     if (!audioCore.fxRack || !this.container) return;
     const fx = audioCore.fxRack;
+
+    // Active-preset + per-layer FX display: makes the rack VISIBLY respond to
+    // preset switches (the master-chain state alone looks identical for most
+    // presets). Reads the engine's active combi + layer FX on every sync.
+    try {
+      const ml = multiLayerEngine || null;
+      const presetEl = document.getElementById("rack-active-preset");
+      const lineEl = document.getElementById("rack-layer-fx-line");
+      if (presetEl) {
+        const name = ml?.activeCombi?.name || ml?.activeSingleInst || null;
+        presetEl.textContent = name ? `ACTIVE: ${name}` : "MASTER FX: DEFAULT";
+      }
+      if (lineEl) {
+        const layers = ml?.layers || [];
+        const fxSum = layers
+          .map((l, i) => (l && l.enabled ? `L${i + 1}: ${String(l.fx || "clean").toUpperCase().replace(/_/g, " ")}` : null))
+          .filter(Boolean)
+          .join(" · ");
+        lineEl.textContent = fxSum || "";
+      }
+    } catch (e) {}
 
     const devMap = {
       "piano-acoustics": fx.pianoAcoustics?.enabled,

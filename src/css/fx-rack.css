@@ -41,6 +41,31 @@
   border-radius: var(--radius-full);
 }
 
+.rack-preset-tag {
+  font-size: 0.58rem;
+  font-weight: 800;
+  color: var(--accent-cyan, #22d3ee);
+  background: rgba(34, 211, 238, 0.12);
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  max-width: 46%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rack-layer-fx-line {
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+  padding: 2px 2px 3px 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
 /* Responsive Studio FX Rack Grid */
 .devices-scroll-bay {
   display: grid;

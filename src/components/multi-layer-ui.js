@@ -555,7 +555,7 @@ export class MultiLayerUI {
           (t.category || "").toLowerCase().includes(q) ||
           (t.code || "").toLowerCase().includes(q)
         );
-        items = items.slice(0, 60);
+        items = items.slice(0, 80);
         const selVal = selectedValue();
         const selName = selectedName();
 
@@ -676,5 +676,60 @@ export class MultiLayerUI {
       btn.classList.toggle("active", btn.getAttribute("data-combi-search") === multiLayerEngine.activeCombi?.id);
     });
     this.filterProgramGrid();
+  }
+
+  filterProgramGrid() {
+    // Rebuild-free filter: updates the combi preset <select> and the search
+    // result chips for the current query. CRITICAL FIX: the original method
+    // definition was lost in an earlier refactor — its call sites (the search
+    // debounce + updateCombiSelectorActive) threw a TypeError on every search
+    // keystroke and preset switch.
+    const q = (this.combiSearchQuery || "").toLowerCase();
+    const allPresets = Object.values(COMBI_PRESETS);
+    const catOrder = [];
+    allPresets.forEach(cp => {
+      if (cp.category && !catOrder.includes(cp.category)) catOrder.push(cp.category);
+    });
+
+    const presetSelect = this.container?.querySelector("#combi-preset-select");
+    if (presetSelect) {
+      presetSelect.innerHTML = catOrder
+        .map(cat => `
+          <optgroup label="${esc(cat)}">
+            ${allPresets
+              .filter(cp => cp.category === cat)
+              .filter(cp => !q || cp.name.toLowerCase().includes(q) || cp.category.toLowerCase().includes(q))
+              .map(cp => `<option value="${esc(cp.id)}" ${multiLayerEngine.activeCombi.id === cp.id ? "selected" : ""}>${esc(cp.name)}</option>`)
+              .join("")}
+          </optgroup>
+        `)
+        .join("");
+    }
+
+    let results = this.container?.querySelector("#combi-search-results");
+    if (!results && q) {
+      results = document.createElement("div");
+      results.className = "combi-search-results";
+      results.id = "combi-search-results";
+      const userBar = this.container?.querySelector(".user-presets-bar");
+      userBar?.parentNode?.insertBefore(results, userBar);
+    }
+    if (results) {
+      results.innerHTML = !q
+        ? ""
+        : allPresets
+            .filter(cp => cp.name.toLowerCase().includes(q) || (cp.category && cp.category.toLowerCase().includes(q)))
+            .slice(0, 15)
+            .map(cp => `<button class="combi-search-chip ${multiLayerEngine.activeCombi.id === cp.id ? "active" : ""}" data-combi-search="${esc(cp.id)}">${esc(cp.name)}</button>`)
+            .join("");
+    }
+
+    this.container?.querySelectorAll("[data-combi-search]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        multiLayerEngine.setCombiPreset(btn.getAttribute("data-combi-search"));
+        this.combiSearchQuery = "";
+        this.updateCombiSelectorActive();
+      });
+    });
   }
 }

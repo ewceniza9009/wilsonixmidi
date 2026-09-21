@@ -63,8 +63,84 @@ export const COMBI_TIMBRES = (() => {
       code: prog.id,
     });
   });
+  // Picker order: the playable singles (pianos, keys, strings, brass,
+  // woodwinds, mallets, organs, voices) come FIRST and the EDM/FX/percussion
+  // banks come LAST. The combi picker shows the first 60 rows with no search
+  // query — the old map order (Animal/Bloom EDM spread first in
+  // HD_SOUNDBANKS) swarmed it with EDM entries and buried the sax/vibes-style
+  // singles past the cap (measured complaint).
+  const CATEGORY_ORDER = [
+    "Acoustic Piano", "Electric Piano", "Organ", "Organ & Bass", "Organ & Pad",
+    "Strings", "Strings & Choir", "Brass", "Woodwind", "Guitar",
+    "Bells & Mallet", "Bells & Pad", "Bass & Sub", "Synth Pad", "Synth",
+    "Human Voices", "VA Synth",
+  ];
+  const rank = (cat) => {
+    const i = CATEGORY_ORDER.indexOf(cat);
+    return i === -1 ? CATEGORY_ORDER.length : i;
+  };
+  out.sort((a, b) => rank(a.category) - rank(b.category));
   return out;
 })();
+
+/**
+ * Default master-chain FX preset per combi id — used when the combi object
+ * has no fxPreset of its own. MEASURED FIX: 52 of 56 combis had no fxPreset,
+ * so applyPreset(null) fell to the default rack state and the WORKSTATION
+ * DEVICE RACK looked identical for nearly every preset switch. This map gives
+ * each stack a master FX character matching its genre.
+ */
+export const DEFAULT_COMBI_FX_PRESETS = {
+  synthesizer_you_surf: "synthesizer_you_surf",
+  synthesizer_you_pad: "synthesizer_you_pad",
+  synthesizer_you: "synthesizer_you_pad",
+  animal_festival_stack: "dub_space_echo",
+  bloom_future_bass_stack: "juno_synth_pad",
+  whitney_ballad: "whitney_ballad",
+  ballad_master: "foster_ballad",
+  celestial_worship: "shimmer_ethereal",
+  m1_90s_house: "rnb_ep",
+  clean_electric_piano: "dx7_ep1",
+  smooth_rnb: "rnb_ep",
+  neo_soul_chill: "rnb_ep",
+  lofi_vinyl_ep: "lofi_vinyl_tape",
+  gospel_praise: "rooftop_cathedral",
+  ambient_space: "shimmer_ethereal",
+  stadium_synth: "synth_lead",
+  hard_rock_shred: "shreddage_lead_guitar",
+  smooth_latin_jazz: "rnb_ep",
+  synthwave_80s_drive: "juno_synth_pad",
+  acoustic_cafe_lounge: "lofi_vinyl_tape",
+  vintage_funk_fusion: "funk_auto_wah",
+  power_ballad_1989: "foster_ballad",
+  gospel_cathedral: "rooftop_cathedral",
+  cyberpunk_arena: "dub_space_echo",
+  cinematic_symphony: "warm_strings",
+  chicago_blues_rock: "rock_lead",
+  tokyo_city_pop: "dx7_ep1",
+  neo_classical_ambient: "shimmer_ethereal",
+  acid_jazz_groove: "m1_organ",
+  jazz_funk_soul: "funk_auto_wah",
+  bossa_nova_sunset: "m1_universe",
+  sun_rai_street: "lofi_vinyl_tape",
+  acid_jazz_afterhours: "m1_organ",
+  smooth_jazz_radio: "rnb_ep",
+  funk_brothers: "funk_auto_wah",
+  soul_train_70s: "slapback_vocal",
+  lofi_study_beats: "lofi_vinyl_tape",
+  gospel_shout: "rooftop_cathedral",
+  yamaha_cfx_stage: "triton_dyno_ep",
+  sweet_soprano_ballad: "whitney_ballad",
+  unplugged_morning: "m1_fresh_air",
+  sunday_pipe_praise: "rooftop_cathedral",
+  yacht_rock_79: "whitney_ballad",
+  shreddage_arena: "shreddage_lead_guitar",
+  final_countdown: "synth_lead",
+  europe_ambient: "shimmer_ethereal",
+  afro_cuban_congas: "reggae_dub",
+  analog_synth_drum_space: "dub_space_echo",
+  studio_acoustic_kit: "gated_snare_room",
+};
 
 export const COMBI_PRESETS = {
   synthesizer_you_surf: {
@@ -4085,11 +4161,8 @@ export class MultiLayerEngine {
 
     // Always apply FX preset when switching combi presets
     if (audioCore.fxRack) {
-      if (this.activeCombi.fxPreset) {
-        audioCore.fxRack.applyPreset(this.activeCombi.fxPreset);
-      } else {
-        audioCore.fxRack.applyPreset(null);
-      }
+      const fxPreset = this.activeCombi.fxPreset || DEFAULT_COMBI_FX_PRESETS[this.activeCombi.id] || null;
+      audioCore.fxRack.applyPreset(fxPreset);
     }
 
     if (INSTRUMENT_PATCHES[presetId]) {
