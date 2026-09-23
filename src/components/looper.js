@@ -15,6 +15,7 @@ import { audioCore } from "../audio/audio-core.js";
 import { synthEngine } from "../audio/synth-engine.js";
 import { multiLayerEngine } from "../audio/multi-layer-engine.js";
 import { noteScheduler } from "../audio/lookahead-scheduler.js";
+import { getTritonProgramById } from "../triton/combi-timbres.js";
 
 let __clipLooperHooked = false;
 
@@ -600,6 +601,9 @@ export class ClipLooper {
   // ──────────────────────────────────────────────────────────────────────
 
   togglePlay(trackId) {
+    if (audioCore && typeof audioCore.ensureRunning === "function") {
+      audioCore.ensureRunning();
+    }
     const track = this.tracks[trackId];
     if (track.state === "playing") {
       this.stopPlayback(trackId);
@@ -612,6 +616,9 @@ export class ClipLooper {
   }
 
   startPlayback(trackId) {
+    if (audioCore && typeof audioCore.ensureRunning === "function") {
+      audioCore.ensureRunning();
+    }
     const track = this.tracks[trackId];
     this.stopPlayback(trackId);
     if (!audioCore.ctx) return;
@@ -622,6 +629,17 @@ export class ClipLooper {
     if (track.pinnedInsts && multiLayerEngine.pcmEngine &&
         typeof multiLayerEngine.pcmEngine.pinLooperInstruments === "function") {
       multiLayerEngine.pcmEngine.pinLooperInstruments(track.pinnedInsts);
+    }
+
+    // Preload / kick async decode for any non-loaded PCM instruments in this preset
+    if (track.preset.layers && multiLayerEngine.pcmEngine) {
+      for (const L of track.preset.layers) {
+        if (L && L.enabled && L.inst && !L.inst.startsWith("va:") && !L.vaProg) {
+          if (!multiLayerEngine.pcmEngine.decodedBuffers.has(L.inst)) {
+            multiLayerEngine.pcmEngine.decodeEmbeddedAnchors(L.inst).catch(() => {});
+          }
+        }
+      }
     }
 
     // Reset looper bus sustain state to avoid drift from prior presets
@@ -706,9 +724,6 @@ export class ClipLooper {
   }
 
   _playLooperEvent(trackId, preset, midiNote, velocity, at) {
-    const pcm = multiLayerEngine.pcmEngine;
-    if (!pcm || typeof pcm.playLooperNote !== "function") return;
-
     for (let slot = 0; slot < 4; slot++) {
       const L = preset.layers[slot];
       if (!L || !L.enabled) continue;
@@ -716,6 +731,26 @@ export class ClipLooper {
         21,
         Math.min(108, midiNote + (L.oct || 0) * 12),
       );
+
+      // 1. Virtual Analog (VA) Synth Timbre Route (Triton VA / Combi VA layers)
+      const isVa = !!(L.vaProg || (L.inst && L.inst.startsWith("va:")));
+      if (isVa) {
+        const progId = L.vaProg || L.inst.slice(3);
+        const prog = typeof getTritonProgramById === "function" ? getTritonProgramById(progId) : null;
+        if (prog && typeof multiLayerEngine.getVaEngineFor === "function") {
+          const effectiveGain = (typeof L.gain === "number" ? L.gain : 1.0) * this.looperGain;
+          const va = multiLayerEngine.getVaEngineFor(prog, effectiveGain, slot);
+          if (va && typeof va.noteOn === "function") {
+            va.noteOn(transposed, velocity, at);
+            continue;
+          }
+        }
+      }
+
+      // 2. PCM Sample Engine Route
+      const pcm = multiLayerEngine.pcmEngine;
+      if (!pcm || typeof pcm.playLooperNote !== "function") continue;
+
       try {
         const voice = pcm.playLooperNote(
           trackId,
@@ -726,19 +761,9 @@ export class ClipLooper {
           L.gain * this.looperGain,
           at,
         );
-        // Silent-note detector: null = the looper bus is missing or the
-        // instrument has no decoded anchor. Logged (throttled) so silent
-        // playback can be traced to a specific inst id.
         if (!voice) {
-          this._silentCount = (this._silentCount || 0) + 1;
-          const now = Date.now();
-          if (!this._silentLogAt || now - this._silentLogAt > 5000) {
-            this._silentLogAt = now;
-            const insts = (preset.layers || [])
-              .filter((l) => l && l.enabled)
-              .map((l) => l.inst)
-              .join(", ");
-            console.warn(`[Looper] SILENT: ${this._silentCount} notes got no voice — track ${trackId} preset [${insts}] (bus missing or no decoded anchor; VA timbres are not replayable by the PCM looper bus)`);
+          if (pcm.decodeEmbeddedAnchors) {
+            pcm.decodeEmbeddedAnchors(L.inst).catch(() => {});
           }
         }
       } catch (e) {}
@@ -746,9 +771,6 @@ export class ClipLooper {
   }
 
   _stopLooperEvent(trackId, preset, midiNote, at) {
-    const pcm = multiLayerEngine.pcmEngine;
-    if (!pcm || typeof pcm.stopLooperNote !== "function") return;
-
     for (let slot = 0; slot < 4; slot++) {
       const L = preset.layers[slot];
       if (!L || !L.enabled) continue;
@@ -756,6 +778,25 @@ export class ClipLooper {
         21,
         Math.min(108, midiNote + (L.oct || 0) * 12),
       );
+
+      // 1. Virtual Analog (VA) Synth Timbre Route
+      const isVa = !!(L.vaProg || (L.inst && L.inst.startsWith("va:")));
+      if (isVa) {
+        const progId = L.vaProg || L.inst.slice(3);
+        const prog = typeof getTritonProgramById === "function" ? getTritonProgramById(progId) : null;
+        if (prog && typeof multiLayerEngine.getVaEngineFor === "function") {
+          const va = multiLayerEngine.getVaEngineFor(prog, L.gain || 1.0, slot);
+          if (va && typeof va.noteOff === "function") {
+            va.noteOff(transposed, at);
+            continue;
+          }
+        }
+      }
+
+      // 2. PCM Sample Engine Route
+      const pcm = multiLayerEngine.pcmEngine;
+      if (!pcm || typeof pcm.stopLooperNote !== "function") continue;
+
       try {
         pcm.stopLooperNote(trackId, slot, L.inst, transposed, at);
       } catch (e) {}
@@ -773,28 +814,41 @@ export class ClipLooper {
     // Cancel any events this track had scheduled.
     noteScheduler.discard("looper-" + trackId);
 
-    // Kill voices on this track's dedicated looper buses.
+    // Release every note that is currently open on this track (both VA and PCM).
+    track.activeNotes.forEach((note) => {
+      for (let slot = 0; slot < 4; slot++) {
+        const L = track.preset?.layers?.[slot];
+        if (!L) continue;
+        const transposed = Math.max(
+          21,
+          Math.min(108, note + (L.oct || 0) * 12),
+        );
+        const isVa = !!(L.vaProg || (L.inst && L.inst.startsWith("va:")));
+        if (isVa) {
+          const progId = L.vaProg || L.inst.slice(3);
+          const prog = typeof getTritonProgramById === "function" ? getTritonProgramById(progId) : null;
+          if (prog && typeof multiLayerEngine.getVaEngineFor === "function") {
+            const va = multiLayerEngine.getVaEngineFor(prog, L.gain || 1.0, slot);
+            if (va && typeof va.noteOff === "function") {
+              va.noteOff(transposed);
+            }
+          }
+        } else {
+          const pcm = multiLayerEngine.pcmEngine;
+          if (pcm) {
+            try {
+              pcm.stopLooperNote(trackId, slot, L.inst, transposed);
+            } catch (e) {}
+          }
+        }
+      }
+    });
+
     const pcm = multiLayerEngine.pcmEngine;
     if (pcm && pcm.looperInserts && pcm.looperInserts[trackId]) {
-      // Release every note that is currently open on this track.
-      track.activeNotes.forEach((note) => {
-        for (let slot = 0; slot < 4; slot++) {
-          const L = track.preset?.layers?.[slot];
-          if (!L) continue;
-          const transposed = Math.max(
-            21,
-            Math.min(108, note + (L.oct || 0) * 12),
-          );
-          try {
-            pcm.stopLooperNote(trackId, slot, L.inst, transposed);
-          } catch (e) {}
-        }
-      });
       try {
         pcm.clearLooperTrack(trackId);
       } catch (e) {}
-      // Clear the sticky per-bus sustain flag so a future clip recorded with
-      // the pedal UP never inherits sustain from this (or any prior) session.
       if (pcm && typeof pcm.setLooperTrackSustain === "function") {
         pcm.setLooperTrackSustain(trackId, false);
       }

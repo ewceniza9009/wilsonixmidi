@@ -1158,6 +1158,45 @@ body.mobile-stage-keys .studio-keyboard-deck {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
+/* Sample-cache maintenance (latency popover → MAINTENANCE) */
+.cache-maint-row {
+  display: flex;
+  justify-content: stretch;
+}
+
+.cache-clear-btn {
+  width: 100%;
+  background: #181d28;
+  border: 1px solid rgba(248, 113, 113, 0.45);
+  border-radius: 5px;
+  padding: 8px 6px;
+  color: #fca5a5;
+  font-weight: 800;
+  font-size: 0.62rem;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cache-clear-btn:hover:not(:disabled) {
+  background: #2a1a1d;
+  border-color: rgba(248, 113, 113, 0.8);
+  color: #fecaca;
+}
+
+.cache-clear-btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.cache-usage-row {
+  font-size: 0.58rem;
+  font-weight: 600;
+  color: #64748b;
+  font-family: "JetBrains Mono", monospace;
+  text-align: center;
+}
+
 .latency-profile-title {
   font-size: 0.60rem;
   font-weight: 800;

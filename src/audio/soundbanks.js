@@ -7,10 +7,12 @@
 
 import { ANIMAL_EDM_BANKS } from "./animal-edm-manifest.js";
 import { BLOOM_EDM_BANKS } from "./bloom-edm-manifest.js";
+import { MULTISAMPLE_BANKS } from "./multisample-manifest.js";
 
 export const HD_SOUNDBANKS = {
   ...ANIMAL_EDM_BANKS,
   ...BLOOM_EDM_BANKS,
+  ...MULTISAMPLE_BANKS,
   acoustic_grand_piano: { id: "acoustic_grand_piano", name: "Velo Piano Concert Grand", category: "Acoustic Piano" },
   electric_piano_1: { id: "electric_piano_1", name: "Triton Suit. & Stage EP", category: "Electric Piano" },
   rhodes_stage_mp3: { id: "rhodes_stage_mp3", name: "Stage Rhodes 73 (Vintage Muir)", category: "Electric Piano" },
@@ -139,4 +141,16 @@ export const HD_SOUNDBANKS = {
   sy_kick_punch: { id: "sy_kick_punch", name: "🥊 Synthesizer You - 80s Punch Kick", category: "Synthesizer You (80s)" },
   sy_riser_sweep: { id: "sy_riser_sweep", name: "🚀 Synthesizer You - FX Riser Sweep", category: "Synthesizer You (80s)" },
   sy_tape_drop: { id: "sy_tape_drop", name: "🛑 Synthesizer You - Tape Drop FX", category: "Synthesizer You (80s)" },
+
+  // Roland Legendary D-50, U-20, MV-30 & SC-55 SoundBanks
+  roland_d50_fantasia: { id: "roland_d50_fantasia", name: "Roland D-50 Fantasia", category: "Synth Pad" },
+  roland_u20_choir: { id: "roland_u20_choir", name: "Roland U-20 Airy Vocal Choir", category: "Strings & Choir" },
+  roland_bright_ep: { id: "roland_bright_ep", name: "Roland SA Bright E.Piano", category: "Electric Piano" },
+  roland_sc55_warm_pad: { id: "roland_sc55_warm_pad", name: "Roland SC-55 Warm Pad", category: "Synth Pad" },
+  roland_space_voice: { id: "roland_space_voice", name: "Roland SC-55 Space Voice", category: "Strings & Choir" },
+  roland_metal_pad: { id: "roland_metal_pad", name: "Roland MV-30 Shimmer Metal Pad", category: "Synth Pad" },
+  roland_sc55_finger_bass: { id: "roland_sc55_finger_bass", name: "Roland SC-55 Punchy Finger Bass", category: "Bass & Sub" },
+  roland_u20_shakuhachi: { id: "roland_u20_shakuhachi", name: "Roland U-20 Breathy Shakuhachi", category: "Woodwind" },
+  roland_orchestra_hit: { id: "roland_orchestra_hit", name: "Roland SC-55 Orchestra Hit", category: "Orchestral & Hit" },
+  roland_synth_brass: { id: "roland_synth_brass", name: "Roland Jupiter Synth Brass", category: "Brass" },
 };

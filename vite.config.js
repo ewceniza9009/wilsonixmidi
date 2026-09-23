@@ -17,6 +17,9 @@ export default defineConfig({
     },
   },
   build: {
+    // Emits .vite/manifest.json in dist so the service worker can precache
+    // the hashed entry files (see public/sw.js).
+    manifest: true,
     rollupOptions: {
       output: {
         manualChunks: {

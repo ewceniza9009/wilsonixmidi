@@ -359,15 +359,21 @@ export class MultiLayerUI {
 
     // Combi search chip clicks
     this.container.querySelectorAll("[data-combi-search]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        multiLayerEngine.setCombiPreset(btn.getAttribute("data-combi-search"));
-        this.combiSearchQuery = "";
-        this.updateCombiSelectorActive();
-      });
+      this._bindCombiChip(btn);
     });
 
     // Combi preset selector + steppers
     const presetSelect = this.container.querySelector("#combi-preset-select");
+    // Speculative prefetch (P1): while the user is choosing in the dropdown,
+    // decode the presets adjacent to the current selection (budget-guarded).
+    presetSelect?.addEventListener("mousedown", () => {
+      const ids = Object.keys(COMBI_PRESETS);
+      const cur = Math.max(0, ids.indexOf(multiLayerEngine.activeCombi.id));
+      for (const d of [-1, 1]) {
+        const id = ids[(cur + d + ids.length) % ids.length];
+        if (id) multiLayerEngine.preloadCombi(id);
+      }
+    });
     presetSelect?.addEventListener("change", e => {
       multiLayerEngine.setCombiPreset(e.target.value);
       this.combiSearchQuery = "";
@@ -604,21 +610,64 @@ export class MultiLayerUI {
       };
 
       input.addEventListener("focus", renderList);
-      input.addEventListener("input", renderList);
+      // Debounced (P1): the list rebuild (~80 rows of innerHTML) used to run
+      // synchronously on every keystroke. Enter flushes the pending render so
+      // keyboard selection always matches the latest filter.
+      let _listDebounce = null;
+      const flushListRender = () => {
+        if (_listDebounce) { clearTimeout(_listDebounce); _listDebounce = null; }
+        renderList();
+      };
+      input.addEventListener("input", () => {
+        clearTimeout(_listDebounce);
+        _listDebounce = setTimeout(renderList, 160);
+      });
       input.addEventListener("click", () => { if (!list.classList.contains("open")) renderList(); });
       input.addEventListener("blur", close);
 
+      // Speculative prefetch (P1): hovering/pressing a PCM timbre starts its
+      // decode before selection. Throttled + budget-guarded so scrolling the
+      // list can never blow up decoded RAM.
+      let _prefetchAt = 0;
+      const prefetchTimbre = (value) => {
+        if (!value || value.startsWith("va:") || value === "current_stack") return;
+        const now = Date.now();
+        if (now - _prefetchAt < 300) return;
+        _prefetchAt = now;
+        try {
+          const pcm = multiLayerEngine.pcmEngine;
+          if (!pcm || typeof pcm.preloadInstrument !== "function") return;
+          const resolved = multiLayerEngine.resolveBankKey(value);
+          if (pcm.decodedBuffers?.get(resolved)?.size > 0) return;
+          if (typeof pcm.getDecodedBufferStats === "function") {
+            const stats = pcm.getDecodedBufferStats();
+            if ((stats?.bytes || 0) + 1024 * 1024 > (stats?.budget || 0) * 0.8) return;
+          }
+          pcm.preloadInstrument(resolved).catch(() => {});
+        } catch (e) {}
+      };
+      list.addEventListener("pointerover", (e) => {
+        const opt = e.target.closest(".timbre-opt");
+        if (opt) prefetchTimbre(opt.getAttribute("data-value"));
+      });
+      list.addEventListener("pointerdown", (e) => {
+        const opt = e.target.closest(".timbre-opt");
+        if (opt) prefetchTimbre(opt.getAttribute("data-value"));
+      });
+
       input.addEventListener("keydown", e => {
-        const opts = [...list.querySelectorAll(".timbre-opt")];
-        if (!opts.length) return;
         if (e.key === "ArrowDown" || e.key === "ArrowUp") {
           e.preventDefault();
+          const opts = [...list.querySelectorAll(".timbre-opt")];
+          if (!opts.length) return;
           const cur = opts.findIndex(o => o.classList.contains("active"));
           const next = e.key === "ArrowDown" ? (cur + 1) % opts.length : (cur <= 0 ? opts.length - 1 : cur - 1);
           opts.forEach((o, i) => o.classList.toggle("active", i === next));
           opts[next]?.scrollIntoView({ block: "nearest" });
         } else if (e.key === "Enter") {
           e.preventDefault();
+          flushListRender();
+          const opts = [...list.querySelectorAll(".timbre-opt")];
           const active = opts.find(o => o.classList.contains("active")) || opts[0];
           if (active) selectOption(active);
         } else if (e.key === "Escape") {
@@ -678,6 +727,26 @@ export class MultiLayerUI {
     this.filterProgramGrid();
   }
 
+  /**
+   * Shared chip binder: click selects the preset; pointerenter/pointerdown
+   * speculatively prefetch+decode it (P1). Used by bindEvents AND
+   * filterProgramGrid, because filterProgramGrid rebuilds the chips container
+   * and any new chips must carry the prefetch handlers too.
+   */
+  _bindCombiChip(btn) {
+    btn.addEventListener("pointerenter", () => {
+      multiLayerEngine.preloadCombi(btn.getAttribute("data-combi-search"));
+    });
+    btn.addEventListener("pointerdown", () => {
+      multiLayerEngine.preloadCombi(btn.getAttribute("data-combi-search"));
+    });
+    btn.addEventListener("click", () => {
+      multiLayerEngine.setCombiPreset(btn.getAttribute("data-combi-search"));
+      this.combiSearchQuery = "";
+      this.updateCombiSelectorActive();
+    });
+  }
+
   filterProgramGrid() {
     // Rebuild-free filter: updates the combi preset <select> and the search
     // result chips for the current query. CRITICAL FIX: the original method
@@ -690,6 +759,21 @@ export class MultiLayerUI {
     allPresets.forEach(cp => {
       if (cp.category && !catOrder.includes(cp.category)) catOrder.push(cp.category);
     });
+
+    // P1: skip the whole rebuild when the filtered set is unchanged — the
+    // search debounce can fire on edits that don't change the result list
+    // (e.g. a trailing space), and rebuilding 56 <option>s + re-binding for
+    // the same set is wasted main-thread work.
+    const visibleIds = [];
+    catOrder.forEach(cat => {
+      allPresets
+        .filter(cp => cp.category === cat)
+        .filter(cp => !q || cp.name.toLowerCase().includes(q) || cp.category.toLowerCase().includes(q))
+        .forEach(cp => visibleIds.push(cp.id));
+    });
+    const sig = `${q}::${visibleIds.join(",")}`;
+    if (sig === this._lastFilterSig) return;
+    this._lastFilterSig = sig;
 
     const presetSelect = this.container?.querySelector("#combi-preset-select");
     if (presetSelect) {
@@ -725,11 +809,7 @@ export class MultiLayerUI {
     }
 
     this.container?.querySelectorAll("[data-combi-search]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        multiLayerEngine.setCombiPreset(btn.getAttribute("data-combi-search"));
-        this.combiSearchQuery = "";
-        this.updateCombiSelectorActive();
-      });
+      this._bindCombiChip(btn);
     });
   }
 }

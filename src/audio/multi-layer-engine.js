@@ -5,7 +5,7 @@
  * with independent volume faders, octave transpositions, and Korg IFX/MFX effects.
  */
 
-import { NativePcmEngine } from "./native-pcm-engine.js";
+import { NativePcmEngine, getInstrumentTrimGain } from "./native-pcm-engine.js";
 import { audioCore } from "./audio-core.js";
 import { synthEngine, INSTRUMENT_PATCHES } from "./synth-engine.js";
 import {
@@ -143,6 +143,226 @@ export const DEFAULT_COMBI_FX_PRESETS = {
 };
 
 export const COMBI_PRESETS = {
+  roland_d50_masterpiece: {
+    id: "roland_d50_masterpiece",
+    name: "👑 Roland D-50 Masterpiece Stack",
+    category: "Roland Legendary Signature",
+    layers: [
+      {
+        id: 0,
+        name: "D-50 Fantasia Bell/Pad",
+        inst: "roland_d50_fantasia",
+        fx: "chorus_lush",
+        gain: 0.95,
+        pan: -0.1,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "SC-55 Warm Pad Swell",
+        inst: "roland_sc55_warm_pad",
+        fx: "analog_juno_chorus",
+        gain: 0.70,
+        pan: 0.1,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "SC-55 Space Voice Ambience",
+        inst: "roland_space_voice",
+        fx: "slapback_vocal",
+        gain: 0.60,
+        pan: 0,
+        oct: 0,
+        minVel: 20,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "SC-55 Punchy Finger Bass",
+        inst: "roland_sc55_finger_bass",
+        fx: "tape_sat_master",
+        gain: 0.90,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+    ],
+  },
+  roland_ballad_power_ep: {
+    id: "roland_ballad_power_ep",
+    name: "🎹 Roland 90s Ballad Power EP",
+    category: "Roland Legendary Signature",
+    layers: [
+      {
+        id: 0,
+        name: "Roland SA Bright E.Piano",
+        inst: "roland_bright_ep",
+        fx: "chorus_lush",
+        gain: 0.95,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "U-20 Airy Vocal Choir",
+        inst: "roland_u20_choir",
+        fx: "slapback_vocal",
+        gain: 0.65,
+        pan: 0.15,
+        oct: 0,
+        minVel: 15,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "SC-55 Warm String Pad",
+        inst: "roland_sc55_warm_pad",
+        fx: "analog_juno_chorus",
+        gain: 0.55,
+        pan: -0.15,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Triton Stereo Strings",
+        inst: "string_ensemble_1",
+        fx: "clean",
+        gain: 0.50,
+        pan: 0,
+        oct: 0,
+        minVel: 30,
+        maxVel: 127,
+        enabled: true,
+      },
+    ],
+  },
+  roland_cyberpunk_soundtrack: {
+    id: "roland_cyberpunk_soundtrack",
+    name: "⚡ Roland Cyberpunk Soundtrack Stack",
+    category: "Roland Legendary Signature",
+    layers: [
+      {
+        id: 0,
+        name: "MV-30 Shimmer Metal Pad",
+        inst: "roland_metal_pad",
+        fx: "chorus_lush",
+        gain: 0.90,
+        pan: -0.1,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Jupiter Synth Brass",
+        inst: "roland_synth_brass",
+        fx: "clean",
+        gain: 0.85,
+        pan: 0.1,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "SC-55 Space Voice",
+        inst: "roland_space_voice",
+        fx: "analog_juno_chorus",
+        gain: 0.65,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "SC-55 Orchestra Hit Velocity Stab",
+        inst: "roland_orchestra_hit",
+        fx: "gated_cannon",
+        gain: 0.85,
+        pan: 0,
+        oct: 0,
+        minVel: 95,
+        maxVel: 127,
+        enabled: true,
+      },
+    ],
+  },
+  roland_enigma_chillout: {
+    id: "roland_enigma_chillout",
+    name: "🎋 Roland Enigma Ambient Chillout",
+    category: "Roland Legendary Signature",
+    layers: [
+      {
+        id: 0,
+        name: "U-20 Breathy Shakuhachi",
+        inst: "roland_u20_shakuhachi",
+        fx: "slapback_vocal",
+        gain: 0.90,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "D-50 Celestial Bell Shimmer",
+        inst: "roland_d50_fantasia",
+        fx: "chorus_lush",
+        gain: 0.70,
+        pan: 0.2,
+        oct: 1,
+        minVel: 40,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "SC-55 Warm Pad Background",
+        inst: "roland_sc55_warm_pad",
+        fx: "analog_juno_chorus",
+        gain: 0.60,
+        pan: -0.2,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "SC-55 Finger Bass Foundation",
+        inst: "roland_sc55_finger_bass",
+        fx: "clean",
+        gain: 0.85,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+    ],
+  },
   synthesizer_you_surf: {
     id: "synthesizer_you_surf",
     name: "🏄 Synthesizer You - 80s Surf & Beach Rock Stack",
@@ -2975,7 +3195,7 @@ export const COMBI_PRESETS = {
         name: "Final Countdown Lead",
         inst: "supersaw_lead",
         fx: "synth_lead",
-        gain: 0.75,
+        gain: 0.95,
         pan: 0,
         oct: 0,
         minVel: 1,
@@ -2987,9 +3207,33 @@ export const COMBI_PRESETS = {
         name: "Final Countdown Pad",
         inst: "m1_universe",
         fx: "reverb_hall",
-        gain: 0.6,
-        pan: 0,
+        gain: 0.70,
+        pan: 0.1,
         oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Brass Accent",
+        inst: "brass_section",
+        fx: "air_eq",
+        gain: 0.65,
+        pan: -0.1,
+        oct: 0,
+        minVel: 40,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Sub Bass Foundation",
+        inst: "synth_bass_1",
+        fx: "clean",
+        gain: 0.70,
+        pan: 0,
+        oct: -1,
         minVel: 1,
         maxVel: 127,
         enabled: true,
@@ -3004,12 +3248,48 @@ export const COMBI_PRESETS = {
     layers: [
       {
         id: 0,
-        name: "Final Countdown Pad",
+        name: "Universe Shimmer Pad",
         inst: "m1_universe",
         fx: "reverb_hall",
+        gain: 0.90,
+        pan: -0.1,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Choir Aahs Ambience",
+        inst: "choir_aahs",
+        fx: "slapback_vocal",
         gain: 0.65,
+        pan: 0.1,
+        oct: 0,
+        minVel: 15,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "Warm String Bed",
+        inst: "string_ensemble_1",
+        fx: "analog_juno_chorus",
+        gain: 0.55,
         pan: 0,
         oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Sub Foundation",
+        inst: "synth_bass_1",
+        fx: "clean",
+        gain: 0.70,
+        pan: 0,
+        oct: -1,
         minVel: 1,
         maxVel: 127,
         enabled: true,
@@ -3232,6 +3512,12 @@ export class MultiLayerEngine {
     this.layerChangeListeners = new Set();
     this._vaEngines = new Map(); // VA oscillator engine per combi layer program
 
+    // Sound-loading feedback: fires true while a newly selected preset's
+    // instruments are still decoding, false when playback-ready. Consumed by
+    // the HUD live-text display so a still-decoding preset never reads as
+    // "laggy silence".
+    this.onSoundLoadingCallback = null;
+
     // AudioWorklet bridge: live VA notes route here for zero-jank playback
     this._workletNode = null;
     this._workletReady = false;
@@ -3264,8 +3550,12 @@ export class MultiLayerEngine {
       sustainDecayTau: 2.4, // pedal held: decay rate (0.5–8s)
       heldNoteSec: 15, // NO pedal, key held: rings for this long, then fades (2–60s)
       // Audio
-      polyphonyCap: 128, // max simultaneous voices (16–128)
-      masterVolumePct: 50, // default master volume on load (0–100)
+      polyphonyCap:
+        typeof navigator !== "undefined" &&
+        /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)
+          ? 48
+          : 96, // max simultaneous voices (16–128)
+      masterVolumePct: 80, // default master volume on load (0–100)
       // Keyboard
       defaultOctave: 4, // starting octave (1–7)
       defaultVelocity: 95, // default note velocity (1–127)
@@ -3349,7 +3639,14 @@ export class MultiLayerEngine {
       } catch (e) {}
     }
     if (key === "polyphonyCap" && this.pcmEngine) {
-      this.pcmEngine.MAX_VOICES = s.polyphonyCap;
+      if (typeof this.pcmEngine.setPolyphonyCap === "function") {
+        this.pcmEngine.setPolyphonyCap(s.polyphonyCap);
+      } else {
+        this.pcmEngine.MAX_VOICES = s.polyphonyCap;
+      }
+      if (this._pcmWorkletNode && typeof this._pcmWorkletNode.setPolyphonyCap === "function") {
+        this._pcmWorkletNode.setPolyphonyCap(s.polyphonyCap);
+      }
     }
     if (key === "sustainDecayTau" && this._workletReady && this._workletNode) {
       try {
@@ -3730,6 +4027,9 @@ export class MultiLayerEngine {
           this.settings.sustainDecayTau,
           this.settings.heldNoteSec,
         );
+        if (typeof this._pcmWorkletNode.setPolyphonyCap === "function") {
+          this._pcmWorkletNode.setPolyphonyCap(this.settings.polyphonyCap);
+        }
         // Connect to NativePcmEngine so playNote routes to worklet
         if (this.pcmEngine) {
           this.pcmEngine.pcmWorkletNode = this._pcmWorkletNode;
@@ -3739,6 +4039,9 @@ export class MultiLayerEngine {
               this.settings.sustainDecayTau,
               this.settings.heldNoteSec,
             );
+          }
+          if (this.pcmEngine.flushPendingPrewarms) {
+            this.pcmEngine.flushPendingPrewarms();
           }
         }
         // Pre-load decoded sample buffers into worklet
@@ -3921,7 +4224,8 @@ export class MultiLayerEngine {
     }
     // Fire-and-forget preload - don't block UI thread
     if (preloadEnabled && this.pcmEngine) {
-      this.pcmEngine.preloadInstrument(resolved).catch(() => {});
+      const p = this.pcmEngine.preloadInstrument(resolved);
+      this._trackSoundLoading([p], HD_SOUNDBANKS[resolved]?.name || resolved);
     }
 
     // Synchronize Layer 0 with the active single instrument
@@ -4098,6 +4402,89 @@ export class MultiLayerEngine {
     }
   }
 
+  /**
+   * Collects fire-and-forget preload promises for a preset's layers. Only
+   * instruments that are NOT already decoded are tracked — already-decoded
+   * layers resolve instantly and must not flash a "loading" state. VA layers
+   * resolve their Triton program inline (no async work).
+   */
+  _collectPreloadPromises(layers, enabled) {
+    const promises = [];
+    if (!enabled) return promises;
+    for (let i = 0; i < layers.length; i++) {
+      const layer = layers[i];
+      if (layer.inst && layer.inst.startsWith("va:")) {
+        const prog = getTritonProgramById(layer.inst.slice(3));
+        if (prog) layer.vaProg = prog;
+      } else if (layer.inst && this.pcmEngine) {
+        const resolved = this.resolveBankKey(layer.inst);
+        const decoded = this.pcmEngine.decodedBuffers?.get(resolved);
+        if (decoded && decoded.size > 0) continue;
+        promises.push(
+          this.pcmEngine.preloadInstrument(resolved).catch(() => {}),
+        );
+      }
+    }
+    return promises;
+  }
+
+  /**
+   * Notifies the onSoundLoadingCallback while a selected preset's instruments
+   * decode (true → false). The end callback re-syncs the display to the
+   * CURRENT state, so a preset switched mid-load shows correctly.
+   */
+  _trackSoundLoading(promises, presetName) {
+    const pending = (promises || []).filter(
+      (p) => p && typeof p.then === "function",
+    );
+    if (pending.length === 0) return;
+    if (typeof this.onSoundLoadingCallback === "function") {
+      try { this.onSoundLoadingCallback(true, presetName); } catch (e) {}
+    }
+    Promise.all(pending).finally(() => {
+      if (typeof this.onSoundLoadingCallback === "function") {
+        try { this.onSoundLoadingCallback(false, presetName); } catch (e) {}
+      }
+    });
+  }
+
+  /**
+   * Speculative preload (P1): decodes a preset's instruments BEFORE it is
+   * selected — wired to pointerenter/pointerdown on preset chips. Fire-and-
+   * forget, budget-guarded, deduped by preloadInstrument, and never touches
+   * the live layer state. Starting the fetch/decode a beat earlier (hover on
+   * desktop, press-first on touch) removes most of the perceived lag when a
+   * still-decoding preset is tapped.
+   */
+  preloadCombi(presetId) {
+    const combi = COMBI_PRESETS[presetId];
+    if (!combi || !Array.isArray(combi.layers)) return;
+    let preloadEnabled = true;
+    if (
+      this.pcmEngine &&
+      typeof this.pcmEngine.getDecodedBufferStats === "function"
+    ) {
+      const stats = this.pcmEngine.getDecodedBufferStats();
+      const currentBytes = stats?.bytes || 0;
+      const budget = stats?.budget || this.pcmEngine._getDecodedMemoryBudget();
+      const pcmLayers = combi.layers.filter(
+        (l) => l.inst && !l.inst.startsWith("va:"),
+      ).length;
+      if (currentBytes + pcmLayers * 1024 * 1024 > budget * 0.8)
+        preloadEnabled = false;
+    }
+    if (!preloadEnabled) return;
+    for (let i = 0; i < combi.layers.length; i++) {
+      const layer = combi.layers[i];
+      if (!layer.inst || layer.inst.startsWith("va:")) continue;
+      if (this.pcmEngine) {
+        this.pcmEngine
+          .preloadInstrument(this.resolveBankKey(layer.inst))
+          .catch(() => {});
+      }
+    }
+  }
+
   async setCombiPreset(presetId) {
     if (!COMBI_PRESETS[presetId]) return;
 
@@ -4141,19 +4528,10 @@ export class MultiLayerEngine {
         preloadEnabled = false;
     }
     // Fire-and-forget preloads - don't block UI thread
-    if (preloadEnabled) {
-      for (let i = 0; i < this.layers.length; i++) {
-        const layer = this.layers[i];
-        if (layer.inst && layer.inst.startsWith("va:")) {
-          const prog = getTritonProgramById(layer.inst.slice(3));
-          if (prog) layer.vaProg = prog;
-        } else if (layer.inst && this.pcmEngine) {
-          this.pcmEngine
-            .preloadInstrument(this.resolveBankKey(layer.inst))
-            .catch(() => {});
-        }
-      }
-    }
+    const preloadPromises = this._collectPreloadPromises(this.layers, preloadEnabled);
+    // Surface "sound loading" on the HUD until every layer is playback-ready —
+    // a still-decoding preset shows progress instead of silent lag.
+    this._trackSoundLoading(preloadPromises, this.activeCombi.name);
 
     // NO init() call - engine already initialized at startup
     // Only sync layer FX
@@ -4530,27 +4908,28 @@ export class MultiLayerEngine {
         }
       }
 
-      // Pro Combi Mixer Auto-Headroom: scale each layer so the summed output
-      // matches single-instrument reference level regardless of how many layers
-      // are active or what their individual gains are. Multi-instrument summing is
-      // psychoacoustically incoherent, so dividing by linear sum severely under-powers
-      // 3- and 4-layer combis. 1.35 / sqrt(totalLayerGain) perfectly equalizes loudness.
-      let totalLayerGain = 0;
+      // Equal-Loudness RMS Preset Normalizer: compute per-layer RMS power using
+      // calibrated trim gains, then scale the entire preset to the standardized
+      // TARGET_RMS so every combi — whether 1, 2, 3 or 4 layers — outputs at
+      // the exact same perceived loudness.
+      const TARGET_RMS = 1.10;
+      let sumPower = 0;
       for (let i = 0; i < this.layers.length; i++) {
         const layer = this.layers[i];
         if (!layer.enabled) continue;
-        if (velocity < layer.minVel || velocity > layer.maxVel) continue;
-        totalLayerGain += layer.gain ?? 1.0;
+        if (velocity < (layer.minVel || 1) || velocity > (layer.maxVel || 127)) continue;
+        const g = layer.gain ?? 1.0;
+        const t = layer.vaProg ? 0.82 : getInstrumentTrimGain(layer.inst);
+        sumPower += (g * t) * (g * t);
       }
-      const combiScale =
-        totalLayerGain > 0
-          ? Math.min(1.0, 1.35 / Math.sqrt(totalLayerGain))
-          : 1.0;
-      // Headroom protection for dense Combi chords & sweeps:
-      // Prevents 4-layer stacks from driving +20dB into the master limiter
+      const rms = Math.sqrt(sumPower);
+      const combiScale = rms > 0.05 ? Math.max(0.60, Math.min(1.65, TARGET_RMS / rms)) : 1.0;
+
+      // Chord headroom: only attenuate dense 5+ note clusters; 1–4 note chords
+      // retain full volume and power without choking.
       const polyHeadroom =
-        this.heldNotes.size > 2
-          ? Math.min(1.0, 1.45 / Math.sqrt(this.heldNotes.size))
+        this.heldNotes.size > 4
+          ? Math.min(1.0, 2.0 / Math.sqrt(this.heldNotes.size))
           : 1.0;
 
       // COMBI MODE: Synchronous sample-0 trigger on all enabled PCM layers
@@ -4583,13 +4962,15 @@ export class MultiLayerEngine {
         }
       }
     } else {
-      // SINGLE PROGRAM MODE: Instant sample-0 playback of authentic PCM sound
+      // SINGLE PROGRAM MODE: Normalized to match combi loudness reference
+      const singleTrim = getInstrumentTrimGain(this.activeSingleInst);
+      const singleGain = singleTrim > 0.05 ? Math.min(1.65, 1.10 / singleTrim) : 1.0;
       if (this.pcmEngine) {
         this.pcmEngine.playNote(
           this.activeSingleInst,
           midiNote,
           velocity,
-          1.0,
+          singleGain,
           null,
           null,
           when,
@@ -4840,7 +5221,7 @@ export class MultiLayerEngine {
             );
           } else {
             if (typeof this.pcmEngine.fastStopNote === "function") {
-              this.pcmEngine.fastStopNote(layer.inst, transposedMidi, when);
+              this.pcmEngine.fastStopNote(layer.inst, transposedMidi, when, i);
             } else {
               this.pcmEngine.stopNote(layer.inst, transposedMidi, when);
             }
@@ -4848,7 +5229,7 @@ export class MultiLayerEngine {
         }
       } else {
         if (typeof this.pcmEngine.fastStopNote === "function") {
-          this.pcmEngine.fastStopNote(this.activeSingleInst, midiNote, when);
+          this.pcmEngine.fastStopNote(this.activeSingleInst, midiNote, when, null);
         } else {
           this.pcmEngine.stopNote(this.activeSingleInst, midiNote, when);
         }

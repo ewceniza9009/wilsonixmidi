@@ -17,23 +17,50 @@
 import { synthEngine } from "../audio/synth-engine.js";
 import { multiLayerEngine } from "../audio/multi-layer-engine.js";
 import { qwertyKeyboard } from "../midi/qwerty-keyboard.js";
-import { shapeVelocity, setVelocityCurve, getVelocityCurve } from "../midi/velocity-curve.js";
+import {
+  shapeVelocity,
+  setVelocityCurve,
+  getVelocityCurve,
+} from "../midi/velocity-curve.js";
 import { scaleLock, ROOT_NAMES, SCALES } from "../midi/scale-lock.js";
 import { arpeggiator } from "../audio/arpeggiator.js";
 import { XyPadUI } from "./xy-pad-ui.js";
 
-const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const NOTE_NAMES = [
+  "C",
+  "C#",
+  "D",
+  "D#",
+  "E",
+  "F",
+  "F#",
+  "G",
+  "G#",
+  "A",
+  "A#",
+  "B",
+];
 const WHITE_NOTES = [0, 2, 4, 5, 7, 9, 11];
 
 function detectTabletOrTouch() {
   try {
     const ua = (navigator.userAgent || "").toLowerCase();
     const isAndroid = ua.includes("android");
-    const isTablet = /(ipad|tablet|playbook|silk)|(android(?!.*mobile))/i.test(ua);
-    const isTouchDevice = typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0);
-    const isMediumWidth = typeof window !== "undefined" && window.innerWidth >= 600 && window.innerWidth <= 1366;
-    const isCapacitor = typeof window !== "undefined" && window.Capacitor?.isNativePlatform?.();
-    return isAndroid || isTablet || isCapacitor || (isTouchDevice && isMediumWidth);
+    const isTablet = /(ipad|tablet|playbook|silk)|(android(?!.*mobile))/i.test(
+      ua,
+    );
+    const isTouchDevice =
+      typeof window !== "undefined" &&
+      ("ontouchstart" in window || navigator.maxTouchPoints > 0);
+    const isMediumWidth =
+      typeof window !== "undefined" &&
+      window.innerWidth >= 600 &&
+      window.innerWidth <= 1366;
+    const isCapacitor =
+      typeof window !== "undefined" && window.Capacitor?.isNativePlatform?.();
+    return (
+      isAndroid || isTablet || isCapacitor || (isTouchDevice && isMediumWidth)
+    );
   } catch (e) {
     return false;
   }
@@ -53,7 +80,10 @@ export class VirtualKeyboardUI {
     this.isXyVisible = false;
     this._windowHandlers = [];
 
-    const savedZoom = typeof localStorage !== "undefined" ? localStorage.getItem("midikey_zoom_mode") : null;
+    const savedZoom =
+      typeof localStorage !== "undefined"
+        ? localStorage.getItem("midikey_zoom_mode")
+        : null;
     const isTouchPlatform = detectTabletOrTouch();
     this.currentZoomMode = savedZoom || (isTouchPlatform ? "touch" : "compact");
 
@@ -79,16 +109,21 @@ export class VirtualKeyboardUI {
       }
     }, 60);
 
-    this._onWindow(window, "resize", () => {
-      const rollContainer = document.getElementById("piano-roll-container");
-      if (rollContainer && !rollContainer.classList.contains("zoom-full")) {
-        if (this.currentZoomMode === "touch") {
-          this.frameC3C5(false);
-        } else {
-          this.centerOnMiddleC(false);
+    this._onWindow(
+      window,
+      "resize",
+      () => {
+        const rollContainer = document.getElementById("piano-roll-container");
+        if (rollContainer && !rollContainer.classList.contains("zoom-full")) {
+          if (this.currentZoomMode === "touch") {
+            this.frameC3C5(false);
+          } else {
+            this.centerOnMiddleC(false);
+          }
         }
-      }
-    }, { passive: true });
+      },
+      { passive: true },
+    );
 
     // Subscribe to multiLayerEngine note triggers for instant visual response (0ms latency)
     multiLayerEngine.onNoteChangeCallback = (midiNote, isPressed, velocity) => {
@@ -110,7 +145,11 @@ export class VirtualKeyboardUI {
     };
 
     // Arpeggiator note trigger callback -> illuminate piano keys
-    arpeggiator.onNoteTriggerCallback = (midiNote, isPressed, velocity = 95) => {
+    arpeggiator.onNoteTriggerCallback = (
+      midiNote,
+      isPressed,
+      velocity = 95,
+    ) => {
       this.setKeyVisualState(midiNote, isPressed, velocity);
     };
 
@@ -137,15 +176,21 @@ export class VirtualKeyboardUI {
       this.updateHudState();
     };
 
-    qwertyKeyboard.onChordVisualCallback = (notes, isPressed, velocity = 95) => {
-      notes.forEach(m => this.setKeyVisualState(m, isPressed, velocity));
+    qwertyKeyboard.onChordVisualCallback = (
+      notes,
+      isPressed,
+      velocity = 95,
+    ) => {
+      notes.forEach((m) => this.setKeyVisualState(m, isPressed, velocity));
     };
 
     // Chord pads -> virtual key highlight bridge
-    this._onWindow(window, "wilsonix-keys-visual", e => {
+    this._onWindow(window, "wilsonix-keys-visual", (e) => {
       const { notes, pressed, velocity } = e.detail || {};
       if (!Array.isArray(notes)) return;
-      notes.forEach(m => this.setKeyVisualState(m, !!pressed, velocity || 95));
+      notes.forEach((m) =>
+        this.setKeyVisualState(m, !!pressed, velocity || 95),
+      );
     });
   }
 
@@ -213,7 +258,12 @@ export class VirtualKeyboardUI {
               ${ROOT_NAMES.map((r, i) => `<option value="${i}" ${scaleLock.rootNote === i ? "selected" : ""}>${r}</option>`).join("")}
             </select>
             <select class="hud-select hud-scale-select" id="hud-scale-type" title="Scale Mode">
-              ${Object.values(SCALES).map(s => `<option value="${s.id}" ${scaleLock.scaleId === s.id ? "selected" : ""}>${s.short}</option>`).join("")}
+              ${Object.values(SCALES)
+                .map(
+                  (s) =>
+                    `<option value="${s.id}" ${scaleLock.scaleId === s.id ? "selected" : ""}>${s.short}</option>`,
+                )
+                .join("")}
             </select>
           </div>
 
@@ -221,13 +271,6 @@ export class VirtualKeyboardUI {
           <div class="chord-hud-unit">
             <button class="hud-btn chord-btn" id="hud-chord-btn" title="Cycle Smart Chords: 7th, 9th/11th, Diminished (HotKey: ~ / Backquote)">
               CHORD: ${qwertyKeyboard.chordMode.toUpperCase()}
-            </button>
-          </div>
-
-          <!-- QWERTY Layout Selector Button -->
-          <div class="layout-hud-unit">
-            <button class="hud-btn layout-btn" id="hud-layout-btn" title="Switch QWERTY Layout (F2)">
-              LAYOUT: ${qwertyKeyboard.layoutMode === "melody" ? "MELODY (Q-P)" : "DAW (A-')"}
             </button>
           </div>
 
@@ -376,18 +419,33 @@ export class VirtualKeyboardUI {
       return { midi, rect, el: keyEl };
     };
 
-    const calculateVelocity = (clientY, rect) => {
+    const calculateVelocity = (clientY, rect, keyEl = null, isGlissando = false) => {
       // Top of key (0.0) -> pianissimo (velocity 5)
       // Bottom edge of key (1.0) -> fortissimo (velocity 127)
-      const relativeY = Math.max(0, Math.min(1.0, (clientY - rect.top) / rect.height));
-      const raw = Math.round(5 + relativeY * 122); // 5 to 127 full dynamic span
+      let relativeY = Math.max(
+        0,
+        Math.min(1.0, (clientY - rect.top) / rect.height),
+      );
+      // For white keys: black keys only cover the upper ~60% of the keybed.
+      // If a user sweeps across the upper half of the keys, white keys would sit at 0.1-0.3
+      // (extreme pianissimo) while black keys sit at 0.6-0.8 (mezzoforte/fortissimo).
+      // Normalize white keys in the upper zone so horizontal sweeps stay balanced.
+      if (keyEl && keyEl.classList.contains("white-key") && relativeY < 0.6) {
+        relativeY = 0.4 + relativeY * 0.75;
+      }
+      let raw = Math.round(5 + relativeY * 122); // 5 to 127 full dynamic span
+      if (isGlissando) {
+        // Fast horizontal glissando/sweeps floor at 75 (mezzoforte) so notes never
+        // drop into muffled pianissimo layers during rapid runs.
+        raw = Math.max(raw, 75);
+      }
       return shapeVelocity(raw);
     };
 
     let isMouseDown = false;
     let lastTouchTime = 0; // Suppress synthetic mouse events after real touch
 
-    track.addEventListener("mousedown", e => {
+    track.addEventListener("mousedown", (e) => {
       // On touchscreen laptops, browsers fire BOTH touchstart AND synthesized mousedown
       // for the same finger tap. Suppress the mouse event to prevent double-trigger.
       if (performance.now() - lastTouchTime < 800) return;
@@ -395,13 +453,18 @@ export class VirtualKeyboardUI {
       isMouseDown = true;
       const key = getKeyFromPoint(e.clientX, e.clientY);
       if (key) {
-        const vel = calculateVelocity(e.clientY, key.rect);
-        const snappedMidi = scaleLock.isLocked ? scaleLock.snapToScale(key.midi) : key.midi;
+        const vel = calculateVelocity(e.clientY, key.rect, key.el, false);
+        const snappedMidi = scaleLock.isLocked
+          ? scaleLock.snapToScale(key.midi)
+          : key.midi;
         if (snappedMidi === null) return;
-        const notes = qwertyKeyboard.generateSmartVoicing(snappedMidi, qwertyKeyboard.chordMode);
+        const notes = qwertyKeyboard.generateSmartVoicing(
+          snappedMidi,
+          qwertyKeyboard.chordMode,
+        );
         this.activeMouseChord = notes;
 
-        notes.forEach(n => {
+        notes.forEach((n) => {
           this.setKeyVisualState(n, true, vel);
           if (arpeggiator.enabled) {
             arpeggiator.handleNoteOn(n, vel);
@@ -413,13 +476,17 @@ export class VirtualKeyboardUI {
     });
 
     let lastGlissandoTime = 0;
-    this._onWindow(window, "mousemove", e => {
+    this._onWindow(window, "mousemove", (e) => {
       if (!isMouseDown) return;
       if (performance.now() - lastTouchTime < 800) return;
       const key = getKeyFromPoint(e.clientX, e.clientY);
       if (key) {
-        const snappedMidi = scaleLock.isLocked ? scaleLock.snapToScale(key.midi) : key.midi;
-        const primaryNote = this.activeMouseChord ? this.activeMouseChord[0] : null;
+        const snappedMidi = scaleLock.isLocked
+          ? scaleLock.snapToScale(key.midi)
+          : key.midi;
+        const primaryNote = this.activeMouseChord
+          ? this.activeMouseChord[0]
+          : null;
         if (snappedMidi !== null && snappedMidi !== primaryNote) {
           const now = performance.now();
           // Rate-limit sweep transitions to max 30 notes/sec (~33ms minimum key dwell during sweeps)
@@ -429,11 +496,15 @@ export class VirtualKeyboardUI {
 
           // Horizontal Glissando / Legato Slide to adjacent note
           if (this.activeMouseChord) {
-            this.activeMouseChord.forEach(n => {
+            this.activeMouseChord.forEach((n) => {
               this.setKeyVisualState(n, false);
               if (arpeggiator.enabled) {
                 arpeggiator.handleNoteOff(n);
-              } else if (multiLayerEngine.sustainPedalActive || qwertyKeyboard.sustainPedal || qwertyKeyboard.sustainLatched) {
+              } else if (
+                multiLayerEngine.sustainPedalActive ||
+                qwertyKeyboard.sustainPedal ||
+                qwertyKeyboard.sustainLatched
+              ) {
                 multiLayerEngine.noteOff(n);
               } else if (typeof multiLayerEngine.fastNoteOff === "function") {
                 multiLayerEngine.fastNoteOff(n);
@@ -442,11 +513,14 @@ export class VirtualKeyboardUI {
               }
             });
           }
-          const vel = calculateVelocity(e.clientY, key.rect);
-          const notes = qwertyKeyboard.generateSmartVoicing(snappedMidi, qwertyKeyboard.chordMode);
+          const vel = calculateVelocity(e.clientY, key.rect, key.el, true);
+          const notes = qwertyKeyboard.generateSmartVoicing(
+            snappedMidi,
+            qwertyKeyboard.chordMode,
+          );
           this.activeMouseChord = notes;
 
-          notes.forEach(n => {
+          notes.forEach((n) => {
             this.setKeyVisualState(n, true, vel);
             if (arpeggiator.enabled) {
               arpeggiator.handleNoteOn(n, vel);
@@ -456,16 +530,22 @@ export class VirtualKeyboardUI {
           });
         } else {
           // Vertical Key Slide Expression (Y-Axis Timbre Modulation & Filter Swell)
-          const relativeY = Math.max(0, Math.min(1.0, (e.clientY - key.rect.top) / key.rect.height));
+          const relativeY = Math.max(
+            0,
+            Math.min(1.0, (e.clientY - key.rect.top) / key.rect.height),
+          );
           multiLayerEngine.setNoteExpression(key.midi, relativeY);
         }
       }
     });
 
     this._onWindow(window, "mouseup", () => {
-      if (performance.now() - lastTouchTime < 800) { isMouseDown = false; return; }
+      if (performance.now() - lastTouchTime < 800) {
+        isMouseDown = false;
+        return;
+      }
       if (isMouseDown && this.activeMouseChord) {
-        this.activeMouseChord.forEach(n => {
+        this.activeMouseChord.forEach((n) => {
           this.setKeyVisualState(n, false);
           if (arpeggiator.enabled) {
             arpeggiator.handleNoteOff(n);
@@ -478,60 +558,70 @@ export class VirtualKeyboardUI {
       isMouseDown = false;
     });
 
-    this._onWindow(window, "blur", () => {
-      if (this.activeMouseChord) {
-        this.activeMouseChord.forEach(n => {
-          this.setKeyVisualState(n, false);
-          if (typeof multiLayerEngine.fastNoteOff === "function") {
-            multiLayerEngine.fastNoteOff(n);
-          } else {
-            multiLayerEngine.noteOff(n);
+    const clearAllActiveTouches = () => {
+      if (this.activeTouches.size > 0) {
+        this.activeTouches.forEach((prevTouch) => {
+          if (prevTouch && prevTouch.chordNotes) {
+            prevTouch.chordNotes.forEach((n) => {
+              this.setKeyVisualState(n, false);
+              if (arpeggiator.enabled) {
+                arpeggiator.handleNoteOff(n);
+              } else {
+                multiLayerEngine.noteOff(n);
+              }
+            });
           }
+        });
+        this.activeTouches.clear();
+      }
+      if (this.activeMouseChord) {
+        this.activeMouseChord.forEach((n) => {
+          this.setKeyVisualState(n, false);
+          multiLayerEngine.noteOff(n);
         });
         this.activeMouseChord = null;
       }
       isMouseDown = false;
+    };
+
+    this._onWindow(window, "blur", clearAllActiveTouches);
+    this._onWindow(document, "visibilitychange", () => {
+      if (document.hidden) clearAllActiveTouches();
     });
 
-    // Robust Multi-Touch Engine for Mobile, Tablets & Android Touchscreens
-    // Xiaomi/HyperOS firmware drops touch IDs mid-press (touchcancel without
-    // finger lift). Deferred release: cancelled touches get a 1500ms grace
-    // period before noteOff fires. MEASURED on Pad 6: after the system cancel
-    // the native input stream pauses ~300-700ms before resuming — a 200ms
-    // grace fired MID-HOLD (notes died then retriggered ~0.5s later). 1500ms
-    // outlasts the pause: the resuming native MOVE (or re-delivered touchstart)
-    // cancels the deferral and the note stays held. If the user truly lifts
-    // during the dead window the note hangs at most until the timer, and the
-    // resumed stream's reconcile cleans it sooner.
-    this._cancelledTouchTimers = new Map();
+    // Clean Multi-Touch Engine for Mobile, Tablets & Android Touchscreens
+    // Touches release immediately on touchend and touchcancel without artificial delay
+    // to prevent keys sticking when multi-finger gestures (e.g. 3-finger chords/screenshot) occur.
 
     track.addEventListener(
       "touchstart",
-      e => {
+      (e) => {
         if (e.cancelable) e.preventDefault();
         e.stopPropagation();
         lastTouchTime = performance.now(); // Block synthetic mouse events
 
         for (let i = 0; i < e.changedTouches.length; i++) {
           const t = e.changedTouches[i];
-
-          // Cancel any deferred release for a touch that reappeared
-          const pendingTimer = this._cancelledTouchTimers.get(t.identifier);
-          if (pendingTimer) {
-            clearTimeout(pendingTimer);
-            this._cancelledTouchTimers.delete(t.identifier);
-            continue; // touch already held in activeTouches — don't re-trigger
-          }
-
           const key = getKeyFromPoint(t.clientX, t.clientY);
           if (key) {
-            const snappedMidi = scaleLock.isLocked ? scaleLock.snapToScale(key.midi) : key.midi;
+            const snappedMidi = scaleLock.isLocked
+              ? scaleLock.snapToScale(key.midi)
+              : key.midi;
             if (snappedMidi === null) continue;
-            const vel = calculateVelocity(t.clientY, key.rect);
-            const notes = qwertyKeyboard.generateSmartVoicing(snappedMidi, qwertyKeyboard.chordMode);
-            this.activeTouches.set(t.identifier, { midi: key.midi, snappedMidi, rect: key.rect, chordNotes: notes });
+            const vel = calculateVelocity(t.clientY, key.rect, key.el, false);
+            const notes = qwertyKeyboard.generateSmartVoicing(
+              snappedMidi,
+              qwertyKeyboard.chordMode,
+            );
+            this.activeTouches.set(t.identifier, {
+              midi: key.midi,
+              snappedMidi,
+              rect: key.rect,
+              chordNotes: notes,
+              lastGlissandoTime: lastTouchTime,
+            });
 
-            notes.forEach(n => {
+            notes.forEach((n) => {
               this.setKeyVisualState(n, true, vel);
               if (arpeggiator.enabled) {
                 arpeggiator.handleNoteOn(n, vel);
@@ -542,10 +632,10 @@ export class VirtualKeyboardUI {
           }
         }
       },
-      { passive: false }
+      { passive: false },
     );
 
-    const handleTouchMove = e => {
+    const handleTouchMove = (e) => {
       if (this.activeTouches.size === 0) return;
       if (e.cancelable) e.preventDefault();
 
@@ -555,17 +645,30 @@ export class VirtualKeyboardUI {
         const key = getKeyFromPoint(t.clientX, t.clientY);
 
         if (key) {
-          const snappedMidi = scaleLock.isLocked ? scaleLock.snapToScale(key.midi) : key.midi;
+          const snappedMidi = scaleLock.isLocked
+            ? scaleLock.snapToScale(key.midi)
+            : key.midi;
           if (snappedMidi === null) continue;
 
           if (!prevTouch || snappedMidi !== prevTouch.snappedMidi) {
+            const now = performance.now();
+            // Rate-limit sweep transitions to max ~35 notes/sec (~28ms dwell) per touch point
+            // to eliminate audio thread event queue flooding and voice stacking on 120Hz/240Hz screens
+            if (prevTouch && prevTouch.lastGlissandoTime && (now - prevTouch.lastGlissandoTime < 28)) {
+              continue;
+            }
+
             // Glissando / slide to new key
             if (prevTouch && prevTouch.chordNotes) {
-              prevTouch.chordNotes.forEach(n => {
+              prevTouch.chordNotes.forEach((n) => {
                 this.setKeyVisualState(n, false);
                 if (arpeggiator.enabled) {
                   arpeggiator.handleNoteOff(n);
-                } else if (multiLayerEngine.sustainPedalActive || qwertyKeyboard.sustainPedal || qwertyKeyboard.sustainLatched) {
+                } else if (
+                  multiLayerEngine.sustainPedalActive ||
+                  qwertyKeyboard.sustainPedal ||
+                  qwertyKeyboard.sustainLatched
+                ) {
                   multiLayerEngine.noteOff(n);
                 } else if (typeof multiLayerEngine.fastNoteOff === "function") {
                   multiLayerEngine.fastNoteOff(n);
@@ -574,11 +677,20 @@ export class VirtualKeyboardUI {
                 }
               });
             }
-            const vel = calculateVelocity(t.clientY, key.rect);
-            const notes = qwertyKeyboard.generateSmartVoicing(snappedMidi, qwertyKeyboard.chordMode);
-            this.activeTouches.set(t.identifier, { midi: key.midi, snappedMidi, rect: key.rect, chordNotes: notes });
+            const vel = calculateVelocity(t.clientY, key.rect, key.el, true);
+            const notes = qwertyKeyboard.generateSmartVoicing(
+              snappedMidi,
+              qwertyKeyboard.chordMode,
+            );
+            this.activeTouches.set(t.identifier, {
+              midi: key.midi,
+              snappedMidi,
+              rect: key.rect,
+              chordNotes: notes,
+              lastGlissandoTime: now,
+            });
 
-            notes.forEach(n => {
+            notes.forEach((n) => {
               this.setKeyVisualState(n, true, vel);
               if (arpeggiator.enabled) {
                 arpeggiator.handleNoteOn(n, vel);
@@ -588,7 +700,10 @@ export class VirtualKeyboardUI {
             });
           } else {
             // Continuous Vertical Slide on held key (Expressive Aftertouch)
-            const relativeY = Math.max(0, Math.min(1.0, (t.clientY - key.rect.top) / key.rect.height));
+            const relativeY = Math.max(
+              0,
+              Math.min(1.0, (t.clientY - key.rect.top) / key.rect.height),
+            );
             multiLayerEngine.setNoteExpression(key.midi, relativeY);
           }
         }
@@ -598,13 +713,14 @@ export class VirtualKeyboardUI {
     track.addEventListener("touchmove", handleTouchMove, { passive: false });
     this._onWindow(window, "touchmove", handleTouchMove, { passive: false });
 
-    const handleTouchRelease = e => {
-      const isPianoTouch = e.target && (e.target.closest("#piano-keys-track") || e.target.closest(".piano-key"));
+    const handleTouchRelease = (e) => {
+      const isPianoTouch =
+        e.target &&
+        (e.target.closest("#piano-keys-track") ||
+          e.target.closest(".piano-key"));
       if (isPianoTouch && e.cancelable) {
         e.preventDefault();
       }
-
-      const isCancel = e.type === "touchcancel";
 
       const releaseTouch = (touchId, prevTouch) => {
         if (!prevTouch || !prevTouch.chordNotes) {
@@ -612,44 +728,16 @@ export class VirtualKeyboardUI {
           return;
         }
 
-        if (isCancel) {
-          // Defer release — Xiaomi firmware may re-emit this touch within 1500ms
-          // (see grace-period note above — the stream pauses before resuming).
-          // CRITICAL: clear any PREVIOUS timer for this touch first — set()
-          // alone overwrites the map entry but LEAKS the old timer, which still
-          // fires and kills the note mid-hold even while the cancel storm keeps
-          // re-arming (measured: notes died every ~1200ms while held and stuck
-          // after release).
-          const existingTimer = this._cancelledTouchTimers.get(touchId);
-          if (existingTimer) clearTimeout(existingTimer);
-          const timer = setTimeout(() => {
-            this._cancelledTouchTimers.delete(touchId);
-            if (this.activeTouches.has(touchId)) {
-              prevTouch.chordNotes.forEach(n => {
-                this.setKeyVisualState(n, false);
-                if (arpeggiator.enabled) {
-                  arpeggiator.handleNoteOff(n);
-                } else {
-                  multiLayerEngine.noteOff(n);
-                }
-              });
-              this.activeTouches.delete(touchId);
-            }
-          }, 1500);
-          this._cancelledTouchTimers.set(touchId, timer);
-        } else {
-          // Real finger lift — release immediately
-          this._cancelledTouchTimers.delete(touchId);
-          prevTouch.chordNotes.forEach(n => {
-            this.setKeyVisualState(n, false);
-            if (arpeggiator.enabled) {
-              arpeggiator.handleNoteOff(n);
-            } else {
-              multiLayerEngine.noteOff(n);
-            }
-          });
-          this.activeTouches.delete(touchId);
-        }
+        // Release immediately on both touchend and touchcancel to prevent stuck keys
+        prevTouch.chordNotes.forEach((n) => {
+          this.setKeyVisualState(n, false);
+          if (arpeggiator.enabled) {
+            arpeggiator.handleNoteOff(n);
+          } else {
+            multiLayerEngine.noteOff(n);
+          }
+        });
+        this.activeTouches.delete(touchId);
       };
 
       for (let i = 0; i < e.changedTouches.length; i++) {
@@ -660,23 +748,11 @@ export class VirtualKeyboardUI {
 
       // Reconcile stuck touches if all fingers were lifted or system gesture cancelled touches
       if (e.touches) {
-        // CRITICAL: only treat e.touches.length===0 as "user lifted everything"
-        // when this is a REAL touchend. A full-stream touchcancel ALSO reports
-        // 0 active touches — clearing the deferred releases there made the
-        // 200ms Xiaomi grace period dead code and killed 3-finger chords
-        // instantly (measured on Pad 6: continuous CANCEL, 0 still active).
-        // For touchcancel the deferred timers stay armed: reappearance via a
-        // re-delivered touchstart (or a native-bridge MOVE) cancels them and
-        // the notes survive.
-        if (e.touches.length === 0 && this.activeTouches.size > 0 && !isCancel) {
-          // Cancel all pending deferred releases — user lifted everything
-          for (const [timerId] of this._cancelledTouchTimers) {
-            clearTimeout(this._cancelledTouchTimers.get(timerId));
-          }
-          this._cancelledTouchTimers.clear();
-          this.activeTouches.forEach(prevTouch => {
+        if (e.touches.length === 0 && this.activeTouches.size > 0) {
+          // All fingers lifted or gesture cancelled: release all active touches immediately
+          this.activeTouches.forEach((prevTouch) => {
             if (prevTouch && prevTouch.chordNotes) {
-              prevTouch.chordNotes.forEach(n => {
+              prevTouch.chordNotes.forEach((n) => {
                 this.setKeyVisualState(n, false);
                 if (arpeggiator.enabled) {
                   arpeggiator.handleNoteOff(n);
@@ -688,17 +764,15 @@ export class VirtualKeyboardUI {
           });
           this.activeTouches.clear();
         } else {
-          // Check if any touch IDs in activeTouches no longer exist in e.touches
+          // Release any touch IDs in activeTouches that no longer exist in e.touches
           const currentIds = new Set();
           for (let j = 0; j < e.touches.length; j++) {
             currentIds.add(e.touches[j].identifier);
           }
           for (const [touchId, prevTouch] of this.activeTouches.entries()) {
             if (!currentIds.has(touchId)) {
-              // Skip touches with a pending deferred release (Xiaomi touchcancel)
-              if (this._cancelledTouchTimers.has(touchId)) continue;
               if (prevTouch && prevTouch.chordNotes) {
-                prevTouch.chordNotes.forEach(n => {
+                prevTouch.chordNotes.forEach((n) => {
                   this.setKeyVisualState(n, false);
                   if (arpeggiator.enabled) {
                     arpeggiator.handleNoteOff(n);
@@ -715,18 +789,16 @@ export class VirtualKeyboardUI {
     };
 
     track.addEventListener("touchend", handleTouchRelease, { passive: false });
-    track.addEventListener("touchcancel", handleTouchRelease, { passive: false });
+    track.addEventListener("touchcancel", handleTouchRelease, {
+      passive: false,
+    });
     this._onWindow(window, "touchend", handleTouchRelease, { passive: false });
-    this._onWindow(window, "touchcancel", handleTouchRelease, { passive: false });
+    this._onWindow(window, "touchcancel", handleTouchRelease, {
+      passive: false,
+    });
 
     // Native touch bridge: MainActivity.dispatchTouchEvent forwards the raw
-    // input stream here (window.__nativeTouch). The piano is then driven from
-    // native events — immune to the Xiaomi/HyperOS cancel storm that kills the
-    // WebView's page-touch pipeline. Android pointer ids are IDENTICAL to web
-    // touch identifiers (WebView maps 1:1), so dedup is by id: a native DOWN
-    // for a touch the web stream already triggered is filtered out — no
-    // double-voices. A native MOVE proves the finger is still down, so it
-    // cancels any deferred release and keeps notes alive through the storm.
+    // input stream here (window.__nativeTouch)
     window.__nativeTouch = (data) => {
       if (!data || !Array.isArray(data.pointers)) return;
       const pts = data.pointers;
@@ -736,7 +808,13 @@ export class VirtualKeyboardUI {
       const synth = (type, changedList, touchesList) => {
         try {
           const target = track;
-          const toTouch = t => new Touch({ identifier: t.identifier, target, clientX: t.clientX, clientY: t.clientY });
+          const toTouch = (t) =>
+            new Touch({
+              identifier: t.identifier,
+              target,
+              clientX: t.clientX,
+              clientY: t.clientY,
+            });
           const ev = new TouchEvent(type, {
             changedTouches: changedList.map(toTouch),
             touches: (touchesList || changedList).map(toTouch),
@@ -748,29 +826,32 @@ export class VirtualKeyboardUI {
       };
 
       if (action === "DOWN" || action === "POINTER_DOWN") {
-        const fresh = pts.filter(p => !this.activeTouches.has(p.id) && !this._cancelledTouchTimers.has(p.id));
+        const fresh = pts.filter((p) => !this.activeTouches.has(p.id));
         if (fresh.length) synth("touchstart", fresh);
       } else if (action === "MOVE") {
         const moved = [];
         const lost = [];
         for (const p of pts) {
-          const timer = this._cancelledTouchTimers.get(p.id);
-          if (timer) {
-            clearTimeout(timer);
-            this._cancelledTouchTimers.delete(p.id);
-          }
-          if (this.activeTouches.has(p.id)) moved.push({ identifier: p.id, clientX: p.x, clientY: p.y });
+          if (this.activeTouches.has(p.id))
+            moved.push({ identifier: p.id, clientX: p.x, clientY: p.y });
           else lost.push(p);
         }
         if (lost.length) synth("touchstart", lost);
-        if (moved.length) synth("touchmove", moved, pts.map(p => ({ identifier: p.id, clientX: p.x, clientY: p.y })));
+        if (moved.length)
+          synth(
+            "touchmove",
+            moved,
+            pts.map((p) => ({ identifier: p.id, clientX: p.x, clientY: p.y })),
+          );
       } else if (action === "UP" || action === "POINTER_UP") {
-        const lifted = (action === "UP") ? pts.slice() : pts.filter((p, i2) => i2 === idx);
+        const lifted =
+          action === "UP" ? pts.slice() : pts.filter((p, i2) => i2 === idx);
         if (lifted.length) {
-          this._cancelledTouchTimers.forEach((t, id) => {
-            if (lifted.some(p => p.id === id)) this._cancelledTouchTimers.delete(id);
-          });
-          synth("touchend", lifted, pts.filter(p => !lifted.includes(p)));
+          synth(
+            "touchend",
+            lifted,
+            pts.filter((p) => !lifted.includes(p)),
+          );
         }
       } else if (action === "CANCEL") {
         synth("touchcancel", pts, []);
@@ -787,44 +868,47 @@ export class VirtualKeyboardUI {
     // Spring-loaded Pitch Bend (-2 to +2 semitones)
     if (pitchTrack && pitchThumb) {
       let isDragging = false;
-      const setPitchFromY = clientY => {
+      const setPitchFromY = (clientY) => {
         const rect = pitchTrack.getBoundingClientRect();
-        const norm = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
+        const norm = Math.max(
+          0,
+          Math.min(1, (clientY - rect.top) / rect.height),
+        );
         const semitones = (0.5 - norm) * 4;
         pitchThumb.style.top = `${norm * 100}%`;
         multiLayerEngine.setPitchBend(semitones);
         synthEngine.setPitchBend(semitones);
       };
 
-      pitchTrack.addEventListener("mousedown", e => {
+      pitchTrack.addEventListener("mousedown", (e) => {
         isDragging = true;
         setPitchFromY(e.clientY);
       });
 
       pitchTrack.addEventListener(
         "touchstart",
-        e => {
+        (e) => {
           if (e.cancelable) e.preventDefault();
           isDragging = true;
           if (e.touches[0]) setPitchFromY(e.touches[0].clientY);
         },
-        { passive: false }
+        { passive: false },
       );
 
-      this._onWindow(window, "mousemove", e => {
+      this._onWindow(window, "mousemove", (e) => {
         if (isDragging) setPitchFromY(e.clientY);
       });
 
       this._onWindow(
         window,
         "touchmove",
-        e => {
+        (e) => {
           if (isDragging && e.touches[0]) {
             if (e.cancelable) e.preventDefault();
             setPitchFromY(e.touches[0].clientY);
           }
         },
-        { passive: false }
+        { passive: false },
       );
 
       this._onWindow(window, "mouseup", () => {
@@ -850,44 +934,47 @@ export class VirtualKeyboardUI {
     // Latching Modulation / Air Brilliance Wheel
     if (modTrack && modThumb) {
       let isModDragging = false;
-      const setModFromY = clientY => {
+      const setModFromY = (clientY) => {
         const rect = modTrack.getBoundingClientRect();
-        const norm = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
+        const norm = Math.max(
+          0,
+          Math.min(1, (clientY - rect.top) / rect.height),
+        );
         const amount = 1.0 - norm; // Top is 100%
         modThumb.style.top = `${norm * 100}%`;
         multiLayerEngine.setModWheel(amount);
         synthEngine.setModWheel(amount);
       };
 
-      modTrack.addEventListener("mousedown", e => {
+      modTrack.addEventListener("mousedown", (e) => {
         isModDragging = true;
         setModFromY(e.clientY);
       });
 
       modTrack.addEventListener(
         "touchstart",
-        e => {
+        (e) => {
           if (e.cancelable) e.preventDefault();
           isModDragging = true;
           if (e.touches[0]) setModFromY(e.touches[0].clientY);
         },
-        { passive: false }
+        { passive: false },
       );
 
-      this._onWindow(window, "mousemove", e => {
+      this._onWindow(window, "mousemove", (e) => {
         if (isModDragging) setModFromY(e.clientY);
       });
 
       this._onWindow(
         window,
         "touchmove",
-        e => {
+        (e) => {
           if (isModDragging && e.touches[0]) {
             if (e.cancelable) e.preventDefault();
             setModFromY(e.touches[0].clientY);
           }
         },
-        { passive: false }
+        { passive: false },
       );
 
       this._onWindow(window, "mouseup", () => {
@@ -916,11 +1003,11 @@ export class VirtualKeyboardUI {
       this.toggleXyPad();
     });
 
-    scaleRoot?.addEventListener("change", e => {
+    scaleRoot?.addEventListener("change", (e) => {
       scaleLock.setRootNote(parseInt(e.target.value));
     });
 
-    scaleType?.addEventListener("change", e => {
+    scaleType?.addEventListener("change", (e) => {
       scaleLock.setScale(e.target.value);
     });
 
@@ -990,12 +1077,12 @@ export class VirtualKeyboardUI {
     tabletHelpBtn?.addEventListener("click", () => {
       alert(
         "📱 XIAOMI PAD / ANDROID MULTI-TOUCH TIP:\n\n" +
-        "If playing chords with 3 or more fingers triggers Xiaomi's screenshot snipping tool:\n\n" +
-        "1. Open your tablet's Settings app.\n" +
-        "2. Tap 'Additional settings' → 'Gesture shortcuts'.\n" +
-        "3. Tap 'Take a screenshot' and set to 'None' (or turn off 'Slide 3 fingers down').\n" +
-        "4. Tap 'Partial screenshot' and turn off 'Press and hold with 3 fingers'.\n\n" +
-        "Alternatively, open Xiaomi 'Game Turbo' and enable 'Turn off 3-finger screenshot'."
+          "If playing chords with 3 or more fingers triggers Xiaomi's screenshot snipping tool:\n\n" +
+          "1. Open your tablet's Settings app.\n" +
+          "2. Tap 'Additional settings' → 'Gesture shortcuts'.\n" +
+          "3. Tap 'Take a screenshot' and set to 'None' (or turn off 'Slide 3 fingers down').\n" +
+          "4. Tap 'Partial screenshot' and turn off 'Press and hold with 3 fingers'.\n\n" +
+          "Alternatively, open Xiaomi 'Game Turbo' and enable 'Turn off 3-finger screenshot'.",
       );
     });
 
@@ -1004,23 +1091,28 @@ export class VirtualKeyboardUI {
     });
 
     // Accent mini buttons (PP, MP, MF, FF, SFZ) & Tablet/Mobile Dropdown
-    const accentBtns = this.container.querySelectorAll(".accent-mini-btn[data-vel]");
+    const accentBtns = this.container.querySelectorAll(
+      ".accent-mini-btn[data-vel]",
+    );
     const velSelect = document.getElementById("hud-velocity-select");
 
-    velSelect?.addEventListener("change", e => {
+    velSelect?.addEventListener("change", (e) => {
       const vel = parseInt(e.target.value);
       qwertyKeyboard.setVelocity(vel);
-      accentBtns.forEach(b => {
-        b.classList.toggle("active", parseInt(b.getAttribute("data-vel")) === vel);
+      accentBtns.forEach((b) => {
+        b.classList.toggle(
+          "active",
+          parseInt(b.getAttribute("data-vel")) === vel,
+        );
       });
       if (typeof this.updateHudReadouts === "function") {
         this.updateHudReadouts();
       }
     });
 
-    accentBtns.forEach(btn => {
+    accentBtns.forEach((btn) => {
       btn.addEventListener("click", () => {
-        accentBtns.forEach(b => b.classList.remove("active"));
+        accentBtns.forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
         const vel = parseInt(btn.getAttribute("data-vel"));
         qwertyKeyboard.setVelocity(vel);
@@ -1035,9 +1127,9 @@ export class VirtualKeyboardUI {
 
     // Mobile / Screen Key Zoom Mode Switcher
     const zoomBtns = this.container.querySelectorAll(".zoom-btn");
-    zoomBtns.forEach(btn => {
+    zoomBtns.forEach((btn) => {
       btn.addEventListener("click", () => {
-        zoomBtns.forEach(b => b.classList.remove("active"));
+        zoomBtns.forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
         const mode = btn.getAttribute("data-zoom");
         this.setZoomMode(mode, true);
@@ -1048,7 +1140,9 @@ export class VirtualKeyboardUI {
     const c3c5Btn = document.getElementById("hud-c3-c5-btn");
     c3c5Btn?.addEventListener("click", () => {
       this.setZoomMode("touch", false);
-      zoomBtns.forEach(b => b.classList.toggle("active", b.getAttribute("data-zoom") === "touch"));
+      zoomBtns.forEach((b) =>
+        b.classList.toggle("active", b.getAttribute("data-zoom") === "touch"),
+      );
       this.frameC3C5(true);
     });
 
@@ -1074,8 +1168,10 @@ export class VirtualKeyboardUI {
     const collapseBtn = document.getElementById("btn-collapse-piano");
     const toggleCollapse = (forceState = null) => {
       const appRoot = document.getElementById("app-root");
-      const isCurrentlyCollapsed = appRoot?.classList.contains("piano-collapsed");
-      const nextCollapsed = forceState !== null ? forceState : !isCurrentlyCollapsed;
+      const isCurrentlyCollapsed =
+        appRoot?.classList.contains("piano-collapsed");
+      const nextCollapsed =
+        forceState !== null ? forceState : !isCurrentlyCollapsed;
 
       appRoot?.classList.toggle("piano-collapsed", nextCollapsed);
       document.body.classList.toggle("piano-collapsed", nextCollapsed);
@@ -1103,7 +1199,7 @@ export class VirtualKeyboardUI {
     });
 
     // Ctrl+F4 toggles piano collapse (plain F1-F8 are rig-slot recalls)
-    this._onWindow(window, "keydown", e => {
+    this._onWindow(window, "keydown", (e) => {
       if (e.key === "F4" && e.ctrlKey && !e.altKey && !e.metaKey) {
         e.preventDefault();
         toggleCollapse();
@@ -1121,8 +1217,14 @@ export class VirtualKeyboardUI {
     const containerWidth = container.clientWidth;
     const currentScroll = container.scrollLeft;
 
-    if (elLeft < currentScroll + 40 || elLeft + elWidth > currentScroll + containerWidth - 40) {
-      const targetScroll = Math.max(0, elLeft - (containerWidth / 2) + (elWidth / 2));
+    if (
+      elLeft < currentScroll + 40 ||
+      elLeft + elWidth > currentScroll + containerWidth - 40
+    ) {
+      const targetScroll = Math.max(
+        0,
+        elLeft - containerWidth / 2 + elWidth / 2,
+      );
       container.scrollTo({
         left: targetScroll,
         behavior: smooth ? "smooth" : "auto",
@@ -1138,10 +1240,18 @@ export class VirtualKeyboardUI {
 
     const rollContainer = document.getElementById("piano-roll-container");
     if (rollContainer) {
-      rollContainer.classList.remove("zoom-touch", "zoom-wide", "zoom-compact", "zoom-full");
+      rollContainer.classList.remove(
+        "zoom-touch",
+        "zoom-wide",
+        "zoom-compact",
+        "zoom-full",
+      );
       rollContainer.classList.add(`zoom-${mode}`);
       if (mode === "full") {
-        rollContainer.scrollTo({ left: 0, behavior: smooth ? "smooth" : "auto" });
+        rollContainer.scrollTo({
+          left: 0,
+          behavior: smooth ? "smooth" : "auto",
+        });
       } else if (mode === "touch") {
         this.frameC3C5(smooth);
       } else {
@@ -1161,7 +1271,7 @@ export class VirtualKeyboardUI {
     const rangeStart = c3El.offsetLeft;
     const rangeEnd = c5El.offsetLeft + c5El.offsetWidth;
     const rangeCenter = (rangeStart + rangeEnd) / 2;
-    const targetScroll = Math.max(0, rangeCenter - (container.clientWidth / 2));
+    const targetScroll = Math.max(0, rangeCenter - container.clientWidth / 2);
     container.scrollTo({
       left: targetScroll,
       behavior: smooth ? "smooth" : "auto",
@@ -1172,7 +1282,10 @@ export class VirtualKeyboardUI {
     const el = this.keyElements.get(60); // Middle C = 60
     const container = document.getElementById("piano-roll-container");
     if (!el || !container) return;
-    const targetScroll = Math.max(0, el.offsetLeft - (container.clientWidth / 2) + (el.offsetWidth / 2));
+    const targetScroll = Math.max(
+      0,
+      el.offsetLeft - container.clientWidth / 2 + el.offsetWidth / 2,
+    );
     container.scrollTo({
       left: targetScroll,
       behavior: smooth ? "smooth" : "auto",
@@ -1185,7 +1298,9 @@ export class VirtualKeyboardUI {
     const midiToKey = new Map();
 
     for (const mapping of Object.values(keyMap)) {
-      const m = (qwertyKeyboard.baseOctave + 1 + mapping.octOffset) * 12 + mapping.noteOffset;
+      const m =
+        (qwertyKeyboard.baseOctave + 1 + mapping.octOffset) * 12 +
+        mapping.noteOffset;
       midiToKey.set(m, mapping.label);
     }
 
@@ -1195,7 +1310,8 @@ export class VirtualKeyboardUI {
         if (show && midiToKey.has(m)) {
           const text = midiToKey.get(m);
           if (labelEl.innerText !== text) labelEl.innerText = text;
-          if (labelEl.style.display !== "block") labelEl.style.display = "block";
+          if (labelEl.style.display !== "block")
+            labelEl.style.display = "block";
         } else {
           if (labelEl.innerText !== "") labelEl.innerText = "";
           if (labelEl.style.display !== "none") labelEl.style.display = "none";
@@ -1210,7 +1326,7 @@ export class VirtualKeyboardUI {
     const wasPressed = this.keyStates[midiNote] > 0;
     if (wasPressed === isNowPressed) return; // Drop redundant DOM updates to eliminate lag
 
-    this.keyStates[midiNote] = isNowPressed ? (velocity || 95) : 0;
+    this.keyStates[midiNote] = isNowPressed ? velocity || 95 : 0;
     const el = this.keyElements.get(midiNote);
     if (!el) return;
 
@@ -1236,11 +1352,6 @@ export class VirtualKeyboardUI {
     if (chordBtn) {
       chordBtn.innerText = `CHORD: ${qwertyKeyboard.chordMode.toUpperCase()}`;
       chordBtn.classList.toggle("active", qwertyKeyboard.chordMode !== "off");
-    }
-
-    const layoutBtn = document.getElementById("hud-layout-btn");
-    if (layoutBtn) {
-      layoutBtn.innerText = `LAYOUT: ${qwertyKeyboard.layoutMode === "melody" ? "MELODY (Q-P)" : "DAW (A-')"}`;
     }
 
     const velSelect = document.getElementById("hud-velocity-select");
@@ -1269,7 +1380,8 @@ export class VirtualKeyboardUI {
 
     const sustainBtn = document.getElementById("sustain-latch-btn");
     if (sustainBtn) {
-      const isDown = qwertyKeyboard.sustainPedal || qwertyKeyboard.sustainLatched;
+      const isDown =
+        qwertyKeyboard.sustainPedal || qwertyKeyboard.sustainLatched;
       sustainBtn.classList.toggle("active", isDown);
       const led = sustainBtn.querySelector(".pedal-led");
       if (led) {
@@ -1290,12 +1402,14 @@ export class VirtualKeyboardUI {
 
     if (curveSelect) {
       curveSelect.value = saved || "linear";
-      curveSelect.addEventListener("change", e => {
+      curveSelect.addEventListener("change", (e) => {
         const val = e.target.value;
         setVelocityCurve(val);
         if (wrapper) {
           const btns = wrapper.querySelectorAll(".accent-mini-btn");
-          btns.forEach(b => b.classList.toggle("active", b.getAttribute("data-curve") === val));
+          btns.forEach((b) =>
+            b.classList.toggle("active", b.getAttribute("data-curve") === val),
+          );
         }
       });
     }
@@ -1307,15 +1421,15 @@ export class VirtualKeyboardUI {
     if (active) active.classList.add("active");
 
     const btns = wrapper.querySelectorAll(".accent-mini-btn");
-    btns.forEach(btn => {
+    btns.forEach((btn) => {
       let lastHandled = 0;
-      const handleCurve = e => {
+      const handleCurve = (e) => {
         const now = performance.now();
         if (now - lastHandled < 200) return;
         lastHandled = now;
         if (e.cancelable && e.type === "touchstart") e.preventDefault();
 
-        btns.forEach(b => b.classList.remove("active"));
+        btns.forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
         const val = btn.getAttribute("data-curve");
         setVelocityCurve(val);

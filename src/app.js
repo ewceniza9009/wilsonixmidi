@@ -365,59 +365,83 @@ class MidiKeyEliteApp {
       appRoot.classList.add("view-triton");
     }
 
-    // 11. Workspace View Tabs Switcher
-    const wsTabBtns = document.querySelectorAll(".ws-tab-btn[data-view]");
-    wsTabBtns.forEach(btn => {
-      btn.addEventListener("click", () => {
-        wsTabBtns.forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        const view = btn.getAttribute("data-view");
-
-        const wsSelect = document.getElementById("hud-ws-tabs-select");
-        if (wsSelect && wsSelect.value !== view) {
-          wsSelect.value = view;
-        }
-
-        // Lazy-render the view on first activation
-        if (this._lazyViews && this._lazyViews[view]) {
-          this._lazyViews[view]();
-        }
-
-        if (appRoot) {
-          appRoot.classList.remove(
-            "view-all",
-            "view-triton",
-            "view-combi",
-            "view-split",
-            "view-keys",
-            "view-chords",
-            "view-demo",
-            "view-fx",
-            "view-looper",
-            "view-grooves",
-            "view-player"
-          );
-          appRoot.classList.add(`view-${view}`);
-        }
-
-        if (view === "combi") {
-          multiLayerEngine.toggleCombiMode(true);
-        }
-
-        // SPLIT tab is the master split switch: select it → split ON, leave → OFF
-        const splitOn = view === "split";
-        multiLayerEngine.toggleSplitMode(splitOn);
-        synthEngine.toggleSplitMode(splitOn);
-
-        // Snap smoothly to stage deck when switching stage views
-        const stageDeck = document.getElementById("studio-stage-deck");
-        if (stageDeck && window.scrollY > 50) {
-          stageDeck.scrollIntoView({ behavior: "smooth" });
-        }
-
-        // Remember last tab for restore
-        multiLayerEngine.updateSetting("lastTab", view);
+    // 11. Workspace View Switcher (Delegated — survives HUD re-renders)
+    const switchView = (view) => {
+      if (!view) return;
+      document.querySelectorAll(".ws-tab-btn[data-view]").forEach(b => {
+        b.classList.toggle("active", b.getAttribute("data-view") === view);
       });
+
+      const wsSelect = document.getElementById("hud-ws-tabs-select");
+      if (wsSelect && wsSelect.value !== view) {
+        wsSelect.value = view;
+      }
+
+      // Lazy-render the view on first activation
+      if (this._lazyViews && this._lazyViews[view]) {
+        this._lazyViews[view]();
+      }
+
+      if (appRoot) {
+        appRoot.classList.remove(
+          "view-all",
+          "view-triton",
+          "view-combi",
+          "view-split",
+          "view-keys",
+          "view-chords",
+          "view-demo",
+          "view-fx",
+          "view-looper",
+          "view-grooves",
+          "view-player"
+        );
+        appRoot.classList.add(`view-${view}`);
+      }
+
+      if (view === "combi") {
+        multiLayerEngine.toggleCombiMode(true);
+      }
+
+      // SPLIT tab is the master split switch: select it → split ON, leave → OFF
+      const splitOn = view === "split";
+      multiLayerEngine.toggleSplitMode(splitOn);
+      synthEngine.toggleSplitMode(splitOn);
+
+      // Snap smoothly to stage deck when switching stage views
+      const stageDeck = document.getElementById("studio-stage-deck");
+      if (stageDeck && window.scrollY > 50) {
+        stageDeck.scrollIntoView({ behavior: "smooth" });
+      }
+
+      // Remember last tab for restore
+      multiLayerEngine.updateSetting("lastTab", view);
+    };
+
+    // Delegated click listener on document — handles .ws-tab-btn[data-view] and #btn-toggle-fullscreen
+    document.addEventListener("click", (e) => {
+      const tabBtn = e.target.closest(".ws-tab-btn[data-view]");
+      if (tabBtn) {
+        const view = tabBtn.getAttribute("data-view");
+        switchView(view);
+        return;
+      }
+
+      const fullBtn = e.target.closest("#btn-toggle-fullscreen");
+      if (fullBtn) {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen?.().catch(() => {});
+        } else {
+          document.exitFullscreen?.().catch(() => {});
+        }
+      }
+    });
+
+    // Delegated dropdown change listener on document
+    document.addEventListener("change", (e) => {
+      if (e.target && e.target.id === "hud-ws-tabs-select") {
+        switchView(e.target.value);
+      }
     });
 
     // Restore last tab if enabled
@@ -426,36 +450,17 @@ class MidiKeyEliteApp {
       if (this._lazyViews && this._lazyViews[lastTab]) {
         this._lazyViews[lastTab]();
       }
-      const restoreBtn = document.querySelector(`.ws-tab-btn[data-view="${lastTab}"]`);
-      if (restoreBtn) restoreBtn.click();
+      switchView(lastTab);
     }
 
-    // Tablet & Mobile Workspace View Dropdown Listener
-    const wsTabsSelect = document.getElementById("hud-ws-tabs-select");
-    wsTabsSelect?.addEventListener("change", e => {
-      const view = e.target.value;
-      const targetBtn = document.querySelector(`.ws-tab-btn[data-view="${view}"]`);
-      if (targetBtn) {
-        targetBtn.click();
-      }
-    });
-
-
-    // 13. Fullscreen Toggle (state synced from fullscreenchange, not optimistic)
-    const fullscreenBtn = document.getElementById("btn-toggle-fullscreen");
+    // 13. Fullscreen state sync from fullscreenchange
     const syncFullscreenState = () => {
-      if (fullscreenBtn) {
-        fullscreenBtn.classList.toggle("active", !!document.fullscreenElement);
+      const fullBtn = document.getElementById("btn-toggle-fullscreen");
+      if (fullBtn) {
+        fullBtn.classList.toggle("active", !!document.fullscreenElement);
       }
     };
     document.addEventListener("fullscreenchange", syncFullscreenState);
-    fullscreenBtn?.addEventListener("click", () => {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen?.().catch(() => {});
-      } else {
-        document.exitFullscreen?.().catch(() => {});
-      }
-    });
 
     // 14. Mobile Orientation & Resize Adaptation
     window.addEventListener("orientationchange", () => {

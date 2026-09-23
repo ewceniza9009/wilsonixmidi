@@ -231,107 +231,107 @@ export const ABLETUNES_BANKS = {
         "v": "vl3"
       },
       {
-        "f": "FMPiano_G#0_vl1.flac",
+        "f": "FMPiano_Gs0_vl1.flac",
         "m": 20,
         "v": "vl1"
       },
       {
-        "f": "FMPiano_G#0_vl2.flac",
+        "f": "FMPiano_Gs0_vl2.flac",
         "m": 20,
         "v": "vl2"
       },
       {
-        "f": "FMPiano_G#0_vl3.flac",
+        "f": "FMPiano_Gs0_vl3.flac",
         "m": 20,
         "v": "vl3"
       },
       {
-        "f": "FMPiano_G#1_vl1.flac",
+        "f": "FMPiano_Gs1_vl1.flac",
         "m": 32,
         "v": "vl1"
       },
       {
-        "f": "FMPiano_G#1_vl2.flac",
+        "f": "FMPiano_Gs1_vl2.flac",
         "m": 32,
         "v": "vl2"
       },
       {
-        "f": "FMPiano_G#1_vl3.flac",
+        "f": "FMPiano_Gs1_vl3.flac",
         "m": 32,
         "v": "vl3"
       },
       {
-        "f": "FMPiano_G#2_vl1.flac",
+        "f": "FMPiano_Gs2_vl1.flac",
         "m": 44,
         "v": "vl1"
       },
       {
-        "f": "FMPiano_G#2_vl2.flac",
+        "f": "FMPiano_Gs2_vl2.flac",
         "m": 44,
         "v": "vl2"
       },
       {
-        "f": "FMPiano_G#2_vl3.flac",
+        "f": "FMPiano_Gs2_vl3.flac",
         "m": 44,
         "v": "vl3"
       },
       {
-        "f": "FMPiano_G#3_vl1.flac",
+        "f": "FMPiano_Gs3_vl1.flac",
         "m": 56,
         "v": "vl1"
       },
       {
-        "f": "FMPiano_G#3_vl2.flac",
+        "f": "FMPiano_Gs3_vl2.flac",
         "m": 56,
         "v": "vl2"
       },
       {
-        "f": "FMPiano_G#3_vl3.flac",
+        "f": "FMPiano_Gs3_vl3.flac",
         "m": 56,
         "v": "vl3"
       },
       {
-        "f": "FMPiano_G#4_vl1.flac",
+        "f": "FMPiano_Gs4_vl1.flac",
         "m": 68,
         "v": "vl1"
       },
       {
-        "f": "FMPiano_G#4_vl2.flac",
+        "f": "FMPiano_Gs4_vl2.flac",
         "m": 68,
         "v": "vl2"
       },
       {
-        "f": "FMPiano_G#4_vl3.flac",
+        "f": "FMPiano_Gs4_vl3.flac",
         "m": 68,
         "v": "vl3"
       },
       {
-        "f": "FMPiano_G#5_vl1.flac",
+        "f": "FMPiano_Gs5_vl1.flac",
         "m": 80,
         "v": "vl1"
       },
       {
-        "f": "FMPiano_G#5_vl2.flac",
+        "f": "FMPiano_Gs5_vl2.flac",
         "m": 80,
         "v": "vl2"
       },
       {
-        "f": "FMPiano_G#5_vl3.flac",
+        "f": "FMPiano_Gs5_vl3.flac",
         "m": 80,
         "v": "vl3"
       },
       {
-        "f": "FMPiano_G#6_vl1.flac",
+        "f": "FMPiano_Gs6_vl1.flac",
         "m": 92,
         "v": "vl1"
       },
       {
-        "f": "FMPiano_G#6_vl2.flac",
+        "f": "FMPiano_Gs6_vl2.flac",
         "m": 92,
         "v": "vl2"
       },
       {
-        "f": "FMPiano_G#6_vl3.flac",
+        "f": "FMPiano_Gs6_vl3.flac",
         "m": 92,
         "v": "vl3"
       }

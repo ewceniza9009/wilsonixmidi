@@ -10,8 +10,9 @@ import {
 import { ABLETUNES_BANKS } from "./abletunes-manifest.js";
 import { animalEdmLoader } from "./animal-edm-loader.js";
 import { bloomEdmLoader } from "./bloom-edm-loader.js";
-import { SfxSoundGenerator } from "./sfx-sound-generator.js";
 import { sampleCache } from "./sample-cache.js";
+import { isSfxInstrumentId } from "./sfx-instrument-ids.js";
+import { multisampleLoader } from "./multisample-loader.js";
 import { logger } from "../utils/logger.js";
 
 const NOTE_MAP = {
@@ -35,12 +36,12 @@ const NOTE_MAP = {
 };
 
 const INST_ALIASES = {
-  synthage_grand: "abletunes_upright",
-  whitney_ballad: "abletunes_upright",
-  ballad_master: "abletunes_upright",
-  m1_piano_16: "abletunes_upright",
+  synthage_grand: "acoustic_grand_piano",
+  whitney_ballad: "acoustic_grand_piano",
+  ballad_master: "acoustic_grand_piano",
+  m1_piano_16: "acoustic_grand_piano",
   abletunes_upright: "abletunes_upright",
-  acoustic_grand_piano: "abletunes_upright",
+  acoustic_grand_piano: "acoustic_grand_piano",
   rhodes_stage_mp3: "electric_piano_1",
   electric_piano_1: "electric_piano_1",
   electric_piano_2: "electric_piano_2",
@@ -535,6 +536,18 @@ const INST_TRIM_GAINS = {
   edm_trance_oct2: 0.75,
   omega_saw_gs: 0.75,
   omega_doctor_solo: 0.75,
+
+  // Roland SoundFonts
+  roland_d50_fantasia: 0.85,
+  roland_u20_choir: 0.82,
+  roland_bright_ep: 0.88,
+  roland_sc55_warm_pad: 0.80,
+  roland_space_voice: 0.82,
+  roland_metal_pad: 0.84,
+  roland_sc55_finger_bass: 0.92,
+  roland_u20_shakuhachi: 0.88,
+  roland_orchestra_hit: 0.85,
+  roland_synth_brass: 0.85,
 };
 
 /**
@@ -1643,7 +1656,12 @@ export class NativePcmEngine {
   constructor(ctx, destinationNode) {
     this.ctx = ctx;
     this.destination = destinationNode;
-    this.sfxGenerator = new SfxSoundGenerator(ctx, destinationNode);
+    // P1 code splitting: the 111KB SFX generator is dynamically imported on
+    // first SFX use instead of being parsed at boot (it is only reachable
+    // after the user selects an SFX preset). Classification of SFX ids in the
+    // hot path uses the standalone stateless check (sfx-instrument-ids.js).
+    this.sfxGenerator = null;
+    this._sfxLoadPromise = null;
 
     this.layerInserts = createLazyInsertGrid(
       () => new LayerInsertProcessor(ctx, destinationNode),
@@ -1727,6 +1745,22 @@ export class NativePcmEngine {
     // Cache for findNearestAnchor: key = "instId:midi:vel", value = {anchorMidi, buffer}
     this._anchorCache = new Map();
     this._anchorCacheMaxSize = 1024;
+    // In-memory registry of binary soundfont-pack manifests (small JSON) so
+    // instrument selection never re-downloads the manifest — only the pack
+    // bytes come from IndexedDB.
+    this._packManifests = new Map();
+    // Multi-velocity: instId -> ascending velocity lower-bounds (abletunes
+    // registers its thresholds at decode time; imported multisample banks via
+    // the multisample loader). Replaces the old hardcoded 55/98 law.
+    this._velocityThresholds = new Map([
+      ["abletunes_upright", [1, 55, 95]],
+      ["abletunes_fm_piano", [1, 55, 95]],
+    ]);
+    // Round-robin: key = "instId:anchorMidi" -> cycle counter, incremented per
+    // noteOn so repeated notes alternate through rr1..rrN variants.
+    this._rrCounters = new Map();
+    // Set of instIds whose prewarm was scheduled before pcmWorkletNode became ready
+    this._pendingPrewarms = new Set();
 
     this.initBuffers();
   }
@@ -2222,10 +2256,25 @@ export class NativePcmEngine {
       this._prewarmWorklet(instId);
       return Promise.resolve();
     }
+    if (isSfxInstrumentId(instId)) {
+      // Kick the lazy SFX bootstrap (P1) so the generator is ready by the time
+      // a key is pressed; SFX instruments have no PCM anchors to decode.
+      this.ensureSfxGenerator().catch(() => {});
+      return Promise.resolve();
+    }
+    if (multisampleLoader && multisampleLoader.isMultisampleInstrument(instId)) {
+      return multisampleLoader.loadInstrument(instId, this.ctx, this.decodedBuffers).then(() => {
+        this._prewarmWorklet(instId);
+      });
+    }
     if (instId.startsWith("animal_")) {
-      return animalEdmLoader.loadInstrument(instId, this.ctx, this.decodedBuffers);
+      return animalEdmLoader.loadInstrument(instId, this.ctx, this.decodedBuffers).then(() => {
+        this._prewarmWorklet(instId);
+      });
     } else if (instId.startsWith("bloom_")) {
-      return bloomEdmLoader.loadInstrument(instId, this.ctx, this.decodedBuffers);
+      return bloomEdmLoader.loadInstrument(instId, this.ctx, this.decodedBuffers).then(() => {
+        this._prewarmWorklet(instId);
+      });
     } else if (instId.startsWith("abletunes_")) {
       const bankKey = instId === "abletunes_fm_piano" ? "fm_piano" : "upright_piano";
       return this.loadAbletunesInstrument(bankKey).then(() => {
@@ -2238,10 +2287,212 @@ export class NativePcmEngine {
     }
   }
 
+  /**
+   * Lazily bootstraps the SfxSoundGenerator via dynamic import. Kicked from
+   * preloadInstrument (SFX preset selected) and the noteOn hot path; until it
+   * resolves, SFX notes are dropped (silence for a fraction of a second —
+   * consistent with the engine's silence-over-wrong-instrument policy).
+   */
+  ensureSfxGenerator() {
+    if (this.sfxGenerator) return Promise.resolve(this.sfxGenerator);
+    if (this._sfxLoadPromise) return this._sfxLoadPromise;
+    this._sfxLoadPromise = import("./sfx-sound-generator.js")
+      .then((mod) => {
+        this.sfxGenerator = new mod.SfxSoundGenerator(this.ctx, this.destination);
+        this._sfxLoadPromise = null;
+        return this.sfxGenerator;
+      })
+      .catch((err) => {
+        this._sfxLoadPromise = null;
+        logger.warn("PCM", "Failed to lazy-load SFX generator", err);
+        return null;
+      });
+    return this._sfxLoadPromise;
+  }
+
   async loadSoundfont(instId) {
     if (!instId || this.loadingSoundfonts.has(instId)) return;
-    if (this.sfxGenerator && this.sfxGenerator.isSfxInstrument(instId)) return;
+    if (isSfxInstrumentId(instId)) {
+      // Kick the lazy SFX bootstrap so the generator is ready by the time a
+      // key is pressed (import + construction is a one-time fraction of a
+      // second; until then SFX notes are dropped).
+      this.ensureSfxGenerator().catch(() => {});
+      return;
+    }
     this.loadingSoundfonts.add(instId);
+    try {
+      // P1: binary pack path — one fetch + one IndexedDB entry per instrument,
+      // no megabyte-scale JSON.parse and no per-sample base64 decode on the
+      // main thread (the old JSONP pipeline cost seconds on Android WebView).
+      const loaded = await this._loadSoundfontPack(instId);
+      if (loaded) {
+        this._prewarmWorklet(instId);
+        return;
+      }
+      // Fallback: legacy JSONP path (dev trees / builds without extracted packs).
+      await this._loadSoundfontJsonp(instId);
+      this._prewarmWorklet(instId);
+    } catch (err) {
+      logger.warn("PCM", `Failed to load soundfont: ${instId}`, err);
+    } finally {
+      // Allow the instrument to be loaded again later (e.g. after cold eviction
+      // frees it). Without this, an evicted soundfont could never re-decode.
+      this.loadingSoundfonts.delete(instId);
+      this._maybeEvictDecodedBuffers();
+    }
+  }
+
+  /**
+   * Loads a soundfont from its build-time extracted binary pack
+   * (`/soundfonts-bin/<id>.pack` + sibling `.json` manifest, see
+   * tools/extract-soundfonts.mjs). One fetch + one IndexedDB entry per
+   * instrument instead of ~88 sequential base64 decodes plus a megabyte-scale
+   * JSON.parse on the main thread; the pack is also ~25% smaller than its
+   * base64 JSONP source. Returns true when loaded, null when the packs are
+   * unavailable (caller falls back to the JSONP path).
+   */
+  async _loadSoundfontPack(instId) {
+    try {
+      if (this.decodedBuffers.has(instId) && this.decodedBuffers.get(instId).size > 0) {
+        return true;
+      }
+      const cacheKey = `sfb_${instId}`;
+      let manifest = this._packManifests.get(instId);
+      let packBuf = null;
+
+      const cachedEntry = await sampleCache.getSampleEntry(cacheKey);
+      if (cachedEntry) {
+        packBuf = cachedEntry.buffer;
+        if (!manifest && cachedEntry.metadata?.manifest) {
+          manifest = cachedEntry.metadata.manifest;
+          this._packManifests.set(instId, manifest);
+        }
+      }
+
+      // If pack is cached in IndexedDB but manifest wasn't in metadata (e.g. legacy entry),
+      // we ONLY fetch the tiny ~1KB .json manifest, NEVER re-downloading the multi-MB .pack.
+      if (packBuf && !manifest) {
+        try {
+          const manifestResp = await fetch(`/soundfonts-bin/${instId}.json`);
+          if (manifestResp && manifestResp.ok) {
+            const parsed = await manifestResp.json();
+            if (parsed && Array.isArray(parsed.samples) && parsed.samples.length > 0) {
+              manifest = parsed;
+              this._packManifests.set(instId, manifest);
+              sampleCache.setSample(cacheKey, packBuf, {
+                instId,
+                kind: "soundfont-pack",
+                manifest,
+              });
+            }
+          }
+        } catch (_) {}
+      }
+
+      // If either pack or manifest is still missing, fetch both from network
+      if (!manifest || !packBuf) {
+        const base = `/soundfonts-bin/${instId}`;
+        const [manifestResp, packResp] = await Promise.all([
+          fetch(`${base}.json`),
+          fetch(`${base}.pack`),
+        ]);
+        if (!manifestResp.ok || !packResp.ok) return null;
+        const contentType = packResp.headers.get("content-type") || "";
+        if (contentType.includes("text/html")) return null;
+        manifest = await manifestResp.json();
+        if (!manifest || !Array.isArray(manifest.samples) || manifest.samples.length === 0) {
+          return null;
+        }
+        packBuf = await packResp.arrayBuffer();
+        sampleCache.setSample(cacheKey, packBuf, { instId, kind: "soundfont-pack", manifest });
+        this._packManifests.set(instId, manifest);
+      }
+
+      if (!this.decodedBuffers.has(instId))
+        this.decodedBuffers.set(instId, new Map());
+      const instMap = this.decodedBuffers.get(instId);
+      const ctx = this.ctx;
+      // Decode the anchors nearest C4 first so the first played notes become
+      // playable as early as possible.
+      const entries = manifest.samples
+        .slice()
+        .sort((a, b) => Math.abs(a.m - 60) - Math.abs(b.m - 60));
+
+      // Corrupt pack healing helper (single-flight per instrument so concurrent
+      // decodes in a batch don't spawn multiple parallel fetches of the same pack).
+      let healPromise = null;
+      const getFreshPack = () => {
+        if (!healPromise) {
+          healPromise = (async () => {
+            const packResp = await fetch(`/soundfonts-bin/${instId}.pack`).catch(() => null);
+            if (packResp && packResp.ok) {
+              const fresh = await packResp.arrayBuffer();
+              packBuf = fresh;
+              sampleCache.setSample(cacheKey, fresh, {
+                instId,
+                kind: "soundfont-pack",
+                manifest,
+              });
+              return fresh;
+            }
+            return null;
+          })().finally(() => {
+            healPromise = null;
+          });
+        }
+        return healPromise;
+      };
+
+      const BATCH_SIZE = 8;
+      for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+        const batch = entries.slice(i, i + BATCH_SIZE);
+        await Promise.all(
+          batch.map(async (s) => {
+            const midi = s.m;
+            if (typeof midi !== "number") return;
+            try {
+              let audioBuf = null;
+              try {
+                audioBuf = await this.decodeAudioBuffer(
+                  ctx,
+                  packBuf.slice(s.o, s.o + s.l),
+                );
+              } catch (firstErr) {
+                // Corrupt pack in IndexedDB (a known WebView failure mode): the
+                // cached bytes fail decode on every future note. Refetch a
+                // fresh copy (single-flight), HEAL the cache entry, and retry so the
+                // instrument recovers permanently instead of staying silent until reinstall.
+                const fresh = await getFreshPack();
+                if (fresh) {
+                  audioBuf = await this.decodeAudioBuffer(ctx, fresh.slice(s.o, s.o + s.l));
+                }
+              }
+              if (!audioBuf) return;
+              const processedBuf = this.createCrossfadedLoopBuffer(
+                ctx,
+                audioBuf,
+                instId,
+              );
+              instMap.set(midi, processedBuf);
+              this._trackDecodedBuffer(instId, processedBuf);
+            } catch (err) {
+              logger.warn(
+                "PCM",
+                `Failed to decode soundfont sample ${s.n} for "${instId}"`,
+                err,
+              );
+            }
+          }),
+        );
+      }
+      return instMap.size > 0;
+    } catch (err) {
+      logger.warn("PCM", `Soundfont pack load failed for "${instId}" — falling back to JSONP`, err);
+      return null;
+    }
+  }
+
+  async _loadSoundfontJsonp(instId) {
     try {
       const resp = await fetch(`/soundfonts/${instId}-mp3.js`);
       if (!resp.ok) return;
@@ -2307,10 +2558,6 @@ export class NativePcmEngine {
     } catch (err) {
       logger.warn("PCM", `Failed to load soundfont: ${instId}`, err);
     }
-    // Allow the instrument to be loaded again later (e.g. after cold eviction
-    // frees it). Without this, an evicted soundfont could never re-decode.
-    this.loadingSoundfonts.delete(instId);
-    this._maybeEvictDecodedBuffers();
   }
 
   /**
@@ -2351,6 +2598,20 @@ export class NativePcmEngine {
     const instId = bank.id;
     if (this.loadingSoundfonts.has(instId)) return;
     this.loadingSoundfonts.add(instId);
+    try {
+      await this._runLoadAbletunes(bank, bankKey, instId);
+    } finally {
+      // Allow the instrument to be loaded again later (e.g. after cold eviction
+      // frees it, or after a transient decode failure). Without this release,
+      // the loading guard blocks every future load attempt for the rest of the
+      // session — an evicted/failed instrument would never re-decode and both
+      // live play and clip playback would go permanently silent.
+      this.loadingSoundfonts.delete(instId);
+      this._maybeEvictDecodedBuffers();
+    }
+  }
+
+  async _runLoadAbletunes(bank, bankKey, instId) {
     if (!this.decodedBuffers.has(instId))
       this.decodedBuffers.set(instId, new Map());
     const instMap = this.decodedBuffers.get(instId);
@@ -2364,8 +2625,12 @@ export class NativePcmEngine {
           try {
             const cacheKey = `able_${instId}_${sample.f}`;
             let arrayBuf = await sampleCache.getSample(cacheKey);
+            if (arrayBuf && !sampleCache.constructor._looksLikeAudio(new Uint8Array(arrayBuf.slice(0, 16)))) {
+              arrayBuf = null; // discard corrupt or HTML 404 cache entry
+            }
+            const safeFile = sample.f.split("/").map(encodeURIComponent).join("/");
             if (!arrayBuf) {
-              const url = `${bank.path}/${sample.f}`;
+              const url = `${bank.path}/${safeFile}`;
               const resp = await fetch(url);
               if (!resp.ok) return;
               arrayBuf = await resp.arrayBuffer();
@@ -2374,7 +2639,26 @@ export class NativePcmEngine {
                 file: sample.f,
               });
             }
-            const audioBuf = await this.decodeAudioBuffer(ctx, arrayBuf);
+            let audioBuf = null;
+            try {
+              audioBuf = await this.decodeAudioBuffer(ctx, arrayBuf);
+            } catch (cacheErr) {
+              // Corrupt IndexedDB cache (a known WebView failure mode): the
+              // cached bytes fail decode on every future note. Re-fetch a
+              // fresh copy, HEAL the cache entry, and retry so the instrument
+              // recovers permanently instead of staying silent until reinstall.
+              const url = `${bank.path}/${safeFile}`;
+              const resp = await fetch(url);
+              if (resp.ok) {
+                const fresh = await resp.arrayBuffer();
+                audioBuf = await this.decodeAudioBuffer(ctx, fresh);
+                sampleCache.setSample(cacheKey, fresh, {
+                  instId,
+                  file: sample.f,
+                });
+              }
+            }
+            if (!audioBuf) return;
             if (
               bankKey === "fm_piano" &&
               audioBuf &&
@@ -2401,11 +2685,16 @@ export class NativePcmEngine {
             instMap.set(sample.m, processedBuf);
             instMap.set(`${sample.m}_${sample.v}`, processedBuf);
             this._trackDecodedBuffer(instId, processedBuf);
-          } catch (e) {}
+          } catch (e) {
+            logger.warn(
+              "PCM",
+              `Failed to decode Abletunes sample ${sample.f} for "${instId}"`,
+              e,
+            );
+          }
         }),
       );
     }
-    this._maybeEvictDecodedBuffers();
   }
 
   async decodeEmbeddedAnchors(instId) {
@@ -2490,10 +2779,20 @@ export class NativePcmEngine {
    * Uploads an instrument's decoded buffers to the worklet ahead of the first
    * note (P1.5). Registers the decode name plus every alias that resolves to
    * it, because the worklet keys noteOn by the requested instId.
+   *
+   * P1: chunked + idle-scheduled — the full-PCM Float32 channel copies run
+   * across idle callbacks in small batches instead of one synchronous burst.
+   * This used to run inside the preset click handler and cost tens-to-hundreds
+   * of ms of main-thread jank on Android for multi-anchor instruments.
    */
   _prewarmWorklet(instId) {
     const w = this.pcmWorkletNode;
-    if (!instId || !w || !w.isReady) return;
+    if (!instId) return;
+    if (!w || !w.isReady) {
+      if (!this._pendingPrewarms) this._pendingPrewarms = new Set();
+      this._pendingPrewarms.add(instId);
+      return;
+    }
     const instMap = this.decodedBuffers.get(instId);
     if (!instMap || instMap.size === 0) return;
     const names = new Set([instId]);
@@ -2502,7 +2801,21 @@ export class NativePcmEngine {
         if (INST_ALIASES[key] === instId) names.add(key);
       }
     }
-    for (const name of names) w.prewarm(name, instMap);
+    for (const name of names) w.prewarmChunked(name, instMap);
+  }
+
+  /**
+   * Flushes all pending prewarms that were queued while the AudioWorklet was
+   * initializing. Called when pcmWorkletNode becomes ready.
+   */
+  flushPendingPrewarms() {
+    if (!this._pendingPrewarms || this._pendingPrewarms.size === 0) return;
+    const w = this.pcmWorkletNode;
+    if (!w || !w.isReady) return;
+    for (const instId of this._pendingPrewarms) {
+      this._prewarmWorklet(instId);
+    }
+    this._pendingPrewarms.clear();
   }
 
   _touchBuffer(buf) {
@@ -2795,15 +3108,95 @@ export class NativePcmEngine {
     } catch (e) {}
   }
 
+  /**
+   * Full manual reset of ALL decoded sample state (RAM + worklet copies),
+   * invoked by the in-app "Clear Sample Cache" maintenance action after the
+   * IndexedDB store is wiped. Forces every instrument to refetch fresh bytes
+   * from disk/network on next use, so corrupted cached samples can never be
+   * served again. In-flight voices keep their own buffer references and are
+   * not cut off.
+   */
+  resetDecodedBuffers() {
+    try {
+      const ids = this.decodedBuffers
+        ? Array.from(this.decodedBuffers.keys())
+        : [];
+      this.decodedBuffers = new Map();
+      if (this._anchorCache) this._anchorCache.clear();
+      if (this._instLastUsed) this._instLastUsed.clear();
+      if (this._instProtectedAt) this._instProtectedAt.clear();
+      if (this.loadingSoundfonts) this.loadingSoundfonts.clear();
+      if (this._decodePromises) this._decodePromises.clear();
+      if (this.pcmWorkletNode && typeof this.pcmWorkletNode.dropInstrument === "function") {
+        ids.forEach((id) => {
+          try { this.pcmWorkletNode.dropInstrument(id); } catch (e) {}
+        });
+      }
+      // The EDM loaders keep their own decoded maps outside decodedBuffers —
+      // reset those too so the wipe is complete.
+      if (typeof animalEdmLoader !== "undefined") animalEdmLoader.decodedBuffers = new Map();
+      if (typeof bloomEdmLoader !== "undefined") bloomEdmLoader.decodedBuffers = new Map();
+      if (typeof multisampleLoader !== "undefined") multisampleLoader.decodedBuffers = new Map();
+      console.log("[PCM] Cache: all decoded sample state reset — instruments refetch on next use");
+    } catch (e) {
+      logger.warn("PCM", "Failed to reset decoded buffers", e);
+    }
+  }
+
+  /**
+   * Multi-velocity layer resolution: maps a note velocity (1-127) to a layer
+   * index using the instrument's ascending velocity lower-bounds (registered
+   * at decode/load time from the bank manifest). Falls back to layer 0
+   * (single-sample behavior) for instruments without thresholds.
+   */
+  velocityToLayerIndex(instId, velocity) {
+    let thresholds = this._velocityThresholds?.get(instId);
+    if (
+      !thresholds &&
+      multisampleLoader &&
+      multisampleLoader.velocityThresholds?.has?.(instId)
+    ) {
+      thresholds = multisampleLoader.velocityThresholds.get(instId);
+    }
+    if (!thresholds || thresholds.length <= 1) return 0;
+    let idx = 0;
+    for (let i = 0; i < thresholds.length; i++) {
+      if (velocity >= thresholds[i]) idx = i;
+    }
+    return Math.min(idx, thresholds.length - 1);
+  }
+
+  /**
+   * Round-robin cycling (industry-standard rompler behavior): for an anchor
+   * with rr1..rrN variants, successive noteOns alternate through the variants
+   * (per instId+anchor counter), adding timbre variation to repeated notes.
+   * The cached anchor entry holds the whole variant array; cycling happens
+   * here at call time. Non-RR results pass through unchanged.
+   */
+  _applyRoundRobin(result, instId) {
+    if (!result || !Array.isArray(result.variants) || result.variants.length <= 1) {
+      return result;
+    }
+    const key = `${instId || result.instId}:${result.anchorMidi}`;
+    const n = this._rrCounters.get(key) || 0;
+    this._rrCounters.set(key, n + 1);
+    const idx = n % result.variants.length;
+    if (idx === 0) return result;
+    return {
+      anchorMidi: result.anchorMidi,
+      buffer: result.variants[idx],
+      rrKey: `${result.anchorMidi}_${result.vlName || "vl1"}_rr${idx + 1}`,
+    };
+  }
+
   findNearestAnchor(instId, targetMidi, velocity = 95) {
-    if (this.sfxGenerator && this.sfxGenerator.isSfxInstrument(instId))
-      return null;
+    if (isSfxInstrumentId(instId)) return null;
     if (instId && INST_ALIASES[instId]) instId = INST_ALIASES[instId];
 
-    // Check cache first
+    // Check cache first (RR variants cycle at call time even on cache hits)
     const cacheKey = `${instId}:${targetMidi}:${velocity}`;
     const cached = this._anchorCache.get(cacheKey);
-    if (cached) return cached;
+    if (cached) return this._applyRoundRobin(cached, instId);
 
     const yamahaBank = bankData("yamaha");
     const userBank = bankData("user");
@@ -2840,15 +3233,21 @@ export class NativePcmEngine {
         return null;
       }
       const instMap = this.decodedBuffers.get(instId);
-      const vl = velocity < 55 ? "vl1" : velocity < 98 ? "vl2" : "vl3";
+      // Multi-velocity via the per-instrument thresholds registry (abletunes
+      // registers [1, 55, 98] at decode time — same law as the old hardcoded
+      // <55/<98 split, now manifest-driven for any multi-velocity bank).
+      const vlIdx = this.velocityToLayerIndex(instId, velocity);
+      const vl = "vl" + (vlIdx + 1);
       const exactKey = `${targetMidi}_${vl}`;
       if (instMap.has(exactKey)) {
-        this._anchorCache.set(cacheKey, { anchorMidi: targetMidi, buffer: instMap.get(exactKey) });
-        return { anchorMidi: targetMidi, buffer: instMap.get(exactKey) };
+        const result = { anchorMidi: targetMidi, buffer: instMap.get(exactKey) };
+        this._anchorCache.set(cacheKey, result);
+        return result;
       }
       if (instMap.has(targetMidi)) {
-        this._anchorCache.set(cacheKey, { anchorMidi: targetMidi, buffer: instMap.get(targetMidi) });
-        return { anchorMidi: targetMidi, buffer: instMap.get(targetMidi) };
+        const result = { anchorMidi: targetMidi, buffer: instMap.get(targetMidi) };
+        this._anchorCache.set(cacheKey, result);
+        return result;
       }
       let closestMidi = null;
       let minDiff = Infinity;
@@ -2862,6 +3261,20 @@ export class NativePcmEngine {
         }
       }
       if (closestMidi !== null) {
+        // If the target note is in the ultra-high register (above C6 = 84),
+        // Abletunes Upright has no samples (highest is C6) and pitch-shifting up
+        // by > 4 semitones produces a tinny, chipmunk-like "toy piano" sound.
+        // Seamlessly fall back to the 88-key acoustic_grand_piano if available!
+        if (targetMidi > 84 && minDiff > 4) {
+          const grandMap = this.decodedBuffers.get("acoustic_grand_piano");
+          if (grandMap && grandMap.size > 0) {
+            const grandAnchor = this.findAnchorInMap(grandMap, targetMidi);
+            if (grandAnchor) {
+              this._anchorCache.set(cacheKey, grandAnchor);
+              return grandAnchor;
+            }
+          }
+        }
         const buf =
           instMap.get(`${closestMidi}_${vl}`) || instMap.get(closestMidi);
         if (buf) {
@@ -2874,6 +3287,57 @@ export class NativePcmEngine {
       const result2 = this.findAnchorInMap(pianoMap, targetMidi);
       this._anchorCache.set(cacheKey, result2);
       return result2;
+    }
+
+    if (multisampleLoader && multisampleLoader.isMultisampleInstrument(instId)) {
+      // Imported multisample bank (multisample-manifest.js): closest anchor +
+      // per-bank velocity thresholds + round-robin cycling.
+      if (
+        !this.decodedBuffers.has(instId) ||
+        this.decodedBuffers.get(instId).size === 0
+      ) {
+        multisampleLoader.loadInstrument(instId, this.ctx, this.decodedBuffers);
+        return null;
+      }
+      const msMap = this.decodedBuffers.get(instId);
+      let msClosest = null;
+      let msMinDiff = Infinity;
+      for (const key of msMap.keys()) {
+        const midi =
+          typeof key === "number" ? key : parseInt(String(key).split("_")[0]);
+        if (!Number.isFinite(midi)) continue;
+        const diff = Math.abs(targetMidi - midi);
+        if (diff < msMinDiff) {
+          msMinDiff = diff;
+          msClosest = midi;
+        }
+      }
+      if (msClosest !== null) {
+        const vlIdx = this.velocityToLayerIndex(instId, velocity);
+        const vlName = "vl" + (vlIdx + 1);
+        const baseKey = `${msClosest}_${vlName}`;
+        // Collect rr1..rrN variants for this (note, layer); cycle per note.
+        const variants = [];
+        for (let n = 1; ; n++) {
+          const b = msMap.get(`${baseKey}_rr${n}`);
+          if (!b) break;
+          variants.push(b);
+        }
+        if (variants.length === 0) {
+          const base = msMap.get(baseKey) || msMap.get(msClosest);
+          if (!base) return null;
+          variants.push(base);
+        }
+        const msResult = {
+          anchorMidi: msClosest,
+          buffer: variants[0],
+          variants,
+          vlName,
+        };
+        this._anchorCache.set(cacheKey, msResult);
+        return this._applyRoundRobin(msResult, instId);
+      }
+      return null;
     }
 
     if (instId && instId.startsWith("animal_")) {
@@ -3067,15 +3531,22 @@ export class NativePcmEngine {
         ? this.layerInserts[layerIndex].input
         : this.destination;
 
-    if (this.sfxGenerator && this.sfxGenerator.isSfxInstrument(instId)) {
-      return this.sfxGenerator.playSfxNote(
-        instId,
-        midiNote,
-        velocity,
-        customGain,
-        dest,
-        when,
-      );
+    if (isSfxInstrumentId(instId)) {
+      // Lazily bootstrap the SFX generator on first use (P1 code splitting);
+      // until it resolves the note is dropped — consistent with the engine's
+      // silence-over-wrong-instrument policy.
+      this.ensureSfxGenerator().catch(() => {});
+      if (this.sfxGenerator) {
+        return this.sfxGenerator.playSfxNote(
+          instId,
+          midiNote,
+          velocity,
+          customGain,
+          dest,
+          when,
+        );
+      }
+      return null;
     }
 
     const anchorData = this.findNearestAnchor(instId, midiNote, velocity);
@@ -3102,11 +3573,13 @@ export class NativePcmEngine {
       // buffer identity, so same-layer retriggers are free and differing
       // velocity layers re-upload only the layer they need. This keeps
       // velocity-layered instruments (piano) correct AND prewarmed — no
-      // mid-play transfer storm = no choppy.
-      this.pcmWorkletNode.ensureBuffer(instId, anchorData.anchorMidi, buf);
+      // mid-play transfer storm = no choppy. Round-robin variants upload
+      // under their distinct rrKey (one copy per variant, then copy-free).
+      const workletKey = anchorData.rrKey || anchorData.anchorMidi;
+      this.pcmWorkletNode.ensureBuffer(instId, workletKey, buf);
       const trim = getInstrumentTrimGain(instId);
-      const dynamicAmp = Math.pow(velNorm, 1.25);
-      const peakGain = (0.1 + dynamicAmp * 0.9) * customGain * trim;
+      const dynamicAmp = Math.pow(velNorm, 1.10);
+      const peakGain = (0.16 + dynamicAmp * 0.84) * customGain * trim;
       const [isSax, isChoirTimbre] = this._instTimbre(instId);
       const isChoir =
         isChoirTimbre ||
@@ -3120,6 +3593,7 @@ export class NativePcmEngine {
         instId === "string_ensemble_1" ||
         instId?.includes("string") ||
         instId?.includes("pad") ||
+        instId?.includes("fantasia") ||
         instId?.includes("saw") ||
         instId?.includes("extacy") ||
         instId?.includes("vocoder") ||
@@ -3140,16 +3614,16 @@ export class NativePcmEngine {
       const releaseTime = isHit
         ? 1.8
         : isString
-          ? 0.65
+          ? 0.75
           : isChoir
-            ? 0.45
+            ? 0.55
             : isPiano
-              ? 0.38
+              ? 0.55
               : isSax
-                ? 0.22
-                : 0.25;
+                ? 0.28
+                : 0.35;
 
-      const minCutoff = isSax ? 4000 : isChoir ? 1000 : 3500;
+      const minCutoff = isPiano ? 14000 : isSax ? 4000 : isChoir ? 1000 : 3500;
       const maxCutoff = isSax ? 16000 : isChoir ? 8500 : 20000;
       const filterNorm = Math.min(
         1.0,
@@ -3162,7 +3636,7 @@ export class NativePcmEngine {
         velocity: velNorm,
         gain: peakGain,
         layerIndex,
-        anchorMidi: anchorData.anchorMidi,
+        anchorMidi: workletKey,
         playbackRate: bentPlaybackRate,
         isLoopable: !!buf._isLoopable,
         loopStart: buf._loopStartSec || 0,
@@ -3205,6 +3679,7 @@ export class NativePcmEngine {
                 oldV.instId === "string_ensemble_1" ||
                 oldV.instId?.includes("string") ||
                 oldV.instId?.includes("pad") ||
+                oldV.instId?.includes("fantasia") ||
                 oldV.instId?.includes("saw") ||
                 oldV.instId?.includes("extacy") ||
                 oldV.instId?.includes("vocoder") ||
@@ -3381,6 +3856,15 @@ export class NativePcmEngine {
     }
 
     const [isSax, isChoir, isHashy] = this._instTimbre(instId);
+    const isPiano =
+      instId?.includes("piano") ||
+      instId?.includes("rhodes") ||
+      instId?.includes("roads") ||
+      instId?.includes("cp80") ||
+      instId?.includes("tx816") ||
+      instId?.includes("grand") ||
+      instId?.includes("clavi") ||
+      instId?.includes("ep");
     let filter, voiceGain;
     const pooled = this._voiceNodePool.pop();
     if (pooled) {
@@ -3403,7 +3887,7 @@ export class NativePcmEngine {
       voiceGain.connect(dest);
     }
 
-    const minCutoff = isSax ? 4000 : isChoir ? 1000 : isHashy ? 3000 : 3500;
+    const minCutoff = isPiano ? 14000 : isSax ? 4000 : isChoir ? 1000 : isHashy ? 3000 : 3500;
     const maxCutoff = isSax ? 16000 : isChoir ? 8500 : isHashy ? 16000 : 20000;
     const dynamicCutoff =
       minCutoff + Math.pow(velNorm, 1.35) * (maxCutoff - minCutoff);
@@ -3417,8 +3901,8 @@ export class NativePcmEngine {
     filter.Q.setValueAtTime(0.35, now);
 
     const trim = getInstrumentTrimGain(instId);
-    const dynamicAmp = Math.pow(velNorm, 1.25);
-    const peakGain = (0.1 + dynamicAmp * 0.9) * customGain * trim;
+    const dynamicAmp = Math.pow(velNorm, 1.10);
+    const peakGain = (0.16 + dynamicAmp * 0.84) * customGain * trim;
 
     voiceGain.gain.setValueAtTime(0.0, now);
     if (isChoir) voiceGain.gain.setTargetAtTime(peakGain, now, 0.04);
@@ -3678,6 +4162,15 @@ export class NativePcmEngine {
     }
   }
 
+  setPolyphonyCap(cap) {
+    if (Number.isFinite(cap)) {
+      this.MAX_VOICES = Math.max(16, Math.min(128, cap | 0));
+    }
+    if (this.pcmWorkletNode && typeof this.pcmWorkletNode.setPolyphonyCap === "function") {
+      this.pcmWorkletNode.setPolyphonyCap(this.MAX_VOICES);
+    }
+  }
+
   setSustainPedal(isDown, when = 0) {
     const wasDown = this.sustainPedal;
     this.sustainPedal = !!isDown;
@@ -3787,14 +4280,14 @@ export class NativePcmEngine {
   }
 
   stopNote(instId, midiNote, when = 0) {
-    this.heldNotes.delete(midiNote);
+    if (this.heldNotes) this.heldNotes.delete(midiNote);
 
     // AudioWorklet path: forward to audio thread
     if (this.pcmWorkletNode && this.pcmWorkletNode.isReady && when === 0) {
       this.pcmWorkletNode.noteOff(midiNote);
     }
 
-    const voices = this.activeVoices.get(midiNote);
+    const voices = this.activeVoices ? this.activeVoices.get(midiNote) : null;
     if (!voices || voices.length === 0) return;
 
     const ctx = this.ctx;
@@ -3910,14 +4403,14 @@ export class NativePcmEngine {
             const tau = isHit
               ? 0.5
               : isString
-                ? 0.22
+                ? 0.25
                 : isChoir
-                  ? 0.18
+                  ? 0.20
                   : isPiano
-                    ? 0.12
+                    ? 0.16
                     : isSax
-                      ? 0.08
-                      : 0.10;
+                      ? 0.09
+                      : 0.12;
             const stopTime = isHit
               ? 1.8
               : isString
@@ -3925,10 +4418,10 @@ export class NativePcmEngine {
                 : isChoir
                   ? 0.85
                   : isPiano
-                    ? 0.65
+                    ? 0.75
                     : isSax
-                      ? 0.35
-                      : 0.45;
+                      ? 0.40
+                      : 0.50;
             v.voiceGain.gain.cancelScheduledValues(now);
             v.voiceGain.gain.setValueAtTime(v.voiceGain.gain.value || 0.0, now);
             v.voiceGain.gain.setTargetAtTime(0, now, tau);
@@ -3954,14 +4447,18 @@ export class NativePcmEngine {
     else this.activeVoices.delete(midiNote);
   }
 
-  fastStopNote(instId, midiNote, when = 0) {
-    this.heldNotes.delete(midiNote);
+  fastStopNote(instId, midiNote, when = 0, layerIndex = null) {
+    if (this.heldNotes) this.heldNotes.delete(midiNote);
 
     if (this.pcmWorkletNode && this.pcmWorkletNode.isReady && when === 0) {
-      this.pcmWorkletNode.noteOff(midiNote);
+      if (typeof this.pcmWorkletNode.fastNoteOff === "function") {
+        this.pcmWorkletNode.fastNoteOff(midiNote, layerIndex);
+      } else {
+        this.pcmWorkletNode.noteOff(midiNote, layerIndex);
+      }
     }
 
-    const voices = this.activeVoices.get(midiNote);
+    const voices = this.activeVoices ? this.activeVoices.get(midiNote) : null;
     if (!voices || voices.length === 0) return;
 
     const ctx = this.ctx;

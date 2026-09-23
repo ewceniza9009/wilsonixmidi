@@ -41,18 +41,22 @@ class AnimalEdmSampleLoader {
     }
 
     const promise = (async () => {
+      const url = `/samples/animal_edm/${def.file}`;
+      const fetchFresh = async () => {
+        const resp = await fetch(url);
+        if (!resp.ok) {
+          logger.warn("PCM", `Failed to fetch Animal EDM sample: ${url} (${resp.status})`);
+          return null;
+        }
+        return resp.arrayBuffer();
+      };
       try {
         const cacheKey = `animal_edm_${instId}_${def.file}`;
         let arrayBuf = await sampleCache.getSample(cacheKey);
 
         if (!arrayBuf) {
-          const url = `/samples/animal_edm/${def.file}`;
-          const resp = await fetch(url);
-          if (!resp.ok) {
-            logger.warn("PCM", `Failed to fetch Animal EDM sample: ${url} (${resp.status})`);
-            return null;
-          }
-          arrayBuf = await resp.arrayBuffer();
+          arrayBuf = await fetchFresh();
+          if (!arrayBuf) return null;
           sampleCache.setSample(cacheKey, arrayBuf, {
             instId,
             file: def.file,
@@ -61,7 +65,23 @@ class AnimalEdmSampleLoader {
         }
 
         // Web Audio API decodeAudioData needs a copy of arrayBuf if used multiple times
-        const audioBuf = await ctx.decodeAudioData(arrayBuf.slice(0));
+        let audioBuf = null;
+        try {
+          audioBuf = await ctx.decodeAudioData(arrayBuf.slice(0));
+        } catch (cacheErr) {
+          // Corrupt IndexedDB cache (a known WebView failure mode): the cached
+          // bytes fail decode on every future note. Re-fetch a fresh copy, HEAL
+          // the cache entry, and retry so playback recovers permanently instead
+          // of staying silent until reinstall.
+          const fresh = await fetchFresh();
+          if (!fresh) throw cacheErr;
+          audioBuf = await ctx.decodeAudioData(fresh.slice(0));
+          sampleCache.setSample(cacheKey, fresh, {
+            instId,
+            file: def.file,
+            rootMidi: def.rootMidi,
+          });
+        }
         if (!audioBuf) return null;
 
         configureSustainLoop(audioBuf, def.subCategory || def.category, instId);

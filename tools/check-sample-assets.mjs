@@ -6,6 +6,10 @@
  *      (re-introduction guard — these must be FLAC, see transcode-sample-assets.mjs).
  *   2. Any sample file referenced by the audio manifests / pads / groove tracks
  *      is missing from public/.
+ *   3. Any extracted soundfont pack manifest (public/soundfonts-bin/*.json) is
+ *      missing its .pack sibling or the pack size disagrees with the manifest
+ *      totalBytes (re-introduction guard — the runtime prefers binary packs,
+ *      see extract-soundfonts.mjs / NativePcmEngine._loadSoundfontPack).
  *
  * Usage: node tools/check-sample-assets.mjs   (run from the repo root)
  */
@@ -16,6 +20,7 @@ import { join, dirname } from "node:path";
 import { ABLETUNES_BANKS } from "../src/audio/abletunes-manifest.js";
 import { BLOOM_EDM_BANKS } from "../src/audio/bloom-edm-manifest.js";
 import { ANIMAL_EDM_BANKS } from "../src/audio/animal-edm-manifest.js";
+import { MULTISAMPLE_BANKS } from "../src/audio/multisample-manifest.js";
 
 const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const PUBLIC = join(ROOT, "public");
@@ -69,6 +74,34 @@ for (const [bankKey, bank] of Object.entries(ABLETUNES_BANKS)) {
 }
 checkManifest("bloom", BLOOM_EDM_BANKS, (e) => `samples/bloom_edm/${e.file}`);
 checkManifest("animal", ANIMAL_EDM_BANKS, (e) => `samples/animal_edm/${e.file}`);
+
+// Imported multisample banks: every sample file must exist.
+checkManifest("multisample", MULTISAMPLE_BANKS, (e) => `${e.path.replace(/^\/+/, "")}/${e.f}`);
+
+// Soundfont binary packs: every manifest needs a valid, size-matched pack.
+// public/soundfonts-bin must exist (the JSONP fallback is gone from the tree).
+const SF_BIN = join(PUBLIC, "soundfonts-bin");
+if (!existsSync(SF_BIN)) {
+  errors.push("soundfonts-bin missing: run tools/extract-soundfonts.mjs (packs are the only soundfont source now)");
+} else {
+  for (const entry of readdirSync(SF_BIN)) {
+    if (!/\.json$/i.test(entry)) continue;
+    const manifestPath = join(SF_BIN, entry);
+    const packPath = manifestPath.replace(/\.json$/i, ".pack");
+    try {
+      const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+      if (!existsSync(packPath)) {
+        errors.push(`soundfont pack missing: ${entry.replace(/\.json$/i, ".pack")}`);
+        continue;
+      }
+      if (manifest.totalBytes !== statSync(packPath).size) {
+        errors.push(`soundfont pack size mismatch for ${entry}: manifest ${manifest.totalBytes} != ${statSync(packPath).size}`);
+      }
+    } catch (err) {
+      errors.push(`soundfont manifest unreadable: ${entry} (${err.message})`);
+    }
+  }
+}
 
 for (const rel of SRC_SCAN_FILES) {
   const text = readFileSync(join(ROOT, rel), "utf8");

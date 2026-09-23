@@ -105,6 +105,14 @@ class PcmWorkletVoice {
     }
   }
 
+  fastRelease(fadeSec = 0.015) {
+    if (!this.active || this.envStage === 0) return;
+    this.held = false;
+    this.pedalHeld = false;
+    this.envStage = 4;
+    this.releaseTime = Math.min(this.releaseTime, fadeSec);
+  }
+
   forceStop() {
     this.active = false;
     this.envStage = 0;
@@ -184,6 +192,9 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
     // for combi layer voices only; single instruments keep the original law.
     this.polyScaleCombi = 1.0;
 
+    // Active polyphony ceiling (syncs with performance settings / device tier)
+    this.polyphonyCap = 64;
+
     this.reusableEvent = { status: 0, note: 0, velocity: 0, time: 0 };
 
     this.port.onmessage = e => {
@@ -208,6 +219,14 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
         break;
       case "noteOff":
         this.handleNoteOff(data);
+        break;
+      case "fastNoteOff":
+        this.handleFastNoteOff(data);
+        break;
+      case "polyphonyCap":
+        if (Number.isFinite(data.cap)) {
+          this.polyphonyCap = Math.max(16, Math.min(MAX_VOICES, data.cap | 0));
+        }
         break;
       case "loadBuffer":
         this.handleLoadBuffer(data);
@@ -283,22 +302,23 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
 
     this.heldNotes.add(midiNote);
 
-    // Re-trigger: if same note+layer already active, release old voice
-    for (let i = 0; i < MAX_VOICES; i++) {
+    const maxV = this.polyphonyCap || MAX_VOICES;
+
+    // Re-trigger: if same note+layer already active, release old voice cleanly
+    for (let i = 0; i < maxV; i++) {
       const v = this.voices[i];
       if (v.active && v.midiNote === midiNote && v.layerIndex === layerIndex && v.instId === instId) {
-        v.envStage = 4;
-        v.held = false;
+        v.fastRelease();
       }
     }
 
     // Allocate voice: prefer free, then released & quiet, then quietest non-held, then quietest
     let voice = null;
-    for (let i = 0; i < MAX_VOICES; i++) {
+    for (let i = 0; i < maxV; i++) {
       if (!this.voices[i].active) { voice = this.voices[i]; break; }
     }
     if (!voice) {
-      for (let i = 0; i < MAX_VOICES; i++) {
+      for (let i = 0; i < maxV; i++) {
         const v = this.voices[i];
         if (v.envStage === 4 && v.envLevel < 0.05) { voice = v; break; }
       }
@@ -308,7 +328,7 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
       let bestScore = Infinity;
       let oldest = null;
       let oldestTime = Infinity;
-      for (let i = 0; i < MAX_VOICES; i++) {
+      for (let i = 0; i < maxV; i++) {
         const v = this.voices[i];
         const t = v.startTime || 0;
         if (t < oldestTime) { oldest = v; oldestTime = t; }
@@ -318,7 +338,7 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
         }
       }
       if (!bestTarget) {
-        for (let i = 0; i < MAX_VOICES; i++) {
+        for (let i = 0; i < maxV; i++) {
           const v = this.voices[i];
           const t = v.startTime || 0;
           const score = v.envLevel * 1000 + t;
@@ -339,11 +359,26 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
   handleNoteOff(data) {
     const { midiNote, layerIndex } = data;
     this.heldNotes.delete(midiNote);
-    for (let i = 0; i < MAX_VOICES; i++) {
+    const maxV = this.polyphonyCap || MAX_VOICES;
+    for (let i = 0; i < maxV; i++) {
       const v = this.voices[i];
       if (v.active && v.midiNote === midiNote) {
         if (layerIndex === undefined || layerIndex === null || v.layerIndex === layerIndex) {
           v.noteOff(this.pedalDown, this.currentTime);
+        }
+      }
+    }
+  }
+
+  handleFastNoteOff(data) {
+    const { midiNote, layerIndex } = data;
+    this.heldNotes.delete(midiNote);
+    const maxV = this.polyphonyCap || MAX_VOICES;
+    for (let i = 0; i < maxV; i++) {
+      const v = this.voices[i];
+      if (v.active && v.midiNote === midiNote) {
+        if (layerIndex === undefined || layerIndex === null || v.layerIndex === layerIndex) {
+          v.fastRelease();
         }
       }
     }
@@ -390,9 +425,11 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
     outL.fill(0);
     outR.fill(0);
 
+    const maxV = this.polyphonyCap || MAX_VOICES;
+
     // Polyphony-aware output trim
     let activeCount = 0;
-    for (let v = 0; v < MAX_VOICES; v++) {
+    for (let v = 0; v < maxV; v++) {
       const vv = this.voices[v];
       // Only voices that are actually audible count toward the polyphony trim.
       // Near-silent sustained tails (envLevel ~0.02) must not drag the 1/sqrt(N)
@@ -400,7 +437,22 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
       // while of pounding/pads/sustain").
       if (vv.active && vv.envLevel > 0.05) activeCount++;
     }
-    const targetScale = 1.0 / Math.sqrt(Math.max(1, activeCount));
+
+    // Overload safety: if active voices exceed 80% of polyphonyCap (e.g. dense sustain sweeps),
+    // accelerate decaying release-stage voices to protect audio thread buffer deadlines
+    if (activeCount > maxV * 0.8) {
+      for (let v = 0; v < maxV; v++) {
+        const vv = this.voices[v];
+        if (vv.active && vv.envStage === 4) {
+          vv.envLevel *= 0.75;
+          if (vv.envLevel < 0.001) vv.forceStop();
+        }
+      }
+    }
+
+    // Floored polyphony trim so rapid glissando sweeps and dense arpeggios
+    // don't aggressively duck volume down to 10-15% (whisper/toy sound).
+    const targetScale = Math.max(0.45, 1.0 / Math.sqrt(Math.max(1, activeCount)));
     this.polyScale += (targetScale - this.polyScale) * 0.12;
     const masterScale = this.polyScale;
 
@@ -409,7 +461,7 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
     const combiTarget = Math.max(0.6, targetScale);
     this.polyScaleCombi += (combiTarget - this.polyScaleCombi) * 0.12;
 
-    for (let v = 0; v < MAX_VOICES; v++) {
+    for (let v = 0; v < maxV; v++) {
       const voice = this.voices[v];
       if (!voice.active) continue;
 
@@ -424,7 +476,7 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
 
       const attackRate = 1.0 / Math.max(0.001, voice.attackTime * this.sampleRate);
       const decayRate = 1.0 / Math.max(0.001, voice.decayTime * this.sampleRate);
-      const releaseRate = 1.0 / Math.max(0.001, voice.releaseTime * this.sampleRate);
+      const releaseDecay = Math.exp(-4.605 / Math.max(0.001, voice.releaseTime * this.sampleRate));
       const cutoffHz = Math.max(200, Math.min(20000, voice.filterCutoff * 20000));
       const filterAlpha = Math.exp(-2.0 * PI * cutoffHz * this.invSampleRate);
 
@@ -464,9 +516,9 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
               }
             }
             break;
-          case 4: // Release
-            voice.envLevel -= releaseRate;
-            if (voice.envLevel <= 0.0005) {
+          case 4: // Release (Natural acoustic exponential decay - no abrupt cliff/cutoff)
+            voice.envLevel *= releaseDecay;
+            if (voice.envLevel <= 0.0008) {
               voice.forceStop();
               break;
             }

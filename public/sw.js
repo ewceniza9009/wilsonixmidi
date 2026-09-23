@@ -1,18 +1,29 @@
 const CACHE_NAME = 'wilsonix-midikey-v2';
-const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/src/main.js',
-  '/src/css/theme.css',
-  '/src/css/workstation.css',
-  '/src/css/keyboard.css',
-  '/src/css/media-player.css',
-];
+// Precache list is resolved at runtime from the Vite build manifest
+// (build.manifest: true -> /manifest.webmanifest in dist) so the hashed
+// chunk/css filenames never drift out of sync with the source tree. The
+// previous hardcoded /src/* paths never existed in build output, so
+// addAll failed silently and every cold start re-fetched everything.
+const CORE_ASSETS = ['/', '/index.html', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)).catch(() => {})
+    (async () => {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.addAll(CORE_ASSETS).catch(() => {});
+      try {
+        const resp = await fetch('/.vite/manifest.json');
+        if (resp && resp.ok) {
+          const manifest = await resp.json();
+          // Precache only the entry files (chunks/css load on demand and are
+          // cached by the runtime fetch handler on first use).
+          const entryFiles = Object.values(manifest)
+            .filter((e) => e.isEntry && e.file)
+            .map((e) => '/' + e.file);
+          await cache.addAll(entryFiles).catch(() => {});
+        }
+      } catch (e) {}
+    })()
   );
   self.skipWaiting();
 });
@@ -33,6 +44,7 @@ self.addEventListener('fetch', (event) => {
   if (
     request.url.includes('/samples/') ||
     request.url.includes('/soundfonts/') ||
+    request.url.includes('/soundfonts-bin/') ||
     request.url.includes('/banks/') ||
     request.url.includes('/abletunes/')
   ) {

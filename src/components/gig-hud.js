@@ -11,6 +11,7 @@ import {
   COMBI_PRESETS,
 } from "../audio/multi-layer-engine.js";
 import { audioCore } from "../audio/audio-core.js";
+import { sampleCache } from "../audio/sample-cache.js";
 import { licenseManager } from "../security/license-manager.js";
 import { masterRecorder } from "../audio/master-recorder.js";
 import { registrationManager } from "./registration-manager.js";
@@ -75,6 +76,21 @@ export class GigHudUI {
       this.syncSoundDisplay();
       this.syncToolsIndicator();
     });
+
+    // Sound-loading feedback (P1): a newly selected preset whose instruments
+    // are still decoding shows an instant "loading" readout on the live badge
+    // instead of silent lag; the end callback re-syncs to the current state.
+    multiLayerEngine.onSoundLoadingCallback = (loading, presetName) => {
+      const liveText = document.getElementById("hud-live-text");
+      const liveIcon = document.getElementById("hud-live-icon");
+      if (!liveText) return;
+      if (loading) {
+        liveText.innerText = `⏳ Loading ${presetName || "preset"}…`;
+        if (liveIcon) liveIcon.innerText = "⏳";
+      } else {
+        this.syncSoundDisplay();
+      }
+    };
 
     if (!this.gigMode) {
       this.startVuMonitor();
@@ -726,8 +742,8 @@ export class GigHudUI {
             <!-- Master Volume Console (Proper studio fader + readout) -->
             <div class="hud-volume-unit" data-midi-param="master_vol" title="Master Volume (Right-click to MIDI Learn)">
               <span class="hud-vol-icon">🔊</span>
-              <input type="range" id="hud-master-vol" min="0" max="100" value="50" class="hud-vol-slider" />
-              <span class="hud-vol-readout" id="hud-master-vol-val">50%</span>
+              <input type="range" id="hud-master-vol" min="0" max="100" value="${multiLayerEngine.settings?.masterVolumePct ?? 80}" class="hud-vol-slider" />
+              <span class="hud-vol-readout" id="hud-master-vol-val">${multiLayerEngine.settings?.masterVolumePct ?? 80}%</span>
             </div>
 
             <div class="hud-quick-actions">
@@ -1780,6 +1796,20 @@ export class GigHudUI {
               💾 Settings save instantly and persist across sessions.
             </div>
           </div>
+
+          <!-- MAINTENANCE: SAMPLE CACHE -->
+          <div class="latency-device-section" id="latency-maintenance-section">
+            <div class="latency-profile-title">🧹 MAINTENANCE</div>
+            <div class="cache-maint-row">
+              <button class="midi-clock-btn cache-clear-btn" id="latency-btn-clear-cache" title="Wipe the persistent sample cache (IndexedDB). Use if sounds go silent after long use — corrupted cached samples are healed automatically, but a full wipe forces a clean refetch.">
+                <span>🗑 CLEAR SAMPLE CACHE</span>
+              </button>
+            </div>
+            <div class="cache-usage-row" id="cache-usage-row">Checking cache usage…</div>
+            <div class="latency-pop-reco">
+              🛠 Fixes silent presets & clips without reinstalling.
+            </div>
+          </div>
         </div>
       </div>
     `;
@@ -1809,6 +1839,36 @@ export class GigHudUI {
       e.stopPropagation();
       this._closeLatencyPopover();
     });
+
+    // Sample cache maintenance: live usage readout + full IndexedDB wipe.
+    const usageRow = pop.querySelector("#cache-usage-row");
+    if (usageRow) {
+      sampleCache.getStorageUsage().then((u) => {
+        if (!usageRow.isConnected) return;
+        const mb = (u.usageBytes / (1024 * 1024)).toFixed(1);
+        const quotaMb = (u.quotaBytes / (1024 * 1024)).toFixed(0);
+        usageRow.textContent = `Cache: ${mb} MB used of ${quotaMb} MB quota`;
+      });
+    }
+    pop
+      .querySelector("#latency-btn-clear-cache")
+      ?.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const btn = e.currentTarget;
+        btn.disabled = true;
+        if (usageRow) usageRow.textContent = "Clearing cache…";
+        try {
+          await sampleCache.clearCache();
+          if (typeof multiLayerEngine?.pcmEngine?.resetDecodedBuffers === "function") {
+            multiLayerEngine.pcmEngine.resetDecodedBuffers();
+          }
+          if (usageRow) usageRow.textContent = "✔ Cache cleared — sounds reload fresh on next preset select.";
+        } catch (err) {
+          if (usageRow) usageRow.textContent = "⚠ Cache clear failed — try again.";
+        } finally {
+          btn.disabled = false;
+        }
+      });
 
     // Populate output device list
     const deviceSelect = pop.querySelector("#latency-device-select");
