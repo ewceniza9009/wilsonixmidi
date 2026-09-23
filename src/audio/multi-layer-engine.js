@@ -3555,7 +3555,7 @@ export class MultiLayerEngine {
         /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)
           ? 48
           : 96, // max simultaneous voices (16–128)
-      masterVolumePct: 80, // default master volume on load (0–100)
+      masterVolumePct: 72, // default master volume on load (0–100)
       // Keyboard
       defaultOctave: 4, // starting octave (1–7)
       defaultVelocity: 95, // default note velocity (1–127)
@@ -4923,7 +4923,7 @@ export class MultiLayerEngine {
         sumPower += (g * t) * (g * t);
       }
       const rms = Math.sqrt(sumPower);
-      const combiScale = rms > 0.05 ? Math.max(0.60, Math.min(1.65, TARGET_RMS / rms)) : 1.0;
+      const combiScale = rms > 0.05 ? Math.max(0.60, Math.min(1.40, TARGET_RMS / rms)) : 1.0;
 
       // Chord headroom: only attenuate dense 5+ note clusters; 1–4 note chords
       // retain full volume and power without choking.
@@ -4964,7 +4964,7 @@ export class MultiLayerEngine {
     } else {
       // SINGLE PROGRAM MODE: Normalized to match combi loudness reference
       const singleTrim = getInstrumentTrimGain(this.activeSingleInst);
-      const singleGain = singleTrim > 0.05 ? Math.min(1.65, 1.10 / singleTrim) : 1.0;
+      const singleGain = singleTrim > 0.05 ? Math.min(1.40, 1.10 / singleTrim) : 1.0;
       if (this.pcmEngine) {
         this.pcmEngine.playNote(
           this.activeSingleInst,

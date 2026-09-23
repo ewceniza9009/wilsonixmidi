@@ -991,6 +991,22 @@ export class TritonWorkstationUI {
         fx.compressor?.setRelease(0.18);
         fx.compressor?.setMakeup(1.35);
         fx.compressor?.setMix(0.80);
+      } else if (name.includes("rock piano") || name.includes("compressed rock") || (prog.instId && prog.instId.includes("rock_piano"))) {
+        // Iconic Korg X5D / AI2 Compressed Rock Piano: aggressive hammer bite, punchy ratio, and wide presence
+        fx.compressor?.setThreshold(-22);
+        fx.compressor?.setRatio(5.5);
+        fx.compressor?.setAttack(0.005);
+        fx.compressor?.setRelease(0.16);
+        fx.compressor?.setMakeup(1.45);
+        fx.compressor?.setMix(0.92);
+        fx.masterEq?.setLowGain(1.8);
+        fx.masterEq?.setMidGain(-1.2);
+        fx.masterEq?.setHighGain(2.8);
+        fx.stereoWidener?.setBypass(false);
+        fx.stereoWidener?.setWidth(1.35);
+        fx.reverb?.setBypass(false);
+        fx.reverb?.setMix(0.16);
+        fx.reverb?.setDecay(1.9);
       } else if (name.includes("piano") || cat.includes("keyboard")) {
         // Transparent acoustic piano sustain and peak leveling
         fx.compressor?.setThreshold(-18);

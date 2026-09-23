@@ -81,9 +81,9 @@ export class AudioCore {
 
     this.sampleRate = this.ctx.sampleRate;
 
-    // Master bus: slider 0-100% maps to 0-3x gain, defaults to 80% (1.6x)
+    // Master bus: slider 0-100% maps to 0-3x gain, defaults to 72% (~1.3x)
     this.masterGain = this.ctx.createGain();
-    this.masterGain.gain.value = 1.6;
+    this.masterGain.gain.value = 1.3;
 
     // Fast Peak Analyser for meters & oscilloscope
     this.analyser = this.ctx.createAnalyser();
@@ -93,7 +93,7 @@ export class AudioCore {
 
     // Transparent Hardware Output Safety Limiter (Prevents DAC clipping with zero waveform modulation & zero squashing)
     // Tight knee + high ratio + slower release make it clamp only true peaks while
-    // the busPad provides generous studio-level headroom (0.80 = -1.9 dB).
+    // the busPad provides studio headroom (0.58 = -4.7 dB, +2.2 dB over old 0.45).
     this.hardwareLimiter = this.ctx.createDynamicsCompressor();
     this.hardwareLimiter.threshold.value = -1.0;  // True brickwall safety ceiling
     this.hardwareLimiter.knee.value = 4.0;        // Tight-ish knee: clamp only real peaks
@@ -108,10 +108,12 @@ export class AudioCore {
     this.dcBlocker = this.ctx.createBiquadFilter();
     this.dcBlocker.type = "highpass";
     this.dcBlocker.frequency.value = 20;
-    // Master-wide fixed headroom trim: calibrated to 0.80 (-1.9 dBFS) for full,
-    // punchy output while ensuring peaks are transparently caught by the hardware safety limiter.
+    // Master-wide fixed headroom trim: 0.58 (-4.7 dBFS) keeps sustained sounds
+    // (organs, Roland pads, choirs) well below the limiter threshold so they play
+    // cleanly, while transient-heavy sounds (piano, hits) just kiss the ceiling.
+    // +2.2 dB louder than the old 0.45 setting.
     this.busPad = this.ctx.createGain();
-    this.busPad.gain.value = 0.80;
+    this.busPad.gain.value = 0.58;
 
     // Dynamic Master Kaoss Filter (Lowpass filter modulated in real time by X/Y Pad)
     this.masterFilter = this.ctx.createBiquadFilter();

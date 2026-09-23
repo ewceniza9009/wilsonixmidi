@@ -13,6 +13,7 @@ import { bloomEdmLoader } from "./bloom-edm-loader.js";
 import { sampleCache } from "./sample-cache.js";
 import { isSfxInstrumentId } from "./sfx-instrument-ids.js";
 import { multisampleLoader } from "./multisample-loader.js";
+import { configureSustainLoop } from "./sample-loop-helper.js";
 import { logger } from "../utils/logger.js";
 
 const NOTE_MAP = {
@@ -568,6 +569,18 @@ export function getInstrumentTrimGain(instId) {
     if (id.includes("pad") || id.includes("chord") || id.includes("swell")) return 0.56;
     if (id.includes("fx") || id.includes("impact") || id.includes("riser") || id.includes("downlifter")) return 0.78;
     return 0.54; // Hot-mastered EDM leads & saws
+  }
+  if (id.startsWith("x5d_")) {
+    if (id.includes("piano") || id.includes("roads") || id.includes("keys") || id.includes("clavi") || id.includes("harpsicord")) return 0.94;
+    if (id.includes("string") || id.includes("pad") || id.includes("sun") || id.includes("flare") || id.includes("moonstone") || id.includes("ariana") || id.includes("singers") || id.includes("crossfades") || id.includes("newworlds") || id.includes("swell") || id.includes("torquemada")) return 0.85;
+    if (id.includes("organ") || id.includes("cafedral")) return 0.88;
+    if (id.includes("brass") || id.includes("horn") || id.includes("fanfare")) return 0.92;
+    if (id.includes("sax")) return 0.92;
+    if (id.includes("bass") || id.includes("megatron") || id.includes("neurofunk")) return 0.94;
+    if (id.includes("guitar")) return 0.94;
+    if (id.includes("bell") || id.includes("koto") || id.includes("africa") || id.includes("zen")) return 0.95;
+    if (id.includes("perc") || id.includes("stab")) return 0.95;
+    return 0.92;
   }
   if (id.includes("piano") || id.includes("rhodes") || id.includes("roads") || id.includes("cp80") || id.includes("ep")) return 0.85;
   if (id.includes("string") || id.includes("pad") || id.includes("choir") || id.includes("voice") || id.includes("ooh") || id.includes("vox")) return 0.56;
@@ -2003,105 +2016,80 @@ export class NativePcmEngine {
 
   createCrossfadedLoopBuffer(ctx, originalBuf, instId) {
     if (!originalBuf) return originalBuf;
+
+    const id = String(instId || "").toLowerCase();
+
+    // Percussive, decaying acoustic, pluck, bell, drum, or hit instruments must NOT loop
+    const isOneShotOrDecaying =
+      id.includes("piano") ||
+      id.includes("grand") ||
+      id.includes("rhodes") ||
+      id.includes("wurly") ||
+      id.includes("clavi") ||
+      id.includes("pluck") ||
+      id.includes("guitar") ||
+      id.includes("harp") ||
+      id.includes("bell") ||
+      id.includes("mallet") ||
+      id.includes("kalimba") ||
+      id.includes("vibraphone") ||
+      id.includes("marimba") ||
+      id.includes("drum") ||
+      id.includes("perc") ||
+      id.includes("kick") ||
+      id.includes("snare") ||
+      id.includes("hihat") ||
+      id.includes("cymbal") ||
+      id.includes("hit") ||
+      id.includes("slap") ||
+      id.includes("impact") ||
+      id.includes("downlifter") ||
+      id.includes("riser") ||
+      id.includes("tapestop") ||
+      id.startsWith("fx_") ||
+      id.startsWith("tekk_");
+
     const isDroneInstrument =
-      instId &&
-      (instId.includes("string") ||
-        instId.includes("pad") ||
-        instId.includes("choir") ||
-        instId.includes("organ") ||
-        instId.includes("voice") ||
-        instId.includes("vox") ||
-        instId.includes("universe") ||
-        instId.includes("sax") ||
-        instId.includes("bass") ||
-        instId.includes("flute") ||
-        instId.includes("clarinet") ||
-        instId.includes("trumpet") ||
-        instId.includes("trombone") ||
-        instId.includes("violin") ||
-        instId.includes("cello") ||
-        instId.includes("brass") ||
-        instId.includes("saw") ||
-        instId.includes("extacy") ||
-        instId.includes("vocoder") ||
-        instId.includes("synth") ||
-        instId.includes("lead") ||
-        instId.includes("square") ||
-        instId.includes("thicksaw") ||
-        instId.includes("sweeppad") ||
-        instId.includes("warmpad") ||
-        instId.includes("seq_") ||
-        instId.includes("dreamn"));
-    if (
-      instId.startsWith("tekk_") ||
-      !isDroneInstrument ||
-      originalBuf.duration < 0.8
-    )
-      return this.fadeBufferEnd(originalBuf, 0.4);
-    const numChannels = Math.max(2, originalBuf.numberOfChannels);
-    const sampleRate = originalBuf.sampleRate;
-    const totalSamples = originalBuf.length;
-    const fadeSamples = Math.min(
-      Math.floor(sampleRate * 0.06),
-      Math.floor(totalSamples * 0.06),
-    );
-    const loopEndSample = totalSamples - fadeSamples;
-    const minLoopLen = Math.min(
-      Math.floor(sampleRate * 0.5),
-      Math.floor(totalSamples * 0.2),
-    );
-    const searchFrom = Math.floor(totalSamples * 0.15);
-    const searchTo = loopEndSample - minLoopLen;
-    if (searchTo <= searchFrom || fadeSamples < 64)
-      return this.fadeBufferEnd(originalBuf, 0.3);
-    let loopStartSample = -1;
-    try {
-      const ref = originalBuf.getChannelData(0);
-      let sum = 0,
-        cnt = 0;
-      for (let i = searchFrom; i < loopEndSample; i += 7) {
-        sum += ref[i] * ref[i];
-        cnt++;
-      }
-      const rms = Math.sqrt(sum / Math.max(1, cnt));
-      if (rms < 0.001) return this.fadeBufferEnd(originalBuf, 0.3);
-      const W = Math.min(1024, fadeSamples * 2);
-      const endBase = loopEndSample - W;
-      const threshold = rms * 0.45;
-      for (let s = searchFrom; s <= searchTo; s += 256) {
-        let diff = 0;
-        for (let i = 0; i < W; i += 2) {
-          const d = ref[s + i] - ref[endBase + i];
-          diff += d * d;
-        }
-        diff = Math.sqrt(diff / (W / 2));
-        if (diff < threshold) {
-          loopStartSample = s;
-          break;
-        }
-      }
-    } catch (e) {}
-    if (loopStartSample < 0) return this.fadeBufferEnd(originalBuf, 0.3);
-    const newBuf = ctx.createBuffer(numChannels, loopEndSample, sampleRate);
-    for (let ch = 0; ch < numChannels; ch++) {
-      const srcCh = Math.min(ch, originalBuf.numberOfChannels - 1);
-      const src = originalBuf.getChannelData(srcCh);
-      const dst = newBuf.getChannelData(ch);
-      for (let i = 0; i < loopStartSample; i++) dst[i] = src[i];
-      for (let i = 0; i < fadeSamples; i++) {
-        const t = i / fadeSamples;
-        const gainTail = Math.cos(t * Math.PI * 0.5);
-        const gainHead = Math.sin(t * Math.PI * 0.5);
-        const headIdx = loopStartSample + i;
-        const tailIdx = loopEndSample + i;
-        dst[headIdx] = src[tailIdx] * gainTail + src[headIdx] * gainHead;
-      }
-      for (let i = loopStartSample + fadeSamples; i < loopEndSample; i++)
-        dst[i] = src[i];
-    }
-    if (newBuf.numberOfChannels >= 2) {
-      const ch0 = newBuf.getChannelData(0);
-      const ch1 = newBuf.getChannelData(1);
+      !isOneShotOrDecaying &&
+      (id.includes("string") ||
+        id.includes("pad") ||
+        id.includes("choir") ||
+        id.includes("organ") ||
+        id.includes("voice") ||
+        id.includes("vox") ||
+        id.includes("universe") ||
+        id.includes("sax") ||
+        id.includes("bass") ||
+        id.includes("flute") ||
+        id.includes("clarinet") ||
+        id.includes("trumpet") ||
+        id.includes("trombone") ||
+        id.includes("violin") ||
+        id.includes("cello") ||
+        id.includes("brass") ||
+        id.includes("horn") ||
+        id.includes("reed") ||
+        id.includes("oboe") ||
+        id.includes("bassoon") ||
+        id.includes("accordion") ||
+        id.includes("harmonica") ||
+        id.includes("shakuhachi") ||
+        id.includes("saw") ||
+        id.includes("extacy") ||
+        id.includes("vocoder") ||
+        id.includes("synth") ||
+        id.includes("lead") ||
+        id.includes("square") ||
+        id.includes("thicksaw") ||
+        id.includes("sweeppad") ||
+        id.includes("warmpad") ||
+        id.includes("seq_") ||
+        id.includes("dreamn"));
+
+    // Stereo Channel Healing: if 2 channels and right channel is silent, copy left to right
+    if (originalBuf.numberOfChannels >= 2) {
+      const ch0 = originalBuf.getChannelData(0);
+      const ch1 = originalBuf.getChannelData(1);
       let ch0Sum = 0,
         ch1Sum = 0;
       for (let i = 0; i < Math.min(1000, ch0.length); i += 10) {
@@ -2110,10 +2098,16 @@ export class NativePcmEngine {
       }
       if (ch0Sum > 0.001 && ch1Sum < 0.00005) ch1.set(ch0);
     }
-    newBuf._isLoopable = true;
-    newBuf._loopStartSec = loopStartSample / sampleRate;
-    newBuf._loopEndSec = loopEndSample / sampleRate;
-    return newBuf;
+
+    if (
+      instId.startsWith("tekk_") ||
+      !isDroneInstrument ||
+      originalBuf.duration < 0.45
+    ) {
+      return this.fadeBufferEnd(originalBuf, 0.4);
+    }
+
+    return configureSustainLoop(originalBuf, "", instId);
   }
 
   _yield() {
@@ -2356,7 +2350,7 @@ export class NativePcmEngine {
       if (this.decodedBuffers.has(instId) && this.decodedBuffers.get(instId).size > 0) {
         return true;
       }
-      const cacheKey = `sfb_${instId}`;
+      const cacheKey = instId.startsWith("x5d_") ? `sfb_v2_${instId}` : `sfb_${instId}`;
       let manifest = this._packManifests.get(instId);
       let packBuf = null;
 
@@ -3577,9 +3571,10 @@ export class NativePcmEngine {
       // under their distinct rrKey (one copy per variant, then copy-free).
       const workletKey = anchorData.rrKey || anchorData.anchorMidi;
       this.pcmWorkletNode.ensureBuffer(instId, workletKey, buf);
+      const isRockPiano = instId === "x5d_rock_piano" || instId?.includes("rock_piano");
       const trim = getInstrumentTrimGain(instId);
-      const dynamicAmp = Math.pow(velNorm, 1.10);
-      const peakGain = (0.16 + dynamicAmp * 0.84) * customGain * trim;
+      const dynamicAmp = isRockPiano ? Math.pow(velNorm, 0.78) : Math.pow(velNorm, 1.10);
+      const peakGain = (isRockPiano ? 0.28 + dynamicAmp * 0.72 : 0.16 + dynamicAmp * 0.84) * customGain * trim;
       const [isSax, isChoirTimbre] = this._instTimbre(instId);
       const isChoir =
         isChoirTimbre ||
@@ -3611,19 +3606,21 @@ export class NativePcmEngine {
         instId?.includes("clavi") ||
         instId?.includes("ep");
 
-      const releaseTime = isHit
-        ? 1.8
-        : isString
-          ? 0.75
-          : isChoir
-            ? 0.55
-            : isPiano
+      const releaseTime = isRockPiano
+        ? 0.65
+        : isHit
+          ? 1.8
+          : isString
+            ? 0.75
+            : isChoir
               ? 0.55
-              : isSax
-                ? 0.28
-                : 0.35;
+              : isPiano
+                ? 0.55
+                : isSax
+                  ? 0.28
+                  : 0.35;
 
-      const minCutoff = isPiano ? 14000 : isSax ? 4000 : isChoir ? 1000 : 3500;
+      const minCutoff = isRockPiano ? 18000 : isPiano ? 14000 : isSax ? 4000 : isChoir ? 1000 : 3500;
       const maxCutoff = isSax ? 16000 : isChoir ? 8500 : 20000;
       const filterNorm = Math.min(
         1.0,
@@ -3641,11 +3638,11 @@ export class NativePcmEngine {
         isLoopable: !!buf._isLoopable,
         loopStart: buf._loopStartSec || 0,
         loopEnd: buf._loopEndSec || 0,
-        attackTime: isChoir ? 0.04 : 0.003,
-        decayTime: isPiano ? 0.4 : 0.25,
-        sustainLevel: isHit ? 0.95 : isPiano ? 0.75 : 0.65,
+        attackTime: isRockPiano ? 0.001 : isChoir ? 0.04 : 0.003,
+        decayTime: isRockPiano ? 0.60 : isPiano ? 0.4 : 0.25,
+        sustainLevel: isRockPiano ? 0.88 : isHit ? 0.95 : isPiano ? 0.75 : 0.65,
         releaseTime,
-        filterCutoff: filterNorm,
+        filterCutoff: isRockPiano ? 1.0 : filterNorm,
         maxLife: buf._isLoopable
           ? 60.0
           : Math.min(8.0, (buf.duration || 4.0) + 0.1),
@@ -3897,15 +3894,17 @@ export class NativePcmEngine {
       Math.min(20000, noteFreq * (2.0 + velNorm * 2.2)),
     );
 
-    filter.frequency.setValueAtTime(keyTrackedCutoff, now);
-    filter.Q.setValueAtTime(0.35, now);
+    const isRockPiano = instId === "x5d_rock_piano" || instId?.includes("rock_piano");
+    filter.frequency.setValueAtTime(isRockPiano ? 20000 : keyTrackedCutoff, now);
+    filter.Q.setValueAtTime(isRockPiano ? 0.45 : 0.35, now);
 
     const trim = getInstrumentTrimGain(instId);
-    const dynamicAmp = Math.pow(velNorm, 1.10);
-    const peakGain = (0.16 + dynamicAmp * 0.84) * customGain * trim;
+    const dynamicAmp = isRockPiano ? Math.pow(velNorm, 0.78) : Math.pow(velNorm, 1.10);
+    const peakGain = (isRockPiano ? 0.28 + dynamicAmp * 0.72 : 0.16 + dynamicAmp * 0.84) * customGain * trim;
 
     voiceGain.gain.setValueAtTime(0.0, now);
     if (isChoir) voiceGain.gain.setTargetAtTime(peakGain, now, 0.04);
+    else if (isRockPiano) voiceGain.gain.setTargetAtTime(peakGain, now, 0.001);
     else voiceGain.gain.setTargetAtTime(peakGain, now, 0.008);
 
     const maxLife =

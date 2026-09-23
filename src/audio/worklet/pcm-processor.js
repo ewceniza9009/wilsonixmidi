@@ -531,30 +531,25 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
         let sampleR = voice.readSampleR(pos);
 
         let nextPos = pos + voice.playbackRate;
-        let sampleEnded = false;
         if (voice.isLoopable && voice.loopEnd > voice.loopStart) {
           while (nextPos >= voice.loopEnd) {
             nextPos -= (voice.loopEnd - voice.loopStart);
           }
         } else if (nextPos >= bufLen) {
-          sampleEnded = true;
           if (voice.held || voice.pedalHeld) {
-            // Sample finished but note is still held/sustained: gracefully release
-            // the envelope instead of repeating the last sample with aggressive gain drop.
-            // This prevents rapid 0.5 gain steps that create hissing/click artifacts.
+            // Sample finished but note is still held/sustained: smoothly release
+            // the envelope over 35ms instead of repeating the last sample or abruptly
+            // zeroing the audio data, eliminating any DC step or crackle artifact.
             if (voice.envStage !== 4) {
-              voice.envStage = 4;
-              voice.held = false;
+              voice.fastRelease(0.035);
             }
-            nextPos = pos;
+            nextPos = Math.max(0, bufLen - 1);
           } else {
             voice.forceStop();
             break;
           }
         }
         voice.playbackPosition = nextPos;
-
-        if (sampleEnded) { sampleL = 0; sampleR = 0; }
 
         const amp = voice.envLevel * voice.gain *
           (typeof voice.layerIndex === "number" ? this.polyScaleCombi : masterScale);
