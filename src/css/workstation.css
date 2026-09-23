@@ -4565,4 +4565,278 @@ body.stage-sunlight-mode .text-secondary {
   100% { box-shadow: 0 0 16px #ff8c00, inset 0 0 8px #ff8c00; }
 }
 
+/* =========================================================================
+   INTERACTIVE PIANO TUTOR STUDIO DECK (DEMO STATION PRACTICE MODE)
+   ========================================================================= */
+.demo-station-practice-btn {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(6, 95, 70, 0.28));
+  color: #6ee7b7;
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: 0.5px;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+}
+.demo-station-practice-btn:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.35), rgba(6, 95, 70, 0.45));
+  border-color: #10b981;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.45);
+  transform: translateY(-1px);
+}
+
+.tutor-deck-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 8px;
+  background: #0d111a;
+  border-radius: var(--radius-lg);
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.tutor-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tutor-back-btn {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary, #94a3b8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 6px 12px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.tutor-back-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.tutor-song-badge-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.tutor-badge {
+  background: linear-gradient(135deg, #059669, #047857);
+  color: #ecfdf5;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.tutor-song-title {
+  font-weight: 800;
+  font-size: 0.92rem;
+  color: #ffffff;
+}
+
+.tutor-song-sub {
+  font-size: 0.74rem;
+  color: var(--text-muted, #64748b);
+}
+
+.tutor-target-prompt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tutor-prompt-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+}
+
+.tutor-prompt-keys {
+  font-family: monospace;
+  font-weight: 800;
+  font-size: 0.86rem;
+  color: #38bdf8;
+}
+
+.tutor-prompt-keys.active-wait {
+  color: #fbbf24;
+  animation: tutor-key-pulse 1s infinite alternate;
+}
+
+.tutor-controls-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 6px 4px;
+}
+
+.tutor-control-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tutor-grp-label {
+  font-size: 0.66rem;
+  font-weight: 800;
+  color: #64748b;
+  margin-right: 2px;
+  letter-spacing: 0.5px;
+}
+
+.tutor-pill-btn {
+  background: rgba(255, 255, 255, 0.04);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.tutor-pill-btn:hover {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.tutor-pill-btn.active {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.35));
+  color: #6ee7b7;
+  border-color: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+}
+
+.tutor-stats-hud {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 4px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.tutor-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 44px;
+}
+
+.tutor-stat-val {
+  font-family: monospace;
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.tutor-stat-lbl {
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.5px;
+}
+
+.text-green { color: #34d399; }
+.text-orange { color: #fb923c; }
+.text-cyan { color: #38bdf8; }
+
+.tutor-transport-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tutor-transport-btn {
+  background: rgba(255, 255, 255, 0.05);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 5px 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.tutor-transport-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.tutor-transport-btn.paused {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: #f59e0b;
+  color: #fbbf24;
+}
+
+.tutor-canvas-wrapper {
+  position: relative;
+  width: 100%;
+  height: 250px;
+  min-height: 200px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6);
+  background: #0b0e14;
+}
+
+.tutor-falling-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Piano Tutor Key Illuminations on Docked Piano */
+.white-key.tutor-target-key {
+  background-color: #fef08a !important;
+  background-image: linear-gradient(180deg, #fef9c3 0%, #fde047 50%, #eab308 100%) !important;
+  box-shadow: 0 0 16px rgba(234, 179, 8, 0.9), inset 0 0 8px rgba(254, 240, 138, 0.8) !important;
+  border-bottom: 6px solid #ca8a04 !important;
+  animation: tutor-key-pulse 1.2s infinite alternate ease-in-out;
+}
+
+.black-key.tutor-target-key {
+  background-color: #d97706 !important;
+  background-image: linear-gradient(180deg, #fbbf24 0%, #d97706 60%, #b45309 100%) !important;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.95), inset 0 1px 2px rgba(255, 255, 255, 0.5) !important;
+  border-bottom: 5px solid #92400e !important;
+  animation: tutor-key-pulse 1.2s infinite alternate ease-in-out;
+}
+
+@keyframes tutor-key-pulse {
+  from { filter: brightness(1); }
+  to { filter: brightness(1.22); }
+}
+
 

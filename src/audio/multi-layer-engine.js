@@ -3504,9 +3504,9 @@ export class MultiLayerEngine {
     this.onSplitChangeCallback = null;
     this.splitChangeListeners = new Set();
 
-    this.onNoteChangeCallback = null;
     this.onPanicCallback = null;
     this._panicHooks = new Set();
+    this._noteHooks = new Set();
 
     this.onLayerChangeCallback = null;
     this.layerChangeListeners = new Set();
@@ -4828,6 +4828,27 @@ export class MultiLayerEngine {
       }
     }
 
+    // Interactive Note Hooks (Piano Tutor & learning monitors)
+    if (this._noteHooks && this._noteHooks.size > 0) {
+      if (when === 0) {
+        for (const hook of this._noteHooks) {
+          try { hook(midiNote, true, velocity); } catch (e) {}
+        }
+      } else {
+        const delayMs = Math.max(
+          0,
+          (when - (audioCore.ctx ? audioCore.ctx.currentTime : 0)) * 1000,
+        );
+        setTimeout(() => {
+          if (this._noteHooks) {
+            for (const hook of this._noteHooks) {
+              try { hook(midiNote, true, velocity); } catch (e) {}
+            }
+          }
+        }, delayMs);
+      }
+    }
+
     const now = when > 0 ? when : audioCore.ctx ? audioCore.ctx.currentTime : 0;
 
     // Live held-note tracking: a key held with no sustain pedal rings for
@@ -5025,6 +5046,27 @@ export class MultiLayerEngine {
           try {
             synthEngine.onNoteChangeCallback(midiNote, false, 0);
           } catch (e) {}
+        }, delayMs);
+      }
+    }
+
+    // Interactive Note Hooks (Piano Tutor & learning monitors)
+    if (this._noteHooks && this._noteHooks.size > 0) {
+      if (when === 0) {
+        for (const hook of this._noteHooks) {
+          try { hook(midiNote, false, 0); } catch (e) {}
+        }
+      } else {
+        const delayMs = Math.max(
+          0,
+          (when - (audioCore.ctx ? audioCore.ctx.currentTime : 0)) * 1000,
+        );
+        setTimeout(() => {
+          if (this._noteHooks) {
+            for (const hook of this._noteHooks) {
+              try { hook(midiNote, false, 0); } catch (e) {}
+            }
+          }
         }, delayMs);
       }
     }
@@ -5452,6 +5494,21 @@ export class MultiLayerEngine {
 
   unregisterPanicHook(fn) {
     this._panicHooks.delete(fn);
+  }
+
+  registerNoteHook(fn) {
+    if (typeof fn === "function") {
+      if (!this._noteHooks) this._noteHooks = new Set();
+      this._noteHooks.add(fn);
+      return () => this._noteHooks.delete(fn);
+    }
+    return () => {};
+  }
+
+  unregisterNoteHook(fn) {
+    if (this._noteHooks) {
+      this._noteHooks.delete(fn);
+    }
   }
 
   setModWheel(amount) {

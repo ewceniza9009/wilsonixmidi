@@ -1,12 +1,27 @@
 # Upload release assets directly via curl.exe for high-speed streaming with reliable clobber
 param(
-    [string]$Tag = "v2.1.0"
+    [string]$Tag = ""
 )
 
 $ErrorActionPreference = "Stop"
 
+if (-not $Tag) {
+    $pkgJson = Get-Content "package.json" | ConvertFrom-Json
+    $Tag = "v" + $pkgJson.version
+}
+
+$ver = $Tag.TrimStart('v')
+Write-Host "Syncing release for Tag: $Tag (Version: $ver)..." -ForegroundColor Cyan
+
 $token = (gh auth token).Trim()
-$releaseId = (gh api "repos/ewceniza9009/wilsonixmidi/releases/tags/$Tag" --jq ".id").Trim()
+$releaseId = (gh api "repos/ewceniza9009/wilsonixmidi/releases/tags/$Tag" --jq ".id" 2>$null)
+if (-not $releaseId) {
+    Write-Host "Creating GitHub release $Tag..." -ForegroundColor Yellow
+    gh release create $Tag --title "WILSONIX MIDIKEY $Tag (Build 24)" --notes "WILSONIX MIDIKEY $Tag Production Release with Interactive Learning & Piano Tutor Studio, High-Fidelity Korg X5D presets, latency optimizations, and memory leak fixes."
+    $releaseId = (gh api "repos/ewceniza9009/wilsonixmidi/releases/tags/$Tag" --jq ".id").Trim()
+} else {
+    $releaseId = $releaseId.Trim()
+}
 
 Write-Host "Target GitHub Release ID: $releaseId ($Tag)" -ForegroundColor Cyan
 
@@ -39,13 +54,47 @@ function Upload-AssetWithClobber($filePath, $assetName, $contentType) {
 }
 
 # 1. APK
-Upload-AssetWithClobber "dist-apk/wilsonix-midikey.apk" "wilsonix-midikey.apk" "application/vnd.android.package-archive"
+if (Test-Path "dist-apk/wilsonix-midikey.apk") {
+    Upload-AssetWithClobber "dist-apk/wilsonix-midikey.apk" "wilsonix-midikey.apk" "application/vnd.android.package-archive"
+}
 
 # 2. Windows Installer
-if (Test-Path "dist-installer/WILSONIX.MIDIKEY_2.1.0_x64-setup.exe") {
-    Upload-AssetWithClobber "dist-installer/WILSONIX.MIDIKEY_2.1.0_x64-setup.exe" "WILSONIX.MIDIKEY_2.1.0_x64-setup.exe" "application/octet-stream"
-} elseif (Test-Path "src-tauri/target/release/bundle/nsis/WILSONIX MIDIKEY_2.1.0_x64-setup.exe") {
-    Upload-AssetWithClobber "src-tauri/target/release/bundle/nsis/WILSONIX MIDIKEY_2.1.0_x64-setup.exe" "WILSONIX.MIDIKEY_2.1.0_x64-setup.exe" "application/octet-stream"
+$exeCandidates = @(
+    "dist-installer/WILSONIX.MIDIKEY_${ver}_x64-setup.exe",
+    "dist-installer/WILSONIX MIDIKEY_${ver}_x64-setup.exe",
+    "src-tauri/target/release/bundle/nsis/WILSONIX MIDIKEY_${ver}_x64-setup.exe",
+    "src-tauri/target/release/bundle/nsis/WILSONIX.MIDIKEY_${ver}_x64-setup.exe"
+)
+
+$foundExe = $null
+foreach ($c in $exeCandidates) {
+    if (Test-Path $c) {
+        $foundExe = $c
+        break
+    }
+}
+
+if (-not $foundExe) {
+    $anyExe = Get-ChildItem -Path "src-tauri/target/release/bundle/nsis/*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($anyExe) { $foundExe = $anyExe.FullName }
+}
+
+if ($foundExe) {
+    Upload-AssetWithClobber $foundExe "WILSONIX.MIDIKEY_${ver}_x64-setup.exe" "application/octet-stream"
+} else {
+    Write-Warning "No Windows setup exe found to upload."
+}
+
+# 3. MSI installer if available
+$msiCandidates = @(
+    "dist-installer/WILSONIX.MIDIKEY_${ver}_x64_en-US.msi",
+    "src-tauri/target/release/bundle/msi/WILSONIX MIDIKEY_${ver}_x64_en-US.msi"
+)
+foreach ($m in $msiCandidates) {
+    if (Test-Path $m) {
+        Upload-AssetWithClobber $m "WILSONIX.MIDIKEY_${ver}_x64_en-US.msi" "application/octet-stream"
+        break
+    }
 }
 
 Write-Host "`nVerifying release assets on GitHub..." -ForegroundColor Cyan

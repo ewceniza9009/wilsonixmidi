@@ -98,8 +98,10 @@ class MidiKeyEliteApp {
     } catch (e) {};
 
     // P3.5: Register Service Worker for PWA offline support
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+      try {
+        navigator.serviceWorker.register("/sw.js").catch(() => {});
+      } catch (e) {}
     }
 
     // Lazy-render flags
@@ -407,6 +409,16 @@ class MidiKeyEliteApp {
       const splitOn = view === "split";
       multiLayerEngine.toggleSplitMode(splitOn);
       synthEngine.toggleSplitMode(splitOn);
+
+      // Stop demo playback and exit interactive practice if switching away from demo tab
+      if (view !== "demo" && this.demoStation) {
+        try {
+          this.demoStation.stop();
+          if (typeof this.demoStation.exitPractice === "function") {
+            this.demoStation.exitPractice();
+          }
+        } catch (e) {}
+      }
 
       // Snap smoothly to stage deck when switching stage views
       const stageDeck = document.getElementById("studio-stage-deck");

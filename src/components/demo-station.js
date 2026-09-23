@@ -1,7 +1,8 @@
 /**
- * Demo Station - 30-Second Song Clip Player
+ * Demo Station - 30-Second Song Clip Player & Interactive Practice Studio
  * Live interactive playback through the MIDIKey engine (pedal + note events),
  * driving both the audible engine and the on-screen key visual bridge.
+ * Features an integrated Synthesia-style interactive piano tutor canvas.
  */
 
 import { DEMO_SONGS } from "../audio/demo-songs/index.js";
@@ -10,6 +11,7 @@ import { multiLayerEngine } from "../audio/multi-layer-engine.js";
 import { audioCore } from "../audio/audio-core.js";
 import { noteScheduler } from "../audio/lookahead-scheduler.js";
 import { escapeHtml } from "../utils/escape-html.js";
+import { PianoTutorCanvas } from "./piano-tutor-canvas.js";
 
 export class DemoStationUI {
   constructor(containerId) {
@@ -25,15 +27,27 @@ export class DemoStationUI {
     this.volume = 0.70;
     this.customSongs = this.loadCustomSongs();
 
+    // Interactive Practice Studio
+    this.tutorCanvas = null;
+    this.isPracticing = false;
+    this.currentPracticeSong = null;
+    this._unsubNoteHook = null;
+
     this.render();
     this.renderList();
     this.bindEvents();
 
     if (typeof multiLayerEngine?.registerPanicHook === "function") {
-      multiLayerEngine.registerPanicHook(() => this.stop(false));
+      multiLayerEngine.registerPanicHook(() => {
+        this.stop(false);
+        this.exitPractice();
+      });
     }
     if (typeof window !== "undefined") {
-      window.addEventListener("wilsonix:panic", () => this.stop(false));
+      window.addEventListener("wilsonix:panic", () => {
+        this.stop(false);
+        this.exitPractice();
+      });
     }
   }
 
@@ -61,32 +75,38 @@ export class DemoStationUI {
 
     this.container.innerHTML = `
       <div class="demo-station-card" id="demo-station-card">
-        <div class="demo-station-header">
-          <div class="station-title-group">
-            <span class="station-badge">🎬 DEMO STATION</span>
-            <span class="genre-tag">INTERACTIVE SONG CLIPS</span>
+        <!-- Main Demo Song List View -->
+        <div class="demo-main-view" id="demo-main-view">
+          <div class="demo-station-header">
+            <div class="station-title-group">
+              <span class="station-badge">🎬 DEMO STATION</span>
+              <span class="genre-tag">INTERACTIVE SONG CLIPS & LEARNING</span>
+            </div>
+            <span class="demo-hint">Listen to stage clips or hit 🎓 PRACTICE to learn notes with falling visuals!</span>
           </div>
-          <span class="demo-hint">Clips play live on the current stage rig — watch the keys!</span>
-        </div>
-        <div class="demo-toolbar">
-          <div class="demo-search-wrap">
-            <input type="text" class="demo-search-input" id="demo-search" placeholder="Search songs..." value="" autocomplete="off" />
-            <div class="demo-volume-control">
-              <span class="demo-vol-icon">🔉</span>
-              <span class="demo-vol-label">VOL</span>
-              <input type="range" class="demo-vol-slider" id="demo-volume-slider" min="15" max="100" value="70" title="Demo playback volume" />
-              <span class="demo-vol-pct" id="demo-vol-pct">70%</span>
+          <div class="demo-toolbar">
+            <div class="demo-search-wrap">
+              <input type="text" class="demo-search-input" id="demo-search" placeholder="Search songs..." value="" autocomplete="off" />
+              <div class="demo-volume-control">
+                <span class="demo-vol-icon">🔉</span>
+                <span class="demo-vol-label">VOL</span>
+                <input type="range" class="demo-vol-slider" id="demo-volume-slider" min="15" max="100" value="70" title="Demo playback volume" />
+                <span class="demo-vol-pct" id="demo-vol-pct">70%</span>
+              </div>
+            </div>
+            <div class="demo-actions-bar">
+              <button class="demo-import-btn" id="demo-import-midi-btn" title="Convert and play any standard .mid or .midi file">
+                ➕ IMPORT MIDI FILE
+              </button>
+              <input type="file" id="demo-midi-file-input" accept=".mid,.midi" style="display:none" />
+              <span class="demo-drop-hint">or drop any .mid here</span>
             </div>
           </div>
-          <div class="demo-actions-bar">
-            <button class="demo-import-btn" id="demo-import-midi-btn" title="Convert and play any standard .mid or .midi file">
-              ➕ IMPORT MIDI FILE
-            </button>
-            <input type="file" id="demo-midi-file-input" accept=".mid,.midi" style="display:none" />
-            <span class="demo-drop-hint">or drop any .mid here</span>
-          </div>
+          <div class="demo-song-list" id="demo-song-list"></div>
         </div>
-        <div class="demo-song-list" id="demo-song-list"></div>
+
+        <!-- Interactive Practice Studio Deck (Hidden until PRACTICE clicked) -->
+        <div class="tutor-deck-container" id="tutor-deck-container" style="display:none;"></div>
       </div>
     `;
   }
@@ -120,6 +140,9 @@ export class DemoStationUI {
           <div class="demo-progress-track">
             <div class="demo-progress-fill" id="demo-progress-${song.id}"></div>
           </div>
+          <button class="demo-station-practice-btn" id="demo-practice-${song.id}" title="Learn and practice this song interactively">
+            🎓 PRACTICE
+          </button>
           <button class="demo-station-play-btn" id="demo-play-${song.id}" title="Play demo clip">
             ▶ PLAY
           </button>
@@ -134,15 +157,20 @@ export class DemoStationUI {
       )
       .join("");
 
-    // Bind play buttons
+    // Bind play and practice buttons
     filtered.forEach((song) => {
-      const btn = list.querySelector(`#demo-play-${song.id}`);
-      btn?.addEventListener("click", () => {
+      const playBtn = list.querySelector(`#demo-play-${song.id}`);
+      playBtn?.addEventListener("click", () => {
         if (this.isPlaying && this.currentSong === song.id) {
           this.stop();
         } else {
           this.play(song);
         }
+      });
+
+      const pracBtn = list.querySelector(`#demo-practice-${song.id}`);
+      pracBtn?.addEventListener("click", () => {
+        this.startPractice(song);
       });
     });
 
@@ -159,6 +187,9 @@ export class DemoStationUI {
   deleteCustomSong(id) {
     if (this.isPlaying && this.currentSong === id) {
       this.stop();
+    }
+    if (this.isPracticing && this.currentPracticeSong?.id === id) {
+      this.exitPractice();
     }
     this.customSongs = this.customSongs.filter((s) => s.id !== id);
     this.saveCustomSongs();
@@ -245,9 +276,286 @@ export class DemoStationUI {
     }
   }
 
+  // =========================================================================
+  // INTERACTIVE PRACTICE & LEARNING STUDIO METHODS
+  // =========================================================================
+
+  startPractice(song) {
+    if (!song) return;
+    if (this.isPlaying) {
+      this.stop();
+    }
+    this.isPracticing = true;
+    this.currentPracticeSong = song;
+
+    // 1. Prepare stage audio rig for the song preset
+    try {
+      const ctx = audioCore.init();
+      if (ctx && ctx.state === "suspended") {
+        ctx.resume().catch(() => {});
+      }
+      audioCore.unlock();
+      multiLayerEngine.init();
+      multiLayerEngine.toggleCombiMode(true);
+      multiLayerEngine.setCombiPreset(song.combi);
+      if (audioCore.fxRack && song.fxPreset) {
+        audioCore.fxRack.applyPreset(song.fxPreset);
+      }
+    } catch (e) {
+      console.warn("Practice audio preset setup:", e);
+    }
+
+    // 2. Switch views
+    const mainView = this.container.querySelector("#demo-main-view");
+    const tutorDeck = this.container.querySelector("#tutor-deck-container");
+    if (mainView) mainView.style.display = "none";
+    if (tutorDeck) {
+      tutorDeck.style.display = "flex";
+      this.renderPracticeDeck(song);
+    }
+
+    // 3. Initialize canvas
+    const canvas = this.container.querySelector("#tutor-falling-canvas");
+    const keyboardContainer = document.getElementById("piano-roll-container");
+
+    if (this.tutorCanvas) {
+      this.tutorCanvas.dispose();
+    }
+
+    this.tutorCanvas = new PianoTutorCanvas(canvas, keyboardContainer, {
+      engine: multiLayerEngine,
+      mode: "wait",
+      speed: 1.0,
+      hand: "both",
+      onScoreUpdate: (stats) => this.updateTutorStats(stats),
+      onSongComplete: (stats) => this.handleTutorComplete(stats),
+      onWaitNotesChange: (notes) => this.updateTargetPrompt(notes),
+    });
+
+    // 4. Hook note triggers from all sources (USB MIDI, virtual keyboard, QWERTY)
+    if (typeof multiLayerEngine.registerNoteHook === "function") {
+      if (this._unsubNoteHook) this._unsubNoteHook();
+      this._unsubNoteHook = multiLayerEngine.registerNoteHook((note, pressed, vel) => {
+        if (this.tutorCanvas) {
+          this.tutorCanvas.handleUserNote(note, pressed);
+        }
+      });
+    }
+
+    // 5. Load and start song
+    this.tutorCanvas.loadSong(song);
+    this.tutorCanvas.start();
+  }
+
+  exitPractice() {
+    if (!this.isPracticing && !this.tutorCanvas) return;
+    this.isPracticing = false;
+    this.currentPracticeSong = null;
+
+    if (this._unsubNoteHook) {
+      this._unsubNoteHook();
+      this._unsubNoteHook = null;
+    }
+    if (this.tutorCanvas) {
+      this.tutorCanvas.dispose();
+      this.tutorCanvas = null;
+    }
+
+    const mainView = this.container.querySelector("#demo-main-view");
+    const tutorDeck = this.container.querySelector("#tutor-deck-container");
+    if (mainView) mainView.style.display = "";
+    if (tutorDeck) {
+      tutorDeck.style.display = "none";
+      tutorDeck.innerHTML = "";
+    }
+  }
+
+  renderPracticeDeck(song) {
+    const deck = this.container.querySelector("#tutor-deck-container");
+    if (!deck) return;
+
+    deck.innerHTML = `
+      <div class="tutor-header-bar">
+        <button class="tutor-back-btn" id="tutor-exit-btn" title="Back to song list">
+          ◀ BACK TO SONGS
+        </button>
+        <div class="tutor-song-badge-group">
+          <span class="tutor-badge">🎓 INTERACTIVE TUTOR</span>
+          <span class="tutor-song-title">${escapeHtml(song.title)}</span>
+          <span class="tutor-song-sub">${escapeHtml(song.subtitle || "")}</span>
+        </div>
+        <div class="tutor-target-prompt" id="tutor-target-prompt">
+          <span class="tutor-prompt-label">TARGET NOTE:</span>
+          <span class="tutor-prompt-keys" id="tutor-target-keys-text">Ready</span>
+        </div>
+      </div>
+
+      <div class="tutor-controls-bar">
+        <!-- Mode Selector -->
+        <div class="tutor-control-group">
+          <span class="tutor-grp-label">MODE:</span>
+          <button class="tutor-pill-btn active" id="tutor-mode-wait" title="Pauses at the hit-line until you press the right key">
+            ⏸ WAIT FOR KEY
+          </button>
+          <button class="tutor-pill-btn" id="tutor-mode-flow" title="Plays continuously — hit keys in rhythm">
+            ▶ PLAY ALONG
+          </button>
+        </div>
+
+        <!-- Speed Selector -->
+        <div class="tutor-control-group">
+          <span class="tutor-grp-label">SPEED:</span>
+          <button class="tutor-pill-btn" data-speed="0.5">0.5x</button>
+          <button class="tutor-pill-btn" data-speed="0.75">0.75x</button>
+          <button class="tutor-pill-btn active" data-speed="1.0">1.0x</button>
+        </div>
+
+        <!-- Hand Splitting -->
+        <div class="tutor-control-group">
+          <span class="tutor-grp-label">HAND:</span>
+          <button class="tutor-pill-btn active" data-hand="both" title="Practice both hands">BOTH</button>
+          <button class="tutor-pill-btn" data-hand="right" title="Practice right hand melody (>= C4)">RIGHT</button>
+          <button class="tutor-pill-btn" data-hand="left" title="Practice left hand bass (< C4)">LEFT</button>
+        </div>
+
+        <!-- Score & Streak HUD -->
+        <div class="tutor-stats-hud">
+          <div class="tutor-stat-item">
+            <span class="tutor-stat-val text-green" id="tutor-stat-accuracy">100%</span>
+            <span class="tutor-stat-lbl">ACCURACY</span>
+          </div>
+          <div class="tutor-stat-item">
+            <span class="tutor-stat-val text-orange" id="tutor-stat-streak">0</span>
+            <span class="tutor-stat-lbl">STREAK 🔥</span>
+          </div>
+          <div class="tutor-stat-item">
+            <span class="tutor-stat-val text-cyan" id="tutor-stat-score">0</span>
+            <span class="tutor-stat-lbl">SCORE</span>
+          </div>
+        </div>
+
+        <!-- Transport -->
+        <div class="tutor-transport-group">
+          <button class="tutor-transport-btn" id="tutor-pause-btn" title="Pause / Resume">⏸ PAUSE</button>
+          <button class="tutor-transport-btn" id="tutor-restart-btn" title="Restart from beginning">🔄 RESTART</button>
+        </div>
+      </div>
+
+      <div class="tutor-canvas-wrapper" id="tutor-canvas-wrapper">
+        <canvas id="tutor-falling-canvas" class="tutor-falling-canvas"></canvas>
+      </div>
+    `;
+
+    // 1. Back button
+    deck.querySelector("#tutor-exit-btn")?.addEventListener("click", () => this.exitPractice());
+
+    // 2. Mode buttons
+    const btnWait = deck.querySelector("#tutor-mode-wait");
+    const btnFlow = deck.querySelector("#tutor-mode-flow");
+    btnWait?.addEventListener("click", () => {
+      btnWait.classList.add("active");
+      btnFlow?.classList.remove("active");
+      if (this.tutorCanvas) this.tutorCanvas.setMode("wait");
+    });
+    btnFlow?.addEventListener("click", () => {
+      btnFlow.classList.add("active");
+      btnWait?.classList.remove("active");
+      if (this.tutorCanvas) this.tutorCanvas.setMode("flow");
+    });
+
+    // 3. Speed buttons
+    deck.querySelectorAll("[data-speed]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        deck.querySelectorAll("[data-speed]").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        const speed = parseFloat(btn.getAttribute("data-speed")) || 1.0;
+        if (this.tutorCanvas) this.tutorCanvas.setSpeed(speed);
+      });
+    });
+
+    // 4. Hand buttons
+    deck.querySelectorAll("[data-hand]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        deck.querySelectorAll("[data-hand]").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        const hand = btn.getAttribute("data-hand") || "both";
+        if (this.tutorCanvas) this.tutorCanvas.setHand(hand);
+      });
+    });
+
+    // 5. Transport buttons
+    const pauseBtn = deck.querySelector("#tutor-pause-btn");
+    pauseBtn?.addEventListener("click", () => {
+      if (!this.tutorCanvas) return;
+      if (this.tutorCanvas.isPaused) {
+        this.tutorCanvas.resume();
+        pauseBtn.innerText = "⏸ PAUSE";
+        pauseBtn.classList.remove("paused");
+      } else {
+        this.tutorCanvas.pause();
+        pauseBtn.innerText = "▶ RESUME";
+        pauseBtn.classList.add("paused");
+      }
+    });
+
+    const restartBtn = deck.querySelector("#tutor-restart-btn");
+    restartBtn?.addEventListener("click", () => {
+      if (this.tutorCanvas) {
+        this.tutorCanvas.restart();
+        if (pauseBtn) {
+          pauseBtn.innerText = "⏸ PAUSE";
+          pauseBtn.classList.remove("paused");
+        }
+      }
+    });
+  }
+
+  updateTutorStats(stats) {
+    const deck = this.container.querySelector("#tutor-deck-container");
+    if (!deck) return;
+
+    const accEl = deck.querySelector("#tutor-stat-accuracy");
+    const streakEl = deck.querySelector("#tutor-stat-streak");
+    const scoreEl = deck.querySelector("#tutor-stat-score");
+
+    if (accEl) accEl.textContent = `${stats.accuracy}%`;
+    if (streakEl) streakEl.textContent = `${stats.streak}`;
+    if (scoreEl) scoreEl.textContent = `${stats.score}`;
+  }
+
+  updateTargetPrompt(notes) {
+    const el = this.container.querySelector("#tutor-target-keys-text");
+    if (!el) return;
+    if (!notes || notes.length === 0) {
+      el.textContent = "Great! Rolling...";
+      el.classList.remove("active-wait");
+    } else {
+      const names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+      const noteNames = notes
+        .sort((a, b) => a - b)
+        .map((n) => `${names[n % 12]}${Math.floor(n / 12) - 1}`)
+        .join(" + ");
+      el.textContent = noteNames;
+      el.classList.add("active-wait");
+    }
+  }
+
+  handleTutorComplete(stats) {
+    const prompt = this.container.querySelector("#tutor-target-keys-text");
+    if (prompt) {
+      prompt.textContent = `Completed! Acc: ${stats.accuracy}%, Best Streak: ${stats.bestStreak}`;
+    }
+  }
+
+  // =========================================================================
+  // STANDARD DEMO PLAYER METHODS
+  // =========================================================================
+
   async play(song) {
+    if (this.isPracticing) {
+      this.exitPractice();
+    }
     // Release any previously pinned demo instruments so they can be evicted
-    // between songs (prevents permanent pin accumulation / OOM).
     if (this._pinnedDemoInsts && this.pcmEngine && typeof this.pcmEngine.removePinnedInstruments === "function") {
       this.pcmEngine.removePinnedInstruments(this._pinnedDemoInsts);
     }
@@ -260,13 +568,10 @@ export class DemoStationUI {
     this._isStarting = true;
 
     try {
-      // Nuclear cleanup: discard ALL demo authors to prevent bleed from previous songs
-      // (discard only removes queued events; already-dispatched noteOffs still fire)
       noteScheduler.queue = noteScheduler.queue.filter(
-        ev => !String(ev.author).startsWith("demo-")
+        (ev) => !String(ev.author).startsWith("demo-"),
       );
 
-      // Always silence any lingering engine state before a new clip
       try {
         multiLayerEngine.panic();
       } catch (e) {}
@@ -284,11 +589,6 @@ export class DemoStationUI {
           audioCore.fxRack.applyPreset(song.fxPreset);
         }
 
-        // Wait until EVERY instrument this song touches is decoded before we
-        // schedule a single note. Fire-and-forget preloads let playback overtake
-        // decodeEmbeddedAnchors, so a heavy layered demo (Dancing Queen, etc.)
-        // hits findNearestAnchor mid-decode -> main-thread decode -> hiss/lag/
-        // wrong notes. AllSettled means one bad instrument can't block the song.
         const ready = async (promise) => {
           try { await promise; } catch (e) {}
         };
@@ -314,25 +614,15 @@ export class DemoStationUI {
             }
           });
         }
-        // Race the preloads against a hard deadline: heavy demos decode fully
-        // before the first note (~1-2s desktop), but a stuck fetch/dynamic bank
-        // load must NEVER block playback forever.
-        const deadline = new Promise(resolve => setTimeout(resolve, 4500));
+        const deadline = new Promise((resolve) => setTimeout(resolve, 4500));
         await Promise.race([Promise.all(allPromises), deadline]);
       } catch (e) {
         console.warn("Demo player audio setup:", e);
       }
 
-      // NOTE: no `if (!this._isStarting) return;` here — the start-of-play
-      // engine panic() fires the panic hook -> this.stop(false), which would
-      // clear _isStarting and abort the play that's just beginning. The preload
-      // is already capped by the deadline, and a second click during preload is
-      // blocked by the _isStarting guard above.
       this.currentSong = song.id;
       this.isPlaying = true;
 
-      // Pin all instruments this song touches so the budget evictor never
-      // drops them mid-playback (the v2.0.x hiss/lag regression source).
       this._pinnedDemoInsts = new Set();
       if (multiLayerEngine.layers) {
         multiLayerEngine.layers.forEach((layer) => {
@@ -421,7 +711,6 @@ export class DemoStationUI {
         } catch (e) {}
       }
 
-      // Release demo pins so previously-played instruments are evictable again.
       if (this._pinnedDemoInsts && multiLayerEngine.pcmEngine && typeof multiLayerEngine.pcmEngine.removePinnedInstruments === "function") {
         multiLayerEngine.pcmEngine.removePinnedInstruments(this._pinnedDemoInsts);
         this._pinnedDemoInsts = null;
