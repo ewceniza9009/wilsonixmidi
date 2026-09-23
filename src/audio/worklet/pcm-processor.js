@@ -105,7 +105,7 @@ class PcmWorkletVoice {
     }
   }
 
-  fastRelease(fadeSec = 0.015) {
+  fastRelease(fadeSec = 0.20) {
     if (!this.active || this.envStage === 0) return;
     this.held = false;
     this.pedalHeld = false;

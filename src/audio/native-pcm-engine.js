@@ -1995,14 +1995,14 @@ export class NativePcmEngine {
     });
   }
 
-  fadeBufferEnd(buf, seconds) {
+  fadeBufferEnd(buf, seconds = 0.02) {
     try {
       if (!buf) return buf;
       const fadeLen = Math.min(
         Math.floor(buf.sampleRate * seconds),
-        Math.floor(buf.length * 0.25),
+        Math.floor(buf.length * 0.04),
       );
-      if (fadeLen < 32) return buf;
+      if (fadeLen < 16) return buf;
       for (let c = 0; c < buf.numberOfChannels; c++) {
         const d = buf.getChannelData(c);
         for (let i = 0; i < fadeLen; i++) {
@@ -2014,24 +2014,109 @@ export class NativePcmEngine {
     return buf;
   }
 
+  /**
+   * Trims silent encoder priming frames (e.g. ~1152 samples / 26ms from MP3 / LAME encoding)
+   * from the start of an AudioBuffer so that note transients attack instantaneously without delay.
+   * Preserves transients by backing off 16 samples and applying a smooth micro-fade.
+   *
+   * @param {AudioContext|BaseAudioContext} ctx
+   * @param {AudioBuffer} originalBuf
+   * @param {number} [threshold=0.0015] - Detection threshold in normalized amplitude (-56 dBFS)
+   * @returns {AudioBuffer} Trimmed AudioBuffer, or originalBuf if no leading silence detected
+   */
+  trimLeadingSilence(ctx, originalBuf, threshold = 0.0015) {
+    if (!originalBuf || !ctx || typeof ctx.createBuffer !== "function") return originalBuf;
+    const numChannels = originalBuf.numberOfChannels;
+    const length = originalBuf.length;
+    const sampleRate = originalBuf.sampleRate || (ctx && ctx.sampleRate) || 44100;
+
+    // Scan up to 50ms of audio (~2205 frames at 44.1kHz)
+    const scanLimit = Math.min(length, Math.floor(sampleRate * 0.05));
+    let firstActiveIndex = length;
+
+    for (let c = 0; c < numChannels; c++) {
+      const data = originalBuf.getChannelData(c);
+      for (let i = 0; i < scanLimit; i++) {
+        if (Math.abs(data[i]) >= threshold) {
+          if (i < firstActiveIndex) {
+            firstActiveIndex = i;
+          }
+          break;
+        }
+      }
+    }
+
+    // If silence is negligible (< 32 samples / < 0.7ms) or no active transient found within scan limit, do not trim
+    if (firstActiveIndex <= 32 || firstActiveIndex >= scanLimit) {
+      return originalBuf;
+    }
+
+    // Back off 16 samples before the detected threshold crossing to preserve the full transient onset
+    const trimStart = Math.max(0, firstActiveIndex - 16);
+    if (trimStart <= 0) return originalBuf;
+
+    const newLength = length - trimStart;
+    if (newLength <= 0) return originalBuf;
+
+    const trimmedBuf = ctx.createBuffer(numChannels, newLength, sampleRate);
+    const fadeLen = Math.min(16, newLength);
+
+    const channelArrays = [];
+    for (let c = 0; c < numChannels; c++) {
+      const src = originalBuf.getChannelData(c);
+      const dst = trimmedBuf.getChannelData(c);
+      dst.set(src.subarray(trimStart, length));
+      for (let i = 0; i < fadeLen; i++) {
+        const factor = 0.5 * (1 - Math.cos((i / fadeLen) * Math.PI));
+        dst[i] *= factor;
+      }
+      channelArrays.push(dst);
+    }
+    trimmedBuf.getChannelData = (ch) => channelArrays[ch] || channelArrays[0];
+
+    // Maintain loop points and custom engine flags if present
+    if (originalBuf._loopStartSec !== undefined) {
+      const trimSec = trimStart / sampleRate;
+      trimmedBuf._loopStartSec = Math.max(0, originalBuf._loopStartSec - trimSec);
+      if (originalBuf._loopEndSec !== undefined) {
+        trimmedBuf._loopEndSec = Math.max(
+          trimmedBuf._loopStartSec,
+          originalBuf._loopEndSec - trimSec,
+        );
+      }
+    }
+    if (originalBuf._isLoopable !== undefined) {
+      trimmedBuf._isLoopable = originalBuf._isLoopable;
+    }
+
+    return trimmedBuf;
+  }
+
   createCrossfadedLoopBuffer(ctx, originalBuf, instId) {
     if (!originalBuf) return originalBuf;
 
+    // Eliminate MP3 priming silence and encoder latency so all presets attack instantaneously
+    originalBuf = this.trimLeadingSilence(ctx, originalBuf);
+
     const id = String(instId || "").toLowerCase();
+    const isX5D = id.startsWith("x5d_");
 
     // Percussive, decaying acoustic, pluck, bell, drum, or hit instruments must NOT loop
     const isOneShotOrDecaying =
       id.includes("piano") ||
       id.includes("grand") ||
       id.includes("rhodes") ||
+      id.includes("roads") ||
       id.includes("wurly") ||
       id.includes("clavi") ||
+      id.includes("harpsicord") ||
       id.includes("pluck") ||
       id.includes("guitar") ||
       id.includes("harp") ||
       id.includes("bell") ||
       id.includes("mallet") ||
       id.includes("kalimba") ||
+      id.includes("koto") ||
       id.includes("vibraphone") ||
       id.includes("marimba") ||
       id.includes("drum") ||
@@ -2040,7 +2125,9 @@ export class NativePcmEngine {
       id.includes("snare") ||
       id.includes("hihat") ||
       id.includes("cymbal") ||
+      id.includes("pizzo") ||
       id.includes("hit") ||
+      id.includes("stab") ||
       id.includes("slap") ||
       id.includes("impact") ||
       id.includes("downlifter") ||
@@ -2051,7 +2138,8 @@ export class NativePcmEngine {
 
     const isDroneInstrument =
       !isOneShotOrDecaying &&
-      (id.includes("string") ||
+      (isX5D ||
+        id.includes("string") ||
         id.includes("pad") ||
         id.includes("choir") ||
         id.includes("organ") ||
@@ -2072,6 +2160,8 @@ export class NativePcmEngine {
         id.includes("oboe") ||
         id.includes("bassoon") ||
         id.includes("accordion") ||
+        id.includes("accordeon") ||
+        id.includes("cafedral") ||
         id.includes("harmonica") ||
         id.includes("shakuhachi") ||
         id.includes("saw") ||
@@ -2104,7 +2194,7 @@ export class NativePcmEngine {
       !isDroneInstrument ||
       originalBuf.duration < 0.45
     ) {
-      return this.fadeBufferEnd(originalBuf, 0.4);
+      return this.fadeBufferEnd(originalBuf, 0.02);
     }
 
     return configureSustainLoop(originalBuf, "", instId);
@@ -2479,6 +2569,7 @@ export class NativePcmEngine {
           }),
         );
       }
+      this._prewarmWorklet(instId);
       return instMap.size > 0;
     } catch (err) {
       logger.warn("PCM", `Soundfont pack load failed for "${instId}" — falling back to JSONP`, err);
@@ -3645,7 +3736,7 @@ export class NativePcmEngine {
         filterCutoff: isRockPiano ? 1.0 : filterNorm,
         maxLife: buf._isLoopable
           ? 60.0
-          : Math.min(8.0, (buf.duration || 4.0) + 0.1),
+          : Math.max(12.0, (buf.duration || 6.0) + 0.5),
       });
       return null; // voice managed by worklet, no main-thread record
     }
@@ -3910,14 +4001,14 @@ export class NativePcmEngine {
     const maxLife =
       anchorData.buffer && anchorData.buffer._isLoopable
         ? 60.0
-        : Math.min(8.0, (anchorData.buffer?.duration || 4.0) + 0.1);
+        : Math.max(12.0, (anchorData.buffer?.duration || 6.0) + 0.5);
 
-    // Natural decay for non-loopable samples: fade out smoothly over the last 120ms
+    // Natural decay for non-loopable samples: fade out smoothly over the last 150ms
     // to prevent abrupt brickwall cutoffs and clicks when holding keys
-    if (!anchorData.buffer?._isLoopable && maxLife > 0.2) {
-      const fadeStart = Math.max(now + 0.05, now + maxLife - 0.12);
+    if (!anchorData.buffer?._isLoopable && maxLife > 0.5) {
+      const fadeStart = Math.max(now + 0.05, now + maxLife - 0.15);
       voiceGain.gain.setValueAtTime(peakGain, fadeStart);
-      voiceGain.gain.setTargetAtTime(0.0, fadeStart, 0.035);
+      voiceGain.gain.setTargetAtTime(0.0, fadeStart, 0.04);
     }
 
     try {
@@ -4475,11 +4566,11 @@ export class NativePcmEngine {
         }
         try {
           if (v.src) v.src.loop = false;
-          // Ultra-fast 8ms clickless fade for glissando sweeps & rapid chord transitions
+          // Smooth 70ms clickless fade for glissando sweeps so they bloom without a chopped up effect
           v.voiceGain.gain.cancelScheduledValues(now);
           v.voiceGain.gain.setValueAtTime(v.voiceGain.gain.value || 0.0, now);
-          v.voiceGain.gain.setTargetAtTime(0.0, now, 0.008);
-          v.src.stop(now + 0.035);
+          v.voiceGain.gain.setTargetAtTime(0.0, now, 0.07);
+          v.src.stop(now + 0.30);
           if (v.vibLfo) {
             try { v.vibLfo.stop(now + 0.035); } catch (e) {}
           }

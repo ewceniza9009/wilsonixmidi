@@ -28,7 +28,7 @@ export class ClipLooper {
     this.snapToBeats = options.snapToBeats ?? true;
     this.seamGuardSec = options.seamGuardSec ?? 0.03;
     this.startLeadSec = options.startLeadSec ?? 0.05;
-    this.looperGain = typeof options.looperGain === "number" ? options.looperGain : 0.55;
+    this.looperGain = typeof options.looperGain === "number" ? options.looperGain : 0.35;
 
     this.tracks = [
       this._blankTrack(0),
@@ -133,6 +133,7 @@ export class ClipLooper {
         const v = parseFloat(e.target.value) / 100;
         this.looperGain = v;
         if (volPct) volPct.textContent = `${Math.round(v * 100)}%`;
+        this._updateAllLooperBusGains();
       });
     }
     this.container.querySelectorAll(".slot-btn").forEach((btn) => {
@@ -243,10 +244,12 @@ export class ClipLooper {
       console.warn("[Looper] pcmEngine missing setLooperTrackFx");
       return;
     }
+    const activeLayers = (preset.layers || []).filter((l) => l && l.enabled);
+    const layerNorm = activeLayers.length > 1 ? 1 / Math.sqrt(activeLayers.length) : 1.0;
     for (let slot = 0; slot < 4; slot++) {
       const L = preset.layers[slot];
       const fx = L ? L.fx : "clean";
-      const g = L ? L.gain : 0.0;
+      const g = L && L.enabled ? (typeof L.gain === "number" ? L.gain : 1.0) * layerNorm * this.looperGain : 0.0;
       try {
         pcm.setLooperTrackFx(trackId, slot, fx);
         if (pcm.setLooperTrackGain) {
@@ -256,6 +259,23 @@ export class ClipLooper {
         console.warn("[Looper] _applyPresetToLooperBuses error", e);
       }
     }
+  }
+
+  _updateAllLooperBusGains() {
+    const pcm = multiLayerEngine.pcmEngine;
+    if (!pcm || typeof pcm.setLooperTrackGain !== "function") return;
+    this.tracks.forEach((track, trackId) => {
+      if (!track.preset || !track.preset.layers) return;
+      const activeLayers = track.preset.layers.filter((l) => l && l.enabled);
+      const layerNorm = activeLayers.length > 1 ? 1 / Math.sqrt(activeLayers.length) : 1.0;
+      for (let slot = 0; slot < 4; slot++) {
+        const L = track.preset.layers[slot];
+        if (L && L.enabled) {
+          const g = (typeof L.gain === "number" ? L.gain : 1.0) * layerNorm * this.looperGain;
+          pcm.setLooperTrackGain(trackId, slot, g);
+        }
+      }
+    });
   }
 
   // ──────────────────────────────────────────────────────────────────────
@@ -738,7 +758,9 @@ export class ClipLooper {
         const progId = L.vaProg || L.inst.slice(3);
         const prog = typeof getTritonProgramById === "function" ? getTritonProgramById(progId) : null;
         if (prog && typeof multiLayerEngine.getVaEngineFor === "function") {
-          const effectiveGain = (typeof L.gain === "number" ? L.gain : 1.0) * this.looperGain;
+          const activeLayers = (preset.layers || []).filter((l) => l && l.enabled);
+          const layerNorm = activeLayers.length > 1 ? 1 / Math.sqrt(activeLayers.length) : 1.0;
+          const effectiveGain = (typeof L.gain === "number" ? L.gain : 1.0) * layerNorm * this.looperGain;
           const va = multiLayerEngine.getVaEngineFor(prog, effectiveGain, slot);
           if (va && typeof va.noteOn === "function") {
             va.noteOn(transposed, velocity, at);
@@ -758,7 +780,7 @@ export class ClipLooper {
           L.inst,
           transposed,
           velocity,
-          L.gain * this.looperGain,
+          1.0,
           at,
         );
         if (!voice) {

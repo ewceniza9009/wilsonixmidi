@@ -500,14 +500,6 @@ export class VirtualKeyboardUI {
               this.setKeyVisualState(n, false);
               if (arpeggiator.enabled) {
                 arpeggiator.handleNoteOff(n);
-              } else if (
-                multiLayerEngine.sustainPedalActive ||
-                qwertyKeyboard.sustainPedal ||
-                qwertyKeyboard.sustainLatched
-              ) {
-                multiLayerEngine.noteOff(n);
-              } else if (typeof multiLayerEngine.fastNoteOff === "function") {
-                multiLayerEngine.fastNoteOff(n);
               } else {
                 multiLayerEngine.noteOff(n);
               }
@@ -664,14 +656,6 @@ export class VirtualKeyboardUI {
                 this.setKeyVisualState(n, false);
                 if (arpeggiator.enabled) {
                   arpeggiator.handleNoteOff(n);
-                } else if (
-                  multiLayerEngine.sustainPedalActive ||
-                  qwertyKeyboard.sustainPedal ||
-                  qwertyKeyboard.sustainLatched
-                ) {
-                  multiLayerEngine.noteOff(n);
-                } else if (typeof multiLayerEngine.fastNoteOff === "function") {
-                  multiLayerEngine.fastNoteOff(n);
                 } else {
                   multiLayerEngine.noteOff(n);
                 }

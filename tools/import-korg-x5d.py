@@ -205,13 +205,7 @@ def clean_and_encode_stereo(pcm_samples, in_srate, in_channels, is_looped=False)
     if n_frames == 0:
         return b""
 
-    # 1. De-click Fade In (4ms - preserves punchy hammer/pluck transients)
-    fade_in_len = min(int(in_srate * 0.004), n_frames // 8)
-    if fade_in_len > 0:
-        for i in range(fade_in_len):
-            factor = 0.5 * (1.0 - math.cos(math.pi * i / fade_in_len))
-            for c in range(in_channels):
-                samples[i * in_channels + c] = int(round(samples[i * in_channels + c] * factor))
+    # 1. Immediate Attack: preserve punchy hammer/pluck transients without artificial ramp
 
     # 2. Fade out ONLY if not looped to avoid killing sustain body
     if not is_looped:

@@ -5,7 +5,8 @@ import path from "node:path";
 import { HD_SOUNDBANKS } from "../src/audio/soundbanks.js";
 import { TRITON_BANKS } from "../src/triton/triton-soundbanks.js";
 import { resolveTritonProgram } from "../src/triton/combi-timbres.js";
-import { getInstrumentTrimGain } from "../src/audio/native-pcm-engine.js";
+import { NativePcmEngine, getInstrumentTrimGain } from "../src/audio/native-pcm-engine.js";
+import { createMockAudioContext } from "./helpers/mock-audio-context.js";
 
 const X5D_SLUGS = [
   "x5d_12_string", "x5d_accordeon", "x5d_analog_king", "x5d_ancient_sun", "x5d_ariana",
@@ -81,4 +82,117 @@ test("KORG_M1 bank registers all 59 Korg X5D programs and resolves to PCM instru
     assert.equal(resolved.type, "pcm");
     assert.equal(resolved.instKey, prog.instId);
   }
+});
+
+test("trimLeadingSilence strips MP3 priming delay (~26ms) and ensures instantaneous attack", () => {
+  const mockCtx = createMockAudioContext();
+  mockCtx.createBuffer = (ch, len, sr) => {
+    const channels = Array.from({ length: ch }, () => new Float32Array(len));
+    return {
+      numberOfChannels: ch,
+      length: len,
+      sampleRate: sr,
+      duration: len / sr,
+      getChannelData: (c) => channels[c] || channels[0],
+    };
+  };
+
+  const origInit = NativePcmEngine.prototype.initBuffers;
+  NativePcmEngine.prototype.initBuffers = function() {
+    this.isReady = true;
+    return Promise.resolve();
+  };
+  const engine = new NativePcmEngine(mockCtx);
+  NativePcmEngine.prototype.initBuffers = origInit;
+
+  const sr = 44100;
+  const totalFrames = 44100;
+  const silenceFrames = 1152; // standard MP3 LAME priming delay (~26.1ms)
+  const bufL = new Float32Array(totalFrames);
+  const bufR = new Float32Array(totalFrames);
+  for (let i = silenceFrames; i < totalFrames; i++) {
+    const s = Math.sin((2 * Math.PI * 440 * (i - silenceFrames)) / sr);
+    bufL[i] = s * 0.8;
+    bufR[i] = s * 0.8;
+  }
+  const mockMp3Buffer = {
+    duration: totalFrames / sr,
+    sampleRate: sr,
+    length: totalFrames,
+    numberOfChannels: 2,
+    getChannelData: (ch) => (ch === 1 ? bufR : bufL),
+    _loopStartSec: 0.5,
+    _loopEndSec: 0.9,
+    _isLoopable: true,
+  };
+
+  const trimmed = engine.trimLeadingSilence(mockCtx, mockMp3Buffer);
+  assert.ok(trimmed !== mockMp3Buffer, "Buffer with MP3 delay must be trimmed");
+  assert.ok(trimmed.length < totalFrames, "Trimmed length must be shorter than original");
+  // sin(0)=0, so threshold (0.0015) is exceeded at sample silenceFrames + 1
+  const expectedTrim = (silenceFrames + 1) - 16;
+  assert.equal(trimmed.length, totalFrames - expectedTrim);
+
+  const trimmedData = trimmed.getChannelData(0);
+  assert.ok(Math.abs(trimmedData[16]) > 0.001, "Transient must be at immediate attack position");
+
+  const trimSec = expectedTrim / sr;
+  assert.ok(Math.abs(trimmed._loopStartSec - (0.5 - trimSec)) < 1e-5, "Loop start must adjust by trim duration");
+
+  // Tight buffer (< 32 frames silence) is untouched
+  const tightBufL = new Float32Array(totalFrames);
+  tightBufL[5] = 0.5;
+  const tightBuf = {
+    duration: 1.0,
+    sampleRate: sr,
+    length: totalFrames,
+    numberOfChannels: 1,
+    getChannelData: () => tightBufL,
+  };
+  const untrimmed = engine.trimLeadingSilence(mockCtx, tightBuf);
+  assert.equal(untrimmed, tightBuf, "Tight buffer must not be modified");
+});
+
+test("createCrossfadedLoopBuffer automatically trims leading delay for X5D presets", () => {
+  const mockCtx = createMockAudioContext();
+  mockCtx.createBuffer = (ch, len, sr) => {
+    const channels = Array.from({ length: ch }, () => new Float32Array(len));
+    return {
+      numberOfChannels: ch,
+      length: len,
+      sampleRate: sr,
+      duration: len / sr,
+      getChannelData: (c) => channels[c] || channels[0],
+    };
+  };
+
+  const origInit = NativePcmEngine.prototype.initBuffers;
+  NativePcmEngine.prototype.initBuffers = function() {
+    this.isReady = true;
+    return Promise.resolve();
+  };
+  const engine = new NativePcmEngine(mockCtx);
+  NativePcmEngine.prototype.initBuffers = origInit;
+
+  const sr = 44100;
+  const totalFrames = 44100;
+  const silenceFrames = 1152;
+  const bufL = new Float32Array(totalFrames);
+  const bufR = new Float32Array(totalFrames);
+  for (let i = silenceFrames; i < totalFrames; i++) {
+    bufL[i] = Math.sin((2 * Math.PI * 440 * (i - silenceFrames)) / sr) * 0.8;
+    bufR[i] = bufL[i];
+  }
+  const x5dBuffer = {
+    duration: totalFrames / sr,
+    sampleRate: sr,
+    length: totalFrames,
+    numberOfChannels: 2,
+    getChannelData: (ch) => (ch === 1 ? bufR : bufL),
+  };
+
+  const processed = engine.createCrossfadedLoopBuffer(mockCtx, x5dBuffer, "x5d_rock_piano");
+  assert.ok(processed.length < totalFrames, "Must trim the MP3 silence delay for x5d_rock_piano");
+  const expectedTrim = (silenceFrames + 1) - 16;
+  assert.equal(processed.length, totalFrames - expectedTrim);
 });
