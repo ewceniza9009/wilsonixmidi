@@ -2072,7 +2072,11 @@ export class NativePcmEngine {
       }
       channelArrays.push(dst);
     }
-    trimmedBuf.getChannelData = (ch) => channelArrays[ch] || channelArrays[0];
+    if (typeof AudioBuffer !== "undefined" && trimmedBuf instanceof AudioBuffer) {
+      // Native AudioBuffer: getChannelData already accesses the native underlying buffer directly
+    } else {
+      trimmedBuf.getChannelData = (ch) => channelArrays[ch] || channelArrays[0];
+    }
 
     // Maintain loop points and custom engine flags if present
     if (originalBuf._loopStartSec !== undefined) {
@@ -2908,7 +2912,7 @@ export class NativePcmEngine {
     const owner = this._bufOwner && this._bufOwner.get(buf);
     if (!owner) return;
     if (!this._instLastUsed) this._instLastUsed = new Map();
-    this._instLastUsed.set(owner, performance.now());
+    this._instLastUsed.set(owner, Date.now());
     // Protection updated on the same cadence as lastUsed (every 12 touches)
     // to avoid a Date.now() allocation on every single note.
     if (!this._touchCount) this._touchCount = 0;
@@ -3274,13 +3278,22 @@ export class NativePcmEngine {
     };
   }
 
+  _setAnchorCache(key, value) {
+    if (!this._anchorCache) this._anchorCache = new Map();
+    if (this._anchorCache.size >= (this._anchorCacheMaxSize || 1024)) {
+      const firstKey = this._anchorCache.keys().next().value;
+      if (firstKey) this._anchorCache.delete(firstKey);
+    }
+    this._anchorCache.set(key, value);
+  }
+
   findNearestAnchor(instId, targetMidi, velocity = 95) {
     if (isSfxInstrumentId(instId)) return null;
     if (instId && INST_ALIASES[instId]) instId = INST_ALIASES[instId];
 
     // Check cache first (RR variants cycle at call time even on cache hits)
     const cacheKey = `${instId}:${targetMidi}:${velocity}`;
-    const cached = this._anchorCache.get(cacheKey);
+    const cached = this._anchorCache ? this._anchorCache.get(cacheKey) : null;
     if (cached) return this._applyRoundRobin(cached, instId);
 
     const yamahaBank = bankData("yamaha");
@@ -3298,7 +3311,7 @@ export class NativePcmEngine {
       const eosMap = this.decodedBuffers.get(instId);
       if (eosMap && eosMap.size > 0) {
         const result = this.findAnchorInMap(eosMap, targetMidi);
-        this._anchorCache.set(cacheKey, result);
+        this._setAnchorCache(cacheKey, result);
         return result;
       }
     } else if (!yamahaBank && !userBank) {
@@ -3326,12 +3339,12 @@ export class NativePcmEngine {
       const exactKey = `${targetMidi}_${vl}`;
       if (instMap.has(exactKey)) {
         const result = { anchorMidi: targetMidi, buffer: instMap.get(exactKey) };
-        this._anchorCache.set(cacheKey, result);
+        this._setAnchorCache(cacheKey, result);
         return result;
       }
       if (instMap.has(targetMidi)) {
         const result = { anchorMidi: targetMidi, buffer: instMap.get(targetMidi) };
-        this._anchorCache.set(cacheKey, result);
+        this._setAnchorCache(cacheKey, result);
         return result;
       }
       let closestMidi = null;
@@ -3355,7 +3368,7 @@ export class NativePcmEngine {
           if (grandMap && grandMap.size > 0) {
             const grandAnchor = this.findAnchorInMap(grandMap, targetMidi);
             if (grandAnchor) {
-              this._anchorCache.set(cacheKey, grandAnchor);
+              this._setAnchorCache(cacheKey, grandAnchor);
               return grandAnchor;
             }
           }
@@ -3364,13 +3377,13 @@ export class NativePcmEngine {
           instMap.get(`${closestMidi}_${vl}`) || instMap.get(closestMidi);
         if (buf) {
           const result2 = { anchorMidi: closestMidi, buffer: buf };
-          this._anchorCache.set(cacheKey, result2);
+          this._setAnchorCache(cacheKey, result2);
           return result2;
         }
       }
       const pianoMap = this.decodedBuffers.get("acoustic_grand_piano");
       const result2 = this.findAnchorInMap(pianoMap, targetMidi);
-      this._anchorCache.set(cacheKey, result2);
+      this._setAnchorCache(cacheKey, result2);
       return result2;
     }
 
@@ -3419,7 +3432,7 @@ export class NativePcmEngine {
           variants,
           vlName,
         };
-        this._anchorCache.set(cacheKey, msResult);
+        this._setAnchorCache(cacheKey, msResult);
         return this._applyRoundRobin(msResult, instId);
       }
       return null;
@@ -3435,7 +3448,7 @@ export class NativePcmEngine {
       }
       const instMap = this.decodedBuffers.get(instId);
       const result = this.findAnchorInMap(instMap, targetMidi);
-      this._anchorCache.set(cacheKey, result);
+      this._setAnchorCache(cacheKey, result);
       return result;
     }
 
@@ -3449,7 +3462,7 @@ export class NativePcmEngine {
       }
       const instMap = this.decodedBuffers.get(instId);
       const result = this.findAnchorInMap(instMap, targetMidi);
-      this._anchorCache.set(cacheKey, result);
+      this._setAnchorCache(cacheKey, result);
       return result;
     }
 
@@ -3465,7 +3478,7 @@ export class NativePcmEngine {
       return null;
     }
     const result2 = this.findAnchorInMap(instMap, targetMidi);
-    this._anchorCache.set(cacheKey, result2);
+    this._setAnchorCache(cacheKey, result2);
     return result2;
   }
 
@@ -4372,9 +4385,18 @@ export class NativePcmEngine {
   stopNote(instId, midiNote, when = 0) {
     if (this.heldNotes) this.heldNotes.delete(midiNote);
 
-    // AudioWorklet path: forward to audio thread
-    if (this.pcmWorkletNode && this.pcmWorkletNode.isReady && when === 0) {
-      this.pcmWorkletNode.noteOff(midiNote);
+    // AudioWorklet path: forward to audio thread (immediate or scheduled)
+    if (this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
+      if (when === 0) {
+        this.pcmWorkletNode.noteOff(midiNote);
+      } else {
+        const delayMs = Math.max(0, (when - this.ctx.currentTime) * 1000);
+        setTimeout(() => {
+          if (this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
+            this.pcmWorkletNode.noteOff(midiNote);
+          }
+        }, delayMs);
+      }
     }
 
     const voices = this.activeVoices ? this.activeVoices.get(midiNote) : null;

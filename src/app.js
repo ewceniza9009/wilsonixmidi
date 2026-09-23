@@ -446,7 +446,8 @@ class MidiKeyEliteApp {
 
     // Restore last tab if enabled
     if (multiLayerEngine.settings.tabRestore) {
-      const lastTab = multiLayerEngine.settings.lastTab;
+      let lastTab = multiLayerEngine.settings.lastTab;
+      if (!lastTab || lastTab === "keys") lastTab = "triton";
       if (this._lazyViews && this._lazyViews[lastTab]) {
         this._lazyViews[lastTab]();
       }

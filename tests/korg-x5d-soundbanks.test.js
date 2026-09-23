@@ -44,7 +44,7 @@ test("All 59 Korg X5D binary packs and manifests exist on disk with valid anchor
     assert.ok(fs.existsSync(jsonFile), `Missing manifest: ${jsonFile}`);
 
     const packStat = fs.statSync(packFile);
-    assert.ok(packStat.size > 200000, `Pack too small: ${packFile} (${packStat.size} bytes)`);
+    assert.ok(packStat.size > 100000, `Pack too small: ${packFile} (${packStat.size} bytes)`);
 
     const manifest = JSON.parse(fs.readFileSync(jsonFile, "utf-8"));
     assert.equal(manifest.id, id);

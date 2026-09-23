@@ -205,11 +205,18 @@ def clean_and_encode_stereo(pcm_samples, in_srate, in_channels, is_looped=False)
     if n_frames == 0:
         return b""
 
-    # 1. Immediate Attack: preserve punchy hammer/pluck transients without artificial ramp
+    # 1. Cap duration to eliminate wasteful silent/decay padding
+    # Looped presets sustain via steady-state loops (3.5s is plenty)
+    # One-shot / decaying presets have full natural decay within 5.5s
+    max_sec = 3.5 if is_looped else 5.5
+    max_frames = int(in_srate * max_sec)
+    if n_frames > max_frames:
+        n_frames = max_frames
+        samples = samples[:n_frames * in_channels]
 
     # 2. Fade out ONLY if not looped to avoid killing sustain body
     if not is_looped:
-        fade_out_len = min(int(in_srate * 0.020), n_frames // 8)
+        fade_out_len = min(int(in_srate * 0.030), n_frames // 8)
         if fade_out_len > 0:
             for i in range(fade_out_len):
                 factor = 0.5 * (1.0 + math.cos(math.pi * i / fade_out_len))
@@ -227,7 +234,7 @@ def clean_and_encode_stereo(pcm_samples, in_srate, in_channels, is_looped=False)
                 val = int(round(samples[i] * scale))
                 samples[i] = max(-32767, min(32767, val))
 
-    # 4. Clean encode via ffmpeg: 44.1kHz stereo 320k MP3 (Studio bit-rate)
+    # 4. Clean encode via ffmpeg: 44.1kHz stereo 192k MP3 (Studio quality, compact footprint)
     proc = subprocess.Popen(
         [
             "ffmpeg", "-v", "error", "-y",
@@ -238,8 +245,7 @@ def clean_and_encode_stereo(pcm_samples, in_srate, in_channels, is_looped=False)
             "-ar", "44100",
             "-ac", "2",
             "-c:a", "libmp3lame",
-            "-b:a", "320k",
-            "-q:a", "0",
+            "-b:a", "192k",
             "-f", "mp3",
             "-"
         ],

@@ -3562,7 +3562,7 @@ export class MultiLayerEngine {
       // UI
       theme: "dark", // "dark" or "light"
       tabRestore: true, // remember last active tab on reload
-      lastTab: "keys", // last active tab
+      lastTab: "triton", // default active view: Triton Workstation Main Bay
     };
     try {
       if (typeof localStorage !== "undefined") {
@@ -3587,7 +3587,11 @@ export class MultiLayerEngine {
             s.theme = raw.theme;
           if (typeof raw.tabRestore === "boolean")
             s.tabRestore = raw.tabRestore;
-          if (typeof raw.lastTab === "string") s.lastTab = raw.lastTab;
+          if (typeof raw.lastTab === "string" && raw.lastTab && raw.lastTab !== "keys") {
+            s.lastTab = raw.lastTab;
+          } else {
+            s.lastTab = "triton";
+          }
         }
       }
     } catch (e) {}
@@ -3624,7 +3628,7 @@ export class MultiLayerEngine {
         s.tabRestore = !!value;
         break;
       case "lastTab":
-        s.lastTab = String(value || "keys");
+        s.lastTab = (value && value !== "keys") ? String(value) : "triton";
         break;
     }
     try {
