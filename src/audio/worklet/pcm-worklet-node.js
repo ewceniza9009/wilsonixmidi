@@ -170,7 +170,7 @@ export class PcmWorkletNode {
     const limit = Math.min(anchors.length, this._loadedBufferMaxSize);
     let pushed = 0;
     for (let i = 0; i < limit; i++) {
-      if (this.ensureBuffer(instId, anchors[i].midiKey, anchors[i].audioBuf)) {
+      if (this.ensureBuffer(instId, anchors[i].workletKey, anchors[i].audioBuf)) {
         pushed++;
       }
     }
@@ -181,11 +181,11 @@ export class PcmWorkletNode {
     const anchors = [];
     const seen = new Set();
     for (const [key, audioBuf] of instMap.entries()) {
-      const midiKey = typeof key === "number" ? key : parseInt(key.split("_")[0], 10);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const midiKey = typeof key === "number" ? key : parseInt(String(key).split("_")[0], 10);
       if (Number.isNaN(midiKey)) continue;
-      if (seen.has(midiKey)) continue;
-      seen.add(midiKey);
-      anchors.push({ midiKey, audioBuf });
+      anchors.push({ workletKey: key, midiKey, audioBuf });
     }
     anchors.sort((a, b) => Math.abs(a.midiKey - 60) - Math.abs(b.midiKey - 60));
     return anchors;
@@ -224,7 +224,7 @@ export class PcmWorkletNode {
       while (i < limit) {
         const end = Math.min(i + chunkSize, limit);
         for (; i < end; i++) {
-          this.ensureBuffer(instId, anchors[i].midiKey, anchors[i].audioBuf);
+          this.ensureBuffer(instId, anchors[i].workletKey, anchors[i].audioBuf);
         }
         // Cooperative frame budget: if more than 1.5ms remain in this idle frame,
         // continue processing the next chunk without yielding; otherwise yield

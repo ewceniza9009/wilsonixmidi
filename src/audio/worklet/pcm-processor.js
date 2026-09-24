@@ -57,11 +57,6 @@ class PcmWorkletVoice {
     this.filterPrevL = 0;
     this.filterPrevR = 0;
 
-    // Anti-click tail when stealing / retriggering active voices
-    this.clickTailL = 0;
-    this.clickTailR = 0;
-    this.clickDecay = 0.88;
-
     // Delay frames for scheduled notes (demo songs / lookahead sequences)
     this.delayFrames = 0;
 
@@ -74,13 +69,6 @@ class PcmWorkletVoice {
   noteOn(instId, midiNote, velocity, gain, layerIndex, sampleBufferL, sampleBufferR,
     playbackRate, isLoopable, loopStart, loopEnd, attackTime, decayTime, sustainLevel,
     releaseTime, filterCutoff, maxLife, delaySec = 0) {
-    if (this.active && this.envLevel > 0.01) {
-      // Capture anti-click tail from the voice being replaced so sudden stealing
-      // doesn't cause a step discontinuity crackle.
-      const amp = this.envLevel * this.gain;
-      this.clickTailL += this.filterPrevL * amp;
-      this.clickTailR += this.filterPrevR * amp;
-    }
     this.active = true;
     this.instId = instId;
     this.midiNote = midiNote;
@@ -108,9 +96,8 @@ class PcmWorkletVoice {
     this.baseCutoff = filterCutoff || 0.5;
     const modBoost = this.processor ? this.processor.modWheelAmount * 0.40 : 0.0;
     this.filterCutoff = Math.min(1.0, this.baseCutoff + modBoost);
-    // Smooth filter transition if stealing an active voice
-    this.filterPrevL = Number.isFinite(this.filterPrevL) ? this.filterPrevL * 0.15 : 0;
-    this.filterPrevR = Number.isFinite(this.filterPrevR) ? this.filterPrevR * 0.15 : 0;
+    this.filterPrevL = 0;
+    this.filterPrevR = 0;
     this.pedalHeld = false;
     this.held = true;
     this.delayFrames = Number.isFinite(delaySec) && delaySec > 0 ? Math.round(delaySec * this.sampleRate) : 0;
@@ -139,8 +126,6 @@ class PcmWorkletVoice {
   forceStop() {
     this.active = false;
     this.delayFrames = 0;
-    this.clickTailL = 0;
-    this.clickTailR = 0;
     this.envStage = 0;
     this.envLevel = 0;
     this.held = false;
@@ -532,24 +517,6 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
     const combiTarget = Math.max(0.38, targetScale);
     this.polyScaleCombi += (combiTarget - this.polyScaleCombi) * 0.12;
 
-    // Anti-click tail rendering: smoothly decay any discontinued voice transitions
-    for (let v = 0; v < maxV; v++) {
-      const voice = this.voices[v];
-      if (Math.abs(voice.clickTailL) > 0.0001 || Math.abs(voice.clickTailR) > 0.0001) {
-        for (let i = 0; i < numFrames; i++) {
-          outL[i] += voice.clickTailL;
-          outR[i] += voice.clickTailR;
-          voice.clickTailL *= 0.88;
-          voice.clickTailR *= 0.88;
-          if (Math.abs(voice.clickTailL) <= 0.0001 && Math.abs(voice.clickTailR) <= 0.0001) {
-            voice.clickTailL = 0;
-            voice.clickTailR = 0;
-            break;
-          }
-        }
-      }
-    }
-
     for (let v = 0; v < maxV; v++) {
       const voice = this.voices[v];
       if (!voice.active) continue;
@@ -673,19 +640,15 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
       }
     }
 
-    // Soft-knee limiter & analog saturation: prevents digital square-wave crackle
+    // Brickwall NaN / Infinity protection: prevent corrupted audio registers in downstream nodes
     for (let i = 0; i < numFrames; i++) {
-      let l = outL[i];
-      if (!Number.isFinite(l)) l = 0;
-      else if (l > 0.90) l = 0.90 + Math.tanh((l - 0.90) * 0.8) * 0.35;
-      else if (l < -0.90) l = -0.90 + Math.tanh((l + 0.90) * 0.8) * 0.35;
-      outL[i] = l;
+      if (!Number.isFinite(outL[i])) outL[i] = 0;
+      else if (outL[i] > 1.5) outL[i] = 1.5;
+      else if (outL[i] < -1.5) outL[i] = -1.5;
 
-      let r = outR[i];
-      if (!Number.isFinite(r)) r = 0;
-      else if (r > 0.90) r = 0.90 + Math.tanh((r - 0.90) * 0.8) * 0.35;
-      else if (r < -0.90) r = -0.90 + Math.tanh((r + 0.90) * 0.8) * 0.35;
-      outR[i] = r;
+      if (!Number.isFinite(outR[i])) outR[i] = 0;
+      else if (outR[i] > 1.5) outR[i] = 1.5;
+      else if (outR[i] < -1.5) outR[i] = -1.5;
     }
 
     this.currentTime += numFrames * this.invSampleRate;

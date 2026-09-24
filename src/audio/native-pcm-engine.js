@@ -2705,7 +2705,7 @@ export class NativePcmEngine {
       this.decodedBuffers.set(instId, new Map());
     const instMap = this.decodedBuffers.get(instId);
     const ctx = this.ctx;
-    const coreAnchors = bank.samples.slice();
+    const coreAnchors = bank.samples.slice().sort((a, b) => Math.abs(a.m - 60) - Math.abs(b.m - 60));
     const BATCH = 4;
     for (let i = 0; i < coreAnchors.length; i += BATCH) {
       const batch = coreAnchors.slice(i, i + BATCH);
@@ -2783,6 +2783,7 @@ export class NativePcmEngine {
           }
         }),
       );
+      this._prewarmWorklet(instId);
     }
   }
 
@@ -3271,10 +3272,13 @@ export class NativePcmEngine {
     this._rrCounters.set(key, n + 1);
     const idx = n % result.variants.length;
     if (idx === 0) return result;
+    const variantBuf = result.variants[idx] || result.buffer;
+    const rrKey = `${result.anchorMidi}_${result.vlName || "vl1"}_rr${idx + 1}`;
     return {
       anchorMidi: result.anchorMidi,
-      buffer: result.variants[idx],
-      rrKey: `${result.anchorMidi}_${result.vlName || "vl1"}_rr${idx + 1}`,
+      buffer: variantBuf,
+      workletKey: rrKey,
+      rrKey,
     };
   }
 
@@ -3338,20 +3342,28 @@ export class NativePcmEngine {
       const vl = "vl" + (vlIdx + 1);
       const exactKey = `${targetMidi}_${vl}`;
       if (instMap.has(exactKey)) {
-        const result = { anchorMidi: targetMidi, buffer: instMap.get(exactKey) };
-        this._setAnchorCache(cacheKey, result);
+        const result = {
+          anchorMidi: targetMidi,
+          buffer: instMap.get(exactKey),
+          workletKey: exactKey,
+        };
+        if (!this.loadingSoundfonts.has(instId)) this._setAnchorCache(cacheKey, result);
         return result;
       }
       if (instMap.has(targetMidi)) {
-        const result = { anchorMidi: targetMidi, buffer: instMap.get(targetMidi) };
-        this._setAnchorCache(cacheKey, result);
+        const result = {
+          anchorMidi: targetMidi,
+          buffer: instMap.get(targetMidi),
+          workletKey: targetMidi,
+        };
+        if (!this.loadingSoundfonts.has(instId)) this._setAnchorCache(cacheKey, result);
         return result;
       }
       let closestMidi = null;
       let minDiff = Infinity;
       for (const key of instMap.keys()) {
         const midi =
-          typeof key === "number" ? key : parseInt(key.split("_")[0]);
+          typeof key === "number" ? key : parseInt(String(key).split("_")[0]);
         const diff = Math.abs(targetMidi - midi);
         if (diff < minDiff) {
           minDiff = diff;
@@ -3368,22 +3380,27 @@ export class NativePcmEngine {
           if (grandMap && grandMap.size > 0) {
             const grandAnchor = this.findAnchorInMap(grandMap, targetMidi);
             if (grandAnchor) {
-              this._setAnchorCache(cacheKey, grandAnchor);
+              if (!this.loadingSoundfonts.has(instId)) this._setAnchorCache(cacheKey, grandAnchor);
               return grandAnchor;
             }
           }
         }
+        const exactClosestKey = `${closestMidi}_${vl}`;
         const buf =
-          instMap.get(`${closestMidi}_${vl}`) || instMap.get(closestMidi);
+          instMap.get(exactClosestKey) || instMap.get(closestMidi);
         if (buf) {
-          const result2 = { anchorMidi: closestMidi, buffer: buf };
-          this._setAnchorCache(cacheKey, result2);
+          const result2 = {
+            anchorMidi: closestMidi,
+            buffer: buf,
+            workletKey: instMap.has(exactClosestKey) ? exactClosestKey : closestMidi,
+          };
+          if (!this.loadingSoundfonts.has(instId)) this._setAnchorCache(cacheKey, result2);
           return result2;
         }
       }
       const pianoMap = this.decodedBuffers.get("acoustic_grand_piano");
       const result2 = this.findAnchorInMap(pianoMap, targetMidi);
-      this._setAnchorCache(cacheKey, result2);
+      if (!this.loadingSoundfonts.has(instId)) this._setAnchorCache(cacheKey, result2);
       return result2;
     }
 
@@ -3676,7 +3693,7 @@ export class NativePcmEngine {
       // velocity-layered instruments (piano) correct AND prewarmed — no
       // mid-play transfer storm = no choppy. Round-robin variants upload
       // under their distinct rrKey (one copy per variant, then copy-free).
-      const workletKey = anchorData.rrKey || anchorData.anchorMidi;
+      const workletKey = anchorData.workletKey || anchorData.rrKey || anchorData.anchorMidi;
       this.pcmWorkletNode.ensureBuffer(instId, workletKey, buf);
       const isRockPiano = instId === "x5d_rock_piano" || instId?.includes("rock_piano");
       const trim = getInstrumentTrimGain(instId);
