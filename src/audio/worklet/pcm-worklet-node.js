@@ -20,7 +20,8 @@ export class PcmWorkletNode {
     this._loadedBufferMaxSize = 1024; // expanded capacity to prevent multi-layer combi thrashing
     this._bufferRegistry = new Map();
     this._sustainSettings = null;
-    this.polyphonyCap = 64;
+    const isMobile = typeof navigator !== "undefined" && /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+    this.polyphonyCap = isMobile ? 36 : 64;
   }
 
   async init() {
