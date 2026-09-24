@@ -268,10 +268,17 @@ export class TritonVirtualAnalogEngine {
     const ratio = Math.pow(2, this.pitchBendSemitones / 12);
     if (!this.pool || !audioCore.ctx) return;
     const now = audioCore.ctx.currentTime;
+    const r1 = this.config?.osc1Ratio ?? 1.0;
+    const r2 = this.config?.osc2Ratio ?? 1.0;
     this.pool.voices.forEach(v => {
       if (v.isBusy && v.activeMidiNote !== null) {
         const baseFreq = 440 * Math.pow(2, (v.activeMidiNote - 69) / 12);
-        v.osc1.frequency.setTargetAtTime(baseFreq * ratio, now, 0.008);
+        if (v.osc1) {
+          v.osc1.frequency.setTargetAtTime(baseFreq * r1 * ratio, now, 0.008);
+        }
+        if (v.osc2) {
+          v.osc2.frequency.setTargetAtTime(baseFreq * r2 * ratio, now, 0.008);
+        }
       }
     });
   }

@@ -83,10 +83,7 @@ export class VirtualKeyboardUI {
         ? localStorage.getItem("midikey_side_wheels")
         : null;
     const isTouchPlatform = detectTabletOrTouch();
-    this.isSideWheelsVisible =
-      savedWheels !== null
-        ? savedWheels === "1"
-        : isTouchPlatform || (typeof window !== "undefined" && window.innerWidth <= 1200);
+    this.isSideWheelsVisible = savedWheels === "1";
     this._windowHandlers = [];
 
     const savedZoom =
@@ -973,110 +970,87 @@ export class VirtualKeyboardUI {
       synthEngine.setModWheel(amount);
     };
 
-    // Bind Pitch Tracks (top mini-wheel & magnified side-wheel)
+    // Bind Pitch Tracks (top mini-wheel & magnified side-wheel) with Pointer Events + Pointer Capture
     const bindPitchElement = (trackEl) => {
       if (!trackEl) return;
-      let isDragging = false;
+      let activePointerId = null;
+
       const setFromY = (clientY) => {
         const rect = trackEl.getBoundingClientRect();
+        if (rect.height <= 0) return;
         const norm = (clientY - rect.top) / rect.height;
         updatePitch(norm);
       };
 
-      trackEl.addEventListener("mousedown", (e) => {
-        isDragging = true;
+      trackEl.addEventListener("pointerdown", (e) => {
+        if (e.cancelable) e.preventDefault();
+        activePointerId = e.pointerId;
+        try {
+          trackEl.setPointerCapture(e.pointerId);
+        } catch (_) {}
         setFromY(e.clientY);
       });
 
-      trackEl.addEventListener(
-        "touchstart",
-        (e) => {
+      trackEl.addEventListener("pointermove", (e) => {
+        if (activePointerId !== null && e.pointerId === activePointerId) {
           if (e.cancelable) e.preventDefault();
-          isDragging = true;
-          if (e.touches[0]) setFromY(e.touches[0].clientY);
-        },
-        { passive: false },
-      );
-
-      this._onWindow(window, "mousemove", (e) => {
-        if (isDragging) setFromY(e.clientY);
-      });
-
-      this._onWindow(
-        window,
-        "touchmove",
-        (e) => {
-          if (isDragging && e.touches[0]) {
-            if (e.cancelable) e.preventDefault();
-            setFromY(e.touches[0].clientY);
-          }
-        },
-        { passive: false },
-      );
-
-      this._onWindow(window, "mouseup", () => {
-        if (isDragging) {
-          isDragging = false;
-          resetPitch();
+          setFromY(e.clientY);
         }
       });
 
-      this._onWindow(window, "touchend", () => {
-        if (isDragging) {
-          isDragging = false;
+      const onPointerEnd = (e) => {
+        if (activePointerId !== null && (e.pointerId === activePointerId || e.pointerId === undefined)) {
+          activePointerId = null;
+          try {
+            trackEl.releasePointerCapture(e.pointerId);
+          } catch (_) {}
           resetPitch();
         }
-      });
+      };
+
+      trackEl.addEventListener("pointerup", onPointerEnd);
+      trackEl.addEventListener("pointercancel", onPointerEnd);
     };
 
-    // Bind Mod Tracks (top mini-wheel & magnified side-wheel)
+    // Bind Mod Tracks (top mini-wheel & magnified side-wheel) with Pointer Events + Pointer Capture
     const bindModElement = (trackEl) => {
       if (!trackEl) return;
-      let isDragging = false;
+      let activePointerId = null;
+
       const setFromY = (clientY) => {
         const rect = trackEl.getBoundingClientRect();
+        if (rect.height <= 0) return;
         const norm = (clientY - rect.top) / rect.height;
         updateMod(norm);
       };
 
-      trackEl.addEventListener("mousedown", (e) => {
-        isDragging = true;
+      trackEl.addEventListener("pointerdown", (e) => {
+        if (e.cancelable) e.preventDefault();
+        activePointerId = e.pointerId;
+        try {
+          trackEl.setPointerCapture(e.pointerId);
+        } catch (_) {}
         setFromY(e.clientY);
       });
 
-      trackEl.addEventListener(
-        "touchstart",
-        (e) => {
+      trackEl.addEventListener("pointermove", (e) => {
+        if (activePointerId !== null && e.pointerId === activePointerId) {
           if (e.cancelable) e.preventDefault();
-          isDragging = true;
-          if (e.touches[0]) setFromY(e.touches[0].clientY);
-        },
-        { passive: false },
-      );
-
-      this._onWindow(window, "mousemove", (e) => {
-        if (isDragging) setFromY(e.clientY);
+          setFromY(e.clientY);
+        }
       });
 
-      this._onWindow(
-        window,
-        "touchmove",
-        (e) => {
-          if (isDragging && e.touches[0]) {
-            if (e.cancelable) e.preventDefault();
-            setFromY(e.touches[0].clientY);
-          }
-        },
-        { passive: false },
-      );
+      const onPointerEnd = (e) => {
+        if (activePointerId !== null && (e.pointerId === activePointerId || e.pointerId === undefined)) {
+          activePointerId = null;
+          try {
+            trackEl.releasePointerCapture(e.pointerId);
+          } catch (_) {}
+        }
+      };
 
-      this._onWindow(window, "mouseup", () => {
-        isDragging = false;
-      });
-
-      this._onWindow(window, "touchend", () => {
-        isDragging = false;
-      });
+      trackEl.addEventListener("pointerup", onPointerEnd);
+      trackEl.addEventListener("pointercancel", onPointerEnd);
     };
 
     bindPitchElement(pitchTrack);
@@ -1100,6 +1074,9 @@ export class VirtualKeyboardUI {
         this.isSideWheelsVisible ? "1" : "0",
       );
     }
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
   }
 
   bindHudButtons() {

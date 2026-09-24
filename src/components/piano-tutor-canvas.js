@@ -115,18 +115,19 @@ export class PianoTutorCanvas {
    */
   updateKeyGeometries() {
     this._keyGeometries.clear();
+    const canvasRect = this.canvas ? this.canvas.getBoundingClientRect() : null;
     const container = this.keyboardContainer || (typeof document !== "undefined" ? document.getElementById("piano-roll-container") : null);
-    const containerRect = container ? container.getBoundingClientRect() : null;
+    const baseRect = canvasRect || (container ? container.getBoundingClientRect() : null);
 
     const w = this.canvasWidth || 800;
     const whiteKeyWidth = w / 52;
 
     for (let m = 21; m <= 108; m++) {
       const el = typeof document !== "undefined" ? document.getElementById(`key-midi-${m}`) : null;
-      if (el && containerRect) {
+      if (el && baseRect) {
         const elRect = el.getBoundingClientRect();
         this._keyGeometries.set(m, {
-          x: elRect.left - containerRect.left,
+          x: elRect.left - baseRect.left,
           width: elRect.width,
           isBlack: el.classList.contains("black-key"),
         });

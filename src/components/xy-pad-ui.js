@@ -74,49 +74,35 @@ export class XyPadUI {
       this.applyModulation();
     };
 
-    // Bound handlers stored on the instance so destroy() can remove them.
-    // Mouse events are bound to window so drags continue outside the widget.
-    this._onMouseDown = e => {
-      e.preventDefault();
+    let activePointerId = null;
+
+    this._onPointerDown = (e) => {
+      if (e.cancelable) e.preventDefault();
+      activePointerId = e.pointerId;
+      try {
+        surface.setPointerCapture(e.pointerId);
+      } catch (_) {}
       this.isDragging = true;
       setFromPoint(e.clientX, e.clientY);
     };
 
-    this._onWindowMouseMove = e => {
-      if (this.isDragging) {
+    this._onPointerMove = (e) => {
+      if (this.isDragging && e.pointerId === activePointerId) {
+        if (e.cancelable) e.preventDefault();
         setFromPoint(e.clientX, e.clientY);
       }
     };
 
-    this._onWindowMouseUp = () => {
-      if (this.isDragging) {
+    this._onPointerUp = (e) => {
+      if (this.isDragging && (activePointerId === null || e.pointerId === activePointerId)) {
         this.isDragging = false;
+        activePointerId = null;
+        try {
+          surface.releasePointerCapture(e.pointerId);
+        } catch (_) {}
         if (!this.isHolding) {
           this.reset(true);
         }
-      }
-    };
-
-    // Touch events
-    this._onTouchStart = e => {
-      if (e.cancelable) e.preventDefault();
-      this.isDragging = true;
-      if (e.touches[0]) {
-        setFromPoint(e.touches[0].clientX, e.touches[0].clientY);
-      }
-    };
-
-    this._onTouchMove = e => {
-      if (e.cancelable) e.preventDefault();
-      if (this.isDragging && e.touches[0]) {
-        setFromPoint(e.touches[0].clientX, e.touches[0].clientY);
-      }
-    };
-
-    this._onTouchEnd = () => {
-      this.isDragging = false;
-      if (!this.isHolding) {
-        this.reset(true);
       }
     };
 
@@ -131,29 +117,24 @@ export class XyPadUI {
       this.reset(false);
     };
 
-    surface.addEventListener("mousedown", this._onMouseDown);
-    window.addEventListener("mousemove", this._onWindowMouseMove);
-    window.addEventListener("mouseup", this._onWindowMouseUp);
-
-    surface.addEventListener("touchstart", this._onTouchStart, { passive: false });
-    surface.addEventListener("touchmove", this._onTouchMove, { passive: false });
-    surface.addEventListener("touchend", this._onTouchEnd, { passive: false });
-    surface.addEventListener("touchcancel", this._onTouchEnd, { passive: false });
+    surface.addEventListener("pointerdown", this._onPointerDown);
+    surface.addEventListener("pointermove", this._onPointerMove);
+    surface.addEventListener("pointerup", this._onPointerUp);
+    surface.addEventListener("pointercancel", this._onPointerUp);
+    window.addEventListener("pointerup", this._onPointerUp);
 
     holdBtn?.addEventListener("click", this._onHoldClick);
     resetBtn?.addEventListener("click", this._onResetClick);
   }
 
   destroy() {
-    window.removeEventListener("mousemove", this._onWindowMouseMove);
-    window.removeEventListener("mouseup", this._onWindowMouseUp);
+    window.removeEventListener("pointerup", this._onPointerUp);
 
     if (this._surface) {
-      this._surface.removeEventListener("mousedown", this._onMouseDown);
-      this._surface.removeEventListener("touchstart", this._onTouchStart);
-      this._surface.removeEventListener("touchmove", this._onTouchMove);
-      this._surface.removeEventListener("touchend", this._onTouchEnd);
-      this._surface.removeEventListener("touchcancel", this._onTouchEnd);
+      this._surface.removeEventListener("pointerdown", this._onPointerDown);
+      this._surface.removeEventListener("pointermove", this._onPointerMove);
+      this._surface.removeEventListener("pointerup", this._onPointerUp);
+      this._surface.removeEventListener("pointercancel", this._onPointerUp);
     }
     this._holdBtn?.removeEventListener("click", this._onHoldClick);
     this._resetBtn?.removeEventListener("click", this._onResetClick);
@@ -161,12 +142,9 @@ export class XyPadUI {
     this._surface = null;
     this._holdBtn = null;
     this._resetBtn = null;
-    this._onMouseDown = null;
-    this._onWindowMouseMove = null;
-    this._onWindowMouseUp = null;
-    this._onTouchStart = null;
-    this._onTouchMove = null;
-    this._onTouchEnd = null;
+    this._onPointerDown = null;
+    this._onPointerMove = null;
+    this._onPointerUp = null;
     this._onHoldClick = null;
     this._onResetClick = null;
   }
