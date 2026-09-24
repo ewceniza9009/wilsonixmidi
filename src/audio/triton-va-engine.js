@@ -137,6 +137,12 @@ export class TritonVirtualAnalogEngine {
       attackVal = Math.max(0.005, prog.attack ?? 0.01);
     }
 
+    if (prog.gain1 !== undefined) gain1 = prog.gain1;
+    if (prog.gain2 !== undefined) gain2 = prog.gain2;
+    if (prog.gain3 !== undefined) gain3 = prog.gain3;
+    if (prog.osc3Type) osc3Type = safeWave(prog.osc3Type);
+    if (prog.osc3Ratio !== undefined) osc3Ratio = prog.osc3Ratio;
+
     this.config = {
       osc1Type: osc1,
       osc1Ratio: r1,

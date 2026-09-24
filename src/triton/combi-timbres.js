@@ -25,7 +25,7 @@ const M1_INST = {
   strings: "string_ensemble_1",
   pan_flute: "flute",
   drums1: "synth_bass_1",
-  epiano: "electric_piano_1",
+  epiano: "electric_piano_2",
   trumpet: "trumpet",
   nimbus: "string_ensemble_1",
   dist_guitar: "distortion_guitar",
@@ -55,6 +55,11 @@ export function isSynthTimbre(prog) {
   const name = (prog.name || "").toLowerCase();
   const hasOsc = !!prog.osc1 || !!prog.osc2;
   if (!hasOsc) return false;
+
+  // Genuine synthesized sine programs always route to VA engine
+  if (name.includes("sine") || /whistler|sub\s*bass/i.test(name)) {
+    return true;
+  }
 
   // Never classify acoustic/electro-mechanical rompler instruments as VA
   if (
@@ -135,11 +140,15 @@ export function resolvePcmByProgram(prog) {
 
   // Electric Pianos
   if (name.includes("phantom of tine") || prog.id === "A025") return "eos_tx816";
-  if (name.includes("fm piano") || prog.id === "A043") return "eos_tx816";
-  if (name.includes("r&b") || prog.id === "A015") return "x5d_super_ep";
-  if (name.includes("studio stage") || prog.id === "A020") return "x5d_velo_roads";
+  if (name.includes("fm piano") || prog.id === "A043") return "abletunes_fm_piano";
+  if (name.includes("r&b") || prog.id === "A015") return "x5d_stereo_keys";
+  if (name.includes("studio stage") || prog.id === "A020") return "electric_piano_1";
   if (name.includes("suit") || name.includes("stage ep") || prog.id === "A028") return "x5d_velo_roads";
-  if (name.includes("dyno")) return "x5d_super_ep";
+  if (name.includes("super keys") || prog.id === "X5D_29") return "x5d_superkeys";
+  if (name.includes("stereo keys") || prog.id === "X5D_28") return "x5d_stereo_keys";
+  if (name.includes("dyno") || prog.id === "X5D_27") return "x5d_super_ep";
+  if (name.includes("old roads") || prog.id === "YEOS02") return "eos_oldroads";
+  if (name.includes("deep roads") || prog.id === "YEOS01") return "eos_deeproads";
   if (cat.includes("electric piano") || /\bep\b/i.test(cat) || /\bep\b/i.test(name) || name.includes("rhodes")) return "x5d_velo_roads";
 
   // Saxophones & Woodwinds
@@ -190,6 +199,10 @@ export function resolveTritonProgram(prog) {
   // VA engine so it plays a punchy synth-brass trombone instead of the weak
   // generic soundfont sample (user-confirmed choice).
   if (prog.id === "A030" && (prog.osc1 || prog.osc2)) {
+    return { type: "va", prog };
+  }
+  const progName = (prog.name || "").toLowerCase();
+  if ((prog.osc1 || prog.osc2) && (progName.includes("sine") || /whistler|sub\s*bass/i.test(progName))) {
     return { type: "va", prog };
   }
   if (isSynthTimbre(prog)) {

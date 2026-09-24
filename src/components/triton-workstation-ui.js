@@ -1650,7 +1650,7 @@ export class TritonWorkstationUI {
       }
     } else if (mType === "epiano") {
       // ★ 11 E. Piano: Classic chorused bell tine EP
-      multiLayerEngine.setSingleInstrument("electric_piano_1");
+      multiLayerEngine.setSingleInstrument("electric_piano_2");
       if (fx) {
         fx.chorus.setBypass(false);
         fx.chorus.setMix(0.48);
