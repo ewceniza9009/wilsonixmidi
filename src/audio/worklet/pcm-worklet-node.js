@@ -199,8 +199,14 @@ export class PcmWorkletNode {
    * already-uploaded layer; any straggler falls back to the synchronous
    * ensureBuffer inside noteOn. Returns a cancel function.
    */
-  prewarmChunked(instId, instMap, chunkSize = 6) {
+  prewarmChunked(instId, instMap, chunkSize = 12) {
     if (!instMap || instMap.size === 0) return () => {};
+    if (!this._activePrewarms) this._activePrewarms = new Map();
+    if (this._activePrewarms.has(instId)) {
+      try { this._activePrewarms.get(instId)(); } catch (e) {}
+      this._activePrewarms.delete(instId);
+    }
+
     const anchors = this._collectAnchors(instMap);
     if (anchors.length === 0) return () => {};
     const limit = Math.min(anchors.length, this._loadedBufferMaxSize);
@@ -209,6 +215,18 @@ export class PcmWorkletNode {
     let timerId = null;
     let idleId = null;
 
+    const cancel = () => {
+      cancelled = true;
+      if (this._activePrewarms && this._activePrewarms.get(instId) === cancel) {
+        this._activePrewarms.delete(instId);
+      }
+      if (idleId !== null && typeof window !== "undefined" && window.cancelIdleCallback) {
+        try { window.cancelIdleCallback(idleId); } catch (e) {}
+      }
+      if (timerId !== null) clearTimeout(timerId);
+    };
+    this._activePrewarms.set(instId, cancel);
+
     const scheduleNext = () => {
       if (i < limit && !cancelled) {
         if (typeof window !== "undefined" && "requestIdleCallback" in window) {
@@ -216,6 +234,8 @@ export class PcmWorkletNode {
         } else {
           timerId = setTimeout(() => step(null), 0);
         }
+      } else if (i >= limit && this._activePrewarms?.get(instId) === cancel) {
+        this._activePrewarms.delete(instId);
       }
     };
 
@@ -240,13 +260,7 @@ export class PcmWorkletNode {
 
     scheduleNext();
 
-    return () => {
-      cancelled = true;
-      if (idleId !== null && typeof window !== "undefined" && window.cancelIdleCallback) {
-        try { window.cancelIdleCallback(idleId); } catch (e) {}
-      }
-      if (timerId !== null) clearTimeout(timerId);
-    };
+    return cancel;
   }
 
   noteOn(params) {
@@ -258,22 +272,24 @@ export class PcmWorkletNode {
     return true;
   }
 
-  noteOff(midiNote, layerIndex) {
+  noteOff(midiNote, layerIndex = null, delaySec = 0) {
     if (!this.isReady || !this.node) return false;
     this.node.port.postMessage({
       type: "noteOff",
       midiNote,
       layerIndex,
+      delaySec,
     });
     return true;
   }
 
-  fastNoteOff(midiNote, layerIndex) {
+  fastNoteOff(midiNote, layerIndex = null, delaySec = 0) {
     if (!this.isReady || !this.node) return false;
     this.node.port.postMessage({
       type: "fastNoteOff",
       midiNote,
       layerIndex,
+      delaySec,
     });
     return true;
   }

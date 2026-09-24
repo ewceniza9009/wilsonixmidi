@@ -5,7 +5,7 @@
  * with independent volume faders, octave transpositions, and Korg IFX/MFX effects.
  */
 
-import { NativePcmEngine, getInstrumentTrimGain } from "./native-pcm-engine.js";
+import { NativePcmEngine, getInstrumentTrimGain, INST_ALIASES } from "./native-pcm-engine.js";
 import { audioCore } from "./audio-core.js";
 import { synthEngine, INSTRUMENT_PATCHES } from "./synth-engine.js";
 import {
@@ -4070,22 +4070,11 @@ export class MultiLayerEngine {
       const decodedBuffers = this.pcmEngine.decodedBuffers;
       if (!decodedBuffers) return;
       const w = this._pcmWorkletNode;
-      const seen = new Set();
       decodedBuffers.forEach((instMap, instId) => {
+        const baseId = (instId && INST_ALIASES && INST_ALIASES[instId]) || instId;
         instMap.forEach((buf, anchorKey) => {
           if (!buf) return;
-          // Layered maps carry STRING keys ("60_1") while the worklet looks up
-          // by NUMERIC anchor midi. Normalize so layered instruments preload
-          // correctly (otherwise every note transfers mid-play -> choppy).
-          const midiKey =
-            typeof anchorKey === "number"
-              ? anchorKey
-              : parseInt(String(anchorKey).split("_")[0], 10);
-          if (!Number.isFinite(midiKey)) return;
-          const dedupe = instId + ":" + midiKey;
-          if (seen.has(dedupe)) return;
-          seen.add(dedupe);
-          w.ensureBuffer(instId, midiKey, buf);
+          w.ensureBuffer(baseId, anchorKey, buf);
         });
       });
     } catch (e) {
@@ -4972,8 +4961,8 @@ export class MultiLayerEngine {
 
         // Musical balance: Layer 0 is the primary lead/piano sound.
         // Secondary accompaniment layers (strings, pads, warm swells) sit gracefully behind
-        // the lead at 0.72 (-2.8dB) so the main instrument always cuts through clearly.
-        const layerRoleTrim = isLeadLayer ? 1.0 : 0.72;
+        // the lead at 0.52 (-5.7dB) so the main instrument always cuts through clearly.
+        const layerRoleTrim = isLeadLayer ? 1.0 : 0.52;
         const effectiveGain = (layer.gain ?? 1.0) * combiScale * polyHeadroom * layerRoleTrim;
         const transposedMidi = Math.max(
           21,
@@ -5170,7 +5159,7 @@ export class MultiLayerEngine {
               when,
             );
           } else {
-            this.pcmEngine.stopNote(layer.inst, transposedMidi, when);
+            this.pcmEngine.stopNote(layer.inst, transposedMidi, when, i);
           }
         }
       } else {

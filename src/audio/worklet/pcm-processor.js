@@ -59,6 +59,7 @@ class PcmWorkletVoice {
 
     // Delay frames for scheduled notes (demo songs / lookahead sequences)
     this.delayFrames = 0;
+    this.releaseDelayFrames = 0;
 
     // Trim (heldNotes map key for steal logic)
     this.held = false;
@@ -126,6 +127,7 @@ class PcmWorkletVoice {
   forceStop() {
     this.active = false;
     this.delayFrames = 0;
+    this.releaseDelayFrames = 0;
     this.envStage = 0;
     this.envLevel = 0;
     this.held = false;
@@ -141,11 +143,13 @@ class PcmWorkletVoice {
     if (!this.sampleBufferL || !Number.isFinite(position)) return 0;
     const len = this.sampleBufferL.length;
     const idx = position | 0;
-    const frac = position - idx;
-    if (idx >= len - 1) {
-      return this.sampleBufferL[len - 1] || 0;
+    if (idx >= len) return 0;
+    if (idx < 0) return 0;
+    if (idx === len - 1) {
+      const s = this.sampleBufferL[idx];
+      return Number.isFinite(s) ? Math.max(-1.0, Math.min(1.0, s)) : 0;
     }
-    if (idx < 0) return this.sampleBufferL[0] || 0;
+    const frac = position - idx;
     const s = this.sampleBufferL[idx] * (1 - frac) + this.sampleBufferL[idx + 1] * frac;
     return Number.isFinite(s) ? Math.max(-1.0, Math.min(1.0, s)) : 0;
   }
@@ -155,9 +159,13 @@ class PcmWorkletVoice {
     if (!Number.isFinite(position)) return 0;
     const len = this.sampleBufferR.length;
     const idx = position | 0;
+    if (idx >= len) return 0;
+    if (idx < 0) return 0;
+    if (idx === len - 1) {
+      const s = this.sampleBufferR[idx];
+      return Number.isFinite(s) ? Math.max(-1.0, Math.min(1.0, s)) : 0;
+    }
     const frac = position - idx;
-    if (idx >= len - 1) return this.sampleBufferR[len - 1] || 0;
-    if (idx < 0) return this.sampleBufferR[0] || 0;
     const s = this.sampleBufferR[idx] * (1 - frac) + this.sampleBufferR[idx + 1] * frac;
     return Number.isFinite(s) ? Math.max(-1.0, Math.min(1.0, s)) : 0;
   }
@@ -343,29 +351,39 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
     for (let i = 0; i < maxV; i++) {
       const v = this.voices[i];
       if (v.active && v.midiNote === midiNote && v.layerIndex === layerIndex && v.instId === instId) {
-        v.fastRelease(0.035);
+        v.fastRelease(0.025);
+      }
+    }
+
+    // When a new note/chord strikes on lead (layerIndex === 0 or undefined/null):
+    // crossfade away any lingering released background accompaniment voices from previous chords
+    // so chords do not stack or clash harmonically.
+    if (layerIndex === 0 || layerIndex === undefined || layerIndex === null) {
+      for (let i = 0; i < maxV; i++) {
+        const v = this.voices[i];
+        if (v.active && typeof v.layerIndex === "number" && v.layerIndex > 0 && !v.held) {
+          v.fastRelease(0.12);
+        }
       }
     }
 
     // Combi background accompaniment layers (layerIndex > 0: strings, pads, ambience):
-    // Cap simultaneous voices per background layer to 5 to prevent runaway voice stacking
-    // across chord changes while preserving the full current chord harmony.
+    // Cap simultaneous voices per background layer to 4 to strictly prevent runaway accumulation
     if (typeof layerIndex === "number" && layerIndex > 0) {
       let bgCount = 0;
-      let oldestBgVoice = null;
-      let oldestBgTime = Infinity;
       for (let i = 0; i < maxV; i++) {
         const v = this.voices[i];
         if (v.active && v.layerIndex === layerIndex) {
           bgCount++;
-          if (v.startTime < oldestBgTime) {
-            oldestBgTime = v.startTime;
-            oldestBgVoice = v;
-          }
         }
       }
-      if (bgCount >= 5 && oldestBgVoice) {
-        oldestBgVoice.fastRelease(0.08);
+      if (bgCount >= 4) {
+        for (let i = 0; i < maxV; i++) {
+          const v = this.voices[i];
+          if (v.active && v.layerIndex === layerIndex && !v.held) {
+            v.fastRelease(0.08);
+          }
+        }
       }
     }
 
@@ -414,28 +432,38 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
   }
 
   handleNoteOff(data) {
-    const { midiNote, layerIndex } = data;
+    const { midiNote, layerIndex, delaySec } = data;
     this.heldNotes.delete(midiNote);
     const maxV = this.polyphonyCap || MAX_VOICES;
+    const delayFrames = Number.isFinite(delaySec) && delaySec > 0 ? Math.round(delaySec * this.sampleRate) : 0;
     for (let i = 0; i < maxV; i++) {
       const v = this.voices[i];
       if (v.active && v.midiNote === midiNote) {
         if (layerIndex === undefined || layerIndex === null || v.layerIndex === layerIndex) {
-          v.noteOff(this.pedalDown, this.currentTime);
+          if (delayFrames > 0) {
+            v.releaseDelayFrames = delayFrames;
+          } else {
+            v.noteOff(this.pedalDown, this.currentTime);
+          }
         }
       }
     }
   }
 
   handleFastNoteOff(data) {
-    const { midiNote, layerIndex } = data;
+    const { midiNote, layerIndex, delaySec } = data;
     this.heldNotes.delete(midiNote);
     const maxV = this.polyphonyCap || MAX_VOICES;
+    const delayFrames = Number.isFinite(delaySec) && delaySec > 0 ? Math.round(delaySec * this.sampleRate) : 0;
     for (let i = 0; i < maxV; i++) {
       const v = this.voices[i];
       if (v.active && v.midiNote === midiNote) {
         if (layerIndex === undefined || layerIndex === null || v.layerIndex === layerIndex) {
-          v.fastRelease(0.045);
+          if (delayFrames > 0) {
+            v.releaseDelayFrames = delayFrames;
+          } else {
+            v.fastRelease(0.045);
+          }
         }
       }
     }
@@ -532,6 +560,16 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
         voice.delayFrames = 0;
       }
 
+      // Handle scheduled noteOff / release delay
+      if (voice.releaseDelayFrames > 0) {
+        if (voice.releaseDelayFrames >= numFrames) {
+          voice.releaseDelayFrames -= numFrames;
+        } else {
+          voice.releaseDelayFrames = 0;
+          voice.noteOff(this.pedalDown, this.currentTime);
+        }
+      }
+
       const bufLen = voice.sampleBufferL ? voice.sampleBufferL.length : 0;
       if (bufLen === 0) { voice.forceStop(); continue; }
 
@@ -620,7 +658,7 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
             if (voice.envStage !== 4) {
               voice.fastRelease(0.035);
             }
-            nextPos = Math.max(0, bufLen - 1);
+            nextPos = bufLen; // past buffer -> readSample will return clean 0
           } else {
             voice.forceStop();
             break;

@@ -36,7 +36,7 @@ const NOTE_MAP = {
   B: 11,
 };
 
-const INST_ALIASES = {
+export const INST_ALIASES = {
   synthage_grand: "acoustic_grand_piano",
   whitney_ballad: "acoustic_grand_piano",
   ballad_master: "acoustic_grand_piano",
@@ -2337,40 +2337,41 @@ export class NativePcmEngine {
     // A selected sound must never be dropped by budget eviction: any instrument
     // the app explicitly preloads is in active use, so protect it for the full
     // PROTECT_MS window (or until a new preset replaces the pin set).
+    const baseId = (instId && INST_ALIASES[instId]) || instId;
     if (this._instProtectedAt) {
-      this._instProtectedAt.set(instId, Date.now() + PROTECT_MS);
+      this._instProtectedAt.set(baseId, Date.now() + PROTECT_MS);
     }
-    if (this.decodedBuffers.has(instId) && this.decodedBuffers.get(instId).size > 0) {
-      this._prewarmWorklet(instId);
+    if (this.decodedBuffers.has(baseId) && this.decodedBuffers.get(baseId).size > 0) {
+      this._prewarmWorklet(baseId);
       return Promise.resolve();
     }
-    if (isSfxInstrumentId(instId)) {
+    if (isSfxInstrumentId(baseId)) {
       // Kick the lazy SFX bootstrap (P1) so the generator is ready by the time
       // a key is pressed; SFX instruments have no PCM anchors to decode.
       this.ensureSfxGenerator().catch(() => {});
       return Promise.resolve();
     }
-    if (multisampleLoader && multisampleLoader.isMultisampleInstrument(instId)) {
-      return multisampleLoader.loadInstrument(instId, this.ctx, this.decodedBuffers).then(() => {
-        this._prewarmWorklet(instId);
+    if (multisampleLoader && multisampleLoader.isMultisampleInstrument(baseId)) {
+      return multisampleLoader.loadInstrument(baseId, this.ctx, this.decodedBuffers).then(() => {
+        this._prewarmWorklet(baseId);
       });
     }
-    if (instId.startsWith("animal_")) {
-      return animalEdmLoader.loadInstrument(instId, this.ctx, this.decodedBuffers).then(() => {
-        this._prewarmWorklet(instId);
+    if (baseId.startsWith("animal_")) {
+      return animalEdmLoader.loadInstrument(baseId, this.ctx, this.decodedBuffers).then(() => {
+        this._prewarmWorklet(baseId);
       });
-    } else if (instId.startsWith("bloom_")) {
-      return bloomEdmLoader.loadInstrument(instId, this.ctx, this.decodedBuffers).then(() => {
-        this._prewarmWorklet(instId);
+    } else if (baseId.startsWith("bloom_")) {
+      return bloomEdmLoader.loadInstrument(baseId, this.ctx, this.decodedBuffers).then(() => {
+        this._prewarmWorklet(baseId);
       });
-    } else if (instId.startsWith("abletunes_")) {
-      const bankKey = instId === "abletunes_fm_piano" ? "fm_piano" : "upright_piano";
+    } else if (baseId.startsWith("abletunes_")) {
+      const bankKey = baseId === "abletunes_fm_piano" ? "fm_piano" : "upright_piano";
       return this.loadAbletunesInstrument(bankKey).then(() => {
-        this._prewarmWorklet(instId);
+        this._prewarmWorklet(baseId);
       });
     } else {
-      return this.decodeEmbeddedAnchors(instId).then(() => {
-        this._prewarmWorklet(instId);
+      return this.decodeEmbeddedAnchors(baseId).then(() => {
+        this._prewarmWorklet(baseId);
       });
     }
   }
@@ -2788,24 +2789,26 @@ export class NativePcmEngine {
   }
 
   async decodeEmbeddedAnchors(instId) {
+    const baseId = (instId && INST_ALIASES[instId]) || instId;
     if (!this._decodePromises) this._decodePromises = new Map();
-    if (this._decodePromises.has(instId)) return this._decodePromises.get(instId);
-    const p = this._runDecodeEmbedded(instId).finally(() => {
-      this._decodePromises.delete(instId);
+    if (this._decodePromises.has(baseId)) return this._decodePromises.get(baseId);
+    const p = this._runDecodeEmbedded(baseId).finally(() => {
+      this._decodePromises.delete(baseId);
     });
-    this._decodePromises.set(instId, p);
+    this._decodePromises.set(baseId, p);
     return p;
   }
 
   async _runDecodeEmbedded(instId) {
-    const bank = await ensureBankForInst(instId);
-    const instData = bank ? bank[instId] : null;
+    const baseId = (instId && INST_ALIASES[instId]) || instId;
+    const bank = await ensureBankForInst(baseId);
+    const instData = bank ? bank[baseId] : null;
     if (!instData || !instData.anchors) {
-      return this.loadSoundfont(instId);
+      return this.loadSoundfont(baseId);
     }
-    if (!this.decodedBuffers.has(instId))
-      this.decodedBuffers.set(instId, new Map());
-    const instMap = this.decodedBuffers.get(instId);
+    if (!this.decodedBuffers.has(baseId))
+      this.decodedBuffers.set(baseId, new Map());
+    const instMap = this.decodedBuffers.get(baseId);
     const ctx = this.ctx;
     const anchors = Object.entries(instData.anchors);
 
@@ -2842,6 +2845,7 @@ export class NativePcmEngine {
       await this._yield();
       }
     }
+    this._prewarmWorklet(baseId);
     this._maybeEvictDecodedBuffers();
   }
 
@@ -2878,20 +2882,15 @@ export class NativePcmEngine {
   _prewarmWorklet(instId) {
     const w = this.pcmWorkletNode;
     if (!instId) return;
+    const baseId = (instId && INST_ALIASES[instId]) || instId;
     if (!w || !w.isReady) {
       if (!this._pendingPrewarms) this._pendingPrewarms = new Set();
-      this._pendingPrewarms.add(instId);
+      this._pendingPrewarms.add(baseId);
       return;
     }
-    const instMap = this.decodedBuffers.get(instId);
+    const instMap = this.decodedBuffers.get(baseId);
     if (!instMap || instMap.size === 0) return;
-    const names = new Set([instId]);
-    if (INST_ALIASES) {
-      for (const key of Object.keys(INST_ALIASES)) {
-        if (INST_ALIASES[key] === instId) names.add(key);
-      }
-    }
-    for (const name of names) w.prewarmChunked(name, instMap);
+    w.prewarmChunked(baseId, instMap);
   }
 
   /**
@@ -3271,7 +3270,12 @@ export class NativePcmEngine {
     const n = this._rrCounters.get(key) || 0;
     this._rrCounters.set(key, n + 1);
     const idx = n % result.variants.length;
-    if (idx === 0) return result;
+    if (idx === 0) {
+      if (!result.workletKey && result.variants && result.variants.length > 1) {
+        result.workletKey = `${result.anchorMidi}_${result.vlName || "vl1"}_rr1`;
+      }
+      return result;
+    }
     const variantBuf = result.variants[idx] || result.buffer;
     const rrKey = `${result.anchorMidi}_${result.vlName || "vl1"}_rr${idx + 1}`;
     return {
@@ -3448,6 +3452,7 @@ export class NativePcmEngine {
           buffer: variants[0],
           variants,
           vlName,
+          workletKey: variants.length > 1 ? `${msClosest}_${vlName}_rr1` : (msMap.has(baseKey) ? baseKey : msClosest),
         };
         this._setAnchorCache(cacheKey, msResult);
         return this._applyRoundRobin(msResult, instId);
@@ -3501,30 +3506,41 @@ export class NativePcmEngine {
 
   findAnchorInMap(map, targetMidi) {
     if (!map || map.size === 0) return null;
-    if (map.has(targetMidi))
-      return { anchorMidi: targetMidi, buffer: map.get(targetMidi) };
+    if (map.has(targetMidi)) {
+      return { anchorMidi: targetMidi, buffer: map.get(targetMidi), workletKey: targetMidi };
+    }
+    const strTarget = String(targetMidi);
+    if (map.has(strTarget)) {
+      return { anchorMidi: targetMidi, buffer: map.get(strTarget), workletKey: strTarget };
+    }
+    let closestKey = null;
     let closestMidi = null;
     let minDiff = Infinity;
-    for (const anchorMidi of map.keys()) {
-      if (typeof anchorMidi !== "number") continue;
-      const diff = Math.abs(targetMidi - anchorMidi);
+    for (const key of map.keys()) {
+      const midi = typeof key === "number" ? key : parseInt(String(key).split("_")[0], 10);
+      if (!Number.isFinite(midi)) continue;
+      const diff = Math.abs(targetMidi - midi);
       if (diff < minDiff) {
         minDiff = diff;
-        closestMidi = anchorMidi;
-        if (diff <= 1) break;
+        closestMidi = midi;
+        closestKey = key;
+        if (diff === 0) break;
       }
     }
-    if (closestMidi === null) {
-      const firstEntry = map.entries().next().value;
-      if (firstEntry) {
-        return {
-          anchorMidi: typeof firstEntry[0] === "number" ? firstEntry[0] : 60,
-          buffer: firstEntry[1],
-        };
-      }
-      return null;
+    if (closestKey !== null) {
+      return { anchorMidi: closestMidi, buffer: map.get(closestKey), workletKey: closestKey };
     }
-    return { anchorMidi: closestMidi, buffer: map.get(closestMidi) };
+    const firstEntry = map.entries().next().value;
+    if (firstEntry) {
+      const k = firstEntry[0];
+      const m = typeof k === "number" ? k : parseInt(String(k).split("_")[0], 10) || 60;
+      return {
+        anchorMidi: m,
+        buffer: firstEntry[1],
+        workletKey: k,
+      };
+    }
+    return null;
   }
 
   _acquireHammer(dest) {
@@ -3685,6 +3701,7 @@ export class NativePcmEngine {
     // Supports both immediate notes (delaySec = 0) and scheduled notes (demo songs, delaySec < 0.25).
     if (!destOverride && delaySec < 0.25 && this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
       const buf = anchorData.buffer;
+      const baseId = (instId && INST_ALIASES[instId]) || instId;
 
       // On-demand buffer transfer (v2.0.4 behavior restored): push this exact
       // layer now unless the worklet already holds it. ensureBuffer compares
@@ -3694,7 +3711,7 @@ export class NativePcmEngine {
       // mid-play transfer storm = no choppy. Round-robin variants upload
       // under their distinct rrKey (one copy per variant, then copy-free).
       const workletKey = anchorData.workletKey || anchorData.rrKey || anchorData.anchorMidi;
-      this.pcmWorkletNode.ensureBuffer(instId, workletKey, buf);
+      this.pcmWorkletNode.ensureBuffer(baseId, workletKey, buf);
       const isRockPiano = instId === "x5d_rock_piano" || instId?.includes("rock_piano");
       const trim = getInstrumentTrimGain(instId);
       const dynamicAmp = isRockPiano ? Math.pow(velNorm, 0.78) : Math.pow(velNorm, 1.10);
@@ -3752,7 +3769,7 @@ export class NativePcmEngine {
       );
 
       this.pcmWorkletNode.noteOn({
-        instId,
+        instId: baseId,
         midiNote,
         velocity: velNorm,
         gain: peakGain,
@@ -4409,18 +4426,19 @@ export class NativePcmEngine {
     }
   }
 
-  stopNote(instId, midiNote, when = 0) {
+  stopNote(instId, midiNote, when = 0, layerIndex = null) {
     if (this.heldNotes) this.heldNotes.delete(midiNote);
 
     // AudioWorklet path: forward to audio thread (immediate or scheduled)
     if (this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
-      if (when === 0) {
-        this.pcmWorkletNode.noteOff(midiNote);
+      const delaySec = when > 0 ? Math.max(0, when - this.ctx.currentTime) : 0;
+      if (delaySec < 0.25) {
+        this.pcmWorkletNode.noteOff(midiNote, layerIndex, delaySec);
       } else {
-        const delayMs = Math.max(0, (when - this.ctx.currentTime) * 1000);
+        const delayMs = Math.round(delaySec * 1000);
         setTimeout(() => {
           if (this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
-            this.pcmWorkletNode.noteOff(midiNote);
+            this.pcmWorkletNode.noteOff(midiNote, layerIndex);
           }
         }, delayMs);
       }
@@ -4590,14 +4608,15 @@ export class NativePcmEngine {
     if (this.heldNotes) this.heldNotes.delete(midiNote);
 
     if (this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
-      if (when === 0) {
+      const delaySec = when > 0 ? Math.max(0, when - this.ctx.currentTime) : 0;
+      if (delaySec < 0.25) {
         if (typeof this.pcmWorkletNode.fastNoteOff === "function") {
-          this.pcmWorkletNode.fastNoteOff(midiNote, layerIndex);
+          this.pcmWorkletNode.fastNoteOff(midiNote, layerIndex, delaySec);
         } else {
-          this.pcmWorkletNode.noteOff(midiNote, layerIndex);
+          this.pcmWorkletNode.noteOff(midiNote, layerIndex, delaySec);
         }
       } else {
-        const delayMs = Math.max(0, (when - this.ctx.currentTime) * 1000);
+        const delayMs = Math.round(delaySec * 1000);
         setTimeout(() => {
           if (this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
             if (typeof this.pcmWorkletNode.fastNoteOff === "function") {
