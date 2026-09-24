@@ -61,6 +61,14 @@ export const HD_SOUNDBANKS = {
   rock_organ: { id: "rock_organ", name: "Rock Organ Shout", category: "Organ" },
   harpsichord: { id: "harpsichord", name: "Baroque Harpsichord", category: "Bells & Pad" },
 
+  // Pure Studio Sine Soundfonts (PCM)
+  pure_sine_lead: { id: "pure_sine_lead", name: "Pure Sine Lead (PCM)", category: "Lead Synth" },
+  pure_sine_sub: { id: "pure_sine_sub", name: "Pure Sine Sub Bass (PCM)", category: "Bass & Sub" },
+  warm_sine_keys: { id: "warm_sine_keys", name: "Warm Sine Electric Keys (PCM)", category: "Electric Piano" },
+  crystal_sine_bells: { id: "crystal_sine_bells", name: "Crystal Sine Bells (PCM)", category: "Bells & Mallet" },
+  cosmic_sine_flute: { id: "cosmic_sine_flute", name: "Cosmic Sine Flute (PCM)", category: "Woodwind" },
+  deep_sine_pad: { id: "deep_sine_pad", name: "Deep Ambient Sine Pad (PCM)", category: "Synth Pad" },
+
   // Genuine Saxophone & Reed Instruments
   sax_genuine_solo: { id: "sax_genuine_solo", name: "🎷 Expressive Solo Alto Sax", category: "Woodwind" },
   sax_sensual: { id: "sax_sensual", name: "🎷 Sensual 80s Breathy Sax", category: "Woodwind" },

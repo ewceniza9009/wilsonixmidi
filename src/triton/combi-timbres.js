@@ -56,11 +56,6 @@ export function isSynthTimbre(prog) {
   const hasOsc = !!prog.osc1 || !!prog.osc2;
   if (!hasOsc) return false;
 
-  // Genuine synthesized sine programs always route to VA engine
-  if (name.includes("sine") || /whistler|sub\s*bass/i.test(name)) {
-    return true;
-  }
-
   // Never classify acoustic/electro-mechanical rompler instruments as VA
   if (
     cat.includes("organ") ||
@@ -138,10 +133,19 @@ export function resolvePcmByProgram(prog) {
   if (name.includes("church") || name.includes("cathedral organ")) return "church_organ";
   if (cat.includes("organ") || name.includes("organ")) return "drawbar_organ";
 
+  // Pure Sine presets (Studio PCM Soundfonts)
+  if (name.includes("sine whistler") || prog.id === "A046") return "pure_sine_lead";
+  if (name.includes("smooth sine") || prog.id === "A010") return "pure_sine_lead";
+  if (name.includes("sine sub") || prog.id === "A047") return "pure_sine_sub";
+  if (name.includes("sine electric keys") || prog.id === "A048") return "warm_sine_keys";
+  if (name.includes("sine bells") || prog.id === "A049") return "crystal_sine_bells";
+  if (name.includes("sine flute") || prog.id === "A050") return "cosmic_sine_flute";
+  if (name.includes("sine pad") || prog.id === "A051") return "deep_sine_pad";
+
   // Electric Pianos
   if (name.includes("phantom of tine") || prog.id === "A025") return "eos_tx816";
   if (name.includes("fm piano") || prog.id === "A043") return "abletunes_fm_piano";
-  if (name.includes("r&b") || prog.id === "A015") return "x5d_stereo_keys";
+  if (name.includes("r&b") || prog.id === "A015") return "eos_deeproads";
   if (name.includes("studio stage") || prog.id === "A020") return "electric_piano_1";
   if (name.includes("suit") || name.includes("stage ep") || prog.id === "A028") return "x5d_velo_roads";
   if (name.includes("super keys") || prog.id === "X5D_29") return "x5d_superkeys";
@@ -199,10 +203,6 @@ export function resolveTritonProgram(prog) {
   // VA engine so it plays a punchy synth-brass trombone instead of the weak
   // generic soundfont sample (user-confirmed choice).
   if (prog.id === "A030" && (prog.osc1 || prog.osc2)) {
-    return { type: "va", prog };
-  }
-  const progName = (prog.name || "").toLowerCase();
-  if ((prog.osc1 || prog.osc2) && (progName.includes("sine") || /whistler|sub\s*bass/i.test(progName))) {
     return { type: "va", prog };
   }
   if (isSynthTimbre(prog)) {

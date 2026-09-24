@@ -52,6 +52,12 @@ export const INST_ALIASES = {
   abletunes_fm_piano: "abletunes_fm_piano",
   abletunes_fm_dx7: "abletunes_fm_piano",
   m1_fresh_air: "abletunes_fm_piano",
+  pure_sine_lead: "pure_sine_lead",
+  pure_sine_sub: "pure_sine_sub",
+  warm_sine_keys: "warm_sine_keys",
+  crystal_sine_bells: "crystal_sine_bells",
+  cosmic_sine_flute: "cosmic_sine_flute",
+  deep_sine_pad: "deep_sine_pad",
   tekk_hit1: "tekk_hit1",
   tekk_hit2: "tekk_hit2",
   tekk_hit3: "tekk_hit3",
@@ -549,6 +555,14 @@ const INST_TRIM_GAINS = {
   roland_u20_shakuhachi: 0.88,
   roland_orchestra_hit: 0.85,
   roland_synth_brass: 0.85,
+
+  // Pure Studio Sine Soundfonts
+  pure_sine_lead: 0.85,
+  pure_sine_sub: 0.90,
+  warm_sine_keys: 0.88,
+  crystal_sine_bells: 0.82,
+  cosmic_sine_flute: 0.85,
+  deep_sine_pad: 0.80,
 };
 
 /**
