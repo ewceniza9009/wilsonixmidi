@@ -2240,28 +2240,51 @@ export class SfxSoundGenerator {
     return noise;
   }
 
-  trigger808SubDrop(velocity = 100, customGain = 1.0, destNode = null) {
+  trigger808SubDrop(velocity = 100, customGain = 1.0, destNode = null, midiNote = 36) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
-    const vel = velocity / 127;
+    const vel = Math.max(0.1, Math.min(1.0, velocity / 127));
     const dest = this.getDest(destNode);
     if (!dest) return null;
 
+    // Musically map midiNote into optimal playable sub-bass octave (32 Hz to 115 Hz)
+    let note = typeof midiNote === "number" && Number.isFinite(midiNote) ? midiNote : 36;
+    while (note > 46) note -= 12; // Octave fold downwards to punchy sub bass register
+    while (note < 22) note += 12;
+    const fundFreq = 440 * Math.pow(2, (note - 69) / 12);
+
+    // Fundamental sub sine oscillator
     const osc = ctx.createOscillator();
     osc.type = "sine";
-    osc.frequency.setValueAtTime(95, now);
-    osc.frequency.exponentialRampToValueAtTime(28, now + 1.6);
+    // Authentic Roland TR-808 pitch punch: transient drops from 2.5x to fundamental in 42ms
+    osc.frequency.setValueAtTime(fundFreq * 2.5, now);
+    osc.frequency.exponentialRampToValueAtTime(fundFreq, now + 0.042);
+
+    // 2nd harmonic overtone for presence and audibility on mobile/tablet/laptop speakers
+    const osc2 = ctx.createOscillator();
+    osc2.type = "sine";
+    osc2.frequency.setValueAtTime(fundFreq * 5.0, now);
+    osc2.frequency.exponentialRampToValueAtTime(fundFreq * 2.0, now + 0.042);
+
+    const g2 = ctx.createGain();
+    g2.gain.setValueAtTime(0.15 * vel, now);
+    g2.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
 
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.001, now);
-    g.gain.linearRampToValueAtTime(0.95 * vel * customGain, now + 0.015);
-    g.gain.exponentialRampToValueAtTime(0.001, now + 1.8);
+    g.gain.linearRampToValueAtTime(0.92 * vel * customGain, now + 0.012);
+    // Warm musical 808 sub decay
+    g.gain.exponentialRampToValueAtTime(0.001, now + 1.4);
 
     osc.connect(g);
+    osc2.connect(g2);
+    g2.connect(g);
     g.connect(dest);
 
     osc.start(now);
-    osc.stop(now + 1.9);
+    osc2.start(now);
+    osc.stop(now + 1.5);
+    osc2.stop(now + 0.4);
     return osc;
   }
 
@@ -2839,7 +2862,7 @@ export class SfxSoundGenerator {
       case "fx_rev_cymbal":
         return this.triggerReverseCymbal(2.2, velocity, customGain, destNode);
       case "fx_sub_drop":
-        return this.trigger808SubDrop(velocity, customGain, destNode);
+        return this.trigger808SubDrop(velocity, customGain, destNode, midiNote);
       case "fx_vinyl_crackle":
         return this.triggerVinylCrackle(4.0, velocity, customGain, destNode);
 

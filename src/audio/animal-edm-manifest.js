@@ -41,7 +41,7 @@ export const ANIMAL_EDM_BANKS = {
     id: "animal_punch_bass_1",
     name: "🦁 Animal Punchy Synth Bass 1",
     category: "EDM Festival (Animal)",
-    file: "animal_shot_006.flac",
+    file: "animal_shot_004.flac",
     rootMidi: 48,
     subCategory: "Bass & Sub",
   },

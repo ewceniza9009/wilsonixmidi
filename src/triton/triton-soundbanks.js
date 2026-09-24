@@ -3160,7 +3160,7 @@ export const TRITON_BANKS = {
       {
         id: "DJ08",
         num: "08",
-        name: "808 Sub Pitch Dive",
+        name: "808 Sub Bass Boom",
         category: "DJ & Cinematic FX",
         instId: "fx_sub_drop",
         ifx: "Sub Enhancer",

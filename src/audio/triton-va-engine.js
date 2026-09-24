@@ -157,6 +157,7 @@ export class TritonVirtualAnalogEngine {
       release: Math.max(0.06, prog.release ?? 0.35),
       isPercussive,
       isLead,
+      isPureSineLead,
       syncSlave: isSyncProgram,
       masterGain: 0.82,
     };
@@ -169,8 +170,35 @@ export class TritonVirtualAnalogEngine {
     this.init();
     if (!this.pool) return;
 
+    const ratio = Math.pow(2, this.pitchBendSemitones / 12);
+
+    // Monophonic legato handling for pure sine leads (Smooth Sine Lead):
+    // Pure sine waves have no harmonics. When adjacent semitones overlap during slides
+    // or fast taps, 100% modulation depth creates an unmusical 15-40Hz beat frequency
+    // (harsh buzzing / motorboat flutter). Enforce solo legato glide or click-free choke.
+    if (this.config.isPureSineLead) {
+      const activeVoice = this.pool.voices.find(v => v.isBusy && v.activeMidiNote !== null);
+      if (activeVoice && this.heldNotes.size > 0) {
+        // Legato pitch glide: smooth 12ms portamento transition to new key
+        const baseFreq = 440 * Math.pow(2, (midiNote - 69) / 12);
+        const freq = baseFreq * ratio;
+        const now = when > 0 ? Math.max(when, audioCore.ctx.currentTime) : audioCore.ctx.currentTime;
+        activeVoice.activeMidiNote = midiNote;
+        activeVoice.osc1.frequency.cancelScheduledValues(now);
+        activeVoice.osc2.frequency.cancelScheduledValues(now);
+        activeVoice.osc1.frequency.setTargetAtTime(freq * (this.config.osc1Ratio || 1.0), now, 0.012);
+        activeVoice.osc2.frequency.setTargetAtTime(freq * (this.config.osc2Ratio || 2.0), now, 0.012);
+        this.heldNotes.add(midiNote);
+        return;
+      }
+      // Staccato re-trigger: cleanly choke any lingering release tail in 3ms
+      this.pool.voices.forEach(v => {
+        if (v.isBusy) v.choke(3);
+      });
+    }
+
     // Voice polyphony ceiling: limits simultaneous voices to avoid DSP overflow under sustain
-    const maxActive = this.config.isLead ? 8 : 16;
+    const maxActive = this.config.isPureSineLead ? 1 : (this.config.isLead ? 8 : 16);
     const busyVoices = this.pool.voices.filter(v => v.isBusy);
     if (busyVoices.length >= maxActive) {
       // Steal oldest voice that is not currently held down by a finger
@@ -190,14 +218,13 @@ export class TritonVirtualAnalogEngine {
     // Nudge each voice's base detune by a hair so stacked notes stay phase-rich
     const sameNote = this.pool.voices.some(v => v.isBusy && v.activeMidiNote === midiNote);
     const voice = this.pool.acquireVoice(midiNote);
-    const ratio = Math.pow(2, this.pitchBendSemitones / 12);
     voice.trigger(midiNote, vel, this.config, ratio, sameNote, when);
   }
 
   noteOff(midiNote, when = 0) {
     if (!this.pool) return;
     this.heldNotes.delete(midiNote);
-    const rel = Math.max(0.02, Math.min(1.2, this.config?.release || 0.35));
+    const rel = this.config?.isPureSineLead ? 0.05 : Math.max(0.02, Math.min(1.2, this.config?.release || 0.35));
     const voices = this.pool.getActiveVoicesByNote(midiNote);
     voices.forEach(v => v.release(this.sustainPedal, rel, when, this._sustainSettings));
   }

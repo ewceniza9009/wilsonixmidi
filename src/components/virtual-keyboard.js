@@ -642,6 +642,25 @@ export class VirtualKeyboardUI {
             : key.midi;
           if (snappedMidi === null) continue;
 
+          // Spatial Hysteresis: prevent buzzing/machine-gun retrigger when finger micro-wobbles near key borders
+          if (
+            prevTouch &&
+            prevTouch.rect &&
+            snappedMidi !== prevTouch.snappedMidi &&
+            t.clientX >= prevTouch.rect.left - 4 &&
+            t.clientX <= prevTouch.rect.right + 4 &&
+            t.clientY >= prevTouch.rect.top - 6 &&
+            t.clientY <= prevTouch.rect.bottom + 6
+          ) {
+            // Finger is still on the held key's footprint; update expression without retriggering
+            const relativeY = Math.max(
+              0,
+              Math.min(1.0, (t.clientY - prevTouch.rect.top) / prevTouch.rect.height),
+            );
+            multiLayerEngine.setNoteExpression(prevTouch.midi, relativeY);
+            continue;
+          }
+
           if (!prevTouch || snappedMidi !== prevTouch.snappedMidi) {
             const now = performance.now();
             // Rate-limit sweep transitions to max ~35 notes/sec (~28ms dwell) per touch point

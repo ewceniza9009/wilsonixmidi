@@ -259,6 +259,25 @@ export class PolyphonicVoice {
     } catch (e) {}
   }
 
+  choke(fadeMs = 3) {
+    const now = this.ctx.currentTime;
+    this._gen++;
+    const gen = this._gen;
+    this.isBusy = false;
+    this.isSustained = false;
+    this.activeMidiNote = null;
+    try {
+      const cur = this.voiceGain.gain.value;
+      this.voiceGain.gain.cancelScheduledValues(now);
+      this.voiceGain.gain.setValueAtTime(cur, now);
+      this.voiceGain.gain.linearRampToValueAtTime(0.0, now + Math.max(0.001, fadeMs / 1000));
+    } catch (e) {}
+    setTimeout(() => {
+      if (gen !== this._gen) return;
+      this.isBusy = false;
+    }, fadeMs + 25);
+  }
+
   forceStop() {
     const now = this.ctx.currentTime;
     this._gen++;
@@ -267,8 +286,10 @@ export class PolyphonicVoice {
     this.isSustained = false;
     this.activeMidiNote = null;
     try {
+      const cur = this.voiceGain.gain.value;
       this.voiceGain.gain.cancelScheduledValues(now);
-      this.voiceGain.gain.setValueAtTime(0.0, now);
+      this.voiceGain.gain.setValueAtTime(cur, now);
+      this.voiceGain.gain.linearRampToValueAtTime(0.0, now + 0.003);
     } catch (e) {}
     setTimeout(() => {
       if (gen !== this._gen) return;
