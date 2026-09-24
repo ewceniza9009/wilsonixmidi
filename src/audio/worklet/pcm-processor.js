@@ -537,12 +537,12 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
 
     // Floored polyphony trim so rapid glissando sweeps and dense arpeggios
     // don't aggressively duck volume down to 10-15% (whisper/toy sound).
-    const targetScale = Math.max(0.45, 1.0 / Math.sqrt(Math.max(1, activeCount)));
+    const targetScale = Math.max(0.28, 1.0 / Math.sqrt(Math.max(1, activeCount)));
     this.polyScale += (targetScale - this.polyScale) * 0.12;
     const masterScale = this.polyScale;
 
     // Combi layer voices: dynamic headroom that scales cleanly under dense chords
-    const combiTarget = Math.max(0.38, targetScale);
+    const combiTarget = Math.max(0.25, targetScale);
     this.polyScaleCombi += (combiTarget - this.polyScaleCombi) * 0.12;
 
     for (let v = 0; v < maxV; v++) {

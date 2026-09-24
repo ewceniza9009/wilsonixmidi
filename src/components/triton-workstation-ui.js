@@ -1123,7 +1123,12 @@ export class TritonWorkstationUI {
       fx.rotary?.setBypass(false);
       fx.rotary?.setMix(0.50);
     }
-    if (has("tremolo") || has("pan")) {
+    if (has("pan")) {
+      fx.autopan?.setBypass(false);
+      fx.autopan?.setRate(1.2);
+      fx.autopan?.setDepth(0.55);
+    }
+    if (has("tremolo") && !has("pan")) {
       fx.tremolo?.setBypass(false);
       fx.tremolo?.setDepth(0.45);
       fx.tremolo?.setMix(0.40);

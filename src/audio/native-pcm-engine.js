@@ -3333,9 +3333,12 @@ export class NativePcmEngine {
         !this.decodedBuffers.has(instId) ||
         this.decodedBuffers.get(instId).size === 0
       ) {
-        // Still loading — kick the load and return null (silence) instead of
-        // a grand piano substitute on the first note.
         this.loadAbletunesInstrument(bankKey);
+        const grandMap = this.decodedBuffers.get("acoustic_grand_piano");
+        if (grandMap && grandMap.size > 0) {
+          const grandAnchor = this.findAnchorInMap(grandMap, targetMidi);
+          if (grandAnchor) return grandAnchor;
+        }
         return null;
       }
       const instMap = this.decodedBuffers.get(instId);

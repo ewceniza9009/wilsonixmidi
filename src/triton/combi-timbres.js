@@ -136,11 +136,11 @@ export function resolvePcmByProgram(prog) {
   // Electric Pianos
   if (name.includes("phantom of tine") || prog.id === "A025") return "eos_tx816";
   if (name.includes("fm piano") || prog.id === "A043") return "eos_tx816";
-  if (name.includes("r&b") || prog.id === "A015") return "eos_deeproads";
-  if (name.includes("studio stage") || prog.id === "A020") return "eos_oldroads";
-  if (name.includes("suit") || name.includes("stage ep") || prog.id === "A028") return "electric_piano_1";
-  if (name.includes("dyno")) return "eos_deeproads";
-  if (cat.includes("electric piano") || /\bep\b/i.test(cat) || /\bep\b/i.test(name) || name.includes("rhodes")) return "eos_oldroads";
+  if (name.includes("r&b") || prog.id === "A015") return "x5d_super_ep";
+  if (name.includes("studio stage") || prog.id === "A020") return "x5d_velo_roads";
+  if (name.includes("suit") || name.includes("stage ep") || prog.id === "A028") return "x5d_velo_roads";
+  if (name.includes("dyno")) return "x5d_super_ep";
+  if (cat.includes("electric piano") || /\bep\b/i.test(cat) || /\bep\b/i.test(name) || name.includes("rhodes")) return "x5d_velo_roads";
 
   // Saxophones & Woodwinds
   if (name.includes("breathy") || name.includes("alto sax") || prog.id === "A026" || prog.id === "SAX02") return "alto_sax";
