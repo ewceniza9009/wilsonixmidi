@@ -89,15 +89,10 @@ foreach ($c in $exeCandidates) {
     }
 }
 
-if (-not $foundExe) {
-    $anyExe = Get-ChildItem -Path "src-tauri/target/release/bundle/nsis/*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($anyExe) { $foundExe = $anyExe.FullName }
-}
-
 if ($foundExe) {
     Upload-AssetWithClobber $foundExe "WILSONIX.MIDIKEY_${ver}_x64-setup.exe" "application/octet-stream"
 } else {
-    Write-Warning "No Windows setup exe found to upload."
+    Write-Warning "No Windows setup exe matching version $ver found to upload. Keeping any existing release exe intact."
 }
 
 # 3. MSI installer if available
