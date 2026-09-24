@@ -57,6 +57,14 @@ class PcmWorkletVoice {
     this.filterPrevL = 0;
     this.filterPrevR = 0;
 
+    // Anti-click tail when stealing / retriggering active voices
+    this.clickTailL = 0;
+    this.clickTailR = 0;
+    this.clickDecay = 0.88;
+
+    // Delay frames for scheduled notes (demo songs / lookahead sequences)
+    this.delayFrames = 0;
+
     // Trim (heldNotes map key for steal logic)
     this.held = false;
 
@@ -65,7 +73,14 @@ class PcmWorkletVoice {
 
   noteOn(instId, midiNote, velocity, gain, layerIndex, sampleBufferL, sampleBufferR,
     playbackRate, isLoopable, loopStart, loopEnd, attackTime, decayTime, sustainLevel,
-    releaseTime, filterCutoff, maxLife) {
+    releaseTime, filterCutoff, maxLife, delaySec = 0) {
+    if (this.active && this.envLevel > 0.01) {
+      // Capture anti-click tail from the voice being replaced so sudden stealing
+      // doesn't cause a step discontinuity crackle.
+      const amp = this.envLevel * this.gain;
+      this.clickTailL += this.filterPrevL * amp;
+      this.clickTailR += this.filterPrevR * amp;
+    }
     this.active = true;
     this.instId = instId;
     this.midiNote = midiNote;
@@ -98,6 +113,7 @@ class PcmWorkletVoice {
     this.filterPrevR = Number.isFinite(this.filterPrevR) ? this.filterPrevR * 0.15 : 0;
     this.pedalHeld = false;
     this.held = true;
+    this.delayFrames = Number.isFinite(delaySec) && delaySec > 0 ? Math.round(delaySec * this.sampleRate) : 0;
   }
 
   noteOff(pedal, currentTime = 0) {
@@ -112,7 +128,7 @@ class PcmWorkletVoice {
     }
   }
 
-  fastRelease(fadeSec = 0.20) {
+  fastRelease(fadeSec = 0.045) {
     if (!this.active || this.envStage === 0) return;
     this.held = false;
     this.pedalHeld = false;
@@ -122,6 +138,9 @@ class PcmWorkletVoice {
 
   forceStop() {
     this.active = false;
+    this.delayFrames = 0;
+    this.clickTailL = 0;
+    this.clickTailR = 0;
     this.envStage = 0;
     this.envLevel = 0;
     this.held = false;
@@ -322,7 +341,7 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
       instId, midiNote, velocity, gain, layerIndex,
       anchorMidi, playbackRate, isLoopable, loopStart, loopEnd,
       attackTime, decayTime, sustainLevel, releaseTime,
-      filterCutoff, maxLife,
+      filterCutoff, maxLife, delaySec,
     } = data;
 
     // Look up sample buffer
@@ -405,7 +424,7 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
       bufEntry.L, bufEntry.R, playbackRate,
       isLoopable, loopStart, loopEnd,
       attackTime, decayTime, sustainLevel, releaseTime,
-      filterCutoff, maxLife);
+      filterCutoff, maxLife, delaySec);
     voice.startTime = this.currentTime;
   }
 
@@ -431,7 +450,7 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
       const v = this.voices[i];
       if (v.active && v.midiNote === midiNote) {
         if (layerIndex === undefined || layerIndex === null || v.layerIndex === layerIndex) {
-          v.fastRelease();
+          v.fastRelease(0.045);
         }
       }
     }
@@ -513,9 +532,38 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
     const combiTarget = Math.max(0.38, targetScale);
     this.polyScaleCombi += (combiTarget - this.polyScaleCombi) * 0.12;
 
+    // Anti-click tail rendering: smoothly decay any discontinued voice transitions
+    for (let v = 0; v < maxV; v++) {
+      const voice = this.voices[v];
+      if (Math.abs(voice.clickTailL) > 0.0001 || Math.abs(voice.clickTailR) > 0.0001) {
+        for (let i = 0; i < numFrames; i++) {
+          outL[i] += voice.clickTailL;
+          outR[i] += voice.clickTailR;
+          voice.clickTailL *= 0.88;
+          voice.clickTailR *= 0.88;
+          if (Math.abs(voice.clickTailL) <= 0.0001 && Math.abs(voice.clickTailR) <= 0.0001) {
+            voice.clickTailL = 0;
+            voice.clickTailR = 0;
+            break;
+          }
+        }
+      }
+    }
+
     for (let v = 0; v < maxV; v++) {
       const voice = this.voices[v];
       if (!voice.active) continue;
+
+      // Handle scheduled note start delay (e.g. demo song lookahead playback)
+      if (voice.delayFrames >= numFrames) {
+        voice.delayFrames -= numFrames;
+        continue;
+      }
+      let startFrame = 0;
+      if (voice.delayFrames > 0) {
+        startFrame = voice.delayFrames;
+        voice.delayFrames = 0;
+      }
 
       const bufLen = voice.sampleBufferL ? voice.sampleBufferL.length : 0;
       if (bufLen === 0) { voice.forceStop(); continue; }
@@ -532,7 +580,7 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
       const cutoffHz = Math.max(200, Math.min(20000, voice.filterCutoff * 20000));
       const filterAlpha = Math.exp(-2.0 * PI * cutoffHz * this.invSampleRate);
 
-      for (let i = 0; i < numFrames; i++) {
+      for (let i = startFrame; i < numFrames; i++) {
         switch (voice.envStage) {
           case 1: // Attack
             voice.envLevel += attackRate;
@@ -625,15 +673,19 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
       }
     }
 
-    // Brickwall NaN / Infinity protection: prevent corrupted audio registers in downstream nodes
+    // Soft-knee limiter & analog saturation: prevents digital square-wave crackle
     for (let i = 0; i < numFrames; i++) {
-      if (!Number.isFinite(outL[i])) outL[i] = 0;
-      else if (outL[i] > 1.5) outL[i] = 1.5;
-      else if (outL[i] < -1.5) outL[i] = -1.5;
+      let l = outL[i];
+      if (!Number.isFinite(l)) l = 0;
+      else if (l > 0.90) l = 0.90 + Math.tanh((l - 0.90) * 0.8) * 0.35;
+      else if (l < -0.90) l = -0.90 + Math.tanh((l + 0.90) * 0.8) * 0.35;
+      outL[i] = l;
 
-      if (!Number.isFinite(outR[i])) outR[i] = 0;
-      else if (outR[i] > 1.5) outR[i] = 1.5;
-      else if (outR[i] < -1.5) outR[i] = -1.5;
+      let r = outR[i];
+      if (!Number.isFinite(r)) r = 0;
+      else if (r > 0.90) r = 0.90 + Math.tanh((r - 0.90) * 0.8) * 0.35;
+      else if (r < -0.90) r = -0.90 + Math.tanh((r + 0.90) * 0.8) * 0.35;
+      outR[i] = r;
     }
 
     this.currentTime += numFrames * this.invSampleRate;

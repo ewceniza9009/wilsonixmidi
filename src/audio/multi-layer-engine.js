@@ -2334,6 +2334,8 @@ export const COMBI_PRESETS = {
         gain: 0.75,
         pan: 0,
         oct: -1,
+        minNote: 21,
+        maxNote: 59,
         minVel: 1,
         maxVel: 127,
         enabled: true,
@@ -4961,10 +4963,16 @@ export class MultiLayerEngine {
       for (let i = 0; i < this.layers.length; i++) {
         const layer = this.layers[i];
         if (!layer.enabled) continue;
+        if (velocity < (layer.minVel || 1) || velocity > (layer.maxVel || 127)) continue;
+        if (layer.minNote != null && midiNote < layer.minNote) continue;
+        if (layer.maxNote != null && midiNote > layer.maxNote) continue;
+        const isLeadLayer = i === 0;
+        const isBassLayer = !isLeadLayer && /(bass|sub)/i.test((layer.name || "") + " " + (layer.inst || ""));
+        if (isBassLayer && midiNote > (layer.maxNote || 60)) continue;
+
         // Musical balance: Layer 0 is the primary lead/piano sound.
         // Secondary accompaniment layers (strings, pads, warm swells) sit gracefully behind
         // the lead at 0.72 (-2.8dB) so the main instrument always cuts through clearly.
-        const isLeadLayer = i === 0;
         const layerRoleTrim = isLeadLayer ? 1.0 : 0.72;
         const effectiveGain = (layer.gain ?? 1.0) * combiScale * polyHeadroom * layerRoleTrim;
         const transposedMidi = Math.max(
@@ -5148,6 +5156,10 @@ export class MultiLayerEngine {
       if (this.isCombiMode) {
         for (let i = 0; i < this.layers.length; i++) {
           const layer = this.layers[i];
+          if (layer.minNote != null && midiNote < layer.minNote) continue;
+          if (layer.maxNote != null && midiNote > layer.maxNote) continue;
+          const isBassLayer = i > 0 && /(bass|sub)/i.test((layer.name || "") + " " + (layer.inst || ""));
+          if (isBassLayer && midiNote > (layer.maxNote || 60)) continue;
           const transposedMidi = Math.max(
             21,
             Math.min(108, midiNote + layer.oct * 12),
@@ -5259,6 +5271,10 @@ export class MultiLayerEngine {
       if (this.isCombiMode) {
         for (let i = 0; i < this.layers.length; i++) {
           const layer = this.layers[i];
+          if (layer.minNote != null && midiNote < layer.minNote) continue;
+          if (layer.maxNote != null && midiNote > layer.maxNote) continue;
+          const isBassLayer = i > 0 && /(bass|sub)/i.test((layer.name || "") + " " + (layer.inst || ""));
+          if (isBassLayer && midiNote > (layer.maxNote || 60)) continue;
           const transposedMidi = Math.max(
             21,
             Math.min(108, midiNote + layer.oct * 12),

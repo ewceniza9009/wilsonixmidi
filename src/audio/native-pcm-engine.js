@@ -3661,9 +3661,12 @@ export class NativePcmEngine {
     const bentPlaybackRate =
       basePlaybackRate * Math.pow(2, this.pitchBendSemitones / 12);
 
+    const delaySec = when > 0 ? Math.max(0, when - ctx.currentTime) : 0;
+
     // === AudioWorklet path: route voice to audio thread (zero main-thread jank) ===
-    // MUST NOT intercept when destOverride is set (e.g. looper track sub-buses) or when > 0 (scheduled playback)
-    if (!destOverride && when === 0 && this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
+    // MUST NOT intercept when destOverride is set (e.g. looper track sub-buses).
+    // Supports both immediate notes (delaySec = 0) and scheduled notes (demo songs, delaySec < 0.25).
+    if (!destOverride && delaySec < 0.25 && this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
       const buf = anchorData.buffer;
 
       // On-demand buffer transfer (v2.0.4 behavior restored): push this exact
@@ -3750,6 +3753,7 @@ export class NativePcmEngine {
         maxLife: buf._isLoopable
           ? 60.0
           : Math.max(12.0, (buf.duration || 6.0) + 0.5),
+        delaySec,
       });
       return null; // voice managed by worklet, no main-thread record
     }
@@ -4568,11 +4572,24 @@ export class NativePcmEngine {
   fastStopNote(instId, midiNote, when = 0, layerIndex = null) {
     if (this.heldNotes) this.heldNotes.delete(midiNote);
 
-    if (this.pcmWorkletNode && this.pcmWorkletNode.isReady && when === 0) {
-      if (typeof this.pcmWorkletNode.fastNoteOff === "function") {
-        this.pcmWorkletNode.fastNoteOff(midiNote, layerIndex);
+    if (this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
+      if (when === 0) {
+        if (typeof this.pcmWorkletNode.fastNoteOff === "function") {
+          this.pcmWorkletNode.fastNoteOff(midiNote, layerIndex);
+        } else {
+          this.pcmWorkletNode.noteOff(midiNote, layerIndex);
+        }
       } else {
-        this.pcmWorkletNode.noteOff(midiNote, layerIndex);
+        const delayMs = Math.max(0, (when - this.ctx.currentTime) * 1000);
+        setTimeout(() => {
+          if (this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
+            if (typeof this.pcmWorkletNode.fastNoteOff === "function") {
+              this.pcmWorkletNode.fastNoteOff(midiNote, layerIndex);
+            } else {
+              this.pcmWorkletNode.noteOff(midiNote, layerIndex);
+            }
+          }
+        }, delayMs);
       }
     }
 
