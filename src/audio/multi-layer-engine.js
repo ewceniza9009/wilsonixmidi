@@ -3555,7 +3555,7 @@ export class MultiLayerEngine {
       polyphonyCap:
         typeof navigator !== "undefined" &&
         /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)
-          ? 36
+          ? 48
           : 96, // max simultaneous voices (16–128)
       masterVolumePct: 72, // default master volume on load (0–100)
       // Keyboard
@@ -3571,9 +3571,6 @@ export class MultiLayerEngine {
         const raw = JSON.parse(localStorage.getItem("wilsonix_settings"));
         if (raw && typeof raw === "object") {
           const s = this.settings;
-          const isMobile =
-            typeof navigator !== "undefined" &&
-            /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
           if (typeof raw.sustainHoldSec === "number")
             s.sustainHoldSec = Math.max(3, Math.min(30, raw.sustainHoldSec));
           if (typeof raw.sustainDecayTau === "number")
@@ -3581,9 +3578,7 @@ export class MultiLayerEngine {
           if (typeof raw.heldNoteSec === "number")
             s.heldNoteSec = Math.max(2, Math.min(60, raw.heldNoteSec));
           if (typeof raw.polyphonyCap === "number")
-            s.polyphonyCap = isMobile
-              ? Math.max(16, Math.min(36, raw.polyphonyCap))
-              : Math.max(16, Math.min(128, raw.polyphonyCap));
+            s.polyphonyCap = Math.max(16, Math.min(128, raw.polyphonyCap));
           if (typeof raw.masterVolumePct === "number")
             s.masterVolumePct = Math.max(0, Math.min(100, raw.masterVolumePct));
           if (typeof raw.defaultOctave === "number")
@@ -3606,9 +3601,6 @@ export class MultiLayerEngine {
 
   updateSetting(key, value) {
     const s = this.settings;
-    const isMobile =
-      typeof navigator !== "undefined" &&
-      /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
     switch (key) {
       case "sustainHoldSec":
         s.sustainHoldSec = Math.max(3, Math.min(30, Number(value) || 7));
@@ -3620,9 +3612,7 @@ export class MultiLayerEngine {
         s.heldNoteSec = Math.max(2, Math.min(60, Number(value) || 15));
         break;
       case "polyphonyCap":
-        s.polyphonyCap = isMobile
-          ? Math.max(16, Math.min(36, Number(value) || 36))
-          : Math.max(16, Math.min(128, Number(value) || 64));
+        s.polyphonyCap = Math.max(16, Math.min(128, Number(value) || 64));
         break;
       case "masterVolumePct":
         s.masterVolumePct = Math.max(0, Math.min(100, Number(value) || 50));

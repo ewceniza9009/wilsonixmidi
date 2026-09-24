@@ -50,8 +50,8 @@ export function detectDeviceCapabilities() {
     deviceMemoryGB: mem,
     hardwareConcurrency: cores,
     
-    maxPolyphony: isMobile ? (tier === DEVICE_TIER.LOW ? 24 : 36) : (tier === DEVICE_TIER.LOW ? 32 : tier === DEVICE_TIER.HIGH ? 128 : 64),
-    maxWorkletVoices: isMobile ? (tier === DEVICE_TIER.LOW ? 24 : 36) : (tier === DEVICE_TIER.LOW ? 32 : tier === DEVICE_TIER.HIGH ? 128 : 64),
+    maxPolyphony: tier === DEVICE_TIER.LOW ? 32 : tier === DEVICE_TIER.HIGH ? 128 : 64,
+    maxWorkletVoices: tier === DEVICE_TIER.LOW ? 32 : tier === DEVICE_TIER.HIGH ? 128 : 64,
     maxSynthVoices: tier === DEVICE_TIER.LOW ? 8 : tier === DEVICE_TIER.HIGH ? 16 : 12,
     
     enableReverb: tier !== DEVICE_TIER.LOW,
