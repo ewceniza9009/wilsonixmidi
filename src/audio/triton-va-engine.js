@@ -283,6 +283,19 @@ export class TritonVirtualAnalogEngine {
     });
   }
 
+  setModWheel(amount) {
+    this.modWheelAmount = Math.max(0, Math.min(1.0, amount));
+    if (!this.pool || !audioCore.ctx) return;
+    const now = audioCore.ctx.currentTime;
+    this.pool.voices.forEach(v => {
+      if (v.isBusy && v.filter) {
+        const baseCutoff = this.config?.filterCutoff || 7500;
+        const targetCutoff = Math.min(20000, baseCutoff + this.modWheelAmount * 6500);
+        v.filter.frequency.setTargetAtTime(targetCutoff, now, 0.02);
+      }
+    });
+  }
+
   allNotesOff() {
     this.heldNotes.clear();
     this.sustainPedal = false;

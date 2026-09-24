@@ -310,6 +310,22 @@ export class PcmWorkletNode {
     this.node.port.postMessage({ type: "allNotesOff" });
   }
 
+  setPitchBend(semitones) {
+    if (!this.isReady || !this.node) return;
+    this.node.port.postMessage({
+      type: "pitchBend",
+      semitones: Number.isFinite(semitones) ? semitones : 0,
+    });
+  }
+
+  setModWheel(amount) {
+    if (!this.isReady || !this.node) return;
+    this.node.port.postMessage({
+      type: "modWheel",
+      amount: Number.isFinite(amount) ? amount : 0,
+    });
+  }
+
   /**
    * Drops every uploaded anchor of an instrument from the audio thread and
    * forgets it locally so the next note re-uploads a fresh copy. This is the

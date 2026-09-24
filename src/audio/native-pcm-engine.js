@@ -4219,6 +4219,9 @@ export class NativePcmEngine {
 
   setPitchBend(semitones) {
     this.pitchBendSemitones = Math.max(-12, Math.min(12, semitones));
+    if (this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
+      this.pcmWorkletNode.setPitchBend(this.pitchBendSemitones);
+    }
     const now = this.ctx.currentTime;
     const bendRatio = Math.pow(2, this.pitchBendSemitones / 12);
     const updateVoicePitch = (voices) => {
@@ -4238,6 +4241,9 @@ export class NativePcmEngine {
 
   setModWheel(amount) {
     this.modWheelAmount = Math.max(0, Math.min(1.0, amount));
+    if (this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
+      this.pcmWorkletNode.setModWheel(this.modWheelAmount);
+    }
     const now = this.ctx.currentTime;
     this.activeVoices.forEach((voices) => {
       voices.forEach((v) => {

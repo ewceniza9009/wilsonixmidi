@@ -12,8 +12,9 @@ const MAX_VOICES = 128;
 const PI = Math.PI;
 
 class PcmWorkletVoice {
-  constructor(sampleRate = 44100) {
+  constructor(sampleRate = 44100, processor = null) {
     this.sampleRate = sampleRate;
+    this.processor = processor;
     this.active = false;
     this.midiNote = 0;
     this.velocity = 0;
@@ -27,6 +28,7 @@ class PcmWorkletVoice {
     this.sampleBufferR = null; // Float32Array (right channel)
     this.isStereo = false;
     this.playbackPosition = 0; // fractional sample position
+    this.basePlaybackRate = 1.0;
     this.playbackRate = 1.0; // pitch ratio (e.g. 1 semitone up = 2^(1/12))
     this.startTime = 0;
     this.maxLife = 8.0; // seconds
@@ -50,6 +52,7 @@ class PcmWorkletVoice {
     this.sustainDecayRate = 0;
 
     // Low-pass filter (1-pole, cheap)
+    this.baseCutoff = 0.5;
     this.filterCutoff = 0.5; // normalized 0-1
     this.filterPrevL = 0;
     this.filterPrevR = 0;
@@ -73,7 +76,9 @@ class PcmWorkletVoice {
     this.sampleBufferR = sampleBufferR;
     this.isStereo = !!(sampleBufferR);
     this.playbackPosition = 0;
-    this.playbackRate = Number.isFinite(playbackRate) && playbackRate > 0 ? playbackRate : 1.0;
+    this.basePlaybackRate = Number.isFinite(playbackRate) && playbackRate > 0 ? playbackRate : 1.0;
+    const bendRatio = this.processor ? this.processor.pitchBendRatio : 1.0;
+    this.playbackRate = this.basePlaybackRate * bendRatio;
     this.startTime = 0;
     this.maxLife = maxLife || 8.0;
     this.isLoopable = !!isLoopable;
@@ -85,7 +90,9 @@ class PcmWorkletVoice {
     this.decayTime = decayTime || 0.25;
     this.sustainLevel = sustainLevel || 0.65;
     this.releaseTime = releaseTime || 0.15;
-    this.filterCutoff = filterCutoff || 0.5;
+    this.baseCutoff = filterCutoff || 0.5;
+    const modBoost = this.processor ? this.processor.modWheelAmount * 0.40 : 0.0;
+    this.filterCutoff = Math.min(1.0, this.baseCutoff + modBoost);
     // Smooth filter transition if stealing an active voice
     this.filterPrevL = Number.isFinite(this.filterPrevL) ? this.filterPrevL * 0.15 : 0;
     this.filterPrevR = Number.isFinite(this.filterPrevR) ? this.filterPrevR * 0.15 : 0;
@@ -158,9 +165,12 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
     this.sampleRate = globalThis.sampleRate || 48000;
     this.invSampleRate = 1.0 / this.sampleRate;
 
+    this.pitchBendRatio = 1.0;
+    this.modWheelAmount = 0.0;
+
     this.voices = [];
     for (let i = 0; i < MAX_VOICES; i++) {
-      this.voices.push(new PcmWorkletVoice(this.sampleRate));
+      this.voices.push(new PcmWorkletVoice(this.sampleRate, this));
     }
 
     // Shared RingBuffer reader setup (same pattern as synth-processor.js)
@@ -272,9 +282,28 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
           this.bufferCatalog.delete(data.instId);
         }
         break;
-      case "pitchBend":
-        // Handled per-note via noteOn messages from main thread
+      case "pitchBend": {
+        const semi = Number.isFinite(data.semitones) ? data.semitones : 0;
+        this.pitchBendRatio = Math.pow(2, semi / 12);
+        for (let i = 0; i < MAX_VOICES; i++) {
+          const v = this.voices[i];
+          if (v.active) {
+            v.playbackRate = v.basePlaybackRate * this.pitchBendRatio;
+          }
+        }
         break;
+      }
+      case "modWheel": {
+        const amt = Number.isFinite(data.amount) ? Math.max(0, Math.min(1.0, data.amount)) : 0;
+        this.modWheelAmount = amt;
+        for (let i = 0; i < MAX_VOICES; i++) {
+          const v = this.voices[i];
+          if (v.active) {
+            v.filterCutoff = Math.min(1.0, v.baseCutoff + this.modWheelAmount * 0.40);
+          }
+        }
+        break;
+      }
     }
   }
 

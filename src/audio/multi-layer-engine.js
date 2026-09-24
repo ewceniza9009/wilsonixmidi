@@ -5515,6 +5515,14 @@ export class MultiLayerEngine {
     if (!this.pcmEngine) this.init();
     if (this.pcmEngine) this.pcmEngine.setModWheel(amount);
     synthEngine.setModWheel(amount);
+    tritonVaEngine.setModWheel(amount);
+    if (this.isCombiMode) {
+      this._vaEngines.forEach((eng) => {
+        try {
+          eng.setModWheel(amount);
+        } catch (err) {}
+      });
+    }
   }
 
   panic() {
