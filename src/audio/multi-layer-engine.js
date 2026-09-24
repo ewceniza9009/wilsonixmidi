@@ -4961,9 +4961,12 @@ export class MultiLayerEngine {
       for (let i = 0; i < this.layers.length; i++) {
         const layer = this.layers[i];
         if (!layer.enabled) continue;
-        if (velocity < layer.minVel || velocity > layer.maxVel) continue;
-
-        const effectiveGain = (layer.gain ?? 1.0) * combiScale * polyHeadroom;
+        // Musical balance: Layer 0 is the primary lead/piano sound.
+        // Secondary accompaniment layers (strings, pads, warm swells) sit gracefully behind
+        // the lead at 0.72 (-2.8dB) so the main instrument always cuts through clearly.
+        const isLeadLayer = i === 0;
+        const layerRoleTrim = isLeadLayer ? 1.0 : 0.72;
+        const effectiveGain = (layer.gain ?? 1.0) * combiScale * polyHeadroom * layerRoleTrim;
         const transposedMidi = Math.max(
           21,
           Math.min(108, midiNote + layer.oct * 12),

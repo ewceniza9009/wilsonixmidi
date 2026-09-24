@@ -17,7 +17,7 @@ export class PcmWorkletNode {
     this.sharedBuffer = null;
     this._pendingBuffers = [];
     this._loadedBuffers = new Set();
-    this._loadedBufferMaxSize = 256; // max anchors held in worklet (expanded to prevent multi-layer combi thrashing)
+    this._loadedBufferMaxSize = 1024; // expanded capacity to prevent multi-layer combi thrashing
     this._bufferRegistry = new Map();
     this._sustainSettings = null;
     this.polyphonyCap = 64;

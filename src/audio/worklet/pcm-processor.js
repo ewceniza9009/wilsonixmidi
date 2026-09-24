@@ -263,7 +263,9 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
             if (v.active && v.pedalHeld) {
               v.pedalHeld = false;
               v.held = false;
-              // Quick ramp down before entering release to avoid DC jump
+              // Clean damper pedal release: smoothly release acoustic resonance in ~140ms
+              // so previous chord does NOT bleed and stack on top of the next chord!
+              v.releaseTime = Math.min(v.releaseTime, 0.14);
               v.envLevel *= Math.max(0.01, 1.0 - delay * 0.003);
               v.envStage = 4;
               delay++;
@@ -333,11 +335,33 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
 
     const maxV = this.polyphonyCap || MAX_VOICES;
 
-    // Re-trigger: if same note+layer already active, release old voice cleanly
+    // Re-trigger: if same note+layer already active, release old voice cleanly and swiftly
     for (let i = 0; i < maxV; i++) {
       const v = this.voices[i];
       if (v.active && v.midiNote === midiNote && v.layerIndex === layerIndex && v.instId === instId) {
-        v.fastRelease();
+        v.fastRelease(0.035);
+      }
+    }
+
+    // Combi background accompaniment layers (layerIndex > 0: strings, pads, ambience):
+    // Cap simultaneous voices per background layer to 5 to prevent runaway voice stacking
+    // across chord changes while preserving the full current chord harmony.
+    if (typeof layerIndex === "number" && layerIndex > 0) {
+      let bgCount = 0;
+      let oldestBgVoice = null;
+      let oldestBgTime = Infinity;
+      for (let i = 0; i < maxV; i++) {
+        const v = this.voices[i];
+        if (v.active && v.layerIndex === layerIndex) {
+          bgCount++;
+          if (v.startTime < oldestBgTime) {
+            oldestBgTime = v.startTime;
+            oldestBgVoice = v;
+          }
+        }
+      }
+      if (bgCount >= 5 && oldestBgVoice) {
+        oldestBgVoice.fastRelease(0.08);
       }
     }
 
@@ -485,9 +509,8 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
     this.polyScale += (targetScale - this.polyScale) * 0.12;
     const masterScale = this.polyScale;
 
-    // Combi layer voices get a floored trim so a stacked Combi stays at a
-    // healthy level instead of ducking toward silence/whisper under chords.
-    const combiTarget = Math.max(0.6, targetScale);
+    // Combi layer voices: dynamic headroom that scales cleanly under dense chords
+    const combiTarget = Math.max(0.38, targetScale);
     this.polyScaleCombi += (combiTarget - this.polyScaleCombi) * 0.12;
 
     for (let v = 0; v < maxV; v++) {
@@ -527,15 +550,25 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
             break;
           case 3: // Sustain
             if (voice.pedalHeld) {
-              // 1. Auto-release timeout governed by sustainHoldSec from latency popover modal
-              if (voice.sustainStartTime > 0 && (this.currentTime - voice.sustainStartTime >= this.sustainHoldSec)) {
+              const isBgLayer = typeof voice.layerIndex === "number" && voice.layerIndex > 0;
+              // 1. Auto-release timeout: background layers auto-fade after 3.0s max
+              const holdSec = isBgLayer ? Math.min(3.0, this.sustainHoldSec) : this.sustainHoldSec;
+              if (voice.sustainStartTime > 0 && (this.currentTime - voice.sustainStartTime >= holdSec)) {
                 voice.pedalHeld = false;
                 voice.envStage = 4; // Smooth release
+                voice.releaseTime = Math.min(voice.releaseTime, 0.25);
                 break;
               }
-              // 2. Gentle natural tone decay governed by sustainDecayTau from latency popover modal
-              const decayPerSample = 1.0 / Math.max(0.001, this.sustainDecayTau * this.sampleRate * 6.0);
-              voice.envLevel = Math.max(0.02, voice.envLevel - decayPerSample);
+              // 2. Natural decay: background pads and strings gently decay down to a warm bed
+              const decayFactor = isBgLayer ? 2.0 : 6.0;
+              const decayPerSample = 1.0 / Math.max(0.001, this.sustainDecayTau * this.sampleRate * decayFactor);
+              voice.envLevel = Math.max(isBgLayer ? 0.015 : 0.02, voice.envLevel - decayPerSample);
+              if (isBgLayer && voice.envLevel <= 0.03) {
+                voice.pedalHeld = false;
+                voice.envStage = 4;
+                voice.releaseTime = 0.15;
+                break;
+              }
             } else if (voice.held) {
               // 3. Key held without pedal: auto-release after heldNoteSec from latency popover modal
               if (voice.startTime > 0 && (this.currentTime - voice.startTime >= this.heldNoteSec)) {
@@ -557,7 +590,7 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
 
         const pos = voice.playbackPosition;
         let sampleL = voice.readSample(pos);
-        let sampleR = voice.readSampleR(pos);
+        let sampleR = voice.isStereo && voice.sampleBufferR ? voice.readSampleR(pos) : sampleL;
 
         let nextPos = pos + voice.playbackRate;
         if (voice.isLoopable && voice.loopEnd > voice.loopStart) {
