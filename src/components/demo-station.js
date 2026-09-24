@@ -12,6 +12,8 @@ import { audioCore } from "../audio/audio-core.js";
 import { noteScheduler } from "../audio/lookahead-scheduler.js";
 import { escapeHtml } from "../utils/escape-html.js";
 import { PianoTutorCanvas } from "./piano-tutor-canvas.js";
+import { TheoryCourseDeck } from "./theory-course-deck.js";
+import { THEORY_EXERCISES } from "./theory-exercises.js";
 
 export class DemoStationUI {
   constructor(containerId) {
@@ -26,6 +28,10 @@ export class DemoStationUI {
     this.searchQuery = "";
     this.volume = 0.70;
     this.customSongs = this.loadCustomSongs();
+
+    // Internal Sub-Tab State
+    this.activeSubTab = "songs";
+    this.theoryDeck = null;
 
     // Interactive Practice Studio
     this.tutorCanvas = null;
@@ -75,7 +81,17 @@ export class DemoStationUI {
 
     this.container.innerHTML = `
       <div class="demo-station-card" id="demo-station-card">
-        <!-- Main Demo Song List View -->
+        <!-- Internal Sub-Navigation Tabs inside DEMO card -->
+        <div class="demo-subnav-bar">
+          <button class="demo-subtab-btn active" id="demo-subtab-songs" data-subtab="songs">
+            🎬 SONG CLIPS & PRACTICE
+          </button>
+          <button class="demo-subtab-btn" id="demo-subtab-theory" data-subtab="theory">
+            📖 THEORY & PRO CRASH COURSE
+          </button>
+        </div>
+
+        <!-- Sub-Tab 1: Main Demo Song List View -->
         <div class="demo-main-view" id="demo-main-view">
           <div class="demo-station-header">
             <div class="station-title-group">
@@ -104,6 +120,9 @@ export class DemoStationUI {
           </div>
           <div class="demo-song-list" id="demo-song-list"></div>
         </div>
+
+        <!-- Sub-Tab 2: Music Theory & Fast-Paced Piano Crash Course -->
+        <div class="demo-theory-view" id="demo-theory-view" style="display:none;"></div>
 
         <!-- Interactive Practice Studio Deck (Hidden until PRACTICE clicked) -->
         <div class="tutor-deck-container" id="tutor-deck-container" style="display:none;"></div>
@@ -250,6 +269,64 @@ export class DemoStationUI {
         if (file) this.handleMidiFile(file);
       });
     }
+
+    // Sub-Navigation Tabs inside DEMO card
+    const subtabSongs = this.container.querySelector("#demo-subtab-songs");
+    const subtabTheory = this.container.querySelector("#demo-subtab-theory");
+    subtabSongs?.addEventListener("click", () => this.switchSubTab("songs"));
+    subtabTheory?.addEventListener("click", () => this.switchSubTab("theory"));
+  }
+
+  switchSubTab(tabName) {
+    this.activeSubTab = tabName;
+    const songsBtn = this.container.querySelector("#demo-subtab-songs");
+    const theoryBtn = this.container.querySelector("#demo-subtab-theory");
+    const mainView = this.container.querySelector("#demo-main-view");
+    const theoryView = this.container.querySelector("#demo-theory-view");
+    const tutorDeck = this.container.querySelector("#tutor-deck-container");
+
+    if (this.isPracticing) {
+      this.exitPractice();
+    }
+
+    if (tabName === "songs") {
+      songsBtn?.classList.add("active");
+      theoryBtn?.classList.remove("active");
+      if (mainView) mainView.style.display = "";
+      if (theoryView) theoryView.style.display = "none";
+      if (tutorDeck) tutorDeck.style.display = "none";
+    } else if (tabName === "theory") {
+      theoryBtn?.classList.add("active");
+      songsBtn?.classList.remove("active");
+      if (mainView) mainView.style.display = "none";
+      if (theoryView) {
+        theoryView.style.display = "block";
+        this.initTheoryDeck();
+      }
+      if (tutorDeck) tutorDeck.style.display = "none";
+    }
+  }
+
+  initTheoryDeck() {
+    const theoryView = this.container.querySelector("#demo-theory-view");
+    if (!theoryView || this.theoryDeck) return;
+
+    this.theoryDeck = new TheoryCourseDeck(theoryView, {
+      onLaunchExercise: (exerciseKey) => {
+        this.launchTheoryExercise(exerciseKey);
+      },
+      audioEngine: multiLayerEngine,
+      keyboardContainer: document.getElementById("piano-roll-container"),
+    });
+  }
+
+  launchTheoryExercise(exerciseKey) {
+    const exerciseSong = THEORY_EXERCISES[exerciseKey];
+    if (!exerciseSong) {
+      console.warn("Exercise not found:", exerciseKey);
+      return;
+    }
+    this.startPractice(exerciseSong);
   }
 
   async handleMidiFile(file) {
@@ -306,9 +383,14 @@ export class DemoStationUI {
     }
 
     // 2. Switch views
+    const subnav = this.container.querySelector(".demo-subnav-bar");
     const mainView = this.container.querySelector("#demo-main-view");
+    const theoryView = this.container.querySelector("#demo-theory-view");
     const tutorDeck = this.container.querySelector("#tutor-deck-container");
+
+    if (subnav) subnav.style.display = "none";
     if (mainView) mainView.style.display = "none";
+    if (theoryView) theoryView.style.display = "none";
     if (tutorDeck) {
       tutorDeck.style.display = "flex";
       this.renderPracticeDeck(song);
@@ -329,7 +411,8 @@ export class DemoStationUI {
       hand: "both",
       onScoreUpdate: (stats) => this.updateTutorStats(stats),
       onSongComplete: (stats) => this.handleTutorComplete(stats),
-      onWaitNotesChange: (notes) => this.updateTargetPrompt(notes),
+      onWaitNotesChange: (notes, satisfied, chordName) =>
+        this.updateTargetPrompt(notes, satisfied, chordName),
     });
 
     // 4. Hook note triggers from all sources (USB MIDI, virtual keyboard, QWERTY)
@@ -361,12 +444,23 @@ export class DemoStationUI {
       this.tutorCanvas = null;
     }
 
+    const subnav = this.container.querySelector(".demo-subnav-bar");
     const mainView = this.container.querySelector("#demo-main-view");
+    const theoryView = this.container.querySelector("#demo-theory-view");
     const tutorDeck = this.container.querySelector("#tutor-deck-container");
-    if (mainView) mainView.style.display = "";
+
+    if (subnav) subnav.style.display = "flex";
     if (tutorDeck) {
       tutorDeck.style.display = "none";
       tutorDeck.innerHTML = "";
+    }
+
+    if (this.activeSubTab === "theory") {
+      if (theoryView) theoryView.style.display = "block";
+      if (mainView) mainView.style.display = "none";
+    } else {
+      if (mainView) mainView.style.display = "";
+      if (theoryView) theoryView.style.display = "none";
     }
   }
 
@@ -376,8 +470,8 @@ export class DemoStationUI {
 
     deck.innerHTML = `
       <div class="tutor-header-bar">
-        <button class="tutor-back-btn" id="tutor-exit-btn" title="Back to song list">
-          ◀ BACK TO SONGS
+        <button class="tutor-back-btn" id="tutor-exit-btn" title="Back">
+          ${this.activeSubTab === "theory" ? "◀ BACK TO THEORY" : "◀ BACK TO SONGS"}
         </button>
         <div class="tutor-song-badge-group">
           <span class="tutor-badge">🎓 INTERACTIVE TUTOR</span>
@@ -386,7 +480,7 @@ export class DemoStationUI {
         </div>
         <div class="tutor-target-prompt" id="tutor-target-prompt">
           <span class="tutor-prompt-label">TARGET NOTE:</span>
-          <span class="tutor-prompt-keys" id="tutor-target-keys-text">Ready</span>
+          <span class="tutor-prompt-keys" id="tutor-target-keys-text">Watch notes falling...</span>
         </div>
       </div>
 
@@ -523,7 +617,7 @@ export class DemoStationUI {
     if (scoreEl) scoreEl.textContent = `${stats.score}`;
   }
 
-  updateTargetPrompt(notes) {
+  updateTargetPrompt(notes, satisfied = [], chordName = "") {
     const el = this.container.querySelector("#tutor-target-keys-text");
     if (!el) return;
     if (!notes || notes.length === 0) {
@@ -531,11 +625,20 @@ export class DemoStationUI {
       el.classList.remove("active-wait");
     } else {
       const names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-      const noteNames = notes
-        .sort((a, b) => a - b)
-        .map((n) => `${names[n % 12]}${Math.floor(n / 12) - 1}`)
-        .join(" + ");
-      el.textContent = noteNames;
+      const formatNote = (n) => `${names[n % 12]}${Math.floor(n / 12) - 1}`;
+      const totalNotes = notes.length + satisfied.length;
+
+      if (totalNotes > 1) {
+        const remainingStr = notes.map(formatNote).join(" + ");
+        const chordBadge = chordName ? `[${chordName}] ` : "";
+        if (satisfied.length > 0) {
+          el.innerHTML = `<span style="color:#00e5ff; font-weight:700;">${chordBadge}SIMULTANEOUS CHORD:</span> Strike remaining: <b>${remainingStr}</b> (${satisfied.length}/${totalNotes} held)`;
+        } else {
+          el.innerHTML = `<span style="color:#ffb300; font-weight:700;">${chordBadge}PRESS TOGETHER:</span> <b>${remainingStr}</b>`;
+        }
+      } else {
+        el.textContent = formatNote(notes[0]);
+      }
       el.classList.add("active-wait");
     }
   }

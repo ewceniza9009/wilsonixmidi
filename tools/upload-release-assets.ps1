@@ -14,13 +14,20 @@ $ver = $Tag.TrimStart('v')
 Write-Host "Syncing release for Tag: $Tag (Version: $ver)..." -ForegroundColor Cyan
 
 $token = (gh auth token).Trim()
-$releaseId = (gh api "repos/ewceniza9009/wilsonixmidi/releases/tags/$Tag" --jq ".id" 2>$null)
+$releaseId = $null
+try {
+    $rawId = gh api "repos/ewceniza9009/wilsonixmidi/releases/tags/$Tag" --jq ".id" 2>$null
+    if ($rawId) {
+        $releaseId = ("" + $rawId).Trim()
+    }
+} catch {
+    $releaseId = $null
+}
+
 if (-not $releaseId) {
     Write-Host "Creating GitHub release $Tag..." -ForegroundColor Yellow
-    gh release create $Tag --title "WILSONIX MIDIKEY $Tag (Build 24)" --notes "WILSONIX MIDIKEY $Tag Production Release with Interactive Learning & Piano Tutor Studio, High-Fidelity Korg X5D presets, latency optimizations, and memory leak fixes."
+    gh release create $Tag --title "WILSONIX MIDIKEY $Tag (Build 25)" --notes "WILSONIX MIDIKEY $Tag Production Release with Interactive Learning & Piano Tutor Studio, Simultaneous Chord Indicators & Visual Guidance, Fast-Paced Music Theory Masterclass, Zero-Allocation 60/120fps Engine, and Tablet UI Optimization."
     $releaseId = (gh api "repos/ewceniza9009/wilsonixmidi/releases/tags/$Tag" --jq ".id").Trim()
-} else {
-    $releaseId = $releaseId.Trim()
 }
 
 Write-Host "Target GitHub Release ID: $releaseId ($Tag)" -ForegroundColor Cyan

@@ -6,14 +6,14 @@
  * - Single-canvas zero-DOM architecture (60/120 FPS fluid rendering, 0 layout thrashing)
  * - Cached key geometry lookups (0 getBoundingClientRect calls during animation)
  * - Auto-aligns with virtual keyboard key coordinates (white and black key columns)
- * - "Wait For Key" Beginner Mode: pauses time at the hit-line until target notes are played
+ * - Simultaneous Chord Detection: Glowing horizontal connector beams & "PRESS TOGETHER" badge
+ * - "Wait For Key" Beginner Mode: pauses time at hit-line, guides multi-note chords step-by-step
  * - "Play Along" Flow Mode: continuous practice with adjustable speed (0.5x, 0.75x, 1.0x)
  * - Hand splitting: Both Hands, Right Hand Only (>= C4), Left Hand Only (< C4)
  * - Auto-accompaniment for non-practiced hand
  * - Live scoring: Hit/Miss detection, accuracy percentage, and combo streak counter
  * - Instant disposal: cancels animation loops and releases memory on close (0% background CPU)
  */
-
 
 export class PianoTutorCanvas {
   /**
@@ -41,10 +41,13 @@ export class PianoTutorCanvas {
     this.isPlaying = false;
     this.isPaused = false;
     this.isWaitingForKey = false;
-    this.pendingWaitNotes = new Set(); // MIDI notes waiting to be pressed
+    this.pendingWaitNotes = new Set(); // MIDI notes waiting to be pressed in current step
+    this.satisfiedWaitNotes = new Set(); // MIDI notes of current chord already pressed
+    this.currentChordName = ""; // Current chord name being waited on
 
     // Pre-cached key geometries for 0-DOM overhead in 60fps loop
     this._keyGeometries = new Map();
+    this._visibleChordGroups = new Map();
 
     // Note velocity / time window
     this.pixelsPerSecond = 240; // speed of falling notes
@@ -159,6 +162,35 @@ export class PianoTutorCanvas {
   }
 
   /**
+   * Identifies chord name from an array of MIDI notes
+   * @param {number[]} notes
+   * @returns {string}
+   */
+  _identifyChord(notes) {
+    if (!notes || notes.length < 2) return "";
+    const unique = [...new Set(notes)].sort((a, b) => a - b);
+    const root = unique[0];
+    const rootName = this._midiToName(root).replace(/-?\d+/, "");
+    const semitones = [...new Set(unique.map(n => (n - root) % 12))].sort((a, b) => a - b);
+
+    const has = (arr) => arr.every(p => semitones.includes(p));
+
+    if (has([0, 4, 7, 11])) return `${rootName} Maj7`;
+    if (has([0, 4, 7, 10])) return `${rootName} 7`;
+    if (has([0, 3, 7, 10])) return `${rootName} m7`;
+    if (has([0, 2, 4, 7]) || has([0, 2, 7])) return `${rootName} Add9`;
+    if (has([0, 5, 7])) return `${rootName} Sus4`;
+    if (has([0, 4, 7])) return `${rootName} Major`;
+    if (has([0, 3, 7])) return `${rootName} Minor`;
+    if (has([0, 3, 6])) return `${rootName} Dim`;
+    if (has([0, 7])) return `${rootName} 5th`;
+    if (unique.length === 2 && (unique[1] - unique[0]) % 12 === 0) {
+      return `${rootName} Octave`;
+    }
+    return `${rootName} Chord`;
+  }
+
+  /**
    * Load and prepare a song for interactive practice
    * @param {Object} song
    */
@@ -169,19 +201,44 @@ export class PianoTutorCanvas {
     this.currentTimeMs = 0;
     this.isWaitingForKey = false;
     this.pendingWaitNotes.clear();
+    this.satisfiedWaitNotes.clear();
+    this.currentChordName = "";
     this.hitEffects = [];
     this._stopAllAccompanimentNotes();
     this.resetStats();
 
-    // Clone and sort events by time
-    const rawEvents = (song.events || []).filter(e => e.note).slice().sort((a, b) => a.time - b.time);
+    // Support both song.events and song.notes, and auto-convert seconds to milliseconds if needed
+    const rawList = (song.events && song.events.length > 0) ? song.events : (song.notes || []);
+    const rawEvents = rawList
+      .filter((e) => e && e.note)
+      .map((e) => {
+        const timeMs = (e.time != null && e.time < 100 && e.time > 0) ? Math.round(e.time * 1000) : (e.time || 0);
+        const durMs = (e.duration != null && e.duration < 30)
+          ? Math.round(e.duration * 1000)
+          : (e.dur || (e.duration ? Math.round(e.duration) : 300));
+        return {
+          time: timeMs,
+          note: e.note,
+          vel: e.vel || e.velocity || 90,
+          dur: Math.max(120, durMs),
+          hand: e.hand,
+          finger: e.finger,
+        };
+      })
+      .slice()
+      .sort((a, b) => a.time - b.time);
+
+    if (rawEvents.length > 0) {
+      const last = rawEvents[rawEvents.length - 1];
+      this.durationMs = song.durationMs || (last.time + (last.dur || 300) + 2000);
+    }
 
     // Filter events into practiced events vs background accompaniment
     this.events = [];
     this.accompanimentEvents = [];
 
     rawEvents.forEach((e) => {
-      const isRight = e.note >= 60;
+      const isRight = e.hand ? e.hand === "right" : e.note >= 60;
       let isPracticed = true;
       if (this.hand === "right" && !isRight) isPracticed = false;
       if (this.hand === "left" && isRight) isPracticed = false;
@@ -194,6 +251,10 @@ export class PianoTutorCanvas {
         hit: false,
         missed: false,
         triggeredAccomp: false,
+        isChord: false,
+        chordId: null,
+        chordNotes: [],
+        chordName: "",
       };
 
       if (isPracticed) {
@@ -202,6 +263,28 @@ export class PianoTutorCanvas {
         this.accompanimentEvents.push(normEvent);
       }
     });
+
+    // Detect and cluster simultaneous notes (within ±35ms) as chords
+    const timeClusters = new Map();
+    this.events.forEach((ev) => {
+      const clusterKey = Math.round(ev.time / 35) * 35;
+      if (!timeClusters.has(clusterKey)) {
+        timeClusters.set(clusterKey, []);
+      }
+      timeClusters.get(clusterKey).push(ev);
+    });
+
+    for (const [clusterKey, cluster] of timeClusters.entries()) {
+      const isChord = cluster.length > 1;
+      const chordNotes = cluster.map((c) => c.note);
+      const chordName = isChord ? this._identifyChord(chordNotes) : "";
+      cluster.forEach((ev) => {
+        ev.isChord = isChord;
+        ev.chordId = clusterKey;
+        ev.chordNotes = chordNotes;
+        ev.chordName = chordName;
+      });
+    }
 
     if (rawEvents.length > 0) {
       const last = rawEvents[rawEvents.length - 1];
@@ -215,6 +298,7 @@ export class PianoTutorCanvas {
     this.mode = mode === "flow" ? "flow" : "wait";
     this.isWaitingForKey = false;
     this.pendingWaitNotes.clear();
+    this.satisfiedWaitNotes.clear();
     this._clearKeyboardGuides();
   }
 
@@ -278,6 +362,7 @@ export class PianoTutorCanvas {
     this.isPaused = false;
     this.isWaitingForKey = false;
     this.pendingWaitNotes.clear();
+    this.satisfiedWaitNotes.clear();
     this._stopAllAccompanimentNotes();
     if (this.animId) {
       cancelAnimationFrame(this.animId);
@@ -301,6 +386,7 @@ export class PianoTutorCanvas {
     this.accompanimentEvents = [];
     this.hitEffects = [];
     this._keyGeometries.clear();
+    this._visibleChordGroups.clear();
     this._onScoreUpdate = null;
     this._onSongComplete = null;
     this._onWaitNotesChange = null;
@@ -318,11 +404,12 @@ export class PianoTutorCanvas {
     if (this.mode === "wait" && this.isWaitingForKey) {
       if (this.pendingWaitNotes.has(midiNote)) {
         this.pendingWaitNotes.delete(midiNote);
+        this.satisfiedWaitNotes.add(midiNote);
         this._recordHit(midiNote, "PERFECT");
 
         // Mark corresponding note event as hit
         for (const ev of this.events) {
-          if (!ev.hit && ev.note === midiNote && Math.abs(ev.time - this.currentTimeMs) <= 350) {
+          if (!ev.hit && ev.note === midiNote && Math.abs(ev.time - this.currentTimeMs) <= 800) {
             ev.hit = true;
             break;
           }
@@ -330,13 +417,19 @@ export class PianoTutorCanvas {
 
         if (this.pendingWaitNotes.size === 0) {
           this.isWaitingForKey = false;
+          this.satisfiedWaitNotes.clear();
           this._clearKeyboardGuides();
         } else {
-          this._highlightKeyboardGuides(this.pendingWaitNotes);
+          // Keep satisfied notes in green and remaining notes in blinking amber
+          this._highlightKeyboardGuides(this.pendingWaitNotes, this.satisfiedWaitNotes);
         }
 
         if (this._onWaitNotesChange) {
-          this._onWaitNotesChange(Array.from(this.pendingWaitNotes));
+          this._onWaitNotesChange(
+            Array.from(this.pendingWaitNotes),
+            Array.from(this.satisfiedWaitNotes),
+            this.currentChordName
+          );
         }
         return;
       }
@@ -344,7 +437,6 @@ export class PianoTutorCanvas {
 
     // 2. "Play Along" Flow Mode check:
     if (this.mode === "flow") {
-      // Find closest un-hit note for this pitch within tolerance window (±160ms * speed)
       const hitWindow = 160 * this.speed;
       let closest = null;
       let minDiff = Infinity;
@@ -405,19 +497,23 @@ export class PianoTutorCanvas {
     if (this._onScoreUpdate) this._onScoreUpdate(this.stats);
   }
 
-  _highlightKeyboardGuides(notes) {
+  _highlightKeyboardGuides(pendingNotes, satisfiedNotes = new Set()) {
     if (typeof document === "undefined") return;
     this._clearKeyboardGuides();
-    for (const note of notes) {
+    for (const note of pendingNotes) {
       const el = document.getElementById(`key-midi-${note}`);
       if (el) el.classList.add("tutor-target-key");
+    }
+    for (const note of satisfiedNotes) {
+      const el = document.getElementById(`key-midi-${note}`);
+      if (el) el.classList.add("tutor-held-key");
     }
   }
 
   _clearKeyboardGuides() {
     if (typeof document === "undefined") return;
-    const els = document.querySelectorAll(".tutor-target-key");
-    els.forEach((el) => el.classList.remove("tutor-target-key"));
+    document.querySelectorAll(".tutor-target-key").forEach((el) => el.classList.remove("tutor-target-key"));
+    document.querySelectorAll(".tutor-held-key").forEach((el) => el.classList.remove("tutor-held-key"));
   }
 
   _stopAllAccompanimentNotes() {
@@ -466,18 +562,26 @@ export class PianoTutorCanvas {
         if (!this.isWaitingForKey) {
           const waitThreshold = 30; // ms before hit line to pause
           const dueNotes = new Set();
+          let dueChordName = "";
           for (const ev of this.events) {
             if (!ev.hit && !ev.missed && ev.time <= this.currentTimeMs + waitThreshold && ev.time >= this.currentTimeMs - 140) {
               dueNotes.add(ev.note);
+              if (ev.chordName) dueChordName = ev.chordName;
             }
           }
 
           if (dueNotes.size > 0) {
             this.isWaitingForKey = true;
             this.pendingWaitNotes = dueNotes;
+            this.satisfiedWaitNotes.clear();
+            this.currentChordName = dueChordName;
             this._highlightKeyboardGuides(dueNotes);
             if (this._onWaitNotesChange) {
-              this._onWaitNotesChange(Array.from(dueNotes));
+              this._onWaitNotesChange(
+                Array.from(dueNotes),
+                [],
+                dueChordName
+              );
             }
           } else {
             this.currentTimeMs += deltaMs * this.speed;
@@ -546,22 +650,26 @@ export class PianoTutorCanvas {
     }
     ctx.restore();
 
-    // 3. Falling Notes Stream
+    // 3. Falling Notes Stream (Zero allocations per frame for max 60/120fps performance)
     const lookaheadMs = (hitY / this.pixelsPerSecond) * 1000;
     const minVisibleTime = this.currentTimeMs - 1200;
     const maxVisibleTime = this.currentTimeMs + lookaheadMs;
 
-    // Render both active hand and ghost accompaniment notes
-    const allRenderEvents = [...this.events, ...this.accompanimentEvents];
+    // Reuse pre-allocated map to eliminate GC pauses
+    this._visibleChordGroups.clear();
+    const visibleChordGroups = this._visibleChordGroups;
 
-    for (let i = 0; i < allRenderEvents.length; i++) {
-      const ev = allRenderEvents[i];
+    const mainCount = this.events.length;
+    const totalCount = mainCount + this.accompanimentEvents.length;
+
+    for (let i = 0; i < totalCount; i++) {
+      const isAccompaniment = i >= mainCount;
+      const ev = isAccompaniment ? this.accompanimentEvents[i - mainCount] : this.events[i];
       if (ev.time + ev.dur < minVisibleTime || ev.time > maxVisibleTime) continue;
 
       const geom = this._getKeyGeometry(ev.note);
       if (!geom || geom.x < -geom.width - 20 || geom.x > w + 20) continue;
 
-      // Distance from hit line
       const msUntilHit = ev.time - this.currentTimeMs;
       const noteY = hitY - (msUntilHit / 1000) * this.pixelsPerSecond;
       const noteHeight = Math.max(14, (ev.dur / 1000) * this.pixelsPerSecond);
@@ -571,15 +679,37 @@ export class PianoTutorCanvas {
 
       const isRightHand = ev.note >= 60;
       const isTarget = this.isWaitingForKey && this.pendingWaitNotes.has(ev.note);
-      const isAccompaniment = !this.events.includes(ev);
+      const isSatisfied = this.isWaitingForKey && this.satisfiedWaitNotes.has(ev.note);
 
-      ctx.save();
-      const radius = 4;
       const blockWidth = Math.max(8, geom.width - 3);
       const blockX = geom.x + 1.5;
 
+      // Group simultaneous chord notes on screen
+      if (ev.isChord && !isAccompaniment) {
+        if (!visibleChordGroups.has(ev.chordId)) {
+          visibleChordGroups.set(ev.chordId, {
+            chordName: ev.chordName,
+            isTarget: this.isWaitingForKey && ev.chordNotes.some(n => this.pendingWaitNotes.has(n)),
+            notes: [],
+          });
+        }
+        visibleChordGroups.get(ev.chordId).notes.push({
+          ev,
+          blockX,
+          blockWidth,
+          noteY,
+          topY,
+        });
+      }
+
+      ctx.save();
+      const radius = 4;
+
       // Shadow glow
-      if (isTarget) {
+      if (isSatisfied) {
+        ctx.shadowColor = "#10b981";
+        ctx.shadowBlur = 18;
+      } else if (isTarget) {
         ctx.shadowColor = "#f59e0b";
         ctx.shadowBlur = 18;
       } else if (!isAccompaniment) {
@@ -594,6 +724,9 @@ export class PianoTutorCanvas {
       if (isAccompaniment) {
         noteGrad.addColorStop(0, "rgba(100, 116, 139, 0.25)");
         noteGrad.addColorStop(1, "rgba(71, 85, 105, 0.45)");
+      } else if (isSatisfied) {
+        noteGrad.addColorStop(0, "#34d399");
+        noteGrad.addColorStop(1, "#059669");
       } else if (ev.hit) {
         noteGrad.addColorStop(0, "rgba(52, 211, 153, 0.4)");
         noteGrad.addColorStop(1, "rgba(16, 185, 129, 0.85)");
@@ -616,8 +749,8 @@ export class PianoTutorCanvas {
       ctx.fill();
 
       // Border stroke
-      ctx.strokeStyle = isTarget ? "#ffffff" : isAccompaniment ? "rgba(255, 255, 255, 0.15)" : "rgba(255, 255, 255, 0.4)";
-      ctx.lineWidth = isTarget ? 2 : 1;
+      ctx.strokeStyle = isSatisfied ? "#34d399" : isTarget ? "#ffffff" : isAccompaniment ? "rgba(255, 255, 255, 0.15)" : "rgba(255, 255, 255, 0.4)";
+      ctx.lineWidth = (isTarget || isSatisfied) ? 2 : 1;
       this._roundRect(ctx, blockX, topY, blockWidth, noteHeight, radius);
       ctx.stroke();
 
@@ -634,7 +767,51 @@ export class PianoTutorCanvas {
       ctx.restore();
     }
 
-    // 4. Target Hit-Line Bar (bottom border where notes meet keyboard)
+    // 4. Simultaneous Chord Connector Ribbons across lanes
+    visibleChordGroups.forEach((group) => {
+      if (group.notes.length > 1) {
+        ctx.save();
+        const minX = Math.min(...group.notes.map(n => n.blockX));
+        const maxX = Math.max(...group.notes.map(n => n.blockX + n.blockWidth));
+        const avgY = group.notes.reduce((sum, n) => sum + n.noteY, 0) / group.notes.length;
+        const ribbonWidth = maxX - minX;
+
+        // Glowing horizontal chord connector beam
+        const isTgt = group.isTarget;
+        ctx.fillStyle = isTgt ? "rgba(245, 158, 11, 0.22)" : "rgba(56, 189, 248, 0.18)";
+        ctx.strokeStyle = isTgt ? "#f59e0b" : "rgba(56, 189, 248, 0.6)";
+        ctx.lineWidth = isTgt ? 2 : 1.5;
+        ctx.shadowColor = isTgt ? "#fbbf24" : "#38bdf8";
+        ctx.shadowBlur = isTgt ? 12 : 6;
+
+        ctx.beginPath();
+        this._roundRect(ctx, minX, avgY - 5, ribbonWidth, 10, 5);
+        ctx.fill();
+        ctx.stroke();
+
+        // Sleek badge on chord ribbon: "PRESS TOGETHER • C Major"
+        const midX = minX + ribbonWidth / 2;
+        const chordBadgeText = isTgt
+          ? `PRESS TOGETHER • ${group.chordName || "CHORD"}`
+          : `CHORD • ${group.chordName || "SIMULTANEOUS"}`;
+
+        ctx.font = "bold 9px monospace";
+        const txtW = ctx.measureText(chordBadgeText).width;
+        ctx.fillStyle = "rgba(11, 14, 20, 0.88)";
+        ctx.shadowBlur = 0;
+        this._roundRect(ctx, midX - txtW / 2 - 6, avgY - 8, txtW + 12, 16, 4);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = isTgt ? "#fbbf24" : "#e0f2fe";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(chordBadgeText, midX, avgY);
+        ctx.restore();
+      }
+    });
+
+    // 5. Target Hit-Line Bar (bottom border where notes meet keyboard)
     ctx.save();
     const hitLineGrad = ctx.createLinearGradient(0, hitY - 4, 0, hitY + 6);
     hitLineGrad.addColorStop(0, "rgba(255, 118, 77, 0.12)");
@@ -645,9 +822,36 @@ export class PianoTutorCanvas {
     ctx.shadowColor = this.isWaitingForKey ? "#fbbf24" : "#ff764d";
     ctx.shadowBlur = this.isWaitingForKey ? 16 : 8;
     ctx.fillRect(0, hitY - 2, w, 4);
+
+    // If waiting for a multi-note chord, render pulsing "PRESS ALL KEYS TOGETHER" bracket
+    if (this.isWaitingForKey && this.pendingWaitNotes.size > 1) {
+      const pendingArray = Array.from(this.pendingWaitNotes);
+      const geoms = pendingArray.map(n => this._getKeyGeometry(n)).filter(Boolean);
+      if (geoms.length > 1) {
+        const minKeyX = Math.min(...geoms.map(g => g.x));
+        const maxKeyX = Math.max(...geoms.map(g => g.x + g.width));
+        const bracketW = maxKeyX - minKeyX;
+
+        ctx.fillStyle = "rgba(245, 158, 11, 0.25)";
+        ctx.strokeStyle = "#fbbf24";
+        ctx.lineWidth = 2;
+        ctx.shadowColor = "#f59e0b";
+        ctx.shadowBlur = 14;
+        this._roundRect(ctx, minKeyX, hitY - 8, bracketW, 16, 6);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.font = "bold 9px monospace";
+        ctx.fillStyle = "#ffffff";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.shadowBlur = 0;
+        ctx.fillText("PRESS ALL KEYS TOGETHER", minKeyX + bracketW / 2, hitY);
+      }
+    }
     ctx.restore();
 
-    // 5. Active Hit Particles & Glowing Ripples
+    // 6. Active Hit Particles & Glowing Ripples
     if (this.hitEffects.length > 0) {
       ctx.save();
       for (let i = this.hitEffects.length - 1; i >= 0; i--) {

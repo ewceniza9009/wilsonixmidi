@@ -4839,4 +4839,1208 @@ body.stage-sunlight-mode .text-secondary {
   to { filter: brightness(1.22); }
 }
 
+/* Simultaneous Chord - Satisfied / Held Keys on Virtual Piano (Emerald Green) */
+.white-key.tutor-held-key {
+  background-color: #a7f3d0 !important;
+  background-image: linear-gradient(180deg, #d1fae5 0%, #34d399 50%, #059669 100%) !important;
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.95), inset 0 0 10px rgba(209, 250, 229, 0.8) !important;
+  border-bottom: 6px solid #047857 !important;
+}
+
+.black-key.tutor-held-key {
+  background-color: #059669 !important;
+  background-image: linear-gradient(180deg, #34d399 0%, #059669 60%, #064e3b 100%) !important;
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.95), inset 0 1px 2px rgba(255, 255, 255, 0.6) !important;
+  border-bottom: 5px solid #064e3b !important;
+}
+
+/* =========================================================================
+   COMPACT TABLET-READY DEMO STATION & PRACTICE STUDIO
+   ========================================================================= */
+.demo-station-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  max-height: calc(100vh - 275px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px 10px;
+  background: rgba(13, 17, 26, 0.88);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(56, 189, 248, 0.35) rgba(0, 0, 0, 0.25);
+}
+
+.demo-station-card::-webkit-scrollbar {
+  width: 5px;
+}
+.demo-station-card::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 4px;
+}
+.demo-station-card::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.35);
+  border-radius: 4px;
+}
+
+/* Internal Sub-Navigation Tabs inside Demo Card */
+.demo-subnav-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: rgba(15, 23, 42, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px 8px 0 0;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.demo-subtab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.04);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.demo-subtab-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.demo-subtab-btn.active {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.28) 0%, rgba(59, 130, 246, 0.24) 100%);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.55);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
+}
+
+/* Compact Demo Songs View */
+.demo-main-view {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.demo-station-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px;
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.station-title-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.station-badge {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 6px;
+  background: #0284c7;
+  color: #fff;
+  border-radius: 4px;
+  letter-spacing: 0.06em;
+}
+
+.genre-tag {
+  font-size: 9.5px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.demo-hint {
+  font-size: 10px;
+  color: #64748b;
+}
+
+.demo-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.demo-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.demo-search-input {
+  background: #11151f;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 5px;
+  height: 28px;
+  width: 220px;
+}
+
+.demo-volume-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.demo-vol-slider {
+  width: 70px;
+  height: 4px;
+}
+
+.demo-import-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 5px;
+  height: 28px;
+  cursor: pointer;
+}
+
+.demo-drop-hint {
+  font-size: 9.5px;
+  color: #64748b;
+}
+
+.demo-song-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.demo-song-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: rgba(20, 26, 38, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  transition: all 0.14s ease;
+}
+
+.demo-song-row:hover {
+  background: rgba(30, 41, 59, 0.7);
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+.demo-song-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.demo-song-subtitle {
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.demo-song-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.demo-station-play-btn {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #fff;
+  border: none;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 5px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* =========================================================================
+   COMPACT MUSIC THEORY & PRO KEYBOARDIST CRASH COURSE DECK
+   ========================================================================= */
+.demo-theory-view {
+  width: 100%;
+  animation: fadeIn 0.18s ease-in-out;
+}
+
+.theory-course-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #e2e8f0;
+}
+
+/* Compact Module Selector Ribbon */
+.theory-nav-ribbon {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 5px;
+  padding: 4px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
+}
+
+@media (max-width: 960px) {
+  .theory-nav-ribbon {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 580px) {
+  .theory-nav-ribbon {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.theory-module-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+  color: inherit;
+}
+
+.theory-module-tab:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+.theory-module-tab.active {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.22) 0%, rgba(99, 102, 241, 0.2) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.55);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+}
+
+.mod-icon {
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.mod-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.mod-num {
+  font-size: 7.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #38bdf8;
+  text-transform: uppercase;
+}
+
+.mod-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Compact Content Viewport & Lesson Card */
+.theory-content-viewport {
+  width: 100%;
+}
+
+.theory-lesson-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 16px;
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.85) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* Compact Lesson Header */
+.lesson-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.lesson-badge {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 8.5px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(59, 130, 246, 0.25) 100%);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+.lesson-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: #f8fafc;
+  letter-spacing: -0.01em;
+}
+
+.lesson-subtitle {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+/* Grids */
+.theory-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.theory-grid-3col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 768px) {
+  .theory-grid-2col,
+  .theory-grid-3col {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Panels (Pro Descriptions & Insights) */
+.theory-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.75) 0%, rgba(15, 23, 42, 0.9) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 3px solid #38bdf8;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.panel-heading {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: #38bdf8;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.theory-p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #cbd5e1;
+}
+
+.theory-p strong {
+  color: #f8fafc;
+  font-weight: 700;
+}
+
+.theory-p code {
+  background: rgba(0, 0, 0, 0.5);
+  color: #38bdf8;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.theory-hint {
+  margin: 0;
+  font-size: 10px;
+  font-style: italic;
+  color: #94a3b8;
+}
+
+.theory-checklist {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #cbd5e1;
+}
+
+.theory-checklist li {
+  margin-bottom: 3px;
+}
+
+.theory-divider {
+  width: 100%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Pattern Callout Box */
+.pattern-callout-box {
+  padding: 6px 10px;
+  background: rgba(234, 179, 8, 0.1);
+  border-left: 3px solid #eab308;
+  border-radius: 0 6px 6px 0;
+  font-size: 11px;
+  color: #fef08a;
+  line-height: 1.4;
+}
+
+.pattern-callout-box p {
+  margin: 2px 0 0 0;
+}
+
+.callout-tag {
+  font-size: 8.5px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #fbbf24;
+}
+
+.key-sequence-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 10px;
+  font-weight: 800;
+  margin-left: 3px;
+}
+
+/* Finger Legend Grid */
+.finger-legend-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+}
+
+.finger-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 2px;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 5px;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.f-num {
+  font-size: 13px;
+  font-weight: 900;
+  color: #38bdf8;
+}
+
+/* Action Rows & Buttons */
+.theory-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.theory-action-row.mt-12 {
+  margin-top: 8px;
+}
+
+.theory-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  background: rgba(14, 165, 233, 0.15);
+  color: #38bdf8;
+  transition: all 0.14s ease;
+}
+
+.theory-action-btn:hover {
+  background: rgba(14, 165, 233, 0.28);
+  color: #7dd3fc;
+  border-color: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+}
+
+.theory-btn-preview {
+  background: rgba(6, 182, 212, 0.15);
+  border-color: rgba(6, 182, 212, 0.35);
+  color: #22d3ee;
+}
+
+.theory-btn-preview:hover {
+  background: rgba(6, 182, 212, 0.28);
+  border-color: #22d3ee;
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.3);
+}
+
+.theory-exercise-launch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #04101e;
+  background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 50%, #0284c7 100%);
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(14, 165, 233, 0.35);
+  transition: all 0.15s ease;
+}
+
+.theory-exercise-launch-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.5);
+}
+
+/* Theory Formula Banner */
+.theory-formula-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.12) 0%, rgba(59, 130, 246, 0.08) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+
+.theory-formula-banner .formula-label {
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #38bdf8;
+  text-transform: uppercase;
+}
+
+.theory-formula-banner .formula-math {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  font-family: monospace;
+  color: #f8fafc;
+}
+
+.f-part {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 5px;
+  color: #e2e8f0;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.f-op {
+  color: #38bdf8;
+  font-size: 14px;
+  font-weight: 900;
+  padding: 0 2px;
+}
+
+/* Theory Chord Cards (Modules 5, 7, 10, etc.) */
+.theory-chord-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.85) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  transition: all 0.15s ease;
+}
+
+.theory-chord-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(56, 189, 248, 0.45);
+  box-shadow: 0 6px 20px rgba(14, 165, 233, 0.25);
+}
+
+.chord-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 6px;
+}
+
+.chord-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+.chord-badge {
+  font-size: 8.5px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: rgba(56, 189, 248, 0.18);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.chord-formula {
+  margin: 0;
+  font-size: 11.5px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.color-notes {
+  font-size: 11px;
+  font-family: monospace;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  display: inline-block;
+}
+
+.chord-btn-group {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.chord-mini-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 10px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  border-radius: 5px;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  background: rgba(14, 165, 233, 0.14);
+  color: #7dd3fc;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.chord-mini-btn:hover {
+  background: rgba(14, 165, 233, 0.28);
+  color: #ffffff;
+  border-color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
+  transform: translateY(-1px);
+}
+
+.formula-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(59, 130, 246, 0.06) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+.formula-item.formula-minor {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(236, 72, 153, 0.06) 100%);
+  border-color: rgba(168, 85, 247, 0.25);
+}
+
+.formula-label {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #38bdf8;
+}
+
+.formula-item.formula-minor .formula-label {
+  color: #c084fc;
+}
+
+.formula-math {
+  font-size: 12.5px;
+  font-weight: 800;
+  font-family: monospace;
+  color: #f8fafc;
+}
+
+.formula-desc {
+  font-size: 9.5px;
+  color: #94a3b8;
+}
+
+.section-title {
+  margin: 6px 0 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+/* Chords Interactive Grid */
+.chords-interactive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.chord-card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 10px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 6px;
+  transition: all 0.14s ease;
+}
+
+.chord-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.chord-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chord-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+.chord-type-pill {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.chord-type-pill.major {
+  background: rgba(56, 189, 248, 0.18);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+
+.chord-type-pill.minor {
+  background: rgba(168, 85, 247, 0.18);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.35);
+}
+
+.chord-notes-line {
+  font-size: 10px;
+  font-family: monospace;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.chord-finger-line {
+  font-size: 9.5px;
+  color: #94a3b8;
+}
+
+.chord-btn-group {
+  display: flex;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.chord-mini-btn {
+  flex: 1;
+  padding: 4px 6px;
+  font-size: 9px;
+  font-weight: 700;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.chord-mini-btn:hover {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+/* Module 3: 4 Magic Chords Progression */
+.magic-progression-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.prog-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 10px;
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  min-width: 75px;
+}
+
+.prog-step .step-num {
+  font-size: 11px;
+  font-weight: 900;
+  color: #38bdf8;
+}
+
+.prog-step .step-chord {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+.prog-step .step-desc {
+  font-size: 8.5px;
+  color: #94a3b8;
+}
+
+.prog-arrow {
+  font-size: 14px;
+  font-weight: 900;
+  color: #475569;
+}
+
+.famous-songs-list {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: #cbd5e1;
+}
+
+.famous-songs-list li {
+  margin-bottom: 2px;
+}
+
+/* Module 4: Inside a Pro's Mind */
+.pro-mindset-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .pro-mindset-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pro-mindset-card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 12px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 6px;
+}
+
+.mindset-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mindset-icon {
+  font-size: 16px;
+}
+
+.mindset-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+.mindset-p {
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: #cbd5e1;
+}
+
+.nashville-example-box {
+  padding: 6px 10px;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 5px;
+  font-family: monospace;
+  font-weight: 700;
+  font-size: 10px;
+  color: #38bdf8;
+}
+
+.pedal-rule-box {
+  padding: 6px 10px;
+  background: rgba(234, 179, 8, 0.1);
+  border: 1px solid rgba(234, 179, 8, 0.35);
+  border-radius: 5px;
+  font-size: 10.5px;
+  color: #fef08a;
+  line-height: 1.4;
+}
+
+/* Module 5: Pro Color Chords */
+.color-chord-card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 12px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 6px;
+}
+
+.color-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.color-badge {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  padding: 2px 5px;
+  border-radius: 3px;
+  align-self: flex-start;
+}
+
+.color-badge.add9 {
+  background: rgba(56, 189, 248, 0.18);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+
+.color-badge.sus4 {
+  background: rgba(234, 179, 8, 0.18);
+  color: #fde047;
+  border: 1px solid rgba(234, 179, 8, 0.35);
+}
+
+.color-badge.slash {
+  background: rgba(168, 85, 247, 0.18);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.35);
+}
+
+.color-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+.color-p {
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: #cbd5e1;
+}
+
+.color-notes {
+  font-size: 10px;
+  font-family: monospace;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.color-desc {
+  margin: 0;
+  font-size: 9.5px;
+  line-height: 1.4;
+  color: #94a3b8;
+}
+
+/* Module 6: Pentatonic Scale */
+.pentatonic-formula-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(99, 102, 241, 0.08) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 6px;
+  text-align: center;
+}
+
+.penta-title {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #38bdf8;
+}
+
+.penta-notes-display {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.blues-notes-display {
+  gap: 12px;
+}
+
+.penta-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  border: 1.5px solid #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
+  font-size: 13px;
+  font-weight: 900;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.penta-note-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.penta-degree {
+  font-size: 8.5px;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.03em;
+}
+
+.penta-note.penta-blue-note {
+  border-color: #f59e0b !important;
+  color: #fef08a !important;
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%) !important;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.6) !important;
+}
+
+.penta-note-sub {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(245, 158, 11, 0.25);
+  color: #fef08a;
+  border: 1px solid rgba(245, 158, 11, 0.6);
+  white-space: nowrap;
+}
+
+.penta-why {
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: #cbd5e1;
+  max-width: 600px;
+}
+
+.mt-12 {
+  margin-top: 8px !important;
+}
+
+
+
+
+
 
