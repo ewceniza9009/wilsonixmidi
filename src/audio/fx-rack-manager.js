@@ -583,6 +583,22 @@ export class FxRackManager {
           break;
 
         case "distortion_guitar":
+        case "overdriven_guitar":
+          this.setPresetTrim(1.0);
+          this.tube.setBypass(false);
+          this.tube.setDrive(0.20);
+          this.tube.setMix(0.30);
+          this.tube.setTone(4200);
+          this.autopan.setBypass(true);
+          this.chorus.setBypass(true);
+          this.phaser.setBypass(true);
+          this.rotary.setBypass(true);
+          this.delay.setBypass(true);
+          this.reverb.setBypass(false);
+          this.reverb.setMix(0.12);
+          this.reverb.setDecay(1.5);
+          break;
+
         case "rock_lead":
         case "shreddage_lead_guitar":
           this.setPresetTrim(1.0);

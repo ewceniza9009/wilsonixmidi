@@ -1085,14 +1085,21 @@ export class TritonWorkstationUI {
     // 4. OVERDRIVE & TUBE SATURATION
     if (has("overdrive") || has("distortion") || has(" tube")) {
       fx.tube?.setBypass(false);
-      if (has("distortion")) {
+      const isDistOrFeedbackGuitar = prog.id === "A037" || prog.id === "A042" || name.includes("feedback guitar") || name.includes("distortionguitar");
+      if (isDistOrFeedbackGuitar) {
+        // Authentic guitar crunch: warm tube drive without runaway feedback screech
+        fx.tube?.setDrive(0.20);
+        fx.tube?.setTone(4200);
+        fx.tube?.setMix(0.35);
+      } else if (has("distortion")) {
         fx.tube?.setDrive(0.48);
         fx.tube?.setTone(6200);
+        fx.tube?.setMix(0.55);
       } else {
         fx.tube?.setDrive(0.32);
         fx.tube?.setTone(5500);
+        fx.tube?.setMix(0.55);
       }
-      fx.tube?.setMix(0.55);
     }
 
     // 5. MODULATION
@@ -1124,9 +1131,10 @@ export class TritonWorkstationUI {
 
     // 6. DELAYS & ECHOES
     if (has("delay") || has("echo") || has("ping-pong")) {
+      const isDistOrFeedbackGuitar = prog.id === "A037" || prog.id === "A042" || name.includes("feedback guitar") || name.includes("distortionguitar");
       fx.delay?.setBypass(false);
-      fx.delay?.setMix(0.32);
-      fx.delay?.setFeedback(0.38);
+      fx.delay?.setMix(isDistOrFeedbackGuitar ? 0.20 : 0.32);
+      fx.delay?.setFeedback(isDistOrFeedbackGuitar ? 0.18 : 0.38);
       if (has("dotted") || has("dub") || has("ping-pong")) {
         fx.delay?.setDivision(0.375);
       }

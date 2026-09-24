@@ -14,9 +14,7 @@ import { audioCore } from "../audio/audio-core.js";
 import { sampleCache } from "../audio/sample-cache.js";
 import { licenseManager } from "../security/license-manager.js";
 import { masterRecorder } from "../audio/master-recorder.js";
-import { registrationManager } from "./registration-manager.js";
-import { getTritonProgramById } from "../triton/combi-timbres.js";
-import { arpeggiator } from "../audio/arpeggiator.js";
+import { getTritonProgramById, resolveTritonProgram } from "../triton/combi-timbres.js";
 import { midiManager } from "../midi/midi-manager.js";
 import { midiOutManager } from "../midi/midi-out.js";
 import {
@@ -1148,7 +1146,12 @@ export class GigHudUI {
     }
     const tritonProg = getTritonProgramById(selectedId);
     if (tritonProg) {
-      multiLayerEngine.setTritonVaProgram(tritonProg);
+      const resolved = resolveTritonProgram(tritonProg);
+      if (resolved && resolved.type === "pcm") {
+        multiLayerEngine.setSingleInstrument(resolved.instKey);
+      } else {
+        multiLayerEngine.setTritonVaProgram(tritonProg);
+      }
       getComponent("tritonConsole")?.selectProgramById?.(selectedId);
       this.syncSoundDisplay();
       return;

@@ -78,13 +78,21 @@ export class VirtualKeyboardUI {
     this.activeMouseChord = null;
     this.xyPad = null;
     this.isXyVisible = false;
+    const savedWheels =
+      typeof localStorage !== "undefined"
+        ? localStorage.getItem("midikey_side_wheels")
+        : null;
+    const isTouchPlatform = detectTabletOrTouch();
+    this.isSideWheelsVisible =
+      savedWheels !== null
+        ? savedWheels === "1"
+        : isTouchPlatform || (typeof window !== "undefined" && window.innerWidth <= 1200);
     this._windowHandlers = [];
 
     const savedZoom =
       typeof localStorage !== "undefined"
         ? localStorage.getItem("midikey_zoom_mode")
         : null;
-    const isTouchPlatform = detectTabletOrTouch();
     this.currentZoomMode = savedZoom || (isTouchPlatform ? "touch" : "compact");
 
     this.render();
@@ -251,6 +259,14 @@ export class VirtualKeyboardUI {
             </button>
           </div>
 
+          <!-- Magnified Left-Hand Performance Wheels Toggle -->
+          <div class="wheels-toggle-unit">
+            <button class="hud-btn wheels-btn ${this.isSideWheelsVisible ? "active" : ""}" id="hud-wheels-btn" title="Toggle Magnified Performance Wheels for Touch/Tablet (Pitch Bend & Mod)">
+              <span class="wheels-led"></span>
+              WHEELS
+            </button>
+          </div>
+
           <!-- Smart Scale Lock (Zero Wrong Notes) -->
           <div class="scale-hud-unit" title="Zero Wrong Notes Scale Lock (Locks touch keys & highlights in-scale notes)">
             <span class="scale-label">KEY:</span>
@@ -357,9 +373,43 @@ export class VirtualKeyboardUI {
           </div>
         </div>
 
-        <!-- Main Keybed Container with Optional Docked Kaoss X/Y Pad -->
+        <!-- Main Keybed Container with Optional Docked Kaoss X/Y Pad & Performance Wheels -->
         <div class="virtual-keyboard-body">
           <div class="xy-pad-bay" id="xy-pad-mount" style="${this.isXyVisible ? "display:flex;" : "display:none;"}"></div>
+          <!-- Magnified Performance Wheels for Touch / Tablet Ergonomics -->
+          <div class="side-wheels-bay" id="side-wheels-bay" style="${this.isSideWheelsVisible ? "display:flex;" : "display:none;"}">
+            <div class="side-wheel-col" title="Pitch Bend (Spring-Loaded)">
+              <div class="side-wheel-header">
+                <span class="side-wheel-title">PITCH</span>
+                <span class="side-wheel-badge" id="side-pitch-badge">0.0 ST</span>
+              </div>
+              <div class="side-wheel-track" id="side-pitch-track">
+                <div class="side-wheel-center-line"></div>
+                <div class="side-wheel-roller" id="side-pitch-roller">
+                  <div class="side-wheel-rib"></div>
+                  <div class="side-wheel-rib"></div>
+                  <div class="side-wheel-rib side-wheel-rib-center"></div>
+                  <div class="side-wheel-rib"></div>
+                  <div class="side-wheel-rib"></div>
+                </div>
+              </div>
+            </div>
+            <div class="side-wheel-col" title="Modulation / Filter & Brilliance">
+              <div class="side-wheel-header">
+                <span class="side-wheel-title">MOD</span>
+                <span class="side-wheel-badge" id="side-mod-badge">0%</span>
+              </div>
+              <div class="side-wheel-track" id="side-mod-track">
+                <div class="side-wheel-roller" id="side-mod-roller">
+                  <div class="side-wheel-rib"></div>
+                  <div class="side-wheel-rib"></div>
+                  <div class="side-wheel-rib side-wheel-rib-active"></div>
+                  <div class="side-wheel-rib"></div>
+                  <div class="side-wheel-rib"></div>
+                </div>
+              </div>
+            </div>
+          </div>
           <!-- Interactive Piano Bed (88 Keys) -->
           <div class="piano-roll-container zoom-${this.currentZoomMode}" id="piano-roll-container">
             <div class="piano-bed" id="piano-keys-track">
@@ -495,23 +545,15 @@ export class VirtualKeyboardUI {
           lastGlissandoTime = now;
 
           // Horizontal Glissando / Legato Slide to adjacent note
-          if (this.activeMouseChord) {
-            this.activeMouseChord.forEach((n) => {
-              this.setKeyVisualState(n, false);
-              if (arpeggiator.enabled) {
-                arpeggiator.handleNoteOff(n);
-              } else {
-                multiLayerEngine.noteOff(n);
-              }
-            });
-          }
           const vel = calculateVelocity(e.clientY, key.rect, key.el, true);
           const notes = qwertyKeyboard.generateSmartVoicing(
             snappedMidi,
             qwertyKeyboard.chordMode,
           );
+          const prevMouseNotes = this.activeMouseChord;
           this.activeMouseChord = notes;
 
+          // 1. Trigger new note(s) first for seamless legato continuity
           notes.forEach((n) => {
             this.setKeyVisualState(n, true, vel);
             if (arpeggiator.enabled) {
@@ -520,6 +562,20 @@ export class VirtualKeyboardUI {
               multiLayerEngine.noteOn(n, vel);
             }
           });
+
+          // 2. Release previous note(s) that are no longer active
+          if (prevMouseNotes) {
+            prevMouseNotes.forEach((n) => {
+              if (!notes.includes(n)) {
+                this.setKeyVisualState(n, false);
+                if (arpeggiator.enabled) {
+                  arpeggiator.handleNoteOff(n);
+                } else {
+                  multiLayerEngine.noteOff(n);
+                }
+              }
+            });
+          }
         } else {
           // Vertical Key Slide Expression (Y-Axis Timbre Modulation & Filter Swell)
           const relativeY = Math.max(
@@ -670,21 +726,13 @@ export class VirtualKeyboardUI {
             }
 
             // Glissando / slide to new key
-            if (prevTouch && prevTouch.chordNotes) {
-              prevTouch.chordNotes.forEach((n) => {
-                this.setKeyVisualState(n, false);
-                if (arpeggiator.enabled) {
-                  arpeggiator.handleNoteOff(n);
-                } else {
-                  multiLayerEngine.noteOff(n);
-                }
-              });
-            }
             const vel = calculateVelocity(t.clientY, key.rect, key.el, true);
             const notes = qwertyKeyboard.generateSmartVoicing(
               snappedMidi,
               qwertyKeyboard.chordMode,
             );
+            const prevChordNotes = prevTouch ? prevTouch.chordNotes : null;
+
             this.activeTouches.set(t.identifier, {
               midi: key.midi,
               snappedMidi,
@@ -693,6 +741,7 @@ export class VirtualKeyboardUI {
               lastGlissandoTime: now,
             });
 
+            // 1. Trigger new note(s) first for seamless legato continuity
             notes.forEach((n) => {
               this.setKeyVisualState(n, true, vel);
               if (arpeggiator.enabled) {
@@ -701,6 +750,20 @@ export class VirtualKeyboardUI {
                 multiLayerEngine.noteOn(n, vel);
               }
             });
+
+            // 2. Release previous note(s) that are no longer active
+            if (prevChordNotes) {
+              prevChordNotes.forEach((n) => {
+                if (!notes.includes(n)) {
+                  this.setKeyVisualState(n, false);
+                  if (arpeggiator.enabled) {
+                    arpeggiator.handleNoteOff(n);
+                  } else {
+                    multiLayerEngine.noteOff(n);
+                  }
+                }
+              });
+            }
           } else {
             // Continuous Vertical Slide on held key (Expressive Aftertouch)
             const relativeY = Math.max(
@@ -868,38 +931,75 @@ export class VirtualKeyboardUI {
     const modTrack = document.getElementById("mod-wheel-track");
     const modThumb = document.getElementById("mod-wheel-thumb");
 
-    // Spring-loaded Pitch Bend (-2 to +2 semitones)
-    if (pitchTrack && pitchThumb) {
+    const sidePitchTrack = document.getElementById("side-pitch-track");
+    const sidePitchRoller = document.getElementById("side-pitch-roller");
+    const sidePitchBadge = document.getElementById("side-pitch-badge");
+    const sideModTrack = document.getElementById("side-mod-track");
+    const sideModRoller = document.getElementById("side-mod-roller");
+    const sideModBadge = document.getElementById("side-mod-badge");
+
+    const updatePitch = (norm) => {
+      const clamped = Math.max(0, Math.min(1, norm));
+      const semitones = (0.5 - clamped) * 4;
+      const pct = `${clamped * 100}%`;
+      if (pitchThumb) pitchThumb.style.top = pct;
+      if (sidePitchRoller) sidePitchRoller.style.top = pct;
+      if (sidePitchBadge) {
+        sidePitchBadge.textContent =
+          (semitones > 0.05 ? "+" : "") + semitones.toFixed(1) + " ST";
+      }
+      multiLayerEngine.setPitchBend(semitones);
+      synthEngine.setPitchBend(semitones);
+    };
+
+    const resetPitch = () => {
+      if (pitchThumb) pitchThumb.style.top = "50%";
+      if (sidePitchRoller) sidePitchRoller.style.top = "50%";
+      if (sidePitchBadge) sidePitchBadge.textContent = "0.0 ST";
+      multiLayerEngine.setPitchBend(0);
+      synthEngine.setPitchBend(0);
+    };
+
+    const updateMod = (norm) => {
+      const clamped = Math.max(0, Math.min(1, norm));
+      const amount = 1.0 - clamped; // Top is 100%
+      const pct = `${clamped * 100}%`;
+      if (modThumb) modThumb.style.top = pct;
+      if (sideModRoller) sideModRoller.style.top = pct;
+      if (sideModBadge) {
+        sideModBadge.textContent = `${Math.round(amount * 100)}%`;
+      }
+      multiLayerEngine.setModWheel(amount);
+      synthEngine.setModWheel(amount);
+    };
+
+    // Bind Pitch Tracks (top mini-wheel & magnified side-wheel)
+    const bindPitchElement = (trackEl) => {
+      if (!trackEl) return;
       let isDragging = false;
-      const setPitchFromY = (clientY) => {
-        const rect = pitchTrack.getBoundingClientRect();
-        const norm = Math.max(
-          0,
-          Math.min(1, (clientY - rect.top) / rect.height),
-        );
-        const semitones = (0.5 - norm) * 4;
-        pitchThumb.style.top = `${norm * 100}%`;
-        multiLayerEngine.setPitchBend(semitones);
-        synthEngine.setPitchBend(semitones);
+      const setFromY = (clientY) => {
+        const rect = trackEl.getBoundingClientRect();
+        const norm = (clientY - rect.top) / rect.height;
+        updatePitch(norm);
       };
 
-      pitchTrack.addEventListener("mousedown", (e) => {
+      trackEl.addEventListener("mousedown", (e) => {
         isDragging = true;
-        setPitchFromY(e.clientY);
+        setFromY(e.clientY);
       });
 
-      pitchTrack.addEventListener(
+      trackEl.addEventListener(
         "touchstart",
         (e) => {
           if (e.cancelable) e.preventDefault();
           isDragging = true;
-          if (e.touches[0]) setPitchFromY(e.touches[0].clientY);
+          if (e.touches[0]) setFromY(e.touches[0].clientY);
         },
         { passive: false },
       );
 
       this._onWindow(window, "mousemove", (e) => {
-        if (isDragging) setPitchFromY(e.clientY);
+        if (isDragging) setFromY(e.clientY);
       });
 
       this._onWindow(
@@ -908,7 +1008,7 @@ export class VirtualKeyboardUI {
         (e) => {
           if (isDragging && e.touches[0]) {
             if (e.cancelable) e.preventDefault();
-            setPitchFromY(e.touches[0].clientY);
+            setFromY(e.touches[0].clientY);
           }
         },
         { passive: false },
@@ -917,76 +1017,88 @@ export class VirtualKeyboardUI {
       this._onWindow(window, "mouseup", () => {
         if (isDragging) {
           isDragging = false;
-          // Spring back to center
-          pitchThumb.style.top = "50%";
-          multiLayerEngine.setPitchBend(0);
-          synthEngine.setPitchBend(0);
+          resetPitch();
         }
       });
 
       this._onWindow(window, "touchend", () => {
         if (isDragging) {
           isDragging = false;
-          pitchThumb.style.top = "50%";
-          multiLayerEngine.setPitchBend(0);
-          synthEngine.setPitchBend(0);
+          resetPitch();
         }
       });
-    }
+    };
 
-    // Latching Modulation / Air Brilliance Wheel
-    if (modTrack && modThumb) {
-      let isModDragging = false;
-      const setModFromY = (clientY) => {
-        const rect = modTrack.getBoundingClientRect();
-        const norm = Math.max(
-          0,
-          Math.min(1, (clientY - rect.top) / rect.height),
-        );
-        const amount = 1.0 - norm; // Top is 100%
-        modThumb.style.top = `${norm * 100}%`;
-        multiLayerEngine.setModWheel(amount);
-        synthEngine.setModWheel(amount);
+    // Bind Mod Tracks (top mini-wheel & magnified side-wheel)
+    const bindModElement = (trackEl) => {
+      if (!trackEl) return;
+      let isDragging = false;
+      const setFromY = (clientY) => {
+        const rect = trackEl.getBoundingClientRect();
+        const norm = (clientY - rect.top) / rect.height;
+        updateMod(norm);
       };
 
-      modTrack.addEventListener("mousedown", (e) => {
-        isModDragging = true;
-        setModFromY(e.clientY);
+      trackEl.addEventListener("mousedown", (e) => {
+        isDragging = true;
+        setFromY(e.clientY);
       });
 
-      modTrack.addEventListener(
+      trackEl.addEventListener(
         "touchstart",
         (e) => {
           if (e.cancelable) e.preventDefault();
-          isModDragging = true;
-          if (e.touches[0]) setModFromY(e.touches[0].clientY);
+          isDragging = true;
+          if (e.touches[0]) setFromY(e.touches[0].clientY);
         },
         { passive: false },
       );
 
       this._onWindow(window, "mousemove", (e) => {
-        if (isModDragging) setModFromY(e.clientY);
+        if (isDragging) setFromY(e.clientY);
       });
 
       this._onWindow(
         window,
         "touchmove",
         (e) => {
-          if (isModDragging && e.touches[0]) {
+          if (isDragging && e.touches[0]) {
             if (e.cancelable) e.preventDefault();
-            setModFromY(e.touches[0].clientY);
+            setFromY(e.touches[0].clientY);
           }
         },
         { passive: false },
       );
 
       this._onWindow(window, "mouseup", () => {
-        isModDragging = false;
+        isDragging = false;
       });
 
       this._onWindow(window, "touchend", () => {
-        isModDragging = false;
+        isDragging = false;
       });
+    };
+
+    bindPitchElement(pitchTrack);
+    bindPitchElement(sidePitchTrack);
+    bindModElement(modTrack);
+    bindModElement(sideModTrack);
+  }
+
+  toggleSideWheels(forceState = null) {
+    const bay = document.getElementById("side-wheels-bay");
+    const wheelsBtn = document.getElementById("hud-wheels-btn");
+    if (!bay) return;
+
+    this.isSideWheelsVisible =
+      forceState !== null ? forceState : !this.isSideWheelsVisible;
+    bay.style.display = this.isSideWheelsVisible ? "flex" : "none";
+    wheelsBtn?.classList.toggle("active", this.isSideWheelsVisible);
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(
+        "midikey_side_wheels",
+        this.isSideWheelsVisible ? "1" : "0",
+      );
     }
   }
 
@@ -999,11 +1111,16 @@ export class VirtualKeyboardUI {
     const chordBtn = document.getElementById("hud-chord-btn");
     const layoutBtn = document.getElementById("hud-layout-btn");
     const xyBtn = document.getElementById("hud-xy-btn");
+    const wheelsBtn = document.getElementById("hud-wheels-btn");
     const scaleRoot = document.getElementById("hud-scale-root");
     const scaleType = document.getElementById("hud-scale-type");
 
     xyBtn?.addEventListener("click", () => {
       this.toggleXyPad();
+    });
+
+    wheelsBtn?.addEventListener("click", () => {
+      this.toggleSideWheels();
     });
 
     scaleRoot?.addEventListener("change", (e) => {
