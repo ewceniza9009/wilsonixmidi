@@ -61,11 +61,6 @@ class PcmWorkletVoice {
     this.delayFrames = 0;
     this.releaseDelayFrames = 0;
 
-    // Voice-steal micro-crossfade to eliminate 0dB DC clicks on stolen voices
-    this.stealFadeL = 0;
-    this.stealFadeR = 0;
-    this.stealFadeFrames = 0;
-
     // Trim (heldNotes map key for steal logic)
     this.held = false;
 
@@ -75,17 +70,6 @@ class PcmWorkletVoice {
   noteOn(instId, midiNote, velocity, gain, layerIndex, sampleBufferL, sampleBufferR,
     playbackRate, isLoopable, loopStart, loopEnd, attackTime, decayTime, sustainLevel,
     releaseTime, filterCutoff, maxLife, delaySec = 0) {
-    if (this.active && this.envLevel > 0.005) {
-      // Capture running output for a 48-sample (~1ms) micro-crossfade to eliminate voice stealing clicks
-      const curAmp = this.envLevel * this.gain;
-      this.stealFadeL = this.filterPrevL * curAmp;
-      this.stealFadeR = this.filterPrevR * curAmp;
-      this.stealFadeFrames = 48;
-    } else {
-      this.stealFadeFrames = 0;
-      this.stealFadeL = 0;
-      this.stealFadeR = 0;
-    }
     this.active = true;
     this.instId = instId;
     this.midiNote = midiNote;
@@ -144,9 +128,6 @@ class PcmWorkletVoice {
     this.active = false;
     this.delayFrames = 0;
     this.releaseDelayFrames = 0;
-    this.stealFadeFrames = 0;
-    this.stealFadeL = 0;
-    this.stealFadeR = 0;
     this.envStage = 0;
     this.envLevel = 0;
     this.held = false;
@@ -568,16 +549,15 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
       }
     }
 
-    // Smooth polyphonic power normalizer (prevents digital overload under sweeps and heavy sustain)
-    // For 1-3 notes: full 1.0 gain (punchy, clear, notes surface immediately and loud)
-    // For dense sweeps & 10+ notes: scales cleanly as 1.732 / sqrt(N) to preserve full dynamic range
-    const targetScale = activeCount <= 3 ? 1.0 : Math.min(1.0, 1.732 / Math.sqrt(activeCount));
-    this.polyScale += (targetScale - this.polyScale) * 0.15;
+    // Floored polyphony trim so rapid glissando sweeps and dense arpeggios
+    // don't aggressively duck volume down to 10-15% (whisper/toy sound).
+    const targetScale = Math.max(0.42, 1.0 / Math.sqrt(Math.max(1, activeCount)));
+    this.polyScale += (targetScale - this.polyScale) * 0.12;
     const masterScale = this.polyScale;
 
-    // Combi layer voices: accompaniment layers scale gracefully alongside lead
-    const combiTarget = Math.min(1.0, masterScale * 0.90);
-    this.polyScaleCombi += (combiTarget - this.polyScaleCombi) * 0.15;
+    // Combi layer voices: dynamic headroom that scales cleanly under dense chords
+    const combiTarget = Math.max(0.35, targetScale);
+    this.polyScaleCombi += (combiTarget - this.polyScaleCombi) * 0.12;
 
     for (let v = 0; v < maxV; v++) {
       const voice = this.voices[v];
@@ -709,37 +689,18 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
         if (voice.filterPrevR > -1e-18 && voice.filterPrevR < 1e-18) voice.filterPrevR = 0;
         outL[i] += voice.filterPrevL * amp;
         outR[i] += voice.filterPrevR * amp;
-        if (voice.stealFadeFrames > 0) {
-          const fadeWeight = voice.stealFadeFrames / 48.0;
-          outL[i] += voice.stealFadeL * fadeWeight;
-          outR[i] += voice.stealFadeR * fadeWeight;
-          voice.stealFadeFrames--;
-        }
       }
     }
 
-    // Soft saturation ceiling: smooth analog curve above 0.88, brickwall ceiling at 1.0
-    // Eliminates all harsh digital clipping and buzzing while preserving 100% linear dynamics below 0.88
+    // Brickwall NaN / Infinity protection: prevent corrupted audio registers in downstream nodes
     for (let i = 0; i < numFrames; i++) {
-      let l = outL[i];
-      let r = outR[i];
-      if (!Number.isFinite(l)) l = 0;
-      if (!Number.isFinite(r)) r = 0;
+      if (!Number.isFinite(outL[i])) outL[i] = 0;
+      else if (outL[i] > 1.5) outL[i] = 1.5;
+      else if (outL[i] < -1.5) outL[i] = -1.5;
 
-      if (l > 0.88) {
-        l = 0.88 + 0.12 * Math.tanh((l - 0.88) / 0.12);
-      } else if (l < -0.88) {
-        l = -0.88 + 0.12 * Math.tanh((l + 0.88) / 0.12);
-      }
-
-      if (r > 0.88) {
-        r = 0.88 + 0.12 * Math.tanh((r - 0.88) / 0.12);
-      } else if (r < -0.88) {
-        r = -0.88 + 0.12 * Math.tanh((r + 0.88) / 0.12);
-      }
-
-      outL[i] = l;
-      outR[i] = r;
+      if (!Number.isFinite(outR[i])) outR[i] = 0;
+      else if (outR[i] > 1.5) outR[i] = 1.5;
+      else if (outR[i] < -1.5) outR[i] = -1.5;
     }
 
     this.currentTime += numFrames * this.invSampleRate;

@@ -56,7 +56,7 @@ export class TritonVirtualAnalogEngine {
     // 3. Complex Synth Leads (Saw/Square/Trance): lush 3-osc supersaw detune
     // 4. General Pads, Strings, Brass: clean 2-osc mix (no sub rumble)
     const isLead = /(lead|trance|saw|synth|stabb|stab|fast|hit|motion)/i.test((prog.category || "") + " " + (prog.name || ""));
-    const isPureSineLead = (osc1 === "sine" && osc2 === "sine") && isLead;
+    const isPureSineLead = prog.id === "A010" || (prog.name || "").includes("Smooth Sine Lead");
     const isOrganOrEP = /(organ|\bep\b|piano|tine|clav|vibes|bell|wurly|rhodes)/i.test((prog.category || "") + " " + (prog.name || ""));
 
     let osc3Type = "sine";
