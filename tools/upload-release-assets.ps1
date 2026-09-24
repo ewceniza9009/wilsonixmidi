@@ -24,9 +24,17 @@ try {
     $releaseId = $null
 }
 
+$buildNum = "26"
+if (Test-Path "src/version.js") {
+    $vContent = Get-Content "src/version.js" -Raw
+    if ($vContent -match 'BUILD_NUMBER\s*=\s*(\d+)') {
+        $buildNum = $matches[1]
+    }
+}
+
 if (-not $releaseId) {
     Write-Host "Creating GitHub release $Tag..." -ForegroundColor Yellow
-    gh release create $Tag --title "WILSONIX MIDIKEY $Tag (Build 25)" --notes "WILSONIX MIDIKEY $Tag Production Release with Interactive Learning & Piano Tutor Studio, Simultaneous Chord Indicators & Visual Guidance, Fast-Paced Music Theory Masterclass, Zero-Allocation 60/120fps Engine, and Tablet UI Optimization."
+    gh release create $Tag --title "WILSONIX MIDIKEY $Tag (Build $buildNum)" --notes "WILSONIX MIDIKEY $Tag Production Release featuring Smooth Sine Lead solo legato glide & anti-intermodulation buzz elimination, tuned Roland TR-808 sub bass punch drop with octave tracking, and authentic Animal punch bass sample assignment."
     $releaseId = (gh api "repos/ewceniza9009/wilsonixmidi/releases/tags/$Tag" --jq ".id").Trim()
 }
 
