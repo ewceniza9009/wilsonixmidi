@@ -5,7 +5,7 @@
  * 4-column TouchView Program Grid, and the full IFX/MFX effects routing matrix.
  */
 
-import { TRITON_BANKS } from "../triton/triton-soundbanks.js";
+import { TRITON_BANKS, Y_EOS_PRESET_LEVELS } from "../triton/triton-soundbanks.js";
 import { resolveTritonProgram } from "../triton/combi-timbres.js";
 import { synthEngine } from "../audio/synth-engine.js";
 import { audioCore } from "../audio/audio-core.js";
@@ -879,43 +879,69 @@ export class TritonWorkstationUI {
 
     if (prog.m1Type) {
       this.applyM1Program(prog);
-      return;
-    }
-
-    if (prog.eosType) {
+    } else if (prog.eosType) {
       this.applyYamahaEosProgram(prog);
-      return;
-    }
-
-    if (prog.userType) {
+    } else if (prog.userType) {
       this.applyUserBankProgram(prog);
-      return;
-    }
-
-    const resolved = resolveTritonProgram(prog);
-    if (resolved && resolved.type === "pcm") {
-      multiLayerEngine.setSingleInstrument(resolved.instKey);
-    } else if (resolved && resolved.type === "va") {
-      multiLayerEngine.setTritonVaProgram(prog);
-    } else if (prog.osc1 || prog.osc2) {
-      multiLayerEngine.setTritonVaProgram(prog);
     } else {
-      multiLayerEngine.setSingleInstrument("acoustic_grand_piano");
-    }
+      const resolved = resolveTritonProgram(prog);
+      if (resolved && resolved.type === "pcm") {
+        multiLayerEngine.setSingleInstrument(resolved.instKey);
+      } else if (resolved && resolved.type === "va") {
+        multiLayerEngine.setTritonVaProgram(prog);
+      } else if (prog.osc1 || prog.osc2) {
+        multiLayerEngine.setTritonVaProgram(prog);
+      } else {
+        multiLayerEngine.setSingleInstrument("acoustic_grand_piano");
+      }
 
-    // Configure matched KORG TRITON IFX & MFX Routing
-    if (audioCore.fxRack) {
-      this.applyIfxMfx(prog);
+      // Configure matched KORG TRITON IFX & MFX Routing
+      if (audioCore.fxRack) {
+        this.applyIfxMfx(prog);
 
-      // If user is currently looking at the IFX/MFX tab, update live display
-      if (this.activeSubTab === "IFX/MFX") {
-        const tv = this.container.querySelector(".touchview-screen");
-        if (tv) {
-          tv.innerHTML = this.renderIfxMfxMatrix();
-          this.bindIfxMfxControls();
+        // If user is currently looking at the IFX/MFX tab, update live display
+        if (this.activeSubTab === "IFX/MFX") {
+          const tv = this.container.querySelector(".touchview-screen");
+          if (tv) {
+            tv.innerHTML = this.renderIfxMfxMatrix();
+            this.bindIfxMfxControls();
+          }
         }
       }
     }
+
+    // Final loudness stage: equalize perceived output level across presets with
+    // a pure master volume trim that compensates each preset's FX staging
+    // (EQ boosts, compressor makeup, delay/reverb tails) — no tone changes.
+    this._applyPresetLevel(prog);
+  }
+
+  _applyPresetLevel(prog) {
+    const fx = audioCore.fxRack;
+    if (!fx || !prog) return;
+
+    let level = 1.0;
+    if (typeof prog.level === "number") {
+      level = prog.level;
+    } else if (prog.eosType && Y_EOS_PRESET_LEVELS && Y_EOS_PRESET_LEVELS[prog.eosType] !== undefined) {
+      level = Y_EOS_PRESET_LEVELS[prog.eosType];
+    } else if (prog.userType && Y_EOS_PRESET_LEVELS && Y_EOS_PRESET_LEVELS[prog.userType] !== undefined) {
+      level = Y_EOS_PRESET_LEVELS[prog.userType];
+    } else if ((prog.name || "").includes("Euro Hit")) {
+      level = 0.74;
+    } else {
+      const cat = (prog.category || "").toLowerCase();
+      if (/(bass|sub|acid|electro)/i.test(cat)) level = 0.78;
+      else if (/(brass|horn)/i.test(cat)) level = 0.80;
+      else if (/(lead|trance|dance|disco|rave|stab|hit)/i.test(cat)) level = 0.84;
+      else if (/(bar|kalimba|woodwind|flute)/i.test(cat)) level = 0.95;
+      else if (/(pad|string|choir|vocal|ambient|cinematic|drone|robot)/i.test(cat)) level = 0.92;
+      else if (/(organ)/i.test(cat)) level = 0.88;
+      else if (/(guitar)/i.test(cat)) level = 0.88;
+      else level = 0.95;
+    }
+
+    fx.setPresetTrim(Math.max(0.45, Math.min(1.0, level)));
   }
 
   applyIfxMfx(prog) {
@@ -1517,6 +1543,14 @@ export class TritonWorkstationUI {
       fx.masterEq.setLowGain(0);
       fx.masterEq.setMidGain(0);
       fx.masterEq.setHighGain(0);
+      // Deterministic compressor state — stale makeup/threshold/ratio leaking
+      // between presets was inflating preset loudness inconsistently.
+      fx.compressor.setMakeup(3.0);
+      fx.compressor.setThreshold(-24);
+      fx.compressor.setRatio(4);
+      fx.compressor.setAttack(0.015);
+      fx.compressor.setRelease(0.2);
+      fx.compressor.setMix(0.85);
     }
 
     if (mType === "ooh_ahh" || mType === "choir") {
@@ -1920,6 +1954,14 @@ export class TritonWorkstationUI {
       fx.masterEq?.setLowGain(0);
       fx.masterEq?.setMidGain(0);
       fx.masterEq?.setHighGain(0);
+      // Deterministic compressor state — stale makeup/threshold/ratio leaking
+      // between presets was inflating preset loudness inconsistently.
+      fx.compressor?.setMakeup(3.0);
+      fx.compressor?.setThreshold(-24);
+      fx.compressor?.setRatio(4);
+      fx.compressor?.setAttack(0.015);
+      fx.compressor?.setRelease(0.2);
+      fx.compressor?.setMix(0.85);
     }
 
     if (!fx) return;
@@ -2263,6 +2305,14 @@ export class TritonWorkstationUI {
       fx.masterEq?.setLowGain(0);
       fx.masterEq?.setMidGain(0);
       fx.masterEq?.setHighGain(0);
+      // Deterministic compressor state — stale makeup/threshold/ratio leaking
+      // between presets was inflating preset loudness inconsistently.
+      fx.compressor?.setMakeup(3.0);
+      fx.compressor?.setThreshold(-24);
+      fx.compressor?.setRatio(4);
+      fx.compressor?.setAttack(0.015);
+      fx.compressor?.setRelease(0.2);
+      fx.compressor?.setMix(0.85);
     }
 
     if (!fx) return;

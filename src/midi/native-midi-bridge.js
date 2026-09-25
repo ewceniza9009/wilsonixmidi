@@ -37,6 +37,9 @@ export const nativeMidiBridge = {
           MidiBridge.openDevice({ id: "all" }).catch(() => {});
         });
       }
+      // API 31+ MidiManager hides BLE devices until the Bluetooth runtime
+      // grants are held, so request them before the first enumerate/open.
+      await MidiBridge.ensureBluetoothPermissions().catch(() => {});
       this.devices = await this.enumerate();
       await MidiBridge.openDevice({ id: "all" }).catch(() => {});
       this.available = true;
@@ -99,6 +102,7 @@ export const nativeMidiBridge = {
           if (onOutputChange) onOutputChange();
         });
       }
+      await MidiBridge.ensureBluetoothPermissions().catch(() => {});
       await MidiBridge.openOutputs().catch(() => {});
       this.outputsAvailable = true;
       return true;

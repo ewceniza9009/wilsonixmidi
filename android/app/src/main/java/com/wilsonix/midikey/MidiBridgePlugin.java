@@ -1,6 +1,8 @@
 package com.wilsonix.midikey;
 
 import android.content.Context;
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.media.midi.MidiDevice;
 import android.media.midi.MidiDeviceInfo;
 import android.media.midi.MidiInputPort;
@@ -15,7 +17,9 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -43,6 +47,41 @@ public class MidiBridgePlugin extends Plugin {
             midiManager = (MidiManager) getContext().getSystemService(Context.MIDI_SERVICE);
         }
     }
+
+    /**
+     * Requests the runtime Bluetooth permissions Android's MidiManager needs to
+     * expose BLE MIDI controllers: BLUETOOTH_CONNECT + BLUETOOTH_SCAN on
+     * API 31+, ACCESS_FINE_LOCATION on API 23-30 (legacy BLE scan). Pre-M is a
+     * no-op. Resolves either way so the web layer can proceed to a best-effort
+     * enumerate.
+     */
+    @PluginMethod
+    public void ensureBluetoothPermissions(PluginCall call) {
+        if (getContext() == null || getActivity() == null) {
+            call.resolve();
+            return;
+        }
+        List<String> missing = new ArrayList<>();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            addIfMissing(missing, Manifest.permission.BLUETOOTH_CONNECT);
+            addIfMissing(missing, Manifest.permission.BLUETOOTH_SCAN);
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            addIfMissing(missing, Manifest.permission.ACCESS_FINE_LOCATION);
+        }
+        if (!missing.isEmpty()) {
+            getActivity().requestPermissions(
+                missing.toArray(new String[0]), REQUEST_BT_PERMISSIONS);
+        }
+        call.resolve();
+    }
+
+    private void addIfMissing(List<String> missing, String permission) {
+        if (getActivity().checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
+            missing.add(permission);
+        }
+    }
+
+    private static final int REQUEST_BT_PERMISSIONS = 9671;
 
     private String deviceName(MidiDeviceInfo info) {
         String name = info.getProperties().getString(MidiDeviceInfo.PROPERTY_NAME);

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wilsonix-midikey-v2';
+const CACHE_NAME = 'wilsonix-midikey-v3';
 // Precache list is resolved at runtime from the Vite build manifest
 // (build.manifest: true -> /manifest.webmanifest in dist) so the hashed
 // chunk/css filenames never drift out of sync with the source tree. The
@@ -53,6 +53,12 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(
     caches.match(request).then((cached) => {
+      if (cached) return cached;
+      // SPA navigation offline: always serve the app shell so routes never
+      // hard-fail with the browser's offline error when the cache is warm.
+      if (request.mode === 'navigate') {
+        return caches.match('/index.html').then((shell) => shell || fetch(request));
+      }
       const network = fetch(request)
         .then((response) => {
           if (
@@ -69,7 +75,7 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => cached);
-      return cached || network;
+      return network;
     })
   );
 });

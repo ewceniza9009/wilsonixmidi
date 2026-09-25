@@ -1710,6 +1710,7 @@ export class NativePcmEngine {
     this.voiceQueue = [];
     this.MAX_VOICES = 128;
     this.heldNotes = new Set();
+    this._scheduledStops = new Set();
 
     this._voiceNodePool = [];
 
@@ -3778,7 +3779,7 @@ export class NativePcmEngine {
         gain: peakGain,
         layerIndex,
         anchorMidi: workletKey,
-        playbackRate: bentPlaybackRate,
+        playbackRate: basePlaybackRate,
         isLoopable: !!buf._isLoopable,
         loopStart: buf._loopStartSec || 0,
         loopEnd: buf._loopEndSec || 0,

@@ -43,6 +43,12 @@ class WorkletVoice {
     // True while the sustain pedal kept this voice ringing after its key lifted
     this.pedalHeld = false;
 
+    // Click-free steal: parked new note + fast release used when a voice must be
+    // stolen while still audibly sounding; process() swaps in the note once quiet.
+    this.pendingReuse = null;
+    this.releaseStartTime = 0;
+    this._fastReleaseSec = 0;
+
     // Filter states (SVF)
     this.ic1eqL = 0;
     this.ic2eqL = 0;
@@ -59,6 +65,9 @@ class WorkletVoice {
     this.envStage = 1; // Attack
     this.envLevel = 0.0;
     this.pedalHeld = false;
+    this.pendingReuse = null;
+    this.releaseStartTime = 0;
+    this._fastReleaseSec = 0;
     this.phase1 = 0;
     this.phase2 = 0;
     this.phaseSub = 0;
@@ -68,7 +77,7 @@ class WorkletVoice {
     this.ic2eqR = 0;
   }
 
-  noteOff(pedal = false) {
+  noteOff(pedal = false, time = 0) {
     if (this.active && this.envStage !== 0) {
       if (pedal) {
         // Sustain pedal down: keep ringing (held at the sustain level), decayed
@@ -77,6 +86,7 @@ class WorkletVoice {
       } else {
         this.pedalHeld = false;
         this.envStage = 4; // Release
+        this.releaseStartTime = time;
       }
     }
   }
@@ -86,6 +96,9 @@ class WorkletVoice {
     this.envStage = 0;
     this.envLevel = 0.0;
     this.pedalHeld = false;
+    this.pendingReuse = null;
+    this.releaseStartTime = 0;
+    this._fastReleaseSec = 0;
     this.ic1eqL = 0;
     this.ic2eqL = 0;
     this.ic1eqR = 0;
@@ -197,7 +210,7 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
       // Audio-only release (no visual echo) - held-note max-sustain fade.
       for (let i = 0; i < MAX_VOICES; i++) {
         if (this.voices[i].active && this.voices[i].note === data.note) {
-          this.voices[i].noteOff(this.pedalDown);
+          this.voices[i].noteOff(this.pedalDown, this.currentTime);
         }
       }
       // Clean up heldNotes if no active voices remain for this note
@@ -217,8 +230,8 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
         voice = this.voices.find(v => !v.active);
       }
       if (!voice) {
-        // Steal releasing voice first
-        voice = this.voices.find(v => v.envStage === 4);
+        // Steal releasing voice first (never a voice already parked for swap-in)
+        voice = this.voices.find(v => v.envStage === 4 && !v.pendingReuse);
       }
       if (!voice) {
         // Steal quietest oldest non-held first, then quietest oldest overall
@@ -228,6 +241,7 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
         let oldestTime = oldest.startTime;
         for (let i = 0; i < MAX_VOICES; i++) {
           const v = this.voices[i];
+          if (v.pendingReuse) continue;
           const t = v.startTime || 0;
           if (t < oldestTime) { oldest = v; oldestTime = t; }
           if (!this.heldNotes.has(v.note)) {
@@ -238,6 +252,7 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
         if (!bestTarget) {
           for (let i = 0; i < MAX_VOICES; i++) {
             const v = this.voices[i];
+            if (v.pendingReuse) continue;
             const t = v.startTime || 0;
             const score = v.envLevel * 1000 + t;
             if (score < bestScore) { bestTarget = v; bestScore = score; }
@@ -245,13 +260,22 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
         }
         voice = bestTarget || oldest;
       }
+      // Click-free steal: fade an audibly sounding victim quickly and park the
+      // new note; the render loop swaps it in once the tail is click-safe.
+      if (voice.pendingReuse) return;
+      if (voice.active && voice.envLevel >= 0.025) {
+        voice._fastReleaseSec = 0.02;
+        voice.pendingReuse = { note, velocity, t: this.currentTime };
+        voice.noteOff(false, this.currentTime);
+        return;
+      }
       voice.noteOn(note, velocity, this.currentTime);
     } else if (cmd === 0x80 || (cmd === 0x90 && velocity === 0)) {
       // Note Off
       this.heldNotes.delete(note);
       for (let i = 0; i < MAX_VOICES; i++) {
         if (this.voices[i].active && this.voices[i].note === note) {
-          this.voices[i].noteOff(this.pedalDown);
+          this.voices[i].noteOff(this.pedalDown, this.currentTime);
         }
       }
     } else if (cmd === 0xb0 && (note === 123 || note === 120)) {
@@ -337,9 +361,23 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
       const voice = this.voices[v];
       if (!voice.active) continue;
 
+      // Click-free steal completion: swap the parked note in once the faded
+      // tail reaches click-safe silence (or after a hard 80ms cap).
+      if (voice.pendingReuse) {
+        const age = this.currentTime - voice.releaseStartTime;
+        if (voice.envLevel < 0.025 || age > 0.08) {
+          const pr = voice.pendingReuse;
+          voice.pendingReuse = null;
+          voice.noteOn(pr.note, pr.velocity, this.currentTime);
+        }
+      }
+
       const dt1 = (voice.freq * (this.ratio1 || 1.0)) * this.invSampleRate;
       const dt2 = (voice.freq * (this.ratio2 || 1.0) * this.detune2Ratio) * this.invSampleRate;
       const dtSub = (voice.freq * 0.5) * this.invSampleRate;
+      const voiceReleaseRate = voice._fastReleaseSec
+        ? 1.0 / Math.max(0.001, voice._fastReleaseSec * this.sampleRate)
+        : releaseRate;
 
       for (let i = 0; i < numFrames; i++) {
         // 1. Process Envelope
@@ -368,7 +406,7 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
             }
           }
         } else if (voice.envStage === 4) { // Release
-          voice.envLevel -= releaseRate;
+          voice.envLevel -= voiceReleaseRate;
           if (voice.envLevel <= 0.0001) {
             voice.envLevel = 0.0;
             voice.active = false;

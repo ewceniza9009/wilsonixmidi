@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- USB MIDI host device filter.
+         Catch-all first: the overwhelming majority of MIDI keyboards expose
+         a vendor-specific interface (class 0xFF) whatever their magic vendor
+         id, so this rule alone covers Arturia, Akai, Novation, etc. -->
+    <usb-device class="255" subclass="-1" protocol="-1" vendor-id="-1" product-id="-1" />
+
+    <!-- Explicit common MIDI manufacturers for devices that announce a standard class -->
+    <usb-device vendor-id="1177" product-id="-1" /> <!-- Yamaha    0x0499 -->
+    <usb-device vendor-id="1410" product-id="-1" /> <!-- Roland    0x0582 -->
+    <usb-device vendor-id="2372" product-id="-1" /> <!-- Korg      0x0944 -->
+    <usb-device vendor-id="2536" product-id="-1" /> <!-- Akai      0x09E8 -->
+    <usb-device vendor-id="1891" product-id="-1" /> <!-- M-Audio   0x0763 -->
+    <usb-device vendor-id="7178" product-id="-1" /> <!-- Arturia   0x1C0A -->
+    <usb-device vendor-id="4661" product-id="-1" /> <!-- Novation  0x1235 -->
+    <usb-device vendor-id="4400" product-id="-1" /> <!-- Alesis    0x1130 -->
+    <usb-device vendor-id="1999" product-id="-1" /> <!-- Casio     0x07CF -->
+    <usb-device vendor-id="5015" product-id="-1" /> <!-- Behringer 0x1397 -->
+    <usb-device vendor-id="6092" product-id="-1" /> <!-- Native Instruments 0x17CC -->
+    <usb-device vendor-id="1604" product-id="-1" /> <!-- Kurzweil  0x0644 -->
+</resources>

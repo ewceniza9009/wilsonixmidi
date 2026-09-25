@@ -26,7 +26,7 @@ import {
   getFullVersionString,
 } from "../version.js";
 import { getComponent } from "./component-registry.js";
-import { escapeHtml } from "../utils/escape-html.js";
+import { escapeHtml, escapeAttr } from "../utils/escape-html.js";
 import { LoggerUI } from "./logger-ui.js";
 
 export class GigHudUI {
@@ -1435,13 +1435,23 @@ export class GigHudUI {
     // Keep the latency pill active state in sync whenever the profile changes
     // from any surface (picker here, settings, future devices), and reflect
     // the "applies next launch" state the moment it is saved.
-    audioCore.onLatencyProfileChange((prof) => {
-      const newL = audioCore.measureLatency();
-      paintLatency(newL);
-      this._pendingLatencyProfile = prof;
-    });
+    // De-dup: refresh() re-runs this bind, so subscribe once per instance
+    // (audioCore.onLatencyProfileChange PUSHES a listener each call).
+    if (!this._latencyProfileBound) {
+      this._latencyProfileBound = true;
+      audioCore.onLatencyProfileChange((prof) => {
+        const newL = audioCore.measureLatency();
+        paintLatency(newL);
+        this._pendingLatencyProfile = prof;
+      });
+    }
 
-    window.addEventListener("click", () => this._closeLatencyPopover());
+    // De-dup window-level close listener the same way: anonymous per-bind
+    // closes would otherwise stack one listener per refresh() call.
+    if (!this._latencyCloseBound) {
+      this._latencyCloseBound = true;
+      window.addEventListener("click", () => this._closeLatencyPopover());
+    }
 
     // 7. Sunlight Mode Toggle
     const sunBtn = document.getElementById("hud-sunlight-btn");
@@ -1663,7 +1673,7 @@ export class GigHudUI {
                   ${
                     recom.isActive
                       ? "✔ Negotiated buffer matches this profile."
-                      : `💡 Device negotiated ${measuredFrames} frames — closest: <b>${recom.label}</b>.`
+                      : `💡 Device negotiated ${measuredFrames} frames — closest: <b>${escapeHtml(recom.label)}</b>.`
                   }
                 </div>`
               : ""
@@ -1718,7 +1728,7 @@ export class GigHudUI {
                     midiManager.getMidiOutputList().length > 0
                       ? midiManager.getMidiOutputList()
                           .map(
-                            (o) => `<option value="${o.id}" ${midiManager.getSelectedMidiOutputs().some(s => s.id === o.id) ? "selected" : ""}>${escapeHtml(o.name)}</option>`
+                            (o) => `<option value="${escapeAttr(o.id)}" ${midiManager.getSelectedMidiOutputs().some(s => s.id === o.id) ? "selected" : ""}>${escapeHtml(o.name)}</option>`
                           )
                           .join("")
                       : `<option value="" disabled>(No MIDI outputs detected)</option>`
@@ -1886,7 +1896,7 @@ export class GigHudUI {
           devices
             .map(
               (d) =>
-                `<option value="${d.deviceId}" ${d.deviceId === currentSink ? "selected" : ""}>${d.label || "Speaker " + d.deviceId.slice(0, 6)}</option>`,
+                `<option value="${escapeAttr(d.deviceId)}" ${d.deviceId === currentSink ? "selected" : ""}>${escapeHtml(d.label || "Speaker " + d.deviceId.slice(0, 6))}</option>`,
             )
             .join("");
       });
@@ -1905,7 +1915,7 @@ export class GigHudUI {
         spatialSelect.innerHTML = envs
           .map(
             (env) =>
-              `<option value="${env.id}" ${env.id === currentEnv ? "selected" : ""}>${env.name}</option>`,
+              `<option value="${escapeAttr(env.id)}" ${env.id === currentEnv ? "selected" : ""}>${escapeHtml(env.name)}</option>`,
           )
           .join("");
       }

@@ -21,6 +21,8 @@ export class PcmWorkletNode {
     this._bufferRegistry = new Map();
     this._sustainSettings = null;
     this.polyphonyCap = 64;
+    this._lastPitchBendMsg = 0;
+    this._lastModWheelMsg = 0;
   }
 
   async init() {
@@ -328,6 +330,11 @@ export class PcmWorkletNode {
 
   setPitchBend(semitones) {
     if (!this.isReady || !this.node) return;
+    // Throttle continuous wheel drags (each message sweeps every voice) while
+    // guaranteeing the always-critical reset to center is never dropped.
+    const nowMs = performance.now();
+    if (Math.abs(semitones) > 1e-3 && nowMs - this._lastPitchBendMsg < 8) return;
+    this._lastPitchBendMsg = nowMs;
     this.node.port.postMessage({
       type: "pitchBend",
       semitones: Number.isFinite(semitones) ? semitones : 0,
@@ -336,6 +343,9 @@ export class PcmWorkletNode {
 
   setModWheel(amount) {
     if (!this.isReady || !this.node) return;
+    const nowMs = performance.now();
+    if (amount !== 0 && nowMs - this._lastModWheelMsg < 8) return;
+    this._lastModWheelMsg = nowMs;
     this.node.port.postMessage({
       type: "modWheel",
       amount: Number.isFinite(amount) ? amount : 0,

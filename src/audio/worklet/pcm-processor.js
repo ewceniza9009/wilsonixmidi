@@ -64,6 +64,12 @@ class PcmWorkletVoice {
     // Trim (heldNotes map key for steal logic)
     this.held = false;
 
+    // When a voice must be stolen while still audibly releasing, the new note
+    // data is parked here and the old tail is faded (fastRelease) until it drops
+    // below click-safe level, at which point process() swaps in the new note.
+    this.pendingReuse = null;
+    this.releaseStartTime = 0;
+
     this.forceStop();
   }
 
@@ -71,6 +77,7 @@ class PcmWorkletVoice {
     playbackRate, isLoopable, loopStart, loopEnd, attackTime, decayTime, sustainLevel,
     releaseTime, filterCutoff, maxLife, delaySec = 0) {
     this.active = true;
+    this.pendingReuse = null;
     this.instId = instId;
     this.midiNote = midiNote;
     this.velocity = velocity;
@@ -113,6 +120,7 @@ class PcmWorkletVoice {
     } else {
       this.envStage = 4;
       this.held = false;
+      this.releaseStartTime = currentTime;
     }
   }
 
@@ -122,6 +130,7 @@ class PcmWorkletVoice {
     this.pedalHeld = false;
     this.envStage = 4;
     this.releaseTime = Math.min(this.releaseTime, fadeSec);
+    this.releaseStartTime = this.processor ? this.processor.currentTime : 0;
   }
 
   forceStop() {
@@ -132,6 +141,8 @@ class PcmWorkletVoice {
     this.envLevel = 0;
     this.held = false;
     this.pedalHeld = false;
+    this.releaseStartTime = 0;
+    this.pendingReuse = null;
     this.sustainStartTime = 0;
     this.sampleBufferL = null;
     this.sampleBufferR = null;
@@ -387,14 +398,17 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
       }
     }
 
-    // Allocate voice: prefer free, then released & quiet, then quietest non-held, then quietest
+    // Allocate voice: prefer free, then released & quiet, then quietest non-held, then quietest.
+    // Voices parked for click-free steal (pendingReuse) are never re-stolen.
     let voice = null;
     for (let i = 0; i < maxV; i++) {
-      if (!this.voices[i].active) { voice = this.voices[i]; break; }
+      const v = this.voices[i];
+      if (!v.active && !v.pendingReuse) { voice = v; break; }
     }
     if (!voice) {
       for (let i = 0; i < maxV; i++) {
         const v = this.voices[i];
+        if (v.pendingReuse) continue;
         if (v.envStage === 4 && v.envLevel < 0.05) { voice = v; break; }
       }
     }
@@ -405,6 +419,7 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
       let oldestTime = Infinity;
       for (let i = 0; i < maxV; i++) {
         const v = this.voices[i];
+        if (v.pendingReuse) continue;
         const t = v.startTime || 0;
         if (t < oldestTime) { oldest = v; oldestTime = t; }
         if (!this.heldNotes.has(v.midiNote)) {
@@ -415,6 +430,7 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
       if (!bestTarget) {
         for (let i = 0; i < maxV; i++) {
           const v = this.voices[i];
+          if (v.pendingReuse) continue;
           const t = v.startTime || 0;
           const score = v.envLevel * 1000 + t;
           if (score < bestScore) { bestTarget = v; bestScore = score; }
@@ -423,11 +439,22 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
       voice = bestTarget || oldest;
     }
 
-    voice.noteOn(instId, midiNote, velocity, gain, layerIndex,
+    const noteArgs = [instId, midiNote, velocity, gain, layerIndex,
       bufEntry.L, bufEntry.R, playbackRate,
       isLoopable, loopStart, loopEnd,
       attackTime, decayTime, sustainLevel, releaseTime,
-      filterCutoff, maxLife, delaySec);
+      filterCutoff, maxLife, delaySec];
+
+    // Click-free steal: if the only available voice is still audibly sounding,
+    // fade its tail out quickly and park the new note; process() swaps it in the
+    // moment the level drops to click-safe silence (no waveform discontinuity).
+    if (voice.active && voice.envLevel >= 0.025) {
+      voice.fastRelease(0.04);
+      voice.pendingReuse = noteArgs;
+      return;
+    }
+
+    voice.noteOn(...noteArgs);
     voice.startTime = this.currentTime;
   }
 
@@ -564,6 +591,18 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
     for (let v = 0; v < maxV; v++) {
       const voice = this.voices[v];
       if (!voice.active) continue;
+
+      // Click-free steal completion: the parked note swaps in as soon as the
+      // stolen voice's tail has faded to click-safe silence (or a hard 80ms cap).
+      if (voice.pendingReuse) {
+        const args = voice.pendingReuse;
+        const pendingAge = this.currentTime - voice.releaseStartTime;
+        if (voice.envLevel < 0.025 || pendingAge > 0.08) {
+          voice.pendingReuse = null;
+          voice.noteOn(...args);
+          voice.startTime = this.currentTime;
+        }
+      }
 
       // Handle scheduled note start delay (e.g. demo song lookahead playback)
       if (voice.delayFrames >= numFrames) {
