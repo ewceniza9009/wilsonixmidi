@@ -14,7 +14,17 @@ export class SfxSoundGenerator {
     this.destination = destinationNode;
     this.noiseBuffer = null;
     this._longFx = new Set();
+    this._initBus();
     this.initNoiseBuffer();
+  }
+
+  _initBus() {
+    if (!this.ctx) return;
+    this.sfxBus = this.ctx.createGain();
+    const dest = this.destination || (audioCore.masterGain || this.ctx.destination);
+    if (dest) {
+      try { this.sfxBus.connect(dest); } catch (e) {}
+    }
   }
 
   trackSfx(nodes, endsInSeconds = 30) {
@@ -25,17 +35,32 @@ export class SfxSoundGenerator {
   }
 
   stopAll() {
-    const now = this.ctx.currentTime;
+    const now = this.ctx ? this.ctx.currentTime : 0;
+    // 1. Immediately cut all live sound effect audio flowing through sfxBus
+    if (this.sfxBus && this.ctx) {
+      try {
+        this.sfxBus.gain.cancelScheduledValues(now);
+        this.sfxBus.gain.setValueAtTime(this.sfxBus.gain.value, now);
+        this.sfxBus.gain.setTargetAtTime(0, now, 0.015);
+      } catch (e) {}
+      const oldBus = this.sfxBus;
+      setTimeout(() => {
+        try { oldBus.disconnect(); } catch (e) {}
+      }, 60);
+      this._initBus();
+    }
+
+    // 2. Stop and silence any tracked individual nodes
     this._longFx.forEach(unit => {
       unit.nodes.forEach(node => {
         try {
           if (node && typeof node.stop === "function") {
-            try { node.stop(now + 0.03); } catch (e) {}
+            try { node.stop(now + 0.02); } catch (e) {}
           }
           if (node && node.gain && typeof node.gain.cancelScheduledValues === "function") {
             try {
               node.gain.cancelScheduledValues(now);
-              node.gain.setTargetAtTime(0, now, 0.03);
+              node.gain.setTargetAtTime(0, now, 0.02);
             } catch (e) {}
           }
         } catch (e) {}
@@ -46,6 +71,8 @@ export class SfxSoundGenerator {
 
   getDest(destNode = null) {
     if (destNode && typeof destNode.connect === "function") return destNode;
+    if (!this.sfxBus) this._initBus();
+    if (this.sfxBus) return this.sfxBus;
     if (this.destination && typeof this.destination.connect === "function") return this.destination;
     if (audioCore.masterGain && typeof audioCore.masterGain.connect === "function") return audioCore.masterGain;
     if (this.ctx && this.ctx.destination) return this.ctx.destination;
@@ -3015,8 +3042,18 @@ export class SfxSoundGenerator {
         return this.triggerDubHorn(velocity, customGain, destNode);
       case "sub_boom":
       case "sub_drop":
-      case "808_boom":
-        return this.trigger808SubBoom(velocity, customGain, destNode);
+      case "tr808_kick":
+        return this.trigger808Kick(velocity, customGain, destNode);
+      case "tr808_snare":
+        return this.trigger808Snare(velocity, customGain, destNode);
+      case "tr808_hat_c":
+        return this.trigger808Hat(true, velocity, customGain, destNode);
+      case "tr808_hat_o":
+        return this.trigger808Hat(false, velocity, customGain, destNode);
+      case "percussion_conga_hi":
+        return this.triggerConga(true, velocity, customGain, destNode, 63);
+      case "percussion_shaker":
+        return this.triggerShaker(velocity, customGain, destNode);
       case "noise_riser":
       case "sweep_riser":
         return this.triggerNoiseRiser(velocity, customGain, destNode);
@@ -3024,6 +3061,103 @@ export class SfxSoundGenerator {
       default:
         return null;
     }
+  }
+
+  trigger808Kick(velocity = 118, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const dest = this.getDest(destNode);
+    if (!dest) return null;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(155, now);
+    osc.frequency.exponentialRampToValueAtTime(48, now + 0.045);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(1.3 * vel * customGain, now + 0.003);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+
+    osc.connect(gain);
+    gain.connect(dest);
+    osc.start(now);
+    osc.stop(now + 0.60);
+    this.trackSfx([osc, gain], 0.65);
+    return osc;
+  }
+
+  trigger808Snare(velocity = 112, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const dest = this.getDest(destNode);
+    if (!dest) return null;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(320, now);
+    osc.frequency.exponentialRampToValueAtTime(180, now + 0.03);
+
+    const oscGain = ctx.createGain();
+    oscGain.gain.setValueAtTime(0.85 * vel * customGain, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+    osc.connect(oscGain);
+    oscGain.connect(dest);
+
+    const noise = this.createNoiseSource(false);
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.setValueAtTime(1000, now);
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.setValueAtTime(3500, now);
+    bp.Q.setValueAtTime(1.6, now);
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(1.15 * vel * customGain, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+    noise.connect(hp);
+    hp.connect(bp);
+    bp.connect(noiseGain);
+    noiseGain.connect(dest);
+
+    osc.start(now);
+    noise.start(now);
+    osc.stop(now + 0.16);
+    noise.stop(now + 0.24);
+    this.trackSfx([osc, noise, oscGain, noiseGain], 0.3);
+    return { osc, noise };
+  }
+
+  trigger808Hat(closed = true, velocity = 100, customGain = 1.0, destNode = null) {
+    const ctx = this.ctx;
+    const dest = this.getDest(destNode);
+    if (!dest) return null;
+    const now = ctx.currentTime;
+    const vel = velocity / 127;
+    const dur = closed ? 0.045 : 0.42;
+
+    const noise = this.createNoiseSource(false);
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.setValueAtTime(9500, now);
+    bp.Q.setValueAtTime(2.2, now);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(1.1 * vel * customGain, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+    noise.connect(bp);
+    bp.connect(gain);
+    gain.connect(dest);
+
+    noise.start(now);
+    noise.stop(now + dur + 0.02);
+    this.trackSfx([noise, gain], dur + 0.05);
+    return noise;
   }
 
   /**

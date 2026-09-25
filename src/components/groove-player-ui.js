@@ -124,8 +124,10 @@ export class GroovePlayerUI {
     this.sfxTabsExpanded = false;
 
     this.activeDrumKit   = localStorage.getItem("midikey_groove_drumkit")   || "rx7_drums";
-    this.showDrumMap     = localStorage.getItem("midikey_drum_map")        || "false";
     this.activePercFamily = localStorage.getItem("midikey_groove_perc_family") || "latin";
+    this._activeTimeouts = new Set();
+
+    multiLayerEngine.loadInstrument(this.activeDrumKit).catch(() => {});
 
     this.initSfx();
     this.render();
@@ -139,13 +141,30 @@ export class GroovePlayerUI {
     }
   }
 
+  _scheduleSfxNote(fn, delay) {
+    if (!this._activeTimeouts) this._activeTimeouts = new Set();
+    const id = setTimeout(() => {
+      this._activeTimeouts.delete(id);
+      fn();
+    }, delay);
+    this._activeTimeouts.add(id);
+    return id;
+  }
+
+  _clearActiveTimeouts() {
+    if (this._activeTimeouts) {
+      for (const id of this._activeTimeouts) {
+        clearTimeout(id);
+      }
+      this._activeTimeouts.clear();
+    }
+  }
+
   stopAll() {
+    this.cancelLongSfx();
     if (this.groovePlayer && this.groovePlayer.isPlaying) {
       this.groovePlayer.stop();
       this.updatePlayState();
-    }
-    if (this.sfxGen && typeof this.sfxGen.stopAll === "function") {
-      try { this.sfxGen.stopAll(); } catch (e) {}
     }
   }
 
@@ -304,21 +323,6 @@ export class GroovePlayerUI {
                     ${kit.label}
                   </button>
                 `).join("")}
-                ${this.showDrumMap ? `
-                  <button class="drummap-toggle-btn" id="btn-drum-map-toggle">⌨ DRUM MAP</button>
-                ` : ""}
-              </div>
-            ` : ""}
-
-            <!-- Drum Map Grid (shown only when toggled, for drums category) -->
-            ${this.showDrumMap && this.activeSfxCategory === "drums" ? `
-              <div class="drummap-grid">
-                ${GM_DRUM_PADS.map(pad => `
-                  <div class="drummap-key" data-note="${pad.key}" title="Note ${pad.key}">
-                    <span>${pad.key}</span>
-                    <span>${pad.name}</span>
-                  </div>
-                `).join("")}
               </div>
             ` : ""}
 
@@ -341,17 +345,14 @@ export class GroovePlayerUI {
     const drumPads = GM_DRUM_PADS.map(pad => {
       const kitSamples = MULTISAMPLE_BANKS[this.activeDrumKit]?.samples || [];
       const hasSample = kitSamples.some(s => s.m === pad.key);
-      const isDimmed = !hasSample && isDrumsCategory;
       return `
-    <div class="sfx-pad-card ${isDimmed ? "dimmed" : ""}" data-sfx-id="dkit_${this.activeDrumKit}_${pad.key}">
+    <div class="sfx-pad-card" data-sfx-id="dkit_${this.activeDrumKit}_${pad.key}">
       <span class="sfx-pad-icon">🥁</span>
       <div class="sfx-pad-info">
         <div class="sfx-pad-name">${pad.name} (${pad.key})</div>
-        <div class="sfx-pad-desc">${isDimmed ? "Not available in this kit" : "General MIDI drum"}</div>
+        <div class="sfx-pad-desc">${hasSample ? "Studio sample" : "Acoustic GM drum"}</div>
       </div>
-      <button class="sfx-trigger-btn ${isDimmed ? "stop-active disabled" : ""}" data-sfx-id="dkit_${this.activeDrumKit}_${pad.key}">
-        ${isDimmed ? "—" : "TRIGGER"}
-      </button>
+      <button class="sfx-trigger-btn" data-sfx-id="dkit_${this.activeDrumKit}_${pad.key}">TRIGGER</button>
     </div>
 `;
     }).join("");
@@ -372,17 +373,14 @@ export class GroovePlayerUI {
       const inst = pad.inst || this.activeDrumKit;
       const kitSamples = MULTISAMPLE_BANKS[inst]?.samples || [];
       const hasSample = kitSamples.some(s => s.m === pad.key);
-      const isDimmed = !hasSample && isPercussionCategory;
       return `
-    <div class="sfx-pad-card ${isDimmed ? "dimmed" : ""}" data-sfx-id="perc_${inst}_${pad.key}">
+    <div class="sfx-pad-card" data-sfx-id="perc_${inst}_${pad.key}">
       <span class="sfx-pad-icon">🥁</span>
       <div class="sfx-pad-info">
         <div class="sfx-pad-name">${pad.name}</div>
-        <div class="sfx-pad-desc">${isDimmed ? "Not available" : "Percussion family sample"}</div>
+        <div class="sfx-pad-desc">${hasSample ? "Percussion sample" : "Acoustic GM percussion"}</div>
       </div>
-      <button class="sfx-trigger-btn ${isDimmed ? "stop-active disabled" : ""}" data-sfx-id="perc_${inst}_${pad.key}">
-        ${isDimmed ? "—" : "TRIGGER"}
-      </button>
+      <button class="sfx-trigger-btn" data-sfx-id="perc_${inst}_${pad.key}">TRIGGER</button>
     </div>
 `;
     }).join("");
@@ -588,10 +586,19 @@ export class GroovePlayerUI {
     });
 
     // 5b. Cancel / stop all running sound effects & long samples
-    this.container.querySelector("#btn-sfx-cancel")?.addEventListener("click", () => {
-      audioCore.ensureRunning();
-      this.cancelLongSfx();
-    });
+    const cancelBtn = this.container.querySelector("#btn-sfx-cancel");
+    if (cancelBtn) {
+      const doCancel = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        audioCore.ensureRunning();
+        this.cancelLongSfx();
+        cancelBtn.classList.add("active");
+        setTimeout(() => cancelBtn.classList.remove("active"), 200);
+      };
+      cancelBtn.addEventListener("pointerdown", doCancel);
+      cancelBtn.addEventListener("click", doCancel);
+    }
 
     this.bindSfxPads();
   }
@@ -607,9 +614,13 @@ export class GroovePlayerUI {
   }
 
   cancelLongSfx() {
-    multiLayerEngine.pcmEngine?.stopSfxSamples();
-    if (this.sfxGen) this.sfxGen.stopAll();
-    synthesizerYouEngine.stopAll();
+    this._clearActiveTimeouts();
+    try { multiLayerEngine.pcmEngine?.stopSfxSamples?.(); } catch (e) {}
+    try { multiLayerEngine.pcmEngine?.allNotesOff?.(true); } catch (e) {}
+    if (this.sfxGen) {
+      try { this.sfxGen.stopAll(); } catch (e) {}
+    }
+    try { synthesizerYouEngine.stopAll?.(); } catch (e) {}
   }
 
   bindSfxPads() {
@@ -641,6 +652,7 @@ export class GroovePlayerUI {
         if (newKit && newKit !== this.activeDrumKit) {
           this.activeDrumKit = newKit;
           localStorage.setItem("midikey_groove_drumkit", newKit);
+          multiLayerEngine.loadInstrument(newKit).catch(() => {});
           // Re-render to update pad availability
           const padsCont = this.container.querySelector("#sfx-pads-container");
           if (padsCont) {
@@ -654,17 +666,6 @@ export class GroovePlayerUI {
         }
       });
     });
-
-    // Drum map toggle
-    const drumMapBtn = this.container.querySelector("#btn-drum-map-toggle");
-    if (drumMapBtn) {
-      drumMapBtn.addEventListener("click", () => {
-        this.showDrumMap = !this.showDrumMap;
-        localStorage.setItem("midikey_drum_map", this.showDrumMap ? "true" : "false");
-        // Re-render to show/hide drum map
-        this.render();
-      });
-    }
   }
 
   triggerSfx(sfxId) {
@@ -679,52 +680,40 @@ export class GroovePlayerUI {
 
     // Handle drum kit pads: dkit_${kitId}_${key}
     if (sfxId.startsWith("dkit_")) {
-      const match = sfxId.match(/^dkit_([^_]+)_(\d+)$/);
-      if (match) {
-        const kitId = match[1];
-        const note = parseInt(match[2], 10);
-        // Use pcmEngine to play the note on the selected kit (live over groove)
-        const pcm = multiLayerEngine.pcmEngine;
-        if (pcm) {
-          pcm.playNote(kitId, note, 118, 1.2);
-        }
+      const lastUnderscore = sfxId.lastIndexOf("_");
+      const kitId = sfxId.substring(5, lastUnderscore);
+      const note = parseInt(sfxId.substring(lastUnderscore + 1), 10);
+      const pcm = multiLayerEngine.pcmEngine;
+      let played = false;
+      if (pcm) {
+        try {
+          const v = pcm.playNote(kitId, note, 118, 1.25);
+          if (v) played = true;
+        } catch (e) {}
+      }
+      if (!played && this.sfxGen) {
+        // Zero-latency acoustic DSP fallback so drums never fail to trigger
+        this.sfxGen.trigger("real_drum_kit", note, 118, 1.25);
       }
       return;
     }
 
     // Handle percussion family pads: perc_${inst}_${key}
     if (sfxId.startsWith("perc_")) {
-      const match = sfxId.match(/^perc_([^_]+)_(\d+)$/);
-      if (match) {
-        const inst = match[1];
-        const note = parseInt(match[2], 10);
-        const pcm = multiLayerEngine.pcmEngine;
-        if (pcm) {
-          // Map instrument to appropriate playback
-          switch (inst) {
-            case "rx7_drums":
-            case "mth_std1":
-            case "mth_std2":
-            case "mth_room88":
-            case "mth_room55":
-            case "mth_power":
-            case "mth_electronic":
-            case "mth_tr909":
-            case "mth_dance":
-            case "mth_jazz":
-            case "mth_brush":
-            case "mth_orchestra":
-            case "mth_kicksnare":
-            case "mth_chaos":
-            case "mth_cm64":
-              pcm.playNote(inst, note, 118, 1.2);
-              break;
-            default:
-              // For synth/inst IDs not in the multisample banks, use sfxGen
-              this.sfxGen.triggerConga(note > 60, note, 1.0);
-              break;
-          }
-        }
+      const lastUnderscore = sfxId.lastIndexOf("_");
+      const inst = sfxId.substring(5, lastUnderscore);
+      const note = parseInt(sfxId.substring(lastUnderscore + 1), 10);
+      const pcm = multiLayerEngine.pcmEngine;
+      let played = false;
+      if (pcm) {
+        try {
+          const v = pcm.playNote(inst, note, 118, 1.25);
+          if (v) played = true;
+        } catch (e) {}
+      }
+      if (!played && this.sfxGen) {
+        // Zero-latency acoustic DSP fallback
+        this.sfxGen.trigger("real_drum_kit", note, 118, 1.25);
       }
       return;
     }
@@ -802,21 +791,44 @@ export class GroovePlayerUI {
 
       // 4. Percussion families (LATIN/WORLD/ORCHESTRA/SYNTH)
       case "perc_latin":
-        // Latin family - play a few key percussion sounds
         multiLayerEngine.pcmEngine?.playNote("conga_low", 64, 125, 1.3);
         multiLayerEngine.pcmEngine?.playNote("cowbell", 56, 120, 1.2);
         break;
       case "perc_world":
-        // World family - play whistle and guiro
         multiLayerEngine.pcmEngine?.playNote("bird_tweet", 72, 110, 1.2);
         break;
       case "perc_orchestra":
-        // Orchestra family - play timpani and crash
         multiLayerEngine.pcmEngine?.playNote("orchestra_timpani", 63, 125, 1.3);
         break;
       case "perc_synth":
-        // Synth family - play 808 style sounds
-        this.sfxGen.trigger808Kick(110, 1.0);
+        this.sfxGen.trigger("tr808_kick", 36, 120, 1.25);
+        break;
+
+      // 4a. Electronic & 808 Percussion Pads (Synth Family)
+      case "percussion_taiko":
+        multiLayerEngine.pcmEngine?.playNote("taiko_drum", 60, 125, 1.3) ||
+        this.sfxGen.trigger("percussion_taiko", 48, 120, 1.25);
+        break;
+      case "percussion_synthdrum":
+        this.sfxGen.trigger("percussion_synthdrum", 60, 118, 1.25);
+        break;
+      case "tr808_kick":
+        this.sfxGen.trigger("tr808_kick", 36, 120, 1.25);
+        break;
+      case "tr808_snare":
+        this.sfxGen.trigger("tr808_snare", 38, 118, 1.2);
+        break;
+      case "tr808_hat_c":
+        this.sfxGen.trigger("tr808_hat_c", 42, 110, 1.15);
+        break;
+      case "tr808_hat_o":
+        this.sfxGen.trigger("tr808_hat_o", 46, 115, 1.2);
+        break;
+      case "percussion_conga_hi":
+        this.sfxGen.trigger("percussion_conga", 63, 118, 1.25);
+        break;
+      case "percussion_shaker":
+        this.sfxGen.trigger("percussion_shaker", 69, 115, 1.2);
         break;
 
       // 4b. REAL Acoustic Drum Kit, Chimes, Cowbell & Congas (0.00ms Zero Latency DSP)
@@ -941,9 +953,9 @@ export class GroovePlayerUI {
         if (pcm) {
           pcm.playNote("breath_noise", 60, 80, 0.4);
           pcm.playNote("alto_sax", 65, 110, 1.25);
-          setTimeout(() => pcm.playNote("alto_sax", 67, 115, 1.25), 140);
-          setTimeout(() => pcm.playNote("alto_sax", 70, 118, 1.25), 290);
-          setTimeout(() => pcm.playNote("alto_sax", 72, 125, 1.35), 460);
+          this._scheduleSfxNote(() => pcm.playNote("alto_sax", 67, 115, 1.25), 140);
+          this._scheduleSfxNote(() => pcm.playNote("alto_sax", 70, 118, 1.25), 290);
+          this._scheduleSfxNote(() => pcm.playNote("alto_sax", 72, 125, 1.35), 460);
         }
         break;
       }
@@ -952,10 +964,10 @@ export class GroovePlayerUI {
         if (pcm) {
           pcm.playNote("breath_noise", 60, 90, 0.5);
           pcm.playNote("tenor_sax", 62, 105, 1.2);
-          setTimeout(() => pcm.playNote("tenor_sax", 65, 110, 1.2), 150);
-          setTimeout(() => pcm.playNote("tenor_sax", 69, 115, 1.25), 300);
-          setTimeout(() => pcm.playNote("tenor_sax", 67, 108, 1.15), 460);
-          setTimeout(() => pcm.playNote("tenor_sax", 65, 115, 1.25), 630);
+          this._scheduleSfxNote(() => pcm.playNote("tenor_sax", 65, 110, 1.2), 150);
+          this._scheduleSfxNote(() => pcm.playNote("tenor_sax", 69, 115, 1.25), 300);
+          this._scheduleSfxNote(() => pcm.playNote("tenor_sax", 67, 108, 1.15), 460);
+          this._scheduleSfxNote(() => pcm.playNote("tenor_sax", 65, 115, 1.25), 630);
         }
         break;
       }
@@ -963,9 +975,9 @@ export class GroovePlayerUI {
         const pcm = multiLayerEngine.pcmEngine;
         if (pcm) {
           pcm.playNote("tenor_sax", 58, 115, 1.25);
-          setTimeout(() => pcm.playNote("tenor_sax", 60, 118, 1.25), 120);
-          setTimeout(() => pcm.playNote("tenor_sax", 63, 122, 1.25), 260);
-          setTimeout(() => pcm.playNote("tenor_sax", 65, 125, 1.3), 420);
+          this._scheduleSfxNote(() => pcm.playNote("tenor_sax", 60, 118, 1.25), 120);
+          this._scheduleSfxNote(() => pcm.playNote("tenor_sax", 63, 122, 1.25), 260);
+          this._scheduleSfxNote(() => pcm.playNote("tenor_sax", 65, 125, 1.3), 420);
         }
         break;
       }
@@ -984,10 +996,10 @@ export class GroovePlayerUI {
         const pcm = multiLayerEngine.pcmEngine;
         if (pcm) {
           pcm.playNote("alto_sax", 76, 125, 1.3);
-          setTimeout(() => pcm.playNote("alto_sax", 74, 115, 1.1), 80);
-          setTimeout(() => pcm.playNote("alto_sax", 72, 105, 0.9), 160);
-          setTimeout(() => pcm.playNote("alto_sax", 69, 90, 0.7), 240);
-          setTimeout(() => pcm.playNote("alto_sax", 65, 75, 0.5), 320);
+          this._scheduleSfxNote(() => pcm.playNote("alto_sax", 74, 115, 1.1), 80);
+          this._scheduleSfxNote(() => pcm.playNote("alto_sax", 72, 105, 0.9), 160);
+          this._scheduleSfxNote(() => pcm.playNote("alto_sax", 69, 90, 0.7), 240);
+          this._scheduleSfxNote(() => pcm.playNote("alto_sax", 65, 75, 0.5), 320);
         }
         break;
       }
@@ -996,7 +1008,7 @@ export class GroovePlayerUI {
         if (pcm) {
           pcm.playNote("breath_noise", 60, 90, 0.5);
           pcm.playNote("alto_sax", 64, 95, 0.9);
-          setTimeout(() => pcm.playNote("alto_sax", 65, 125, 1.3), 70);
+          this._scheduleSfxNote(() => pcm.playNote("alto_sax", 65, 125, 1.3), 70);
         }
         break;
       }

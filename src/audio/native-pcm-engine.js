@@ -4698,16 +4698,15 @@ export class NativePcmEngine {
   }
 
   stopSfxSamples(instId = null) {
+    if (!instId && this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
+      try { this.pcmWorkletNode.allNotesOff(); } catch (e) {}
+    }
     const now = this.ctx.currentTime;
     const matches = (v) => {
-      if (!v || !v.instId) return false;
+      if (!v) return false;
+      if (this._findLooperBusByDest && this._findLooperBusByDest(v.dest)) return false;
       if (instId) return v.instId === instId;
-      if (v.instId.endsWith("_r")) return true;
-      return (
-        v.instId === "thunder_clap" ||
-        v.instId === "lightning_bolt" ||
-        v.instId === "thunder_storm"
-      );
+      return true;
     };
     const silence = (map) => {
       const keptKeys = [];
@@ -4716,10 +4715,18 @@ export class NativePcmEngine {
         voices.forEach((v) => {
           if (matches(v)) {
             try {
-              v.voiceGain.gain.cancelScheduledValues(now);
-              v.voiceGain.gain.setValueAtTime(v.voiceGain.gain.value || 0.0, now);
-              v.voiceGain.gain.setTargetAtTime(0, now, 0.02);
-              v.src.stop(now + 0.1);
+              if (v.src) {
+                v.src.onended = null;
+                v.src.loop = false;
+              }
+              if (v.voiceGain) {
+                v.voiceGain.gain.cancelScheduledValues(now);
+                v.voiceGain.gain.setValueAtTime(v.voiceGain.gain.value || 0.0, now);
+                v.voiceGain.gain.linearRampToValueAtTime(0, now + 0.02);
+              }
+              if (v.src) {
+                try { v.src.stop(now + 0.03); } catch (e) {}
+              }
               const qi = this.voiceQueue.indexOf(v);
               if (qi !== -1) this.voiceQueue.splice(qi, 1);
             } catch (e) {}
