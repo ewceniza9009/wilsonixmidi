@@ -127,7 +127,7 @@ export class GroovePlayerUI {
     this.activePercFamily = localStorage.getItem("midikey_groove_perc_family") || "latin";
     this._activeTimeouts = new Set();
 
-    multiLayerEngine.loadInstrument(this.activeDrumKit).catch(() => {});
+    try { multiLayerEngine.pcmEngine?.preloadInstrument?.(this.activeDrumKit)?.catch?.(() => {}); } catch (e) {}
 
     this.initSfx();
     this.render();
@@ -652,7 +652,7 @@ export class GroovePlayerUI {
         if (newKit && newKit !== this.activeDrumKit) {
           this.activeDrumKit = newKit;
           localStorage.setItem("midikey_groove_drumkit", newKit);
-          multiLayerEngine.loadInstrument(newKit).catch(() => {});
+          try { multiLayerEngine.pcmEngine?.preloadInstrument?.(newKit)?.catch?.(() => {}); } catch (e) {}
           // Re-render to update pad availability
           const padsCont = this.container.querySelector("#sfx-pads-container");
           if (padsCont) {

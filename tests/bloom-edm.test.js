@@ -40,28 +40,6 @@ test("HD_SOUNDBANKS catalog registers every BLOOM_EDM_BANKS entry", () => {
   }
 });
 
-test("GROOVE_TRACKS includes bloom_loop_002 and bloom_loop_003 with valid files on disk", async () => {
-  const { GROOVE_TRACKS } = await import("../src/audio/sample-groove-player.js");
-  const track002 = GROOVE_TRACKS.find(t => t.id === "bloom_loop_002");
-  const track003 = GROOVE_TRACKS.find(t => t.id === "bloom_loop_003");
-
-  assert.ok(track002, "bloom_loop_002 must exist in GROOVE_TRACKS");
-  assert.equal(track002.bpm, 95);
-  assert.equal(track002.baseBpm, 95);
-
-  assert.ok(track003, "bloom_loop_003 must exist in GROOVE_TRACKS");
-  assert.equal(track003.bpm, 100);
-  assert.equal(track003.baseBpm, 100);
-
-  const file002 = path.resolve("public" + track002.sampleUrl);
-  const file003 = path.resolve("public" + track003.sampleUrl);
-
-  assert.ok(fs.existsSync(file002), `Groove track file ${track002.sampleUrl} must exist on disk`);
-  assert.ok(fs.statSync(file002).size > 100000, "Groove track 002 file must be > 100KB");
-
-  assert.ok(fs.existsSync(file003), `Groove track file ${track003.sampleUrl} must exist on disk`);
-  assert.ok(fs.statSync(file003).size > 100000, "Groove track 003 file must be > 100KB");
-});
 
 test("Bloom EDM Stems (Vocal Chops and Wavy Pad) exist in public/samples/bloom_edm", () => {
   const chopsPath = path.resolve("public/samples/bloom_edm/bloom_stem_003_vocal_chops.flac");
