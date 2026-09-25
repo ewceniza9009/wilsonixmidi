@@ -4391,7 +4391,8 @@ select.midi-out-select[multiple] option:disabled {
   display: none;
 }
 
-.drumkit-pill-btn {
+.drumkit-pill-btn,
+.perc-pill-btn {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 16px;
@@ -4403,20 +4404,33 @@ select.midi-out-select[multiple] option:disabled {
   text-align: center;
   transition: all 0.2s ease;
   white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
 }
 
-.drumkit-pill-btn.active {
+.drumkit-pill-btn.active,
+.perc-pill-btn.active {
   background: rgba(99, 102, 241, 0.4);
   border-color: rgba(99, 102, 241, 0.6);
   color: #6366f1;
 }
 
-.drumkit-pill-btn:hover:not(.active) {
+.drumkit-pill-btn:hover:not(.active),
+.perc-pill-btn:hover:not(.active) {
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.4);
   color: #e2e8f0;
 }
 
+.groove-transport-btn,
+.bpm-step-btn,
+.track-card-select-btn,
+.sfx-cat-btn,
+.sfx-cancel-btn,
+.sfx-tab-toggle-btn,
+.sfx-pad-card {
+  touch-action: manipulation;
+}
 
 .sfx-pad-card.dimmed {
   opacity: 0.4;

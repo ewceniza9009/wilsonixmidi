@@ -333,7 +333,6 @@ class MidiKeyEliteApp {
         try {
           const { GroovePlayerUI } = await import("./components/groove-player-ui.js");
           this.grooveStation = new GroovePlayerUI("groove-station-mount");
-          this.grooveStation.render();
           this._viewsRendered.add("grooves");
         } catch (e) { console.error("GroovePlayerUI lazy init:", e); }
       },

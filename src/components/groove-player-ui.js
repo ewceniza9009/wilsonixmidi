@@ -107,6 +107,20 @@ const PERC_FAMILIES = {
   ],
 };
 
+function safeGetStorage(key, fallback = null) {
+  try {
+    return localStorage.getItem(key) ?? fallback;
+  } catch (e) {
+    return fallback;
+  }
+}
+
+function safeSetStorage(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {}
+}
+
 export class GroovePlayerUI {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
@@ -114,24 +128,24 @@ export class GroovePlayerUI {
     this.sfxGen = null;
 
     let savedCat = "sax";
-    try {
-      const stored = localStorage.getItem("midikey_groove_sfx_cat");
-      if (stored && SFX_CATEGORIES.some(c => c.id === stored)) {
-        savedCat = stored;
-      }
-    } catch (e) {}
+    const storedCat = safeGetStorage("midikey_groove_sfx_cat");
+    if (storedCat && SFX_CATEGORIES.some(c => c.id === storedCat)) {
+      savedCat = storedCat;
+    }
     this.activeSfxCategory = savedCat;
     this.sfxTabsExpanded = false;
 
-    this.activeDrumKit   = localStorage.getItem("midikey_groove_drumkit")   || "rx7_drums";
-    this.activePercFamily = localStorage.getItem("midikey_groove_perc_family") || "latin";
+    this.activeDrumKit   = safeGetStorage("midikey_groove_drumkit", "rx7_drums");
+    this.activePercFamily = safeGetStorage("midikey_groove_perc_family", "latin");
     this._activeTimeouts = new Set();
+    this._eventsBound = false;
+    this._lastPadTime = 0;
+    this._lastPadId = "";
 
     try { multiLayerEngine.pcmEngine?.preloadInstrument?.(this.activeDrumKit)?.catch?.(() => {}); } catch (e) {}
 
     this.initSfx();
     this.render();
-    this.bindEvents();
     this.setupGrooveCallbacks();
 
     if (typeof window !== "undefined") {
@@ -212,7 +226,12 @@ export class GroovePlayerUI {
 
     const cards = this.container.querySelectorAll(".groove-track-card");
     cards.forEach((card, idx) => {
-      card.classList.toggle("active", idx === this.groovePlayer.activeTrackIndex);
+      const isActive = idx === this.groovePlayer.activeTrackIndex;
+      card.classList.toggle("active", isActive);
+      const btn = card.querySelector(".track-card-select-btn");
+      if (btn) {
+        btn.innerHTML = (isActive && this.groovePlayer.isPlaying) ? "⏹ PLAYING" : "▶ LOAD & PLAY";
+      }
     });
 
     const bpmDisplay = this.container.querySelector("#groove-bpm-display");
@@ -326,6 +345,16 @@ export class GroovePlayerUI {
               </div>
             ` : ""}
 
+            <!-- Percussion Family Pill Row (shown only for percussion category) -->
+            ${this.activeSfxCategory === "percussion" ? `
+              <div class="drumkit-pill-row">
+                <button class="perc-pill-btn ${this.activePercFamily === "latin" ? "active" : ""}" data-perc-family="latin">LATIN</button>
+                <button class="perc-pill-btn ${this.activePercFamily === "world" ? "active" : ""}" data-perc-family="world">WORLD</button>
+                <button class="perc-pill-btn ${this.activePercFamily === "orchestra" ? "active" : ""}" data-perc-family="orchestra">ORCHESTRA</button>
+                <button class="perc-pill-btn ${this.activePercFamily === "synth" ? "active" : ""}" data-perc-family="synth">808 / SYNTH</button>
+              </div>
+            ` : ""}
+
             <!-- SFX Trigger Pads Grid -->
             <div class="sfx-pads-container" id="sfx-pads-container">
               ${this.renderSfxPads()}
@@ -334,6 +363,9 @@ export class GroovePlayerUI {
         </div>
       </div>
     `;
+
+    this.bindEvents();
+    this.updatePlayState();
   }
 
   renderSfxPads() {
@@ -502,23 +534,28 @@ export class GroovePlayerUI {
   }
 
   bindEvents() {
-    if (!this.container) return;
+    if (!this.container || this._eventsBound) return;
+    this._eventsBound = true;
 
-    // 1. Play / Stop master toggle
-    const playToggleBtn = this.container.querySelector("#btn-groove-play-toggle");
-    playToggleBtn?.addEventListener("click", () => {
-      audioCore.ensureRunning();
-      if (this.groovePlayer.isPlaying) {
-        this.groovePlayer.stop();
-      } else {
-        this.groovePlayer.start();
+    // 1. Delegated click listener on this.container
+    this.container.addEventListener("click", (e) => {
+      // Play / Stop master toggle
+      const playToggleBtn = e.target.closest("#btn-groove-play-toggle");
+      if (playToggleBtn) {
+        audioCore.ensureRunning();
+        if (this.groovePlayer.isPlaying) {
+          this.groovePlayer.stop();
+        } else {
+          this.groovePlayer.start();
+        }
+        this.updatePlayState();
+        return;
       }
-    });
 
-    // 2. Track selection cards
-    this.container.querySelectorAll(".groove-track-card, .track-card-select-btn").forEach(elem => {
-      elem.addEventListener("click", () => {
-        const idx = parseInt(elem.getAttribute("data-track-index"), 10);
+      // Track selection cards (handles clicking anywhere on card or the button inside it)
+      const trackCard = e.target.closest(".groove-track-card");
+      if (trackCard) {
+        const idx = parseInt(trackCard.getAttribute("data-track-index"), 10);
         if (!isNaN(idx)) {
           audioCore.ensureRunning();
           if (this.groovePlayer.activeTrackIndex === idx && this.groovePlayer.isPlaying) {
@@ -527,80 +564,154 @@ export class GroovePlayerUI {
             this.groovePlayer.selectTrack(idx);
             this.groovePlayer.start();
           }
+          this.updatePlayState();
         }
-      });
-    });
-
-    // 3. BPM buttons
-    const bpmDown = this.container.querySelector("#btn-groove-bpm-down");
-    const bpmUp = this.container.querySelector("#btn-groove-bpm-up");
-    bpmDown?.addEventListener("click", () => {
-      this.groovePlayer.setBpm(this.groovePlayer.bpm - 2);
-      this.updatePlayState();
-    });
-    bpmUp?.addEventListener("click", () => {
-      this.groovePlayer.setBpm(this.groovePlayer.bpm + 2);
-      this.updatePlayState();
-    });
-
-    // 4. Volume slider
-    const volSlider = this.container.querySelector("#groove-vol-slider");
-    const volText = this.container.querySelector("#groove-vol-display");
-    volSlider?.addEventListener("input", (e) => {
-      const v = parseInt(e.target.value, 10) / 100;
-      this.groovePlayer.setVolume(v);
-      if (volText) volText.innerText = `${Math.round(v * 100)}%`;
-    });
-
-    // SFX Category Tabs toggle (More / Less)
-    const toggleBtn = this.container.querySelector("#btn-sfx-tab-toggle");
-    const tabsCont = this.container.querySelector("#sfx-cat-tabs-cont");
-    toggleBtn?.addEventListener("click", () => {
-      this.sfxTabsExpanded = !this.sfxTabsExpanded;
-      if (tabsCont) {
-        tabsCont.classList.toggle("expanded", this.sfxTabsExpanded);
+        return;
       }
+
+      // BPM buttons
+      const bpmDown = e.target.closest("#btn-groove-bpm-down");
+      if (bpmDown) {
+        this.groovePlayer.setBpm(this.groovePlayer.bpm - 2);
+        this.updatePlayState();
+        return;
+      }
+      const bpmUp = e.target.closest("#btn-groove-bpm-up");
+      if (bpmUp) {
+        this.groovePlayer.setBpm(this.groovePlayer.bpm + 2);
+        this.updatePlayState();
+        return;
+      }
+
+      // SFX Category Tabs toggle (More / Less)
+      const toggleBtn = e.target.closest("#btn-sfx-tab-toggle");
       if (toggleBtn) {
+        this.sfxTabsExpanded = !this.sfxTabsExpanded;
+        const tabsCont = this.container.querySelector("#sfx-cat-tabs-cont");
+        if (tabsCont) {
+          tabsCont.classList.toggle("expanded", this.sfxTabsExpanded);
+        }
         toggleBtn.innerHTML = this.sfxTabsExpanded ? "▴ LESS" : "▾ MORE";
         toggleBtn.classList.toggle("active", this.sfxTabsExpanded);
+        return;
       }
-    });
 
-    // Horizontal wheel scroll when tabs row is collapsed
-    tabsCont?.addEventListener("wheel", (e) => {
-      if (!this.sfxTabsExpanded && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-        e.preventDefault();
-        tabsCont.scrollLeft += e.deltaY;
+      // SFX Category switchers
+      const catBtn = e.target.closest(".sfx-cat-btn");
+      if (catBtn) {
+        const cat = catBtn.getAttribute("data-sfx-cat");
+        if (cat && cat !== this.activeSfxCategory) {
+          this.activeSfxCategory = cat;
+          safeSetStorage("midikey_groove_sfx_cat", cat);
+          this.render();
+        }
+        return;
       }
-    }, { passive: false });
 
-    // 5. SFX Category switchers
-    this.container.querySelectorAll(".sfx-cat-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const cat = btn.getAttribute("data-sfx-cat");
-        this.activeSfxCategory = cat;
-        try { localStorage.setItem("midikey_groove_sfx_cat", cat); } catch (e) {}
-        this.render();
-        this.bindEvents();
-      });
-    });
+      // Drum kit pill buttons
+      const kitBtn = e.target.closest(".drumkit-pill-btn");
+      if (kitBtn) {
+        const newKit = kitBtn.getAttribute("data-drum-kit");
+        if (newKit && newKit !== this.activeDrumKit) {
+          this.activeDrumKit = newKit;
+          safeSetStorage("midikey_groove_drumkit", newKit);
+          try { multiLayerEngine.pcmEngine?.preloadInstrument?.(newKit)?.catch?.(() => {}); } catch (e) {}
+          this.render();
+        }
+        return;
+      }
 
-    // 5b. Cancel / stop all running sound effects & long samples
-    const cancelBtn = this.container.querySelector("#btn-sfx-cancel");
-    if (cancelBtn) {
-      const doCancel = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+      // Percussion family pill buttons
+      const percBtn = e.target.closest(".perc-pill-btn");
+      if (percBtn) {
+        const newFam = percBtn.getAttribute("data-perc-family");
+        if (newFam && newFam !== this.activePercFamily) {
+          this.activePercFamily = newFam;
+          safeSetStorage("midikey_groove_perc_family", newFam);
+          this.render();
+        }
+        return;
+      }
+
+      // Cancel / stop all running sound effects & long samples
+      const cancelBtn = e.target.closest("#btn-sfx-cancel");
+      if (cancelBtn) {
         audioCore.ensureRunning();
         this.cancelLongSfx();
         cancelBtn.classList.add("active");
         setTimeout(() => cancelBtn.classList.remove("active"), 200);
-      };
-      cancelBtn.addEventListener("pointerdown", doCancel);
-      cancelBtn.addEventListener("click", doCancel);
-    }
+        return;
+      }
 
-    this.bindSfxPads();
+      // SFX Pad Cards (click fallback if pointerdown was not used)
+      const pad = e.target.closest(".sfx-pad-card");
+      if (pad) {
+        const sfxId = pad.getAttribute("data-sfx-id");
+        if (sfxId) {
+          const now = performance.now();
+          if (now - this._lastPadTime < 350 && this._lastPadId === sfxId) {
+            return;
+          }
+          this._lastPadTime = now;
+          this._lastPadId = sfxId;
+          this._triggerPadCard(pad, sfxId);
+        }
+        return;
+      }
+    });
+
+    // 2. Delegated pointerdown listener for 0ms zero-latency touch response
+    this.container.addEventListener("pointerdown", (e) => {
+      const cancelBtn = e.target.closest("#btn-sfx-cancel");
+      if (cancelBtn) {
+        e.preventDefault();
+        audioCore.ensureRunning();
+        this.cancelLongSfx();
+        cancelBtn.classList.add("active");
+        setTimeout(() => cancelBtn.classList.remove("active"), 200);
+        return;
+      }
+
+      const pad = e.target.closest(".sfx-pad-card");
+      if (pad) {
+        const sfxId = pad.getAttribute("data-sfx-id");
+        if (sfxId) {
+          e.preventDefault();
+          this._lastPadTime = performance.now();
+          this._lastPadId = sfxId;
+          this._triggerPadCard(pad, sfxId);
+        }
+      }
+    });
+
+    // 3. Delegated input listener for Volume slider
+    this.container.addEventListener("input", (e) => {
+      if (e.target.id === "groove-vol-slider") {
+        const v = parseInt(e.target.value, 10) / 100;
+        this.groovePlayer.setVolume(v);
+        const volText = this.container.querySelector("#groove-vol-display");
+        if (volText) volText.innerText = `${Math.round(v * 100)}%`;
+      }
+    });
+
+    // 4. Horizontal wheel scroll when tabs row is collapsed
+    this.container.addEventListener("wheel", (e) => {
+      const tabsCont = e.target.closest("#sfx-cat-tabs-cont");
+      if (tabsCont && !this.sfxTabsExpanded && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        e.preventDefault();
+        tabsCont.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+  }
+
+  _triggerPadCard(pad, sfxId) {
+    audioCore.ensureRunning();
+    if (!this.sfxGen) this.initSfx();
+
+    pad.classList.add("firing");
+    setTimeout(() => pad.classList.remove("firing"), 250);
+
+    this.triggerSfx(sfxId);
   }
 
   toggleRealSample(instId, midi, vel, gain) {
@@ -621,51 +732,13 @@ export class GroovePlayerUI {
       try { this.sfxGen.stopAll(); } catch (e) {}
     }
     try { synthesizerYouEngine.stopAll?.(); } catch (e) {}
+    if (this.container) {
+      this.container.querySelectorAll(".sfx-pad-card.playing").forEach(el => el.classList.remove("playing"));
+    }
   }
 
   bindSfxPads() {
-    if (!this.container) return;
-
-    this.container.querySelectorAll(".sfx-pad-card").forEach(pad => {
-      const sfxId = pad.getAttribute("data-sfx-id");
-
-      const triggerAction = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        audioCore.ensureRunning();
-        if (!this.sfxGen) this.initSfx();
-
-        // Visual trigger pulse
-        pad.classList.add("firing");
-        setTimeout(() => pad.classList.remove("firing"), 250);
-
-        this.triggerSfx(sfxId);
-      };
-
-      pad.addEventListener("pointerdown", triggerAction);
-    });
-
-    // Kit pill click handlers
-    this.container.querySelectorAll(".drumkit-pill-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const newKit = btn.getAttribute("data-drum-kit");
-        if (newKit && newKit !== this.activeDrumKit) {
-          this.activeDrumKit = newKit;
-          localStorage.setItem("midikey_groove_drumkit", newKit);
-          try { multiLayerEngine.pcmEngine?.preloadInstrument?.(newKit)?.catch?.(() => {}); } catch (e) {}
-          // Re-render to update pad availability
-          const padsCont = this.container.querySelector("#sfx-pads-container");
-          if (padsCont) {
-            padsCont.innerHTML = this.renderSfxPads();
-            this.bindSfxPads();
-          }
-          // Update button active state
-          this.container.querySelectorAll(".drumkit-pill-btn").forEach(b => {
-            b.classList.toggle("active", b.getAttribute("data-drum-kit") === newKit);
-          });
-        }
-      });
-    });
+    // Handled via delegated container listeners
   }
 
   triggerSfx(sfxId) {
