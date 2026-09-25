@@ -16,6 +16,12 @@ import { synthEngine } from "../audio/synth-engine.js";
 import { multiLayerEngine } from "../audio/multi-layer-engine.js";
 import { noteScheduler } from "../audio/lookahead-scheduler.js";
 import { getTritonProgramById } from "../triton/combi-timbres.js";
+import {
+  identifyChord,
+  midiToNoteName,
+  chordSignature,
+} from "../utils/chord-detection.js";
+import { escapeHtml } from "../utils/escape-html.js";
 
 let __clipLooperHooked = false;
 
@@ -43,9 +49,18 @@ export class ClipLooper {
     this.recordStartTime = 0;
     this.countInNodes = [];
 
+    // Real-time Chord Namer state: UI-side bookkeeping on main thread
+    this._heldNotes = new Set(); // MIDI notes currently pressed live (when===0)
+    this._currentChord = null; // identifyChord() result for the held set
+    this._lastShownChord = null; // snapshot kept across the release gap
+    this._richChord = null; // fullest voicing of current execution (sealed)
+    this._history = []; // executed chords, newest last, trimmed to 5
+    this._sealTimer = null; // debounce for finalizing a released chord
+
     this.render();
     this.bindEvents();
     this.hookSynthEngine();
+    this._subscribeLiveNotes();
 
     if (typeof multiLayerEngine?.registerPanicHook === "function") {
       multiLayerEngine.registerPanicHook(() => this.stopAllPlayback());
@@ -98,6 +113,17 @@ export class ClipLooper {
             <span class="bar-count-badge">${this.beatsPerBar}/4</span>
           </div>
         </div>
+        <div class="chord-namer">
+          <div class="chord-namer-head">
+            <span class="chord-namer-label">▶ LIVE CHORD NAMER</span>
+            <span class="chord-namer-current" id="chord-namer-current-name">—</span>
+            <span class="chord-namer-current-notes" id="chord-namer-current-notes"></span>
+          </div>
+          <div class="chord-namer-history" id="chord-namer-history">
+            <span class="chord-namer-history-label">LAST 5:</span>
+            <span class="chord-namer-history-empty">—</span>
+          </div>
+        </div>
         <div class="looper-tracks-grid">
           ${this.tracks
             .map(
@@ -122,6 +148,121 @@ export class ClipLooper {
         </div>
       </div>
     `;
+
+    this._paintNamer();
+  }
+
+  _subscribeLiveNotes() {
+    if (typeof multiLayerEngine?.registerNoteHook !== "function") return;
+    multiLayerEngine.registerNoteHook((note, pressed, velocity, when) => {
+      if (when !== 0) return; // scheduled playback — ignore
+      if (pressed) {
+        if (this._heldNotes.size === 0) {
+          // Fresh execution begins: forget last execution's best voicing.
+          this._richChord = null;
+        }
+        this._heldNotes.add(note);
+      } else {
+        this._heldNotes.delete(note);
+      }
+      this._recomputeCurrent();
+      this._scheduleSeal();
+      this._paintNamer();
+    });
+  }
+
+  _recomputeCurrent() {
+    if (this._heldNotes.size === 0) {
+      this._currentChord = null;
+      return;
+    }
+    const chord = {
+      ...identifyChord([...this._heldNotes]),
+      notes: [...this._heldNotes]
+        .map((n) => midiToNoteName(n))
+        .sort(
+          (a, b) => this._pcIndex(a) - this._pcIndex(b) || a.localeCompare(b),
+        ),
+    };
+    this._currentChord = chord;
+    this._lastShownChord = chord;
+    // Track the fullest voicing seen during this execution so sealing later
+    // preserves the intended chord even if notes were lifted one at a time.
+    if (!this._richChord || chord.pitchClasses.length >= this._richChord.pitchClasses.length) {
+      this._richChord = chord;
+    }
+  }
+
+  _pcIndex(noteName) {
+    const pc = noteName.replace(/\d+$/, "");
+    const order = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    return order.indexOf(pc);
+  }
+
+  _scheduleSeal() {
+    if (this._sealTimer) clearTimeout(this._sealTimer);
+    if (this._heldNotes.size > 0) {
+      // Continue ringing out the current chord; keep it live while held.
+      return;
+    }
+    // All keys released: after a short debounce, seal the fullest voicing of
+    // the last execution into history. Older entries beyond MAX_HISTORY are
+    // disposed.
+    const chord = this._richChord || this._lastShownChord;
+    this._sealTimer = setTimeout(() => {
+      this._sealTimer = null;
+      if (!chord || !chord.isChord || !chord.name) return;
+      const sig = chordSignature(chord.pitchClasses || []);
+      const last = this._history[this._history.length - 1];
+      if (last && last.signature === sig) return; // consecutive duplicate
+      this._history.push({
+        signature: sig,
+        name: chord.name,
+        notes: chord.notes || [],
+      });
+      if (this._history.length > 5) this._history.shift();
+      this._paintNamer();
+    }, 180);
+  }
+
+  _paintNamer() {
+    const nameEl = document.getElementById("chord-namer-current-name");
+    const notesEl = document.getElementById("chord-namer-current-notes");
+    const histEl = document.getElementById("chord-namer-history");
+    if (nameEl) {
+      const cur = this._currentChord;
+      nameEl.textContent = cur && cur.name ? cur.name : "—";
+      nameEl.classList.toggle("namer-active", !!cur);
+    }
+    if (notesEl) {
+      const cur = this._currentChord;
+      notesEl.innerHTML = cur && cur.notes && cur.notes.length > 0 ? escapeHtml(cur.notes.join(" · ")) : "";
+    }
+    if (histEl) {
+      const empty = histEl.querySelector(".chord-namer-history-empty");
+      const chips = Array.from(histEl.querySelectorAll(".chord-namer-chip"));
+      if (this._history.length === 0) {
+        chips.forEach((c) => c.remove());
+        if (empty) empty.style.display = "";
+      } else {
+        if (empty) empty.style.display = "none";
+        const wanted = this._history.length;
+        // Reuse existing chips, add or remove extras to keep exactly _history.length
+        while (chips.length < wanted) {
+          const chip = document.createElement("span");
+          chip.className = "chord-namer-chip";
+          histEl.appendChild(chip);
+          chips.push(chip);
+        }
+        while (chips.length > wanted) {
+          histEl.removeChild(chips.pop());
+        }
+        this._history.forEach((h, i) => {
+          chips[i].dataset.idx = String(i);
+          chips[i].textContent = h.name;
+        });
+      }
+    }
   }
 
   bindEvents() {
