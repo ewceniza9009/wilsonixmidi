@@ -69,6 +69,141 @@ export class SfxSoundGenerator {
     this._longFx.clear();
   }
 
+  trigger(sfxId, noteOrVelocity = 100, velocity = 100, customGain = 1.0) {
+    if (!this.ctx) return null;
+    if (sfxId === "real_drum_kit") {
+      const midiNote = typeof noteOrVelocity === "number" ? noteOrVelocity : 36;
+      const vel = typeof velocity === "number" ? velocity : 100;
+      const gain = typeof customGain === "number" ? customGain : 1.0;
+      return this.triggerRealDrumKit(midiNote, vel, gain);
+    }
+
+    const vel = typeof velocity === "number" ? velocity : (typeof noteOrVelocity === "number" ? noteOrVelocity : 100);
+    const gain = typeof customGain === "number" ? customGain : 1.0;
+
+    switch (sfxId) {
+      case "tr808_kick":
+        return this.trigger808Kick(vel, gain);
+      case "tr808_snare":
+        return this.trigger808Snare(vel, gain);
+      case "tr808_hat_c":
+        return this.trigger808Hat(true, vel, gain);
+      case "tr808_hat_o":
+        return this.trigger808Hat(false, vel, gain);
+      case "percussion_taiko":
+        return this.triggerAcousticTom("low", vel, gain * 1.25);
+      case "percussion_synthdrum":
+        return this.triggerAnalogSynthDrum(vel, gain);
+      case "percussion_conga":
+      case "percussion_conga_hi":
+        return this.triggerConga(true, vel, gain);
+      case "percussion_conga_low":
+        return this.triggerConga(false, vel, gain);
+      case "percussion_shaker":
+        return this.triggerShaker(vel, gain);
+      case "drum_kick":
+        return this.triggerAcousticKick(vel, gain);
+      case "drum_snare":
+        return this.triggerAcousticSnare(vel, gain);
+      case "drum_hhclosed":
+        return this.triggerAcousticHiHat(true, vel, gain);
+      case "drum_hhopen":
+        return this.triggerAcousticHiHat(false, vel, gain);
+      case "drum_tom_hi":
+        return this.triggerAcousticTom("high", vel, gain);
+      case "drum_tom_low":
+        return this.triggerAcousticTom("low", vel, gain);
+      case "drum_crash":
+        return this.triggerAcousticCrash(vel, gain);
+      case "drum_ride":
+        return this.triggerAcousticRide(vel, gain);
+      case "drum_cowbell":
+        return this.triggerCowbell(vel, gain);
+      case "drum_chimes":
+        return this.triggerWindChimes(vel, gain);
+      case "drum_tambourine":
+        return this.triggerTambourine(vel, gain);
+      case "drum_synth_analog":
+        return this.triggerAnalogSynthDrum(vel, gain);
+      default:
+        if (typeof this[sfxId] === "function") {
+          return this[sfxId](vel, gain);
+        }
+        return this.triggerRealDrumKit(36, vel, gain);
+    }
+  }
+
+  triggerRealDrumKit(midiNote = 36, velocity = 100, customGain = 1.0) {
+    if (!this.ctx) return null;
+    const note = parseInt(midiNote, 10) || 36;
+    switch (note) {
+      case 35: // Acoustic Bass Drum
+      case 36: // Bass Drum 1
+        return this.triggerAcousticKick(velocity, customGain);
+      case 37: // Side Stick
+        return this.triggerAcousticSnare(velocity * 0.8, customGain * 0.9);
+      case 38: // Acoustic Snare
+      case 40: // Electric Snare
+        return this.triggerAcousticSnare(velocity, customGain);
+      case 39: // Hand Clap
+        return this.trigger808Snare(velocity, customGain);
+      case 42: // Closed Hi-Hat
+      case 44: // Pedal Hi-Hat
+        return this.triggerAcousticHiHat(true, velocity, customGain);
+      case 46: // Open Hi-Hat
+        return this.triggerAcousticHiHat(false, velocity, customGain);
+      case 41: // Low Floor Tom
+      case 43: // High Floor Tom
+      case 45: // Low Tom
+        return this.triggerAcousticTom("low", velocity, customGain);
+      case 47: // Low-Mid Tom
+      case 48: // Hi-Mid Tom
+      case 50: // High Tom
+        return this.triggerAcousticTom("high", velocity, customGain);
+      case 49: // Crash Cymbal 1
+      case 57: // Crash Cymbal 2
+      case 52: // Chinese Cymbal
+        return this.triggerAcousticCrash(velocity, customGain);
+      case 51: // Ride Cymbal 1
+      case 53: // Ride Bell
+      case 59: // Ride Cymbal 2
+        return this.triggerAcousticRide(velocity, customGain);
+      case 54: // Tambourine
+        return this.triggerTambourine(velocity, customGain);
+      case 56: // Cowbell
+      case 58: // Vibraslap
+      case 75: // Claves
+      case 76: // Claves
+        return this.triggerCowbell(velocity, customGain);
+      case 60: // Bongo Hi
+      case 61: // Bongo Low
+        return this.triggerBongos(note === 60, velocity, customGain, null, note);
+      case 62: // Conga Mute
+      case 63: // Conga Open Hi
+      case 64: // Conga Low
+        return this.triggerConga(note <= 63, velocity, customGain, null, note);
+      case 65: // Timbale Hi
+      case 66: // Timbale Low
+        return this.triggerAcousticTom(note === 65 ? "high" : "low", velocity, customGain);
+      case 67: // Agogo Hi
+      case 68: // Agogo Low
+        return this.triggerCowbell(velocity, customGain);
+      case 69: // Cabasa
+      case 70: // Maracas
+      case 82: // Shaker
+      case 73: // Guiro Short
+      case 74: // Guiro Long
+        return this.triggerShaker(velocity, customGain);
+      case 71: // Whistle Short
+      case 72: // Whistle Long
+        return this.triggerBirdChirp(72, velocity, customGain);
+      default:
+        if (note < 40) return this.triggerAcousticKick(velocity, customGain);
+        if (note < 50) return this.triggerAcousticSnare(velocity, customGain);
+        return this.triggerAcousticHiHat(true, velocity, customGain);
+    }
+  }
+
   getDest(destNode = null) {
     if (destNode && typeof destNode.connect === "function") return destNode;
     if (!this.sfxBus) this._initBus();

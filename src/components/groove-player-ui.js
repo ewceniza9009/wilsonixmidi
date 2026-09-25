@@ -766,7 +766,11 @@ export class GroovePlayerUI {
       }
       if (!played && this.sfxGen) {
         // Zero-latency acoustic DSP fallback so drums never fail to trigger
-        this.sfxGen.trigger("real_drum_kit", note, 118, 1.25);
+        if (typeof this.sfxGen.triggerRealDrumKit === "function") {
+          this.sfxGen.triggerRealDrumKit(note, 118, 1.25);
+        } else if (typeof this.sfxGen.trigger === "function") {
+          this.sfxGen.trigger("real_drum_kit", note, 118, 1.25);
+        }
       }
       return;
     }
@@ -786,7 +790,11 @@ export class GroovePlayerUI {
       }
       if (!played && this.sfxGen) {
         // Zero-latency acoustic DSP fallback
-        this.sfxGen.trigger("real_drum_kit", note, 118, 1.25);
+        if (typeof this.sfxGen.triggerRealDrumKit === "function") {
+          this.sfxGen.triggerRealDrumKit(note, 118, 1.25);
+        } else if (typeof this.sfxGen.trigger === "function") {
+          this.sfxGen.trigger("real_drum_kit", note, 118, 1.25);
+        }
       }
       return;
     }
@@ -874,34 +882,34 @@ export class GroovePlayerUI {
         multiLayerEngine.pcmEngine?.playNote("orchestra_timpani", 63, 125, 1.3);
         break;
       case "perc_synth":
-        this.sfxGen.trigger("tr808_kick", 36, 120, 1.25);
+        this.sfxGen.trigger808Kick(120, 1.25);
         break;
 
       // 4a. Electronic & 808 Percussion Pads (Synth Family)
       case "percussion_taiko":
         multiLayerEngine.pcmEngine?.playNote("taiko_drum", 60, 125, 1.3) ||
-        this.sfxGen.trigger("percussion_taiko", 48, 120, 1.25);
+        this.sfxGen.triggerAcousticTom("low", 120, 1.25);
         break;
       case "percussion_synthdrum":
-        this.sfxGen.trigger("percussion_synthdrum", 60, 118, 1.25);
+        this.sfxGen.triggerAnalogSynthDrum(118, 1.25);
         break;
       case "tr808_kick":
-        this.sfxGen.trigger("tr808_kick", 36, 120, 1.25);
+        this.sfxGen.trigger808Kick(120, 1.25);
         break;
       case "tr808_snare":
-        this.sfxGen.trigger("tr808_snare", 38, 118, 1.2);
+        this.sfxGen.trigger808Snare(118, 1.2);
         break;
       case "tr808_hat_c":
-        this.sfxGen.trigger("tr808_hat_c", 42, 110, 1.15);
+        this.sfxGen.trigger808Hat(true, 110, 1.15);
         break;
       case "tr808_hat_o":
-        this.sfxGen.trigger("tr808_hat_o", 46, 115, 1.2);
+        this.sfxGen.trigger808Hat(false, 115, 1.2);
         break;
       case "percussion_conga_hi":
-        this.sfxGen.trigger("percussion_conga", 63, 118, 1.25);
+        this.sfxGen.triggerConga(true, 118, 1.25);
         break;
       case "percussion_shaker":
-        this.sfxGen.trigger("percussion_shaker", 69, 115, 1.2);
+        this.sfxGen.triggerShaker(115, 1.2);
         break;
 
       // 4b. REAL Acoustic Drum Kit, Chimes, Cowbell & Congas (0.00ms Zero Latency DSP)
