@@ -13,8 +13,6 @@ import { synthesizerYouEngine, SYNTHESIZER_YOU_EFFECTS } from "../audio/synthesi
 import { MULTISAMPLE_BANKS } from "../audio/multisample-manifest.js";
 
 export const SFX_CATEGORIES = [
-  { id: "bloom", icon: "🌸", label: "BLOOM EDM" },
-  { id: "animal", icon: "🦁", label: "ANIMAL EDM" },
   { id: "sax", icon: "🎷", label: "GENUINE SAX" },
   { id: "synthesizer_you", icon: "🏄", label: "SYNTH YOU FX" },
   { id: "crowd", icon: "👏", label: "CONCERT CROWD" },
@@ -114,10 +112,16 @@ export class GroovePlayerUI {
     this.container = document.getElementById(containerId);
     this.groovePlayer = new SampleGroovePlayer();
     this.sfxGen = null;
-    this.activeSfxCategory = localStorage.getItem("midikey_groove_sfx_cat") || "bloom";
+
+    let savedCat = "sax";
+    try {
+      const stored = localStorage.getItem("midikey_groove_sfx_cat");
+      if (stored && SFX_CATEGORIES.some(c => c.id === stored)) {
+        savedCat = stored;
+      }
+    } catch (e) {}
+    this.activeSfxCategory = savedCat;
     this.sfxTabsExpanded = false;
-    this.activeBloomSources = new Map();
-    this.bloomBuffers = new Map();
 
     this.activeDrumKit   = localStorage.getItem("midikey_groove_drumkit")   || "rx7_drums";
     this.showDrumMap     = localStorage.getItem("midikey_drum_map")        || "false";
@@ -139,13 +143,6 @@ export class GroovePlayerUI {
     if (this.groovePlayer && this.groovePlayer.isPlaying) {
       this.groovePlayer.stop();
       this.updatePlayState();
-    }
-    if (this.activeBloomSources) {
-      this.activeBloomSources.forEach((src, id) => {
-        try { src.stop(); src.disconnect(); } catch (e) {}
-        this.updatePadPlayingState(id, false);
-      });
-      this.activeBloomSources.clear();
     }
     if (this.sfxGen && typeof this.sfxGen.stopAll === "function") {
       try { this.sfxGen.stopAll(); } catch (e) {}
@@ -398,35 +395,6 @@ export class GroovePlayerUI {
     }
 
     const sfxMap = {
-      bloom: [
-        { id: "bloom_stem_vocal_chops", icon: "🎤", name: "Bloom Vocal Chops (100 BPM Dm)", desc: "Stickz Bloom Loop 003: Iconic vocal chop hook" },
-        { id: "bloom_stem_wavy_pad", icon: "🌊", name: "Bloom Wavy Flume Pad (100 BPM Dm)", desc: "Stickz Bloom Loop 003: Pumping wide sidechain synth chords" },
-        { id: "bloom_sfx_drop_002", icon: "🌸", name: "Bloom Drop 002 (95 BPM F#m)", desc: "Stickz Bloom Loop 002: Melodic synth drop with vocal chops" },
-        { id: "bloom_sfx_drop_003", icon: "🔥", name: "Bloom Drop 003 Anthem (100 BPM Dm)", desc: "Stickz Bloom Loop 003: Full Chainsmokers drop with sub punch" },
-        { id: "bloom_vocal_stab", icon: "🎙️", name: "Future Pop Vocal Stab", desc: "Stickz Bloom: Distinctive vocal lead shot" },
-        { id: "bloom_flume_chord", icon: "💜", name: "Flume Future Bass Chord", desc: "Stickz Bloom: Detuned analog lush future bass chord" },
-        { id: "bloom_chord_swell", icon: "✨", name: "Dreamy Ambient Swell", desc: "Stickz Bloom: Atmospheric chord swell & wash" },
-        { id: "bloom_hyper_saw", icon: "⚡", name: "Hyper Pop Saw Blast", desc: "Stickz Bloom: Powerful stereo supersaw stack punch" },
-        { id: "bloom_gritty_reese", icon: "🌪️", name: "Gritty Reese Bass", desc: "Stickz Bloom: Warm moving sub reese growl" },
-        { id: "bloom_glassy_pluck", icon: "💎", name: "Glassy Melodic Pluck", desc: "Stickz Bloom: Bright bell-like festival drop pluck" },
-        { id: "bloom_soaring_lead", icon: "🚀", name: "Soaring Anthem Lead", desc: "Stickz Bloom: Expressive melodic anthem lead" },
-        { id: "bloom_pop_saw", icon: "🌟", name: "Pop EDM Bright Saw", desc: "Stickz Bloom: Radio-ready melodic pop saw stack" },
-        { id: "bloom_vocal_lead", icon: "🎙️", name: "Melodic Vocal Synth", desc: "Stickz Bloom: Formant tuned vocal lead phrase" },
-        { id: "bloom_punch_bass", icon: "🥊", name: "Festival Punch Bass", desc: "Stickz Bloom: Deep tight 808 drop punch bass" },
-        { id: "bloom_fx_riser", icon: "📈", name: "8-Bar Tension Riser", desc: "Festival white noise sweep & pitch riser" },
-        { id: "bloom_fx_impact", icon: "💥", name: "Stadium Sub Impact", desc: "Heavy low-end impact with massive reverb boom" },
-        { id: "bloom_fx_downlifter", icon: "📉", name: "Sweeping Downlifter", desc: "Sub filter transition sweep downlifter" },
-      ],
-      animal: [
-        { id: "animal_fx_riser_1", icon: "📈", name: "Festival 8-Bar Riser", desc: "Massive pitch & noise tension riser" },
-        { id: "animal_fx_downlifter_1", icon: "📉", name: "Sub Downlifter", desc: "Sweeping sub filter downlifter" },
-        { id: "animal_fx_impact_1", icon: "💥", name: "Stadium Sub Impact", desc: "Heavy sub drop impact with reverb tail" },
-        { id: "animal_mid_anthem_stab", icon: "🔥", name: "Anthem Brass Stab", desc: "Festival rave brass stab" },
-        { id: "animal_garrix_pluck", icon: "🎯", name: "Garrix Drop Pluck", desc: "Martin Garrix style punchy drop pluck" },
-        { id: "animal_sub_drop_bass_1", icon: "🥊", name: "Sub Drop Bass 808", desc: "Heavy 808 sub bass drop" },
-        { id: "animal_high_whistle_lead", icon: "🚀", name: "High Whistle Lead", desc: "Screaming Dutch festival whistle lead" },
-        { id: "animal_dutch_pluck", icon: "💎", name: "Dutch Festival Pluck", desc: "Crisp aggressive drop pluck" },
-      ],
       sax: [
         { id: "sax_genuine_solo", icon: "🎷", name: "Solo Alto Sax", desc: "Genuine expressive solo with natural reed breath & delayed vibrato" },
         { id: "sax_sensual", icon: "💋", name: "Sensual 80s Sax", desc: "80s Careless Whisper style breathy tenor sax with warm plate reverb" },
@@ -519,21 +487,18 @@ export class GroovePlayerUI {
     const pads = sfxMap[this.activeSfxCategory] || [];
     return pads
       .map(
-        pad => {
-          const isPlaying = this.activeBloomSources.has(pad.id);
-          return `
-      <div class="sfx-pad-card ${isPlaying ? "playing" : ""}" data-sfx-id="${pad.id}">
+        pad => `
+      <div class="sfx-pad-card" data-sfx-id="${pad.id}">
         <span class="sfx-pad-icon">${pad.icon}</span>
         <div class="sfx-pad-info">
           <div class="sfx-pad-name">${pad.name}</div>
           <div class="sfx-pad-desc">${pad.desc}</div>
         </div>
-        <button class="sfx-trigger-btn ${isPlaying ? "stop-active" : ""}" data-sfx-id="${pad.id}">
-          ${isPlaying ? "STOP" : "TRIGGER"}
+        <button class="sfx-trigger-btn" data-sfx-id="${pad.id}">
+          TRIGGER
         </button>
       </div>
-    `;
-        }
+    `
       )
       .join("");
   }
@@ -641,76 +606,10 @@ export class GroovePlayerUI {
     pcm.playNote(instId, midi, vel, gain);
   }
 
-  updatePadPlayingState(sfxId, isPlaying) {
-    if (!this.container) return;
-    const card = this.container.querySelector(`.sfx-pad-card[data-sfx-id="${sfxId}"]`);
-    if (card) {
-      card.classList.toggle("playing", isPlaying);
-      const btn = card.querySelector(".sfx-trigger-btn");
-      if (btn) {
-        btn.innerText = isPlaying ? "STOP" : "TRIGGER";
-        btn.classList.toggle("stop-active", isPlaying);
-      }
-    }
-  }
-
-  async playBloomSfxSample(url, sfxId) {
-    audioCore.ensureRunning();
-    const ctx = audioCore.ctx;
-    if (!ctx) return;
-
-    // Toggle off if currently playing
-    if (this.activeBloomSources.has(sfxId)) {
-      try {
-        const existing = this.activeBloomSources.get(sfxId);
-        existing.stop();
-        existing.disconnect();
-      } catch (e) {}
-      this.activeBloomSources.delete(sfxId);
-      this.updatePadPlayingState(sfxId, false);
-      return;
-    }
-
-    try {
-      let buf = this.bloomBuffers.get(sfxId);
-      if (!buf) {
-        const resp = await fetch(url);
-        if (!resp.ok) return;
-        const arrayBuf = await resp.arrayBuffer();
-        buf = await ctx.decodeAudioData(arrayBuf);
-        this.bloomBuffers.set(sfxId, buf);
-      }
-
-      const src = ctx.createBufferSource();
-      src.buffer = buf;
-      src.connect(audioCore.masterGain || ctx.destination);
-      src.onended = () => {
-        if (this.activeBloomSources.get(sfxId) === src) {
-          this.activeBloomSources.delete(sfxId);
-          this.updatePadPlayingState(sfxId, false);
-        }
-      };
-      src.start();
-      this.activeBloomSources.set(sfxId, src);
-      this.updatePadPlayingState(sfxId, true);
-    } catch (e) {
-      console.warn(`Failed to play Bloom SFX ${sfxId}:`, e);
-      this.updatePadPlayingState(sfxId, false);
-    }
-  }
-
   cancelLongSfx() {
     multiLayerEngine.pcmEngine?.stopSfxSamples();
     if (this.sfxGen) this.sfxGen.stopAll();
     synthesizerYouEngine.stopAll();
-    for (const [id, src] of this.activeBloomSources) {
-      try {
-        src.stop();
-        src.disconnect();
-      } catch (e) {}
-      this.updatePadPlayingState(id, false);
-    }
-    this.activeBloomSources.clear();
   }
 
   bindSfxPads() {
@@ -775,12 +674,6 @@ export class GroovePlayerUI {
 
     if (sfxId.startsWith("sy_")) {
       synthesizerYouEngine.trigger(sfxId, 115, 1.0);
-      return;
-    }
-
-    // Check Bloom / Animal EDM direct sample library
-    if (BLOOM_ANIMAL_SAMPLE_PATHS[sfxId]) {
-      this.playBloomSfxSample(BLOOM_ANIMAL_SAMPLE_PATHS[sfxId], sfxId);
       return;
     }
 
