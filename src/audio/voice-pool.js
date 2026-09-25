@@ -171,24 +171,32 @@ export class PolyphonicVoice {
 
     // Dynamic Filter
     const isPureSine = (instrumentConfig.osc1Type === "sine" && instrumentConfig.osc2Type === "sine");
-    const baseCutoff = instrumentConfig.filterCutoff || 6000;
-    const filterEnv = isPureSine
-      ? Math.min(8500, Math.max(800, baseCutoff * (0.8 + velRatio * 0.3)))
-      : Math.min(11000, Math.max(baseCutoff * (0.5 + velRatio * 0.8), freq * 1.5));
-    this.filter.type = instrumentConfig.filterType || "lowpass";
-    const qVal = isPureSine
-      ? Math.min(0.7, Math.max(0.2, (instrumentConfig.filterQ ?? 0.7) * 0.5))
-      : Math.min(1.2, Math.max(0.25, (instrumentConfig.filterQ ?? 1.0) * 0.55));
-    this.filter.Q.setValueAtTime(qVal, now);
-    this.filter.frequency.cancelScheduledValues(now);
-    this.filter.frequency.setTargetAtTime(filterEnv, now, 0.012);
+    if (isPureSine) {
+      // Pure sines have zero harmonics above the fundamental.
+      // Setting filter flat & wide open (20kHz, Q=0) eliminates phase jitter,
+      // high-frequency biquad distortion, and filter sweeping buzz.
+      this.filter.type = "lowpass";
+      this.filter.frequency.setValueAtTime(20000, now);
+      this.filter.Q.setValueAtTime(0.0, now);
+    } else {
+      const baseCutoff = instrumentConfig.filterCutoff || 6000;
+      const filterEnv = Math.min(11000, Math.max(baseCutoff * (0.5 + velRatio * 0.8), freq * 1.5));
+      this.filter.type = instrumentConfig.filterType || "lowpass";
+      const qVal = Math.min(1.2, Math.max(0.25, (instrumentConfig.filterQ ?? 1.0) * 0.55));
+      this.filter.Q.setValueAtTime(qVal, now);
+      this.filter.frequency.cancelScheduledValues(now);
+      this.filter.frequency.setTargetAtTime(filterEnv, now, 0.012);
+    }
 
     // Component balances - use nullish coalescing so explicit 0.0 gains are respected!
     this.gain1.gain.setValueAtTime(instrumentConfig.gain1 ?? 0.7, now);
     this.gain2.gain.setValueAtTime(instrumentConfig.gain2 ?? 0.3, now);
     this.gain3.gain.setValueAtTime(instrumentConfig.gain3 ?? 0.0, now);
 
-    const attack = Math.max(0.005, instrumentConfig.attack || 0.005);
+    // On low pitches (e.g. 30-80Hz), attack must span at least ~half a cycle (12-22ms)
+    // so the sine wave does not start with an abrupt edge step (pop/thump).
+    const minAttack = isPureSine ? Math.max(0.012, 0.65 / Math.max(20, freq)) : 0.005;
+    const attack = Math.max(minAttack, instrumentConfig.attack || 0.005);
     const peakGain = (0.35 + velRatio * 0.65) * (instrumentConfig.masterGain || 0.85);
     const decay = instrumentConfig.decay || 2.2;
     const sustain = peakGain * (instrumentConfig.sustainLevel || 0.35);
@@ -197,16 +205,21 @@ export class PolyphonicVoice {
 
     this.voiceGain.gain.cancelScheduledValues(now);
     const aEnd = now + Math.max(0.003, attack);
+    const duckSec = isPureSine ? 0.008 : 0.003;
+    const currentGainVal = Math.abs(this.voiceGain.gain.value || 0.0);
+
     if (sameNote) {
       // Legato same-note retrigger: ramp smoothly from current level
       this.voiceGain.gain.linearRampToValueAtTime(peakGain, aEnd);
       this.voiceGain.gain.setTargetAtTime(decTarget, aEnd, Math.max(0.05, decTau));
-    } else if (wasBusy) {
-      // Voice steal: quick gentle duck to zero, then clean linear attack
+    } else if (wasBusy || currentGainVal > 0.002) {
+      // Voice steal: quick gentle duck to zero, then clean linear attack.
+      // Never hard-step to 0 to eliminate any DC pop / click!
       this.voiceGain.gain.setValueAtTime(this.voiceGain.gain.value, now);
-      this.voiceGain.gain.linearRampToValueAtTime(0.0, now + 0.003);
-      this.voiceGain.gain.linearRampToValueAtTime(peakGain, aEnd + 0.003);
-      this.voiceGain.gain.setTargetAtTime(decTarget, aEnd + 0.003, Math.max(0.05, decTau));
+      this.voiceGain.gain.linearRampToValueAtTime(0.0, now + duckSec);
+      const aStart = now + duckSec;
+      this.voiceGain.gain.linearRampToValueAtTime(peakGain, aStart + attack);
+      this.voiceGain.gain.setTargetAtTime(decTarget, aStart + attack, Math.max(0.05, decTau));
     } else {
       // Idle voice: clean linear attack from silent state
       this.voiceGain.gain.setValueAtTime(0.0, now);
@@ -241,8 +254,9 @@ export class PolyphonicVoice {
     }
     this.isSustained = false;
 
-    const rel = Math.max(0.02, Math.min(0.8, releaseTime));
-    const tau = Math.max(0.015, rel * 0.22);
+    const isSine = (this.osc1.type === "sine" && this.osc2.type === "sine");
+    const rel = Math.max(isSine ? 0.05 : 0.02, Math.min(0.8, releaseTime));
+    const tau = Math.max(isSine ? 0.035 : 0.015, rel * 0.22);
 
     // Smooth exponential decay to silence
     try {

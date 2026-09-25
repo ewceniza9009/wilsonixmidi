@@ -63,12 +63,14 @@ export class FxRackManager {
     // Studio Perceptual Loudness Equalizer (Transparent AGC):
     // Smoothly balances perceived loudness between disparate acoustic and EDM presets,
     // preserving dynamic playing expression and crisp transients.
+    // 60ms attack ensures low-frequency sine/sub waves (30Hz-80Hz) pass without
+    // audio-rate envelope tracking or waveform rectification buzz.
     this.loudnessLeveler = ctx.createDynamicsCompressor();
-    this.loudnessLeveler.threshold.value = -19.0;
-    this.loudnessLeveler.knee.value = 14.0;
-    this.loudnessLeveler.ratio.value = 2.2;
-    this.loudnessLeveler.attack.value = 0.015;
-    this.loudnessLeveler.release.value = 0.220;
+    this.loudnessLeveler.threshold.value = -16.0;
+    this.loudnessLeveler.knee.value = 16.0;
+    this.loudnessLeveler.ratio.value = 2.0;
+    this.loudnessLeveler.attack.value = 0.060;
+    this.loudnessLeveler.release.value = 0.250;
 
     this.masterEq = new StudioEqLimiter(ctx);
     this.onPresetChangeCallback = null;

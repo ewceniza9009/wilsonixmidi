@@ -55,8 +55,9 @@ export class TritonVirtualAnalogEngine {
     // 2. Organs & E.Pianos (Dark Jazz, R&B EP, Phantom of Tine): body + harmonic drawbar/tine
     // 3. Complex Synth Leads (Saw/Square/Trance): lush 3-osc supersaw detune
     // 4. General Pads, Strings, Brass: clean 2-osc mix (no sub rumble)
+    const isSineProgram = (osc1 === "sine" && osc2 === "sine") || (prog.name || "").toLowerCase().includes("sine");
     const isLead = /(lead|trance|saw|synth|stabb|stab|fast|hit|motion)/i.test((prog.category || "") + " " + (prog.name || ""));
-    const isPureSineLead = prog.id === "A010" || (prog.name || "").includes("Smooth Sine Lead");
+    const isPureSineLead = prog.id === "A010" || (prog.name || "").includes("Smooth Sine Lead") || (isSineProgram && isLead);
     const isOrganOrEP = /(organ|\bep\b|piano|tine|clav|vibes|bell|wurly|rhodes)/i.test((prog.category || "") + " " + (prog.name || ""));
 
     let osc3Type = "sine";
@@ -65,7 +66,14 @@ export class TritonVirtualAnalogEngine {
     let gain2 = 0.35;
     let gain3 = 0.0; // sub disabled for non-leads
 
-    if (isPureSineLead) {
+    if (isSineProgram) {
+      // Pure sine synth: crystal clean harmonic spectrum, no unwanted detuned osc beating
+      gain1 = 0.65;
+      gain2 = 0.35;
+      gain3 = 0.0;
+      osc3Type = "sine";
+      osc3Ratio = 1.0;
+    } else if (isPureSineLead) {
       gain1 = 0.65;
       gain2 = 0.25;
       gain3 = 0.0;

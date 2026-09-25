@@ -555,8 +555,10 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
     this.polyScale += (targetScale - this.polyScale) * 0.12;
     const masterScale = this.polyScale;
 
-    // Combi layer voices: dynamic headroom that scales cleanly under dense chords
-    const combiTarget = Math.max(0.35, targetScale);
+    // Combi layer voices: dynamic headroom scaling that preserves punch for 1-2 notes,
+    // while scaling gracefully under dense 4-layer chords (16-32 voices) to keep
+    // the summed mix cleanly under 1.0 without hard-clipping or digital tearing.
+    const combiTarget = Math.min(0.42, Math.max(0.16, 0.85 / Math.sqrt(Math.max(1, activeCount))));
     this.polyScaleCombi += (combiTarget - this.polyScaleCombi) * 0.12;
 
     for (let v = 0; v < maxV; v++) {
@@ -692,15 +694,29 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
       }
     }
 
-    // Brickwall NaN / Infinity protection: prevent corrupted audio registers in downstream nodes
+    // Transparent soft-knee peak protection: prevents harsh digital flat-top clipping.
+    // Normal signals (|x| <= 0.98) pass 100% unaltered with zero distortion.
+    // Excursions above 0.98 are gently and smoothly rounded to avoid flat-top edge crackle.
     for (let i = 0; i < numFrames; i++) {
-      if (!Number.isFinite(outL[i])) outL[i] = 0;
-      else if (outL[i] > 1.5) outL[i] = 1.5;
-      else if (outL[i] < -1.5) outL[i] = -1.5;
+      let l = outL[i];
+      let r = outR[i];
+      if (!Number.isFinite(l)) l = 0;
+      if (!Number.isFinite(r)) r = 0;
 
-      if (!Number.isFinite(outR[i])) outR[i] = 0;
-      else if (outR[i] > 1.5) outR[i] = 1.5;
-      else if (outR[i] < -1.5) outR[i] = -1.5;
+      if (l > 0.98) {
+        l = 0.98 + 0.20 * Math.tanh((l - 0.98) / 0.20);
+      } else if (l < -0.98) {
+        l = -0.98 + 0.20 * Math.tanh((l + 0.98) / 0.20);
+      }
+
+      if (r > 0.98) {
+        r = 0.98 + 0.20 * Math.tanh((r - 0.98) / 0.20);
+      } else if (r < -0.98) {
+        r = -0.98 + 0.20 * Math.tanh((r + 0.98) / 0.20);
+      }
+
+      outL[i] = l;
+      outR[i] = r;
     }
 
     this.currentTime += numFrames * this.invSampleRate;

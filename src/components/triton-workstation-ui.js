@@ -960,10 +960,12 @@ export class TritonWorkstationUI {
     fx.masterEq?.setHighGain(0);
 
     const has = (s) => ifx.includes(s) || mfx.includes(s) || name.includes(s);
+    const isPureSinePreset = name.includes("sine") || (prog.osc1 === "sine" && prog.osc2 === "sine");
 
     // 1. DYNAMICS & COMPRESSION PRESETS
     if (
-      has("compressor") ||
+      !isPureSinePreset &&
+      (has("compressor") ||
       has("limiter") ||
       has("punch") ||
       cat.includes("percussion") ||
@@ -972,7 +974,7 @@ export class TritonWorkstationUI {
       name.includes("velo piano") ||
       name.includes("piano 16") ||
       name.includes("pick bass") ||
-      name.includes("beatbox")
+      name.includes("beatbox"))
     ) {
       fx.compressor?.setBypass(false);
       if (cat.includes("percussion") || cat.includes("drum") || name.includes("beatbox")) {

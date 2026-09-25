@@ -42,7 +42,7 @@ export class MasterTapeSaturation {
 
     // 2. Analog Tape Waveshaper (Soft-Clipping Polynomial Curve)
     this.shaper = ctx.createWaveShaper();
-    this.shaper.oversample = "4x";
+    this.shaper.oversample = "none";
     this.generateTapeCurve();
 
     // 3. Post-Saturation High-Frequency Tape Roll-off (Gentle 15kHz smoothing)
