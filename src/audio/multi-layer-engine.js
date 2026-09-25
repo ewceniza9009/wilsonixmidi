@@ -4819,11 +4819,15 @@ export class MultiLayerEngine {
       }
     }
 
-    // Interactive Note Hooks (Piano Tutor & learning monitors)
+    // Interactive Note Hooks (Piano Tutor & learning monitors).
+    // Hook contract: hook(note, pressed, velocity, when) — `when` lets consumers
+    // distinguish LIVE user input (when === 0) from scheduled players (looper,
+    // arpeggiator, demo) which pass a future time > 0. Backward compatible: older
+    // hooks simply ignore the extra argument.
     if (this._noteHooks && this._noteHooks.size > 0) {
       if (when === 0) {
         for (const hook of this._noteHooks) {
-          try { hook(midiNote, true, velocity); } catch (e) {}
+          try { hook(midiNote, true, velocity, when); } catch (e) {}
         }
       } else {
         const delayMs = Math.max(
@@ -4833,7 +4837,7 @@ export class MultiLayerEngine {
         setTimeout(() => {
           if (this._noteHooks) {
             for (const hook of this._noteHooks) {
-              try { hook(midiNote, true, velocity); } catch (e) {}
+              try { hook(midiNote, true, velocity, when); } catch (e) {}
             }
           }
         }, delayMs);
@@ -5054,7 +5058,7 @@ export class MultiLayerEngine {
     if (this._noteHooks && this._noteHooks.size > 0) {
       if (when === 0) {
         for (const hook of this._noteHooks) {
-          try { hook(midiNote, false, 0); } catch (e) {}
+          try { hook(midiNote, false, 0, when); } catch (e) {}
         }
       } else {
         const delayMs = Math.max(
@@ -5064,7 +5068,7 @@ export class MultiLayerEngine {
         setTimeout(() => {
           if (this._noteHooks) {
             for (const hook of this._noteHooks) {
-              try { hook(midiNote, false, 0); } catch (e) {}
+              try { hook(midiNote, false, 0, when); } catch (e) {}
             }
           }
         }, delayMs);
@@ -5505,6 +5509,10 @@ export class MultiLayerEngine {
   }
 
   registerNoteHook(fn) {
+    // Contract: fn(note, pressed, velocity, when).
+    // when === 0 means LIVE input (qwerty / on-screen keyboard / MIDI hardware);
+    // when > 0 means scheduled playback (looper / arpeggiator / demo). A returned
+    // unsubscribe function is provided.
     if (typeof fn === "function") {
       if (!this._noteHooks) this._noteHooks = new Set();
       this._noteHooks.add(fn);

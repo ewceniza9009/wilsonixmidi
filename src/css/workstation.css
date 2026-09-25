@@ -2342,6 +2342,94 @@ select.midi-out-select[multiple] option:disabled {
   display: none;
 }
 
+/* Live Chord Namer — real-time chord name readout above the pads grid */
+.chord-namer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.chord-namer-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-height: 20px;
+}
+
+.chord-namer-label {
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.chord-namer-current {
+  font-size: 1.05rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  min-width: 80px;
+  transition: color 0.15s ease;
+}
+
+.chord-namer-current.namer-active {
+  color: var(--accent-cyan);
+  text-shadow: 0 0 14px var(--accent-cyan-glow);
+}
+
+.chord-namer-current-notes {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.chord-namer-history {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  min-height: 18px;
+}
+
+.chord-namer-history-label {
+  font-size: 0.54rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.chord-namer-history-empty {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.chord-namer-chip {
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: var(--accent-amber);
+  background: var(--bg-card);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-full);
+  padding: 2px 9px;
+  white-space: nowrap;
+}
+
 .chord-pad {
   display: flex;
   flex-direction: column;
@@ -4279,6 +4367,124 @@ select.midi-out-select[multiple] option:disabled {
   overflow-y: auto;
   padding-right: 4px;
   align-content: start;
+}
+
+.drumkit-pill-row {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.drumkit-pill-row::-webkit-scrollbar {
+  display: none;
+}
+
+.drumkit-pill-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #cbd5e1;
+  min-width: 64px;
+  text-align: center;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.drumkit-pill-btn.active {
+  background: rgba(99, 102, 241, 0.4);
+  border-color: rgba(99, 102, 241, 0.6);
+  color: #6366f1;
+}
+
+.drumkit-pill-btn:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #e2e8f0;
+}
+
+.drummap-toggle-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #cbd5e1;
+  margin-left: 8px;
+  min-width: 80px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.drummap-toggle-btn.active {
+  background: rgba(99, 102, 241, 0.4);
+  border-color: rgba(99, 102, 241, 0.6);
+  color: #6366f1;
+}
+
+.drummap-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #e2e8f0;
+}
+
+.drummap-grid {
+  display: grid;
+  grid-template-columns: repeat(13, 32px);
+  gap: 2px;
+  justify-content: center;
+  margin: 8px auto;
+}
+
+.drummap-key {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  padding: 3px;
+  font-size: 10px;
+  color: #9ca3af;
+  text-align: center;
+  min-height: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.drummap-key span:first-child {
+  font-weight: 600;
+  font-size: 12px;
+  color: #f1f5f9;
+  display: block;
+}
+
+.drummap-key span:last-child {
+  font-size: 8px;
+  color: #64748b;
+}
+
+.sfx-pad-card.dimmed {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.sfx-pad-card.dimmed .sfx-pad-name {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.sfx-pad-card.dimmed .sfx-pad-desc {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.sfx-pad-card.dimmed .sfx-trigger-btn {
+  opacity: 0.3;
+  pointer-events: none;
 }
 
 .sfx-pad-card {

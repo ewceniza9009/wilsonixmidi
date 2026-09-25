@@ -14,6 +14,10 @@
  *     Fs4v2.wav       → F#4, velocity layer 2
  *     Gb2v1.wav       → Gb2, velocity layer 1
  *     A0.wav          → note A0, velocity layer 1 (single layer)
+ *   Drum-kit / percussion banks additionally accept a raw MIDI number form
+ *   (needed for keys 0-11 which have no note name, e.g. RX7 snares 1-9):
+ *     N36.wav         → midi 36 (kick), single layer
+ *     N5_v2.wav       → midi 5, velocity layer 2
  *
  * Velocity thresholds default to an even 1-127 distribution across the
  * detected layer count; pass an explicit comma-separated list to override:
@@ -55,15 +59,28 @@ function noteToMidi(letter, accidental, octave) {
 
 function parseSampleName(filename) {
   const base = filename.replace(/\.(wav|wave)$/i, "");
-  const match = base.match(/^([A-Ga-g])([sb#]?)(\d{1,2})(?:_?v(\d+))?(?:_?rr(\d+))?$/);
-  if (!match) return null;
-  const midi = noteToMidi(match[1], match[2], parseInt(match[3], 10));
-  if (midi === null) return null;
-  return {
-    m: midi,
-    vl: match[4] ? parseInt(match[4], 10) : 1,
-    rr: match[5] ? parseInt(match[5], 10) : 0,
-  };
+  let match = base.match(/^([A-Ga-g])([sb#]?)(\d{1,2})(?:_?v(\d+))?(?:_?rr(\d+))?$/);
+  if (match) {
+    const midi = noteToMidi(match[1], match[2], parseInt(match[3], 10));
+    if (midi === null) return null;
+    return {
+      m: midi,
+      vl: match[4] ? parseInt(match[4], 10) : 1,
+      rr: match[5] ? parseInt(match[5], 10) : 0,
+    };
+  }
+  // Raw MIDI number form: N36.wav → midi 36 (drum-kit keys below C0)
+  match = base.match(/^N(\d{1,3})(?:_?v(\d+))?(?:_?rr(\d+))?$/i);
+  if (match) {
+    const midi = parseInt(match[1], 10);
+    if (!(midi >= 0 && midi <= 127)) return null;
+    return {
+      m: midi,
+      vl: match[2] ? parseInt(match[2], 10) : 1,
+      rr: match[3] ? parseInt(match[3], 10) : 0,
+    };
+  }
+  return null;
 }
 
 function rawHash(path) {

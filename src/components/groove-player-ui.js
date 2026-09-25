@@ -12,48 +12,98 @@ import { audioCore } from "../audio/audio-core.js";
 import { synthesizerYouEngine, SYNTHESIZER_YOU_EFFECTS } from "../audio/synthesizer-you-samples.js";
 
 export const SFX_CATEGORIES = [
-  { id: "bloom", icon: "🌸", label: "BLOOM EDM" },
-  { id: "animal", icon: "🦁", label: "ANIMAL EDM" },
   { id: "sax", icon: "🎷", label: "GENUINE SAX" },
   { id: "synthesizer_you", icon: "🏄", label: "SYNTH YOU FX" },
   { id: "crowd", icon: "👏", label: "CONCERT CROWD" },
   { id: "vox", icon: "🗣️", label: "HUMAN VOX" },
   { id: "nature", icon: "🌿", label: "NATURE SOUNDS" },
   { id: "percussion", icon: "🥁", label: "PERCUSSIONS" },
-  { id: "drums", icon: "🪘", label: "REAL DRUM KIT" },
+  { id: "drums", icon: "🪘", label: "DRUM KITS" },
   { id: "dj", icon: "🎧", label: "DJ & CINEMATIC" },
   { id: "weird", icon: "🛸", label: "WEIRD SCI-FI" },
 ];
 
-export const BLOOM_ANIMAL_SAMPLE_PATHS = {
-  // Bloom EDM Stems & Loops
-  bloom_stem_vocal_chops: "/samples/bloom_edm/bloom_stem_003_vocal_chops.flac",
-  bloom_stem_wavy_pad: "/samples/bloom_edm/bloom_stem_003_wavy_pad.flac",
-  bloom_sfx_drop_002: "/samples/bloom_edm/bloom_loop_002_95bpm_fsmin.flac",
-  bloom_sfx_drop_003: "/samples/bloom_edm/bloom_loop_003_100bpm_dmin.flac",
-  // Bloom EDM Hits & One-Shots
-  bloom_vocal_stab: "/samples/bloom_edm/bloom_shot_016_vocal_stab.flac",
-  bloom_flume_chord: "/samples/bloom_edm/bloom_shot_022_flume_chord.flac",
-  bloom_chord_swell: "/samples/bloom_edm/bloom_shot_023_chord_swell.flac",
-  bloom_hyper_saw: "/samples/bloom_edm/bloom_shot_026_hyper_saw.flac",
-  bloom_gritty_reese: "/samples/bloom_edm/bloom_shot_033_gritty_reese.flac",
-  bloom_glassy_pluck: "/samples/bloom_edm/bloom_shot_012_glassy_pluck.flac",
-  bloom_soaring_lead: "/samples/bloom_edm/bloom_shot_002_soaring_lead.flac",
-  bloom_pop_saw: "/samples/bloom_edm/bloom_shot_025_pop_saw.flac",
-  bloom_vocal_lead: "/samples/bloom_edm/bloom_shot_032_vocal_lead.flac",
-  bloom_punch_bass: "/samples/bloom_edm/bloom_shot_015_punch_bass.flac",
-  bloom_fx_riser: "/samples/animal_edm/animal_fx_riser_1.flac",
-  bloom_fx_impact: "/samples/animal_edm/animal_fx_impact_1.flac",
-  bloom_fx_downlifter: "/samples/animal_edm/animal_fx_downlifter_1.flac",
-  // Animal EDM FX & Shots
-  animal_fx_riser_1: "/samples/animal_edm/animal_fx_riser_1.flac",
-  animal_fx_downlifter_1: "/samples/animal_edm/animal_fx_downlifter_1.flac",
-  animal_fx_impact_1: "/samples/animal_edm/animal_fx_impact_1.flac",
-  animal_mid_anthem_stab: "/samples/animal_edm/animal_shot_013.flac",
-  animal_garrix_pluck: "/samples/animal_edm/animal_shot_016.flac",
-  animal_sub_drop_bass_1: "/samples/animal_edm/animal_shot_007.flac",
-  animal_high_whistle_lead: "/samples/animal_edm/animal_shot_031.flac",
-  animal_dutch_pluck: "/samples/animal_edm/animal_shot_003.flac",
+export const DRUM_KITS = [
+  {id: "rx7_drums",  label: "RX7 1987"},
+  {id: "mth_std1",   label: "STN 1"},
+  {id: "mth_std2",   label: "STN 2"},
+  {id: "mth_room88", label: "ROOM 88"},
+  {id: "mth_room55", label: "ROOM 55"},
+  {id: "mth_power",  label: "POWER"},
+  {id: "mth_electronic", label: "ELEC"},
+  {id: "mth_tr909",  label: "TR-909"},
+  {id: "mth_dance",  label: "DANCE"},
+  {id: "mth_jazz",   label: "JAZZ"},
+  {id: "mth_brush",  label: "BRUSH"},
+  {id: "mth_orchestra",label: "ORCH"},
+  {id: "mth_kicksnare",label: "K&S"},
+  {id: "mth_chaos",  label: "CHAOS"},
+  {id: "mth_cm64",   label: "CM-64"},
+  {id: "dsp",        label: "DSP (old)"},
+];
+
+const GM_DRUM_PADS = [
+  {key: 36, name: "Kick"},
+  {key: 37, name: "Rim Shot"},
+  {key: 38, name: "Snare"},
+  {key: 39, name: "Hand Clap"},
+  {key: 42, name: "Closed Hat"},
+  {key: 44, name: "Pedal Hat"},
+  {key: 46, name: "Open Hat"},
+  {key: 45, name: "Low Tom"},
+  {key: 47, name: "Mid Tom"},
+  {key: 48, name: "Hi-Mid Tom"},
+  {key: 50, name: "High Tom"},
+  {key: 49, name: "Crash"},
+  {key: 51, name: "Ride"},
+  {key: 56, name: "Cowbell"},
+];
+
+const PERC_FAMILIES = {
+  latin: [
+    {key: 63, name: "Conga Open"},
+    {key: 64, name: "Conga Low"},
+    {key: 60, name: "Bongo Hi"},
+    {key: 61, name: "Bongo Low"},
+    {key: 65, name: "Timbale Hi"},
+    {key: 66, name: "Timbale Low"},
+    {key: 67, name: "Agogo Hi"},
+    {key: 68, name: "Agogo Low"},
+    {key: 56, name: "Cowbell"},
+    {key: 69, name: "Cabasa"},
+    {key: 70, name: "Maracas"},
+    {key: 82, name: "Shaker"},
+    {key: 75, name: "Claves"},
+    {key: 58, name: "Vibraslap"},
+  ],
+  world: [
+    {key: 71, name: "Whistle Short"},
+    {key: 72, name: "Whistle Long"},
+    {key: 73, name: "Guiro Short"},
+    {key: 74, name: "Guiro Long"},
+    {key: 78, name: "Cuica Mute"},
+    {key: 79, name: "Cuica Open"},
+    {key: 84, name: "Bell Tree"},
+    {key: 86, name: "Surdo Mute"},
+    {key: 87, name: "Surdo Open"},
+    {key: 85, name: "Castanets"},
+  ],
+  orchestra: [
+    {inst: "rx7_timpani", key: 63, name: "Timpani"},
+    {inst: "mth_orchestra", key: 48, name: "Timpani SC-88"},
+    {inst: "mth_orchestra", key: 55, name: "Orchestral Crash"},
+    {inst: "mth_orchestra", key: 39, name: "Orchestral Castanets"},
+  ],
+  synth: [
+    {id: "percussion_taiko",       name: "Taiko Thunder Drum"},
+    {id: "percussion_synthdrum",   name: "Analog Synth Drum"},
+    {id: "tr808_kick",             name: "808 Sub Kick"},
+    {id: "tr808_snare",            name: "808 Snare Drum"},
+    {id: "tr808_hat_c",            name: "808 Closed Hat"},
+    {id: "tr808_hat_o",            name: "808 Open Hat"},
+    {id: "percussion_conga_hi",    name: "High Conga Slap"},
+    {id: "percussion_shaker",      name: "Latin Shaker"},
+  ],
 };
 
 export class GroovePlayerUI {
@@ -65,6 +115,10 @@ export class GroovePlayerUI {
     this.sfxTabsExpanded = false;
     this.activeBloomSources = new Map();
     this.bloomBuffers = new Map();
+
+    this.activeDrumKit   = localStorage.getItem("midikey_groove_drumkit")   || "rx7_drums";
+    this.showDrumMap     = localStorage.getItem("midikey_drum_map")        || "false";
+    this.activePercFamily = localStorage.getItem("midikey_groove_perc_family") || "latin";
 
     this.initSfx();
     this.render();
@@ -242,6 +296,32 @@ export class GroovePlayerUI {
               </button>
             </div>
 
+            <!-- Drum Kit Pill Row (shown only for drums category) -->
+            ${this.activeSfxCategory === "drums" ? `
+              <div class="drumkit-pill-row">
+                ${DRUM_KITS.map(kit => `
+                  <button class="drumkit-pill-btn ${this.activeDrumKit === kit.id ? "active" : ""}" data-drum-kit="${kit.id}">
+                    ${kit.label}
+                  </button>
+                `).join("")}
+                ${this.showDrumMap ? `
+                  <button class="drummap-toggle-btn" id="btn-drum-map-toggle">⌨ DRUM MAP</button>
+                ` : ""}
+              </div>
+            ` : ""}
+
+            <!-- Drum Map Grid (shown only when toggled, for drums category) -->
+            ${this.showDrumMap && this.activeSfxCategory === "drums" ? `
+              <div class="drummap-grid">
+                ${GM_DRUM_PADS.map(pad => `
+                  <div class="drummap-key" data-note="${pad.key}" title="Note ${pad.key}">
+                    <span>${pad.key}</span>
+                    <span>${pad.name}</span>
+                  </div>
+                `).join("")}
+              </div>
+            ` : ""}
+
             <!-- SFX Trigger Pads Grid -->
             <div class="sfx-pads-container" id="sfx-pads-container">
               ${this.renderSfxPads()}
@@ -253,36 +333,50 @@ export class GroovePlayerUI {
   }
 
   renderSfxPads() {
+    const percussionFamily = this.activePercFamily || "latin";
+    const isDrumsCategory = this.activeSfxCategory === "drums";
+    const isPercussionCategory = this.activeSfxCategory === "percussion";
+
+    // Drum kit pads (GM map) - shown for drums category
+    const drumPads = GM_DRUM_PADS.map(pad => {
+      const kitSamples = MULTISAMPLE_BANKS[this.activeDrumKit]?.samples || [];
+      const hasSample = kitSamples.some(s => s.m === pad.key);
+      const isDimmed = !hasSample && isDrumsCategory;
+      return `
+    <div class="sfx-pad-card ${isDimmed ? "dimmed" : ""}" data-sfx-id="dkit_${this.activeDrumKit}_${pad.key}">
+      <span class="sfx-pad-icon">🥁</span>
+      <div class="sfx-pad-info">
+        <div class="sfx-pad-name">${pad.name} (${pad.key})</div>
+        <div class="sfx-pad-desc">${isDimmed ? "Not available in this kit" : "General MIDI drum"}</div>
+      </div>
+      <button class="sfx-trigger-btn ${isDimmed ? "stop-active disabled" : ""}" data-sfx-id="dkit_${this.activeDrumKit}_${pad.key}">
+        ${isDimmed ? "—" : "TRIGGER"}
+      </button>
+    </div>
+`;
+    }).join("");
+
+    // Percussion family pads - shown for percussion category
+    const percFamilyPads = PERC_FAMILIES[percussionFamily].map(pad => {
+      const inst = pad.inst || this.activeDrumKit;
+      const kitSamples = MULTISAMPLE_BANKS[inst]?.samples || [];
+      const hasSample = kitSamples.some(s => s.m === pad.key);
+      const isDimmed = !hasSample && isPercussionCategory;
+      return `
+    <div class="sfx-pad-card ${isDimmed ? "dimmed" : ""}" data-sfx-id="perc_${inst}_${pad.key}">
+      <span class="sfx-pad-icon">🥁</span>
+      <div class="sfx-pad-info">
+        <div class="sfx-pad-name">${pad.name}</div>
+        <div class="sfx-pad-desc">${isDimmed ? "Not available" : "Percussion family sample"}</div>
+      </div>
+      <button class="sfx-trigger-btn ${isDimmed ? "stop-active disabled" : ""}" data-sfx-id="perc_${inst}_${pad.key}">
+        ${isDimmed ? "—" : "TRIGGER"}
+      </button>
+    </div>
+`;
+    }).join("");
+
     const sfxMap = {
-      bloom: [
-        { id: "bloom_stem_vocal_chops", icon: "🎤", name: "Bloom Vocal Chops (100 BPM Dm)", desc: "Stickz Bloom Loop 003: Iconic vocal chop hook" },
-        { id: "bloom_stem_wavy_pad", icon: "🌊", name: "Bloom Wavy Flume Pad (100 BPM Dm)", desc: "Stickz Bloom Loop 003: Pumping wide sidechain synth chords" },
-        { id: "bloom_sfx_drop_002", icon: "🌸", name: "Bloom Drop 002 (95 BPM F#m)", desc: "Stickz Bloom Loop 002: Melodic synth drop with vocal chops" },
-        { id: "bloom_sfx_drop_003", icon: "🔥", name: "Bloom Drop 003 Anthem (100 BPM Dm)", desc: "Stickz Bloom Loop 003: Full Chainsmokers drop with sub punch" },
-        { id: "bloom_vocal_stab", icon: "🗣️", name: "Vocal Stab 'Oh Yeah!'", desc: "Stickz Bloom: Hook vocal shout one-shot" },
-        { id: "bloom_flume_chord", icon: "💜", name: "Flume Future Bass Chord", desc: "Stickz Bloom: Detuned analog lush future bass chord" },
-        { id: "bloom_chord_swell", icon: "✨", name: "Dreamy Ambient Swell", desc: "Stickz Bloom: Atmospheric chord swell & wash" },
-        { id: "bloom_hyper_saw", icon: "⚡", name: "Hyper Pop Saw Blast", desc: "Stickz Bloom: Powerful stereo supersaw stack punch" },
-        { id: "bloom_gritty_reese", icon: "🌪️", name: "Gritty Reese Bass", desc: "Stickz Bloom: Warm moving sub reese growl" },
-        { id: "bloom_glassy_pluck", icon: "💎", name: "Glassy Melodic Pluck", desc: "Stickz Bloom: Bright bell-like festival drop pluck" },
-        { id: "bloom_soaring_lead", icon: "🚀", name: "Soaring Anthem Lead", desc: "Stickz Bloom: Expressive melodic anthem lead" },
-        { id: "bloom_pop_saw", icon: "🌟", name: "Pop EDM Bright Saw", desc: "Stickz Bloom: Radio-ready melodic pop saw stack" },
-        { id: "bloom_vocal_lead", icon: "🎙️", name: "Melodic Vocal Synth", desc: "Stickz Bloom: Formant tuned vocal lead phrase" },
-        { id: "bloom_punch_bass", icon: "🥊", name: "Festival Punch Bass", desc: "Stickz Bloom: Deep tight 808 drop punch bass" },
-        { id: "bloom_fx_riser", icon: "📈", name: "8-Bar Tension Riser", desc: "Festival white noise sweep & pitch riser" },
-        { id: "bloom_fx_impact", icon: "💥", name: "Stadium Sub Impact", desc: "Heavy low-end impact with massive reverb boom" },
-        { id: "bloom_fx_downlifter", icon: "📉", name: "Sweeping Downlifter", desc: "Sub filter transition sweep downlifter" },
-      ],
-      animal: [
-        { id: "animal_fx_riser_1", icon: "📈", name: "Festival 8-Bar Riser", desc: "Massive pitch & noise tension riser" },
-        { id: "animal_fx_downlifter_1", icon: "📉", name: "Sub Downlifter", desc: "Sweeping sub filter downlifter" },
-        { id: "animal_fx_impact_1", icon: "💥", name: "Stadium Sub Impact", desc: "Heavy sub drop impact with reverb tail" },
-        { id: "animal_mid_anthem_stab", icon: "🔥", name: "Anthem Brass Stab", desc: "Festival rave brass stab" },
-        { id: "animal_garrix_pluck", icon: "🎯", name: "Garrix Drop Pluck", desc: "Martin Garrix style punchy drop pluck" },
-        { id: "animal_sub_drop_bass_1", icon: "🥊", name: "Sub Drop Bass 808", desc: "Heavy 808 sub bass drop" },
-        { id: "animal_high_whistle_lead", icon: "🚀", name: "High Whistle Lead", desc: "Screaming Dutch festival whistle lead" },
-        { id: "animal_dutch_pluck", icon: "💎", name: "Dutch Festival Pluck", desc: "Crisp aggressive drop pluck" },
-      ],
       sax: [
         { id: "sax_genuine_solo", icon: "🎷", name: "Solo Alto Sax", desc: "Genuine expressive solo with natural reed breath & delayed vibrato" },
         { id: "sax_sensual", icon: "💋", name: "Sensual 80s Sax", desc: "80s Careless Whisper style breathy tenor sax with warm plate reverb" },
@@ -594,6 +688,38 @@ export class GroovePlayerUI {
 
       pad.addEventListener("pointerdown", triggerAction);
     });
+
+    // Kit pill click handlers
+    this.container.querySelectorAll(".drumkit-pill-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const newKit = btn.getAttribute("data-drum-kit");
+        if (newKit && newKit !== this.activeDrumKit) {
+          this.activeDrumKit = newKit;
+          localStorage.setItem("midikey_groove_drumkit", newKit);
+          // Re-render to update pad availability
+          const padsCont = this.container.querySelector("#sfx-pads-container");
+          if (padsCont) {
+            padsCont.innerHTML = this.renderSfxPads();
+            this.bindSfxPads();
+          }
+          // Update button active state
+          this.container.querySelectorAll(".drumkit-pill-btn").forEach(b => {
+            b.classList.toggle("active", b.getAttribute("data-drum-kit") === newKit);
+          });
+        }
+      });
+    });
+
+    // Drum map toggle
+    const drumMapBtn = this.container.querySelector("#btn-drum-map-toggle");
+    if (drumMapBtn) {
+      drumMapBtn.addEventListener("click", () => {
+        this.showDrumMap = !this.showDrumMap;
+        localStorage.setItem("midikey_drum_map", this.showDrumMap ? "true" : "false");
+        // Re-render to show/hide drum map
+        this.render();
+      });
+    }
   }
 
   triggerSfx(sfxId) {
@@ -609,6 +735,58 @@ export class GroovePlayerUI {
     // Check Bloom / Animal EDM direct sample library
     if (BLOOM_ANIMAL_SAMPLE_PATHS[sfxId]) {
       this.playBloomSfxSample(BLOOM_ANIMAL_SAMPLE_PATHS[sfxId], sfxId);
+      return;
+    }
+
+    // Handle drum kit pads: dkit_${kitId}_${key}
+    if (sfxId.startsWith("dkit_")) {
+      const match = sfxId.match(/^dkit_([^_]+)_(\d+)$/);
+      if (match) {
+        const kitId = match[1];
+        const note = parseInt(match[2], 10);
+        // Use pcmEngine to play the note on the selected kit (live over groove)
+        const pcm = multiLayerEngine.pcmEngine;
+        if (pcm) {
+          pcm.playNote(kitId, note, 118, 1.2);
+        }
+      }
+      return;
+    }
+
+    // Handle percussion family pads: perc_${inst}_${key}
+    if (sfxId.startsWith("perc_")) {
+      const match = sfxId.match(/^perc_([^_]+)_(\d+)$/);
+      if (match) {
+        const inst = match[1];
+        const note = parseInt(match[2], 10);
+        const pcm = multiLayerEngine.pcmEngine;
+        if (pcm) {
+          // Map instrument to appropriate playback
+          switch (inst) {
+            case "rx7_drums":
+            case "mth_std1":
+            case "mth_std2":
+            case "mth_room88":
+            case "mth_room55":
+            case "mth_power":
+            case "mth_electronic":
+            case "mth_tr909":
+            case "mth_dance":
+            case "mth_jazz":
+            case "mth_brush":
+            case "mth_orchestra":
+            case "mth_kicksnare":
+            case "mth_chaos":
+            case "mth_cm64":
+              pcm.playNote(inst, note, 118, 1.2);
+              break;
+            default:
+              // For synth/inst IDs not in the multisample banks, use sfxGen
+              this.sfxGen.triggerConga(note > 60, note, 1.0);
+              break;
+          }
+        }
+      }
       return;
     }
 
@@ -683,30 +861,23 @@ export class GroovePlayerUI {
         this.sfxGen.triggerWind(4.5, 90, 1.0);
         break;
 
-      // 4. Percussions & Drums (Real Taiko, Synth Drum soundfonts + 808 DSP)
-      case "percussion_taiko":
-        multiLayerEngine.pcmEngine?.playNote("taiko_drum", 48, 125, 1.3);
+      // 4. Percussion families (LATIN/WORLD/ORCHESTRA/SYNTH)
+      case "perc_latin":
+        // Latin family - play a few key percussion sounds
+        multiLayerEngine.pcmEngine?.playNote("conga_low", 64, 125, 1.3);
+        multiLayerEngine.pcmEngine?.playNote("cowbell", 56, 120, 1.2);
         break;
-      case "percussion_synthdrum":
-        multiLayerEngine.pcmEngine?.playNote("synth_drum", 60, 115, 1.2);
+      case "perc_world":
+        // World family - play whistle and guiro
+        multiLayerEngine.pcmEngine?.playNote("bird_tweet", 72, 110, 1.2);
         break;
-      case "tr808_kick":
+      case "perc_orchestra":
+        // Orchestra family - play timpani and crash
+        multiLayerEngine.pcmEngine?.playNote("orchestra_timpani", 63, 125, 1.3);
+        break;
+      case "perc_synth":
+        // Synth family - play 808 style sounds
         this.sfxGen.trigger808Kick(110, 1.0);
-        break;
-      case "tr808_snare":
-        this.sfxGen.trigger808Snare(100, 1.0);
-        break;
-      case "tr808_hat_c":
-        this.sfxGen.trigger808Hat(true, 95, 1.0);
-        break;
-      case "tr808_hat_o":
-        this.sfxGen.trigger808Hat(false, 95, 1.0);
-        break;
-      case "percussion_conga_hi":
-        this.sfxGen.triggerConga(true, 100, 1.0);
-        break;
-      case "percussion_shaker":
-        this.sfxGen.triggerShaker(95, 1.0);
         break;
 
       // 4b. REAL Acoustic Drum Kit, Chimes, Cowbell & Congas (0.00ms Zero Latency DSP)

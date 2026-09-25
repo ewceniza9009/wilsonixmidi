@@ -105,7 +105,7 @@ test("MULTISAMPLE_BANKS entries are well-formed and registered in the catalog", 
 
 test("Imported multisample sample files exist on disk", () => {
   for (const bank of Object.values(MULTISAMPLE_BANKS)) {
-    const dir = path.resolve("." + bank.path);
+    const dir = path.resolve("public" + bank.path);
     assert.ok(fs.existsSync(dir), `${bank.path} directory must exist`);
     for (const s of bank.samples) {
       const filePath = path.join(dir, s.f);
