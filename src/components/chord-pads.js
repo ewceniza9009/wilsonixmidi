@@ -7,7 +7,7 @@
  */
 
 import { multiLayerEngine } from "../audio/multi-layer-engine.js";
-import { audioCore } from "../audio/audio-core.js";
+import { audioCore as _audioCore } from "../audio/audio-core.js";
 
 export const CHORD_GENRES = [
   { id: "basic_chords", name: "BASIC CHORDS (LEARN)", icon: "🌱" },
@@ -374,7 +374,7 @@ export class ChordPadsUI {
     // the same path as keys/touch — NOT the scheduled main-thread path (which
     // only accepts when > 0 and reintroduces lag/dropped voices on pad bursts).
     try {
-      activeNotes.forEach((m, i) => {
+      activeNotes.forEach((m, _i) => {
         multiLayerEngine.noteOn(m, 105, 0);
       });
     } catch (e) {

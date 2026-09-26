@@ -654,11 +654,52 @@ export class GigHudUI {
     return "🎹";
   }
 
+  getLayerSoundbanks() {
+    const LAYER_CATEGORY_ORDER = [
+      "Strings",
+      "Strings & Choir",
+      "Synth Pad",
+      "Bells & Pad",
+      "Human Voices",
+      "Organ",
+      "Organ & Bass",
+      "Organ & Pad",
+      "Electric Piano",
+      "Acoustic Piano",
+      "Keyboard",
+      "Guitar",
+      "Bass & Sub",
+      "Bells & Mallet",
+      "Orchestral & Hit",
+      "Brass",
+      "Woodwind",
+      "Synth",
+      "Synth Lead",
+      "VA Synth",
+      "Nature Sounds",
+      "Weird & Sci-Fi FX",
+      "DJ & Cinematic FX",
+      "Reggae & Dub SFX",
+      "Percussion & Drums",
+      "Synthesizer You (80s)",
+      "EDM Melodic (Bloom)",
+      "EDM Festival (Animal)",
+      "EDM Festival FX",
+    ];
+    const rank = (cat) => {
+      const i = LAYER_CATEGORY_ORDER.indexOf(cat);
+      return i === -1 ? LAYER_CATEGORY_ORDER.length : i;
+    };
+    return Object.values(HD_SOUNDBANKS).sort(
+      (a, b) => rank(a.category) - rank(b.category),
+    );
+  }
+
   render() {
     if (!this.container) return;
 
     const presetGroups = this.getPerformancePresetGroups();
-    const soundbanksList = Object.values(HD_SOUNDBANKS);
+    const soundbanksList = this.getLayerSoundbanks();
     const activeSoundId = this.getActiveSoundId();
     const activeSoundName = this.getActiveSoundName();
     const soundIcon = this.getSoundIcon();

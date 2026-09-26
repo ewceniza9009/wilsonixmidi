@@ -76,7 +76,16 @@ checkManifest("bloom", BLOOM_EDM_BANKS, (e) => `samples/bloom_edm/${e.file}`);
 checkManifest("animal", ANIMAL_EDM_BANKS, (e) => `samples/animal_edm/${e.file}`);
 
 // Imported multisample banks: every sample file must exist.
-checkManifest("multisample", MULTISAMPLE_BANKS, (e) => `${e.path.replace(/^\/+/, "")}/${e.f}`);
+for (const [bankKey, bank] of Object.entries(MULTISAMPLE_BANKS)) {
+  if (!bank.path) continue;
+  for (const sample of bank.samples || []) {
+    const rel = bank.path.replace(/^\/+/, "") + "/" + sample.f;
+    const full = join(PUBLIC, ...rel.split("/"));
+    if (!existsSync(full) || !statSync(full).isFile()) {
+      errors.push(`multisample[${bankKey}] ${sample.f} missing: ${rel}`);
+    }
+  }
+}
 
 // Soundfont binary packs: every manifest needs a valid, size-matched pack.
 // public/soundfonts-bin must exist (the JSONP fallback is gone from the tree).

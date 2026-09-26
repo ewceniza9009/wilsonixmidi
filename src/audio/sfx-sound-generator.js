@@ -3187,8 +3187,6 @@ export class SfxSoundGenerator {
         return this.trigger808Hat(false, velocity, customGain, destNode);
       case "percussion_conga_hi":
         return this.triggerConga(true, velocity, customGain, destNode, 63);
-      case "percussion_shaker":
-        return this.triggerShaker(velocity, customGain, destNode);
       case "noise_riser":
       case "sweep_riser":
         return this.triggerNoiseRiser(velocity, customGain, destNode);
@@ -3198,6 +3196,7 @@ export class SfxSoundGenerator {
     }
   }
 
+  // eslint-disable-next-line no-dupe-class-members
   trigger808Kick(velocity = 118, customGain = 1.0, destNode = null) {
     const ctx = this.ctx;
     const dest = this.getDest(destNode);
@@ -3223,6 +3222,7 @@ export class SfxSoundGenerator {
     return osc;
   }
 
+  // eslint-disable-next-line no-dupe-class-members
   trigger808Snare(velocity = 112, customGain = 1.0, destNode = null) {
     const ctx = this.ctx;
     const dest = this.getDest(destNode);
@@ -3267,6 +3267,7 @@ export class SfxSoundGenerator {
     return { osc, noise };
   }
 
+  // eslint-disable-next-line no-dupe-class-members
   trigger808Hat(closed = true, velocity = 100, customGain = 1.0, destNode = null) {
     const ctx = this.ctx;
     const dest = this.getDest(destNode);

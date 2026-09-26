@@ -418,7 +418,7 @@ export class DemoStationUI {
     // 4. Hook note triggers from all sources (USB MIDI, virtual keyboard, QWERTY)
     if (typeof multiLayerEngine.registerNoteHook === "function") {
       if (this._unsubNoteHook) this._unsubNoteHook();
-      this._unsubNoteHook = multiLayerEngine.registerNoteHook((note, pressed, vel) => {
+      this._unsubNoteHook = multiLayerEngine.registerNoteHook((note, pressed, _vel) => {
         if (this.tutorCanvas) {
           this.tutorCanvas.handleUserNote(note, pressed);
         }

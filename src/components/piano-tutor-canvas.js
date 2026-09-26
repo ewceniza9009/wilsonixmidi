@@ -489,7 +489,7 @@ export class PianoTutorCanvas {
     if (this._onScoreUpdate) this._onScoreUpdate(this.stats);
   }
 
-  _recordMiss(midiNote) {
+  _recordMiss(_midiNote) {
     this.stats.misses++;
     this.stats.streak = 0;
     const total = this.stats.hits + this.stats.misses;

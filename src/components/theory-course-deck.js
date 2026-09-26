@@ -11,7 +11,7 @@
  * Module 6: ⚡ The Improvisation Cheat Code (Pentatonic Scale)
  */
 
-import { escapeHtml } from "../utils/escape-html.js";
+import { escapeHtml as _escapeHtml } from "../utils/escape-html.js";
 
 export class TheoryCourseDeck {
   /**

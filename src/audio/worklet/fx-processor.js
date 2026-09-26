@@ -420,7 +420,7 @@ class FXChain {
 }
 
 class FXWorkletProcessor extends AudioWorkletProcessor {
-  constructor(options) {
+  constructor(_options) {
     super();
     this.sampleRate = globalThis.sampleRate || 48000;
     this.fxChain = new FXChain(this.sampleRate);
