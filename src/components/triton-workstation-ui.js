@@ -910,10 +910,35 @@ export class TritonWorkstationUI {
       }
     }
 
+    // Presets may declare a quiet sustained layer (e.g. shimmering strings
+    // under a lofi/jazz program). Applied last so it survives the FX reset
+    // above, and only ever removed if we were the ones who enabled it — a
+    // manual LAYER toggle in the GIG HUD must not be switched off silently.
+    this._applyPresetLayer(prog);
+
     // Final loudness stage: equalize perceived output level across presets with
     // a pure master volume trim that compensates each preset's FX staging
     // (EQ boosts, compressor makeup, delay/reverb tails) — no tone changes.
     this._applyPresetLevel(prog);
+  }
+
+  _applyPresetLayer(prog) {
+    const layer = prog && prog.layer;
+    if (layer && layer.inst) {
+      multiLayerEngine.setDualLayerInstrument(layer.inst);
+      multiLayerEngine.setLayerGain(
+        1,
+        typeof layer.gain === "number" ? layer.gain : 0.3,
+      );
+      if (typeof layer.oct === "number") {
+        multiLayerEngine.setLayerOctave(1, layer.oct);
+      }
+      if (layer.fx) multiLayerEngine.setLayerFx(1, layer.fx);
+      this._presetLayerOwned = true;
+    } else if (this._presetLayerOwned) {
+      this._presetLayerOwned = false;
+      multiLayerEngine.setDualLayerEnabled(false);
+    }
   }
 
   _applyPresetLevel(prog) {

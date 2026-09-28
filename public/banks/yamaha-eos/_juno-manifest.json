@@ -1,0 +1,385 @@
+{
+  "juno_lofi_ep": {
+    "id": "juno_lofi_ep",
+    "name": "Juno:Lo-Fi EP",
+    "anchors": {
+      "36": "banks/yamaha-eos/juno_lofi_ep/36.mp3",
+      "43": "banks/yamaha-eos/juno_lofi_ep/43.mp3",
+      "48": "banks/yamaha-eos/juno_lofi_ep/48.mp3",
+      "55": "banks/yamaha-eos/juno_lofi_ep/55.mp3",
+      "60": "banks/yamaha-eos/juno_lofi_ep/60.mp3",
+      "64": "banks/yamaha-eos/juno_lofi_ep/64.mp3",
+      "67": "banks/yamaha-eos/juno_lofi_ep/67.mp3",
+      "72": "banks/yamaha-eos/juno_lofi_ep/72.mp3"
+    }
+  },
+  "juno_lofi_clav": {
+    "id": "juno_lofi_clav",
+    "name": "Juno:Lo-Fi Clav",
+    "anchors": {
+      "36": "banks/yamaha-eos/juno_lofi_clav/36.mp3",
+      "43": "banks/yamaha-eos/juno_lofi_clav/43.mp3",
+      "48": "banks/yamaha-eos/juno_lofi_clav/48.mp3",
+      "55": "banks/yamaha-eos/juno_lofi_clav/55.mp3",
+      "60": "banks/yamaha-eos/juno_lofi_clav/60.mp3",
+      "64": "banks/yamaha-eos/juno_lofi_clav/64.mp3",
+      "67": "banks/yamaha-eos/juno_lofi_clav/67.mp3",
+      "72": "banks/yamaha-eos/juno_lofi_clav/72.mp3"
+    }
+  },
+  "juno_tape_pad": {
+    "id": "juno_tape_pad",
+    "name": "Juno:Tape Pad",
+    "anchors": {
+      "36": "banks/yamaha-eos/juno_tape_pad/36.mp3",
+      "43": "banks/yamaha-eos/juno_tape_pad/43.mp3",
+      "48": "banks/yamaha-eos/juno_tape_pad/48.mp3",
+      "55": "banks/yamaha-eos/juno_tape_pad/55.mp3",
+      "60": "banks/yamaha-eos/juno_tape_pad/60.mp3",
+      "64": "banks/yamaha-eos/juno_tape_pad/64.mp3",
+      "67": "banks/yamaha-eos/juno_tape_pad/67.mp3",
+      "72": "banks/yamaha-eos/juno_tape_pad/72.mp3",
+      "76": "banks/yamaha-eos/juno_tape_pad/76.mp3",
+      "79": "banks/yamaha-eos/juno_tape_pad/79.mp3"
+    }
+  },
+  "juno_90s_lead": {
+    "id": "juno_90s_lead",
+    "name": "Juno:90s Lead",
+    "anchors": {
+      "48": "banks/yamaha-eos/juno_90s_lead/48.mp3",
+      "55": "banks/yamaha-eos/juno_90s_lead/55.mp3",
+      "60": "banks/yamaha-eos/juno_90s_lead/60.mp3",
+      "64": "banks/yamaha-eos/juno_90s_lead/64.mp3",
+      "67": "banks/yamaha-eos/juno_90s_lead/67.mp3",
+      "72": "banks/yamaha-eos/juno_90s_lead/72.mp3",
+      "76": "banks/yamaha-eos/juno_90s_lead/76.mp3",
+      "79": "banks/yamaha-eos/juno_90s_lead/79.mp3",
+      "84": "banks/yamaha-eos/juno_90s_lead/84.mp3"
+    }
+  },
+  "juno_jazz_ep": {
+    "id": "juno_jazz_ep",
+    "name": "Juno:Jazz EP",
+    "anchors": {
+      "36": "banks/yamaha-eos/juno_jazz_ep/36.mp3",
+      "43": "banks/yamaha-eos/juno_jazz_ep/43.mp3",
+      "48": "banks/yamaha-eos/juno_jazz_ep/48.mp3",
+      "55": "banks/yamaha-eos/juno_jazz_ep/55.mp3",
+      "60": "banks/yamaha-eos/juno_jazz_ep/60.mp3",
+      "64": "banks/yamaha-eos/juno_jazz_ep/64.mp3",
+      "67": "banks/yamaha-eos/juno_jazz_ep/67.mp3",
+      "72": "banks/yamaha-eos/juno_jazz_ep/72.mp3",
+      "76": "banks/yamaha-eos/juno_jazz_ep/76.mp3"
+    }
+  },
+  "juno_jazz_flute": {
+    "id": "juno_jazz_flute",
+    "name": "Juno:Jazz Flute",
+    "anchors": {
+      "55": "banks/yamaha-eos/juno_jazz_flute/55.mp3",
+      "60": "banks/yamaha-eos/juno_jazz_flute/60.mp3",
+      "64": "banks/yamaha-eos/juno_jazz_flute/64.mp3",
+      "67": "banks/yamaha-eos/juno_jazz_flute/67.mp3",
+      "72": "banks/yamaha-eos/juno_jazz_flute/72.mp3",
+      "76": "banks/yamaha-eos/juno_jazz_flute/76.mp3",
+      "79": "banks/yamaha-eos/juno_jazz_flute/79.mp3",
+      "84": "banks/yamaha-eos/juno_jazz_flute/84.mp3"
+    }
+  },
+  "juno_jazz_horn": {
+    "id": "juno_jazz_horn",
+    "name": "Juno:Jazz Horn",
+    "anchors": {
+      "48": "banks/yamaha-eos/juno_jazz_horn/48.mp3",
+      "55": "banks/yamaha-eos/juno_jazz_horn/55.mp3",
+      "60": "banks/yamaha-eos/juno_jazz_horn/60.mp3",
+      "64": "banks/yamaha-eos/juno_jazz_horn/64.mp3",
+      "67": "banks/yamaha-eos/juno_jazz_horn/67.mp3",
+      "72": "banks/yamaha-eos/juno_jazz_horn/72.mp3",
+      "76": "banks/yamaha-eos/juno_jazz_horn/76.mp3",
+      "79": "banks/yamaha-eos/juno_jazz_horn/79.mp3"
+    }
+  },
+  "juno_jazz_bass": {
+    "id": "juno_jazz_bass",
+    "name": "Juno:Jazz Bass",
+    "anchors": {
+      "28": "banks/yamaha-eos/juno_jazz_bass/28.mp3",
+      "31": "banks/yamaha-eos/juno_jazz_bass/31.mp3",
+      "36": "banks/yamaha-eos/juno_jazz_bass/36.mp3",
+      "40": "banks/yamaha-eos/juno_jazz_bass/40.mp3",
+      "43": "banks/yamaha-eos/juno_jazz_bass/43.mp3",
+      "47": "banks/yamaha-eos/juno_jazz_bass/47.mp3",
+      "48": "banks/yamaha-eos/juno_jazz_bass/48.mp3"
+    }
+  },
+  "juno_jazz_strings": {
+    "id": "juno_jazz_strings",
+    "name": "Juno:Jazz Strings",
+    "anchors": {
+      "48": "banks/yamaha-eos/juno_jazz_strings/48.mp3",
+      "55": "banks/yamaha-eos/juno_jazz_strings/55.mp3",
+      "60": "banks/yamaha-eos/juno_jazz_strings/60.mp3",
+      "64": "banks/yamaha-eos/juno_jazz_strings/64.mp3",
+      "67": "banks/yamaha-eos/juno_jazz_strings/67.mp3",
+      "72": "banks/yamaha-eos/juno_jazz_strings/72.mp3",
+      "76": "banks/yamaha-eos/juno_jazz_strings/76.mp3",
+      "79": "banks/yamaha-eos/juno_jazz_strings/79.mp3",
+      "84": "banks/yamaha-eos/juno_jazz_strings/84.mp3"
+    }
+  },
+  "juno_vibes_bell": {
+    "id": "juno_vibes_bell",
+    "name": "Juno:Vibes",
+    "anchors": {
+      "60": "banks/yamaha-eos/juno_vibes_bell/60.mp3",
+      "64": "banks/yamaha-eos/juno_vibes_bell/64.mp3",
+      "67": "banks/yamaha-eos/juno_vibes_bell/67.mp3",
+      "72": "banks/yamaha-eos/juno_vibes_bell/72.mp3",
+      "76": "banks/yamaha-eos/juno_vibes_bell/76.mp3",
+      "79": "banks/yamaha-eos/juno_vibes_bell/79.mp3",
+      "84": "banks/yamaha-eos/juno_vibes_bell/84.mp3",
+      "88": "banks/yamaha-eos/juno_vibes_bell/88.mp3"
+    }
+  },
+  "juno_vibes_harp": {
+    "id": "juno_vibes_harp",
+    "name": "Juno:Space Harp",
+    "anchors": {
+      "48": "banks/yamaha-eos/juno_vibes_harp/48.mp3",
+      "55": "banks/yamaha-eos/juno_vibes_harp/55.mp3",
+      "60": "banks/yamaha-eos/juno_vibes_harp/60.mp3",
+      "64": "banks/yamaha-eos/juno_vibes_harp/64.mp3",
+      "67": "banks/yamaha-eos/juno_vibes_harp/67.mp3",
+      "72": "banks/yamaha-eos/juno_vibes_harp/72.mp3",
+      "76": "banks/yamaha-eos/juno_vibes_harp/76.mp3",
+      "79": "banks/yamaha-eos/juno_vibes_harp/79.mp3"
+    }
+  },
+  "juno_vibes_dream": {
+    "id": "juno_vibes_dream",
+    "name": "Juno:Dream Pad",
+    "anchors": {
+      "36": "banks/yamaha-eos/juno_vibes_dream/36.mp3",
+      "43": "banks/yamaha-eos/juno_vibes_dream/43.mp3",
+      "48": "banks/yamaha-eos/juno_vibes_dream/48.mp3",
+      "55": "banks/yamaha-eos/juno_vibes_dream/55.mp3",
+      "60": "banks/yamaha-eos/juno_vibes_dream/60.mp3",
+      "64": "banks/yamaha-eos/juno_vibes_dream/64.mp3",
+      "67": "banks/yamaha-eos/juno_vibes_dream/67.mp3",
+      "72": "banks/yamaha-eos/juno_vibes_dream/72.mp3"
+    }
+  },
+  "juno_organ_80s": {
+    "id": "juno_organ_80s",
+    "name": "Juno:80s Organ",
+    "anchors": {
+      "36": "banks/yamaha-eos/juno_organ_80s/36.mp3",
+      "43": "banks/yamaha-eos/juno_organ_80s/43.mp3",
+      "48": "banks/yamaha-eos/juno_organ_80s/48.mp3",
+      "55": "banks/yamaha-eos/juno_organ_80s/55.mp3",
+      "60": "banks/yamaha-eos/juno_organ_80s/60.mp3",
+      "64": "banks/yamaha-eos/juno_organ_80s/64.mp3",
+      "67": "banks/yamaha-eos/juno_organ_80s/67.mp3",
+      "72": "banks/yamaha-eos/juno_organ_80s/72.mp3"
+    }
+  },
+  "juno_brass_stab": {
+    "id": "juno_brass_stab",
+    "name": "Juno:Brass Stab",
+    "anchors": {
+      "48": "banks/yamaha-eos/juno_brass_stab/48.mp3",
+      "55": "banks/yamaha-eos/juno_brass_stab/55.mp3",
+      "60": "banks/yamaha-eos/juno_brass_stab/60.mp3",
+      "64": "banks/yamaha-eos/juno_brass_stab/64.mp3",
+      "67": "banks/yamaha-eos/juno_brass_stab/67.mp3",
+      "72": "banks/yamaha-eos/juno_brass_stab/72.mp3",
+      "76": "banks/yamaha-eos/juno_brass_stab/76.mp3",
+      "79": "banks/yamaha-eos/juno_brass_stab/79.mp3"
+    }
+  },
+  "juno_80s_synthbass": {
+    "id": "juno_80s_synthbass",
+    "name": "Juno:80s Synth Bass",
+    "anchors": {
+      "28": "banks/yamaha-eos/juno_80s_synthbass/28.mp3",
+      "31": "banks/yamaha-eos/juno_80s_synthbass/31.mp3",
+      "36": "banks/yamaha-eos/juno_80s_synthbass/36.mp3",
+      "40": "banks/yamaha-eos/juno_80s_synthbass/40.mp3",
+      "43": "banks/yamaha-eos/juno_80s_synthbass/43.mp3",
+      "47": "banks/yamaha-eos/juno_80s_synthbass/47.mp3",
+      "48": "banks/yamaha-eos/juno_80s_synthbass/48.mp3",
+      "52": "banks/yamaha-eos/juno_80s_synthbass/52.mp3"
+    }
+  },
+  "juno_80s_polysynth": {
+    "id": "juno_80s_polysynth",
+    "name": "Juno:Polysynth",
+    "anchors": {
+      "48": "banks/yamaha-eos/juno_80s_polysynth/48.mp3",
+      "55": "banks/yamaha-eos/juno_80s_polysynth/55.mp3",
+      "60": "banks/yamaha-eos/juno_80s_polysynth/60.mp3",
+      "64": "banks/yamaha-eos/juno_80s_polysynth/64.mp3",
+      "67": "banks/yamaha-eos/juno_80s_polysynth/67.mp3",
+      "72": "banks/yamaha-eos/juno_80s_polysynth/72.mp3",
+      "76": "banks/yamaha-eos/juno_80s_polysynth/76.mp3",
+      "79": "banks/yamaha-eos/juno_80s_polysynth/79.mp3",
+      "84": "banks/yamaha-eos/juno_80s_polysynth/84.mp3"
+    }
+  },
+  "juno_80s_pizz": {
+    "id": "juno_80s_pizz",
+    "name": "Juno:80s Pizz",
+    "anchors": {
+      "48": "banks/yamaha-eos/juno_80s_pizz/48.mp3",
+      "55": "banks/yamaha-eos/juno_80s_pizz/55.mp3",
+      "60": "banks/yamaha-eos/juno_80s_pizz/60.mp3",
+      "64": "banks/yamaha-eos/juno_80s_pizz/64.mp3",
+      "67": "banks/yamaha-eos/juno_80s_pizz/67.mp3",
+      "72": "banks/yamaha-eos/juno_80s_pizz/72.mp3",
+      "76": "banks/yamaha-eos/juno_80s_pizz/76.mp3",
+      "79": "banks/yamaha-eos/juno_80s_pizz/79.mp3"
+    }
+  },
+  "juno_whistle": {
+    "id": "juno_whistle",
+    "name": "Juno:Whistle",
+    "anchors": {
+      "60": "banks/yamaha-eos/juno_whistle/60.mp3",
+      "64": "banks/yamaha-eos/juno_whistle/64.mp3",
+      "67": "banks/yamaha-eos/juno_whistle/67.mp3",
+      "72": "banks/yamaha-eos/juno_whistle/72.mp3",
+      "76": "banks/yamaha-eos/juno_whistle/76.mp3",
+      "79": "banks/yamaha-eos/juno_whistle/79.mp3",
+      "84": "banks/yamaha-eos/juno_whistle/84.mp3"
+    }
+  },
+  "juno_tx_ep": {
+    "id": "juno_tx_ep",
+    "name": "Juno:Lo-Fi TX EP",
+    "anchors": {
+      "36": "banks/yamaha-eos/juno_tx_ep/36.mp3",
+      "43": "banks/yamaha-eos/juno_tx_ep/43.mp3",
+      "48": "banks/yamaha-eos/juno_tx_ep/48.mp3",
+      "55": "banks/yamaha-eos/juno_tx_ep/55.mp3",
+      "60": "banks/yamaha-eos/juno_tx_ep/60.mp3",
+      "64": "banks/yamaha-eos/juno_tx_ep/64.mp3",
+      "67": "banks/yamaha-eos/juno_tx_ep/67.mp3",
+      "72": "banks/yamaha-eos/juno_tx_ep/72.mp3"
+    }
+  },
+  "juno_clavinet": {
+    "id": "juno_clavinet",
+    "name": "Juno:Chorus Clavinet",
+    "anchors": {
+      "36": "banks/yamaha-eos/juno_clavinet/36.mp3",
+      "43": "banks/yamaha-eos/juno_clavinet/43.mp3",
+      "48": "banks/yamaha-eos/juno_clavinet/48.mp3",
+      "55": "banks/yamaha-eos/juno_clavinet/55.mp3",
+      "60": "banks/yamaha-eos/juno_clavinet/60.mp3",
+      "64": "banks/yamaha-eos/juno_clavinet/64.mp3",
+      "67": "banks/yamaha-eos/juno_clavinet/67.mp3",
+      "72": "banks/yamaha-eos/juno_clavinet/72.mp3"
+    }
+  },
+  "juno_kalimba_lofi": {
+    "id": "juno_kalimba_lofi",
+    "name": "Juno:Lo-Fi Kalimba",
+    "anchors": {
+      "48": "banks/yamaha-eos/juno_kalimba_lofi/48.mp3",
+      "55": "banks/yamaha-eos/juno_kalimba_lofi/55.mp3",
+      "60": "banks/yamaha-eos/juno_kalimba_lofi/60.mp3",
+      "64": "banks/yamaha-eos/juno_kalimba_lofi/64.mp3",
+      "67": "banks/yamaha-eos/juno_kalimba_lofi/67.mp3",
+      "72": "banks/yamaha-eos/juno_kalimba_lofi/72.mp3",
+      "76": "banks/yamaha-eos/juno_kalimba_lofi/76.mp3",
+      "79": "banks/yamaha-eos/juno_kalimba_lofi/79.mp3"
+    }
+  },
+  "juno_x_brass": {
+    "id": "juno_x_brass",
+    "name": "Juno:X-Brass",
+    "anchors": {
+      "40": "banks/yamaha-eos/juno_x_brass/40.mp3",
+      "48": "banks/yamaha-eos/juno_x_brass/48.mp3",
+      "55": "banks/yamaha-eos/juno_x_brass/55.mp3",
+      "60": "banks/yamaha-eos/juno_x_brass/60.mp3",
+      "64": "banks/yamaha-eos/juno_x_brass/64.mp3",
+      "67": "banks/yamaha-eos/juno_x_brass/67.mp3",
+      "72": "banks/yamaha-eos/juno_x_brass/72.mp3"
+    }
+  },
+  "juno_jazz_guitar": {
+    "id": "juno_jazz_guitar",
+    "name": "Juno:Jazz Guitar",
+    "anchors": {
+      "40": "banks/yamaha-eos/juno_jazz_guitar/40.mp3",
+      "48": "banks/yamaha-eos/juno_jazz_guitar/48.mp3",
+      "55": "banks/yamaha-eos/juno_jazz_guitar/55.mp3",
+      "60": "banks/yamaha-eos/juno_jazz_guitar/60.mp3",
+      "64": "banks/yamaha-eos/juno_jazz_guitar/64.mp3",
+      "67": "banks/yamaha-eos/juno_jazz_guitar/67.mp3",
+      "72": "banks/yamaha-eos/juno_jazz_guitar/72.mp3",
+      "76": "banks/yamaha-eos/juno_jazz_guitar/76.mp3",
+      "79": "banks/yamaha-eos/juno_jazz_guitar/79.mp3"
+    }
+  },
+  "juno_house_piano": {
+    "id": "juno_house_piano",
+    "name": "Juno:90s House Piano",
+    "anchors": {
+      "36": "banks/yamaha-eos/juno_house_piano/36.mp3",
+      "43": "banks/yamaha-eos/juno_house_piano/43.mp3",
+      "48": "banks/yamaha-eos/juno_house_piano/48.mp3",
+      "55": "banks/yamaha-eos/juno_house_piano/55.mp3",
+      "60": "banks/yamaha-eos/juno_house_piano/60.mp3",
+      "64": "banks/yamaha-eos/juno_house_piano/64.mp3",
+      "67": "banks/yamaha-eos/juno_house_piano/67.mp3",
+      "72": "banks/yamaha-eos/juno_house_piano/72.mp3"
+    }
+  },
+  "juno_midnight_ep": {
+    "id": "juno_midnight_ep",
+    "name": "Juno:Midnight Rhodes",
+    "anchors": {
+      "36": "banks/yamaha-eos/juno_midnight_ep/36.mp3",
+      "43": "banks/yamaha-eos/juno_midnight_ep/43.mp3",
+      "48": "banks/yamaha-eos/juno_midnight_ep/48.mp3",
+      "55": "banks/yamaha-eos/juno_midnight_ep/55.mp3",
+      "60": "banks/yamaha-eos/juno_midnight_ep/60.mp3",
+      "64": "banks/yamaha-eos/juno_midnight_ep/64.mp3",
+      "67": "banks/yamaha-eos/juno_midnight_ep/67.mp3",
+      "72": "banks/yamaha-eos/juno_midnight_ep/72.mp3"
+    }
+  },
+  "juno_vibes_vibraphone": {
+    "id": "juno_vibes_vibraphone",
+    "name": "Juno:Jazz Vibraphone",
+    "anchors": {
+      "55": "banks/yamaha-eos/juno_vibes_vibraphone/55.mp3",
+      "59": "banks/yamaha-eos/juno_vibes_vibraphone/59.mp3",
+      "62": "banks/yamaha-eos/juno_vibes_vibraphone/62.mp3",
+      "67": "banks/yamaha-eos/juno_vibes_vibraphone/67.mp3",
+      "71": "banks/yamaha-eos/juno_vibes_vibraphone/71.mp3",
+      "74": "banks/yamaha-eos/juno_vibes_vibraphone/74.mp3",
+      "79": "banks/yamaha-eos/juno_vibes_vibraphone/79.mp3",
+      "83": "banks/yamaha-eos/juno_vibes_vibraphone/83.mp3"
+    }
+  },
+  "juno_jazz_guitar_2": {
+    "id": "juno_jazz_guitar_2",
+    "name": "Juno:Jazz Guitar 2",
+    "anchors": {
+      "40": "banks/yamaha-eos/juno_jazz_guitar_2/40.mp3",
+      "48": "banks/yamaha-eos/juno_jazz_guitar_2/48.mp3",
+      "55": "banks/yamaha-eos/juno_jazz_guitar_2/55.mp3",
+      "60": "banks/yamaha-eos/juno_jazz_guitar_2/60.mp3",
+      "64": "banks/yamaha-eos/juno_jazz_guitar_2/64.mp3",
+      "67": "banks/yamaha-eos/juno_jazz_guitar_2/67.mp3",
+      "72": "banks/yamaha-eos/juno_jazz_guitar_2/72.mp3",
+      "76": "banks/yamaha-eos/juno_jazz_guitar_2/76.mp3",
+      "79": "banks/yamaha-eos/juno_jazz_guitar_2/79.mp3"
+    }
+  }
+}

@@ -32,7 +32,13 @@ const KORG_IDS = new Set([
 function ownerBankName(instId) {
   if (typeof instId !== "string" || !instId) return null;
   if (KORG_IDS.has(instId)) return "korg";
-  if (instId.startsWith("eos_") || instId.startsWith("tekk_")) return "yamaha";
+  if (
+    instId.startsWith("eos_") ||
+    instId.startsWith("tekk_") ||
+    instId.startsWith("sc55_") ||
+    instId.startsWith("juno_")
+  )
+    return "yamaha";
   if (
     instId.startsWith("edm_") ||
     instId.startsWith("omega_") ||

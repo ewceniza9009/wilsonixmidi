@@ -3479,12 +3479,7 @@ export class MultiLayerEngine {
     this.activeSingleInst = "acoustic_grand_piano";
     this.synthPatch = null;
     this.layers = JSON.parse(JSON.stringify(this.activeCombi.layers));
-    this.layers.forEach((layer) => {
-      if (layer.inst && layer.inst.startsWith("va:")) {
-        const prog = getTritonProgramById(layer.inst.slice(3));
-        if (prog) layer.vaProg = prog;
-      }
-    });
+    this._resolveLayerVaProgs(this.layers);
     this.isDualLayerActive = false; // Dedicated dual-layer toggle state for live stage performance
 
     // Keyboard split: two fully assignable zones. Notes below splitPointMidi hit the
@@ -3858,12 +3853,7 @@ export class MultiLayerEngine {
       if (!s || !Array.isArray(s.layers) || s.layers.length !== 4) return null;
       if (!s.layers.every((l) => l && typeof l.inst === "string")) return null;
       this.layers = s.layers;
-      this.layers.forEach((layer) => {
-        if (layer.inst && layer.inst.startsWith("va:")) {
-          const prog = getTritonProgramById(layer.inst.slice(3));
-          if (prog) layer.vaProg = prog;
-        }
-      });
+      this._resolveLayerVaProgs(this.layers);
       this.isCombiMode = s.isCombiMode !== false;
       this.isSynthMode = false;
       if (this.isCombiMode && s.activeCombiId) {
@@ -4398,6 +4388,25 @@ export class MultiLayerEngine {
   }
 
   /**
+   * Re-attaches resolved Triton VA programs to layers whose `inst` is a
+   * "va:<progId>" key. Every path that assigns `this.layers` from a cloned or
+   * deserialized source MUST call this: `vaProg` is a live program object, so
+   * JSON cloning and session restore both drop it. Without it a VA layer falls
+   * through to playNote("va:A045"), which is not a PCM bank and is silently
+   * discarded - the layer goes quiet instead of erroring.
+   */
+  _resolveLayerVaProgs(layers) {
+    if (!Array.isArray(layers)) return;
+    for (const layer of layers) {
+      if (layer && layer.inst && layer.inst.startsWith("va:")) {
+        const prog = getTritonProgramById(layer.inst.slice(3));
+        if (prog) layer.vaProg = prog;
+        else delete layer.vaProg;
+      }
+    }
+  }
+
+  /**
    * Collects fire-and-forget preload promises for a preset's layers. Only
    * instruments that are NOT already decoded are tracked — already-decoded
    * layers resolve instantly and must not flash a "loading" state. VA layers
@@ -4505,6 +4514,7 @@ export class MultiLayerEngine {
     // Preserve worklet nodes across combi changes — only update layer state,
     // don't recreate worklets which causes 2-4s main-thread blocks on Android.
     this.layers = JSON.parse(JSON.stringify(this.activeCombi.layers));
+    this._resolveLayerVaProgs(this.layers);
 
     // Budget guard: if decoded RAM is near budget, skip eager preloads and
     // let layer instruments lazy-decode on first note (prevents OOM on low-RAM).
@@ -4978,6 +4988,18 @@ export class MultiLayerEngine {
             velocity,
             when,
           );
+        } else if (layer.inst && layer.inst.startsWith("va:")) {
+          // A VA layer whose program failed to resolve must NOT fall through to
+          // playNote() - "va:A045" is not a PCM bank and would be dropped
+          // silently, making the layer look like a broken preset.
+          const prog = getTritonProgramById(layer.inst.slice(3));
+          if (prog) {
+            this.getVaEngineFor(prog, effectiveGain, i).noteOn(
+              transposedMidi,
+              velocity,
+              when,
+            );
+          }
         } else if (this.pcmEngine) {
           this.pcmEngine.playNote(
             layer.inst,
@@ -5677,6 +5699,7 @@ export class MultiLayerEngine {
     this.isCombiMode = true;
     this.isSynthMode = false;
     this.layers = JSON.parse(JSON.stringify(found.layers));
+    this._resolveLayerVaProgs(this.layers);
     // Apply layer gains to ensure balanced volume across layered presets.
     // The engine applies layerRoleTrim (0.52 for secondary layers) to keep
     // the lead instrument cutting through, so we boost secondary gains accordingly.

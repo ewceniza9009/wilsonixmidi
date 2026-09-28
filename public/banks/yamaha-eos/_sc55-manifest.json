@@ -1,0 +1,323 @@
+{
+  "sc55_midi_grand": {
+    "id": "sc55_midi_grand",
+    "name": "SC55:Midi Grand",
+    "anchors": {
+      "36": "banks/yamaha-eos/sc55_midi_grand/36.mp3",
+      "43": "banks/yamaha-eos/sc55_midi_grand/43.mp3",
+      "48": "banks/yamaha-eos/sc55_midi_grand/48.mp3",
+      "55": "banks/yamaha-eos/sc55_midi_grand/55.mp3",
+      "60": "banks/yamaha-eos/sc55_midi_grand/60.mp3",
+      "64": "banks/yamaha-eos/sc55_midi_grand/64.mp3",
+      "67": "banks/yamaha-eos/sc55_midi_grand/67.mp3",
+      "72": "banks/yamaha-eos/sc55_midi_grand/72.mp3",
+      "76": "banks/yamaha-eos/sc55_midi_grand/76.mp3",
+      "79": "banks/yamaha-eos/sc55_midi_grand/79.mp3",
+      "84": "banks/yamaha-eos/sc55_midi_grand/84.mp3"
+    }
+  },
+  "sc55_vintage_ep": {
+    "id": "sc55_vintage_ep",
+    "name": "SC55:Vintage EP",
+    "anchors": {
+      "36": "banks/yamaha-eos/sc55_vintage_ep/36.mp3",
+      "48": "banks/yamaha-eos/sc55_vintage_ep/48.mp3",
+      "55": "banks/yamaha-eos/sc55_vintage_ep/55.mp3",
+      "60": "banks/yamaha-eos/sc55_vintage_ep/60.mp3",
+      "64": "banks/yamaha-eos/sc55_vintage_ep/64.mp3",
+      "67": "banks/yamaha-eos/sc55_vintage_ep/67.mp3",
+      "72": "banks/yamaha-eos/sc55_vintage_ep/72.mp3",
+      "76": "banks/yamaha-eos/sc55_vintage_ep/76.mp3",
+      "79": "banks/yamaha-eos/sc55_vintage_ep/79.mp3",
+      "84": "banks/yamaha-eos/sc55_vintage_ep/84.mp3"
+    }
+  },
+  "sc55_rnb_tine": {
+    "id": "sc55_rnb_tine",
+    "name": "SC55:R&B Tine",
+    "anchors": {
+      "36": "banks/yamaha-eos/sc55_rnb_tine/36.mp3",
+      "43": "banks/yamaha-eos/sc55_rnb_tine/43.mp3",
+      "48": "banks/yamaha-eos/sc55_rnb_tine/48.mp3",
+      "55": "banks/yamaha-eos/sc55_rnb_tine/55.mp3",
+      "60": "banks/yamaha-eos/sc55_rnb_tine/60.mp3",
+      "64": "banks/yamaha-eos/sc55_rnb_tine/64.mp3",
+      "67": "banks/yamaha-eos/sc55_rnb_tine/67.mp3",
+      "72": "banks/yamaha-eos/sc55_rnb_tine/72.mp3",
+      "76": "banks/yamaha-eos/sc55_rnb_tine/76.mp3"
+    }
+  },
+  "sc55_phantom_ep": {
+    "id": "sc55_phantom_ep",
+    "name": "SC55:Phantom EP",
+    "anchors": {
+      "48": "banks/yamaha-eos/sc55_phantom_ep/48.mp3",
+      "55": "banks/yamaha-eos/sc55_phantom_ep/55.mp3",
+      "60": "banks/yamaha-eos/sc55_phantom_ep/60.mp3",
+      "64": "banks/yamaha-eos/sc55_phantom_ep/64.mp3",
+      "67": "banks/yamaha-eos/sc55_phantom_ep/67.mp3",
+      "72": "banks/yamaha-eos/sc55_phantom_ep/72.mp3",
+      "76": "banks/yamaha-eos/sc55_phantom_ep/76.mp3",
+      "79": "banks/yamaha-eos/sc55_phantom_ep/79.mp3",
+      "84": "banks/yamaha-eos/sc55_phantom_ep/84.mp3"
+    }
+  },
+  "sc55_samba_ep": {
+    "id": "sc55_samba_ep",
+    "name": "SC55:Samba EP",
+    "anchors": {
+      "55": "banks/yamaha-eos/sc55_samba_ep/55.mp3",
+      "60": "banks/yamaha-eos/sc55_samba_ep/60.mp3",
+      "64": "banks/yamaha-eos/sc55_samba_ep/64.mp3",
+      "67": "banks/yamaha-eos/sc55_samba_ep/67.mp3",
+      "72": "banks/yamaha-eos/sc55_samba_ep/72.mp3",
+      "76": "banks/yamaha-eos/sc55_samba_ep/76.mp3",
+      "79": "banks/yamaha-eos/sc55_samba_ep/79.mp3",
+      "84": "banks/yamaha-eos/sc55_samba_ep/84.mp3"
+    }
+  },
+  "sc55_lofi_rhodes": {
+    "id": "sc55_lofi_rhodes",
+    "name": "SC55:Lo-Fi Rhodes",
+    "anchors": {
+      "36": "banks/yamaha-eos/sc55_lofi_rhodes/36.mp3",
+      "43": "banks/yamaha-eos/sc55_lofi_rhodes/43.mp3",
+      "48": "banks/yamaha-eos/sc55_lofi_rhodes/48.mp3",
+      "55": "banks/yamaha-eos/sc55_lofi_rhodes/55.mp3",
+      "60": "banks/yamaha-eos/sc55_lofi_rhodes/60.mp3",
+      "64": "banks/yamaha-eos/sc55_lofi_rhodes/64.mp3",
+      "67": "banks/yamaha-eos/sc55_lofi_rhodes/67.mp3",
+      "72": "banks/yamaha-eos/sc55_lofi_rhodes/72.mp3"
+    }
+  },
+  "sc55_bright_ep": {
+    "id": "sc55_bright_ep",
+    "name": "SC55:Bright EP",
+    "anchors": {
+      "48": "banks/yamaha-eos/sc55_bright_ep/48.mp3",
+      "55": "banks/yamaha-eos/sc55_bright_ep/55.mp3",
+      "60": "banks/yamaha-eos/sc55_bright_ep/60.mp3",
+      "64": "banks/yamaha-eos/sc55_bright_ep/64.mp3",
+      "67": "banks/yamaha-eos/sc55_bright_ep/67.mp3",
+      "72": "banks/yamaha-eos/sc55_bright_ep/72.mp3",
+      "76": "banks/yamaha-eos/sc55_bright_ep/76.mp3",
+      "79": "banks/yamaha-eos/sc55_bright_ep/79.mp3",
+      "84": "banks/yamaha-eos/sc55_bright_ep/84.mp3"
+    }
+  },
+  "sc55_deep_world": {
+    "id": "sc55_deep_world",
+    "name": "SC55:Deep World",
+    "anchors": {
+      "36": "banks/yamaha-eos/sc55_deep_world/36.mp3",
+      "48": "banks/yamaha-eos/sc55_deep_world/48.mp3",
+      "55": "banks/yamaha-eos/sc55_deep_world/55.mp3",
+      "60": "banks/yamaha-eos/sc55_deep_world/60.mp3",
+      "64": "banks/yamaha-eos/sc55_deep_world/64.mp3",
+      "67": "banks/yamaha-eos/sc55_deep_world/67.mp3",
+      "72": "banks/yamaha-eos/sc55_deep_world/72.mp3",
+      "79": "banks/yamaha-eos/sc55_deep_world/79.mp3"
+    }
+  },
+  "sc55_soft_vibes": {
+    "id": "sc55_soft_vibes",
+    "name": "SC55:Soft Vibes",
+    "anchors": {
+      "52": "banks/yamaha-eos/sc55_soft_vibes/52.mp3",
+      "58": "banks/yamaha-eos/sc55_soft_vibes/58.mp3",
+      "60": "banks/yamaha-eos/sc55_soft_vibes/60.mp3",
+      "62": "banks/yamaha-eos/sc55_soft_vibes/62.mp3",
+      "64": "banks/yamaha-eos/sc55_soft_vibes/64.mp3",
+      "67": "banks/yamaha-eos/sc55_soft_vibes/67.mp3",
+      "70": "banks/yamaha-eos/sc55_soft_vibes/70.mp3",
+      "72": "banks/yamaha-eos/sc55_soft_vibes/72.mp3",
+      "76": "banks/yamaha-eos/sc55_soft_vibes/76.mp3",
+      "78": "banks/yamaha-eos/sc55_soft_vibes/78.mp3",
+      "82": "banks/yamaha-eos/sc55_soft_vibes/82.mp3"
+    }
+  },
+  "sc55_nylon_jazz": {
+    "id": "sc55_nylon_jazz",
+    "name": "SC55:Nylon Jazz Gt",
+    "anchors": {
+      "48": "banks/yamaha-eos/sc55_nylon_jazz/48.mp3",
+      "54": "banks/yamaha-eos/sc55_nylon_jazz/54.mp3",
+      "60": "banks/yamaha-eos/sc55_nylon_jazz/60.mp3",
+      "66": "banks/yamaha-eos/sc55_nylon_jazz/66.mp3",
+      "72": "banks/yamaha-eos/sc55_nylon_jazz/72.mp3",
+      "78": "banks/yamaha-eos/sc55_nylon_jazz/78.mp3"
+    }
+  },
+  "sc55_fretless_bass": {
+    "id": "sc55_fretless_bass",
+    "name": "SC55:Fretless Bass",
+    "anchors": {
+      "36": "banks/yamaha-eos/sc55_fretless_bass/36.mp3",
+      "43": "banks/yamaha-eos/sc55_fretless_bass/43.mp3",
+      "48": "banks/yamaha-eos/sc55_fretless_bass/48.mp3",
+      "55": "banks/yamaha-eos/sc55_fretless_bass/55.mp3",
+      "60": "banks/yamaha-eos/sc55_fretless_bass/60.mp3"
+    }
+  },
+  "sc55_acid_resonator": {
+    "id": "sc55_acid_resonator",
+    "name": "SC55:Acid Resonator",
+    "anchors": {
+      "36": "banks/yamaha-eos/sc55_acid_resonator/36.mp3",
+      "43": "banks/yamaha-eos/sc55_acid_resonator/43.mp3",
+      "47": "banks/yamaha-eos/sc55_acid_resonator/47.mp3",
+      "52": "banks/yamaha-eos/sc55_acid_resonator/52.mp3",
+      "55": "banks/yamaha-eos/sc55_acid_resonator/55.mp3",
+      "59": "banks/yamaha-eos/sc55_acid_resonator/59.mp3",
+      "62": "banks/yamaha-eos/sc55_acid_resonator/62.mp3",
+      "65": "banks/yamaha-eos/sc55_acid_resonator/65.mp3",
+      "67": "banks/yamaha-eos/sc55_acid_resonator/67.mp3",
+      "69": "banks/yamaha-eos/sc55_acid_resonator/69.mp3",
+      "74": "banks/yamaha-eos/sc55_acid_resonator/74.mp3",
+      "86": "banks/yamaha-eos/sc55_acid_resonator/86.mp3"
+    }
+  },
+  "sc55_techno_organ": {
+    "id": "sc55_techno_organ",
+    "name": "SC55:Techno Organ",
+    "anchors": {
+      "40": "banks/yamaha-eos/sc55_techno_organ/40.mp3",
+      "43": "banks/yamaha-eos/sc55_techno_organ/43.mp3",
+      "49": "banks/yamaha-eos/sc55_techno_organ/49.mp3",
+      "52": "banks/yamaha-eos/sc55_techno_organ/52.mp3",
+      "57": "banks/yamaha-eos/sc55_techno_organ/57.mp3",
+      "63": "banks/yamaha-eos/sc55_techno_organ/63.mp3",
+      "68": "banks/yamaha-eos/sc55_techno_organ/68.mp3",
+      "74": "banks/yamaha-eos/sc55_techno_organ/74.mp3"
+    }
+  },
+  "sc55_rave_stab": {
+    "id": "sc55_rave_stab",
+    "name": "SC55:Rave Stab",
+    "anchors": {
+      "60": "banks/yamaha-eos/sc55_rave_stab/60.mp3",
+      "64": "banks/yamaha-eos/sc55_rave_stab/64.mp3",
+      "67": "banks/yamaha-eos/sc55_rave_stab/67.mp3",
+      "72": "banks/yamaha-eos/sc55_rave_stab/72.mp3",
+      "76": "banks/yamaha-eos/sc55_rave_stab/76.mp3",
+      "79": "banks/yamaha-eos/sc55_rave_stab/79.mp3",
+      "84": "banks/yamaha-eos/sc55_rave_stab/84.mp3"
+    }
+  },
+  "sc55_trance_oct": {
+    "id": "sc55_trance_oct",
+    "name": "SC55:Trance Oct",
+    "anchors": {
+      "57": "banks/yamaha-eos/sc55_trance_oct/57.mp3",
+      "59": "banks/yamaha-eos/sc55_trance_oct/59.mp3",
+      "62": "banks/yamaha-eos/sc55_trance_oct/62.mp3",
+      "65": "banks/yamaha-eos/sc55_trance_oct/65.mp3",
+      "67": "banks/yamaha-eos/sc55_trance_oct/67.mp3",
+      "69": "banks/yamaha-eos/sc55_trance_oct/69.mp3",
+      "74": "banks/yamaha-eos/sc55_trance_oct/74.mp3",
+      "86": "banks/yamaha-eos/sc55_trance_oct/86.mp3"
+    }
+  },
+  "sc55_marsh_lead": {
+    "id": "sc55_marsh_lead",
+    "name": "SC55:Marshmallow Lead",
+    "anchors": {
+      "60": "banks/yamaha-eos/sc55_marsh_lead/60.mp3",
+      "64": "banks/yamaha-eos/sc55_marsh_lead/64.mp3",
+      "67": "banks/yamaha-eos/sc55_marsh_lead/67.mp3",
+      "69": "banks/yamaha-eos/sc55_marsh_lead/69.mp3",
+      "72": "banks/yamaha-eos/sc55_marsh_lead/72.mp3",
+      "76": "banks/yamaha-eos/sc55_marsh_lead/76.mp3",
+      "79": "banks/yamaha-eos/sc55_marsh_lead/79.mp3"
+    }
+  },
+  "sc55_angelic_choir": {
+    "id": "sc55_angelic_choir",
+    "name": "SC55:Angelic Choir",
+    "anchors": {
+      "48": "banks/yamaha-eos/sc55_angelic_choir/48.mp3",
+      "55": "banks/yamaha-eos/sc55_angelic_choir/55.mp3",
+      "57": "banks/yamaha-eos/sc55_angelic_choir/57.mp3",
+      "60": "banks/yamaha-eos/sc55_angelic_choir/60.mp3",
+      "67": "banks/yamaha-eos/sc55_angelic_choir/67.mp3",
+      "72": "banks/yamaha-eos/sc55_angelic_choir/72.mp3"
+    }
+  },
+  "sc55_space_dream": {
+    "id": "sc55_space_dream",
+    "name": "SC55:Space Dream",
+    "anchors": {
+      "48": "banks/yamaha-eos/sc55_space_dream/48.mp3",
+      "57": "banks/yamaha-eos/sc55_space_dream/57.mp3",
+      "62": "banks/yamaha-eos/sc55_space_dream/62.mp3",
+      "67": "banks/yamaha-eos/sc55_space_dream/67.mp3",
+      "72": "banks/yamaha-eos/sc55_space_dream/72.mp3",
+      "79": "banks/yamaha-eos/sc55_space_dream/79.mp3"
+    }
+  },
+  "sc55_breathy_sax": {
+    "id": "sc55_breathy_sax",
+    "name": "SC55:Breathy Sax",
+    "anchors": {
+      "56": "banks/yamaha-eos/sc55_breathy_sax/56.mp3",
+      "60": "banks/yamaha-eos/sc55_breathy_sax/60.mp3",
+      "63": "banks/yamaha-eos/sc55_breathy_sax/63.mp3",
+      "70": "banks/yamaha-eos/sc55_breathy_sax/70.mp3",
+      "73": "banks/yamaha-eos/sc55_breathy_sax/73.mp3",
+      "80": "banks/yamaha-eos/sc55_breathy_sax/80.mp3",
+      "83": "banks/yamaha-eos/sc55_breathy_sax/83.mp3"
+    }
+  },
+  "sc55_scoop_sax": {
+    "id": "sc55_scoop_sax",
+    "name": "SC55:Scoop Sax",
+    "anchors": {
+      "48": "banks/yamaha-eos/sc55_scoop_sax/48.mp3",
+      "54": "banks/yamaha-eos/sc55_scoop_sax/54.mp3",
+      "60": "banks/yamaha-eos/sc55_scoop_sax/60.mp3",
+      "66": "banks/yamaha-eos/sc55_scoop_sax/66.mp3",
+      "72": "banks/yamaha-eos/sc55_scoop_sax/72.mp3",
+      "78": "banks/yamaha-eos/sc55_scoop_sax/78.mp3",
+      "84": "banks/yamaha-eos/sc55_scoop_sax/84.mp3"
+    }
+  },
+  "sc55_sax_fall": {
+    "id": "sc55_sax_fall",
+    "name": "SC55:Sax Fall",
+    "anchors": {
+      "48": "banks/yamaha-eos/sc55_sax_fall/48.mp3",
+      "54": "banks/yamaha-eos/sc55_sax_fall/54.mp3",
+      "60": "banks/yamaha-eos/sc55_sax_fall/60.mp3",
+      "66": "banks/yamaha-eos/sc55_sax_fall/66.mp3",
+      "72": "banks/yamaha-eos/sc55_sax_fall/72.mp3",
+      "78": "banks/yamaha-eos/sc55_sax_fall/78.mp3",
+      "84": "banks/yamaha-eos/sc55_sax_fall/84.mp3"
+    }
+  },
+  "sc55_tenor_sax": {
+    "id": "sc55_tenor_sax",
+    "name": "SC55:Tenor Sax",
+    "anchors": {
+      "48": "banks/yamaha-eos/sc55_tenor_sax/48.mp3",
+      "54": "banks/yamaha-eos/sc55_tenor_sax/54.mp3",
+      "60": "banks/yamaha-eos/sc55_tenor_sax/60.mp3",
+      "66": "banks/yamaha-eos/sc55_tenor_sax/66.mp3",
+      "72": "banks/yamaha-eos/sc55_tenor_sax/72.mp3",
+      "78": "banks/yamaha-eos/sc55_tenor_sax/78.mp3",
+      "84": "banks/yamaha-eos/sc55_tenor_sax/84.mp3"
+    }
+  },
+  "sc55_funk_stab": {
+    "id": "sc55_funk_stab",
+    "name": "SC55:Funk Stab",
+    "anchors": {
+      "43": "banks/yamaha-eos/sc55_funk_stab/43.mp3",
+      "50": "banks/yamaha-eos/sc55_funk_stab/50.mp3",
+      "57": "banks/yamaha-eos/sc55_funk_stab/57.mp3",
+      "64": "banks/yamaha-eos/sc55_funk_stab/64.mp3",
+      "74": "banks/yamaha-eos/sc55_funk_stab/74.mp3",
+      "77": "banks/yamaha-eos/sc55_funk_stab/77.mp3",
+      "79": "banks/yamaha-eos/sc55_funk_stab/79.mp3"
+    }
+  }
+}

@@ -201,6 +201,14 @@ export function resolveTritonProgram(prog) {
   if (prog.id === "A030" && (prog.osc1 || prog.osc2)) {
     return { type: "va", prog };
   }
+  // A036 "Velo Piano ST" is a dual-triangle synth voice whose category
+  // ("Keyboard") is blacklisted by isSynthTimbre(); it therefore fell through
+  // to resolvePcmByProgram() line 123 and played the exact same PCM bank as
+  // KX_STUDIO_01 "X5D Studio Grand 96k". Route it to VA so each program has
+  // its own distinct sound.
+  if (prog.id === "A036" && (prog.osc1 || prog.osc2)) {
+    return { type: "va", prog };
+  }
   if (isSynthTimbre(prog)) {
     return { type: "va", prog };
   }
