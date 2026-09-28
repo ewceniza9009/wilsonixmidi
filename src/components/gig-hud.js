@@ -1347,15 +1347,35 @@ export class GigHudUI {
     const layerSelect = document.getElementById("hud-layer-select");
 
     layerBtn?.addEventListener("click", () => {
-      const isCurrentlyActive =
-        multiLayerEngine.isCombiMode &&
-        (multiLayerEngine.layers[1]?.enabled ?? true);
-      const nextActive = !isCurrentlyActive;
+      const nextActive = !multiLayerEngine.isCombiMode;
 
-      multiLayerEngine.toggleCombiMode(nextActive);
-      if (multiLayerEngine.layers[1]) {
-        multiLayerEngine.layers[1].enabled = nextActive;
+      multiLayerEngine.isCombiMode = nextActive;
+      multiLayerEngine.isSplitMode = false;
+      multiLayerEngine.isSynthMode = false;
+      multiLayerEngine.isTritonVaMode = false;
+      multiLayerEngine.activeTritonVaProg = null;
+      multiLayerEngine.activeSingleInst = nextActive
+        ? null
+        : "acoustic_grand_piano";
+
+      if (nextActive) {
+        // Switch to combi mode - enable all 4 layers
+        if (multiLayerEngine.layers) {
+          multiLayerEngine.layers.forEach((layer) => (layer.enabled = true));
+        }
+      } else {
+        // Switch to single instrument mode - only enable layer 0
+        if (multiLayerEngine.layers && multiLayerEngine.layers[0]) {
+          multiLayerEngine.layers[0].enabled = true;
+          if (multiLayerEngine.layers[1]) multiLayerEngine.layers[1].enabled = false;
+          if (multiLayerEngine.layers[2]) multiLayerEngine.layers[2].enabled = false;
+          if (multiLayerEngine.layers[3]) multiLayerEngine.layers[3].enabled = false;
+        }
       }
+
+      multiLayerEngine.init();
+      multiLayerEngine.notifyLayerChange();
+      multiLayerEngine.notifySplitChange();
 
       layerBtn.classList.toggle("active", nextActive);
       layerBtn.innerText = nextActive ? "LAYER ON" : "LAYER";
@@ -1514,6 +1534,7 @@ export class GigHudUI {
     const volReadout = document.getElementById("hud-master-vol-val");
     volSlider?.addEventListener("input", (e) => {
       const val = parseInt(e.target.value);
+      audioCore.ensureRunning();
       multiLayerEngine.setMasterVolumePct(val);
       if (volReadout) volReadout.innerText = `${val}%`;
     });

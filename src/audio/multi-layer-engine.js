@@ -5677,6 +5677,40 @@ export class MultiLayerEngine {
     this.isCombiMode = true;
     this.isSynthMode = false;
     this.layers = JSON.parse(JSON.stringify(found.layers));
+    // Apply layer gains to ensure balanced volume across layered presets.
+    // The engine applies layerRoleTrim (0.52 for secondary layers) to keep
+    // the lead instrument cutting through, so we boost secondary gains accordingly.
+    this.layers.forEach((layer, idx) => {
+      const inst = (layer.inst || "").toLowerCase();
+      if (idx === 0) {
+        // Lead layer: no trim applied (roleTrim=1.0), gain at unity
+        layer.gain = 1.0;
+      } else if (
+        inst.startsWith("bloom_") ||
+        inst.startsWith("pad_") ||
+        inst.startsWith("string") ||
+        inst.startsWith("swell") ||
+        inst.includes("pad") ||
+        inst.includes("strings") ||
+        inst.includes("choir") ||
+        inst.includes("organ")
+      ) {
+        // Secondary pad/atmospheric layers: boost to offset roleTrim 0.52
+        layer.gain = 1.92; // 1.0 / 0.52 ≈ 1.92
+      } else if (
+        inst.startsWith("bass") ||
+        inst.includes("sub") ||
+        inst.includes("fm") ||
+        inst.includes("saw") ||
+        inst.includes("square")
+      ) {
+        // Secondary bass/sub layers: boost to offset roleTrim 0.52
+        layer.gain = 1.92; // 1.0 / 0.52 ≈ 1.92
+      } else {
+        // Other secondary layers: moderate boost
+        layer.gain = 1.5;
+      }
+    });
     this.init();
     this.syncLayerFx();
     this.notifyLayerChange();
