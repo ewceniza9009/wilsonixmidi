@@ -341,8 +341,11 @@ class WilsonixSynthProcessor extends AudioWorkletProcessor {
     // can't stack to 7× full-scale and slam the master bus.
     let activeCount = 0;
     for (let v = 0; v < MAX_VOICES; v++) if (this.voices[v].active) activeCount++;
-    const targetScale = 1.0 / Math.sqrt(Math.max(1, activeCount));
+    
+    // Set to 75% master volume to match pcm-processor
+    const targetScale = 0.75 / Math.sqrt(Math.max(1, activeCount));
     this.polyScale += (targetScale - this.polyScale) * 0.12;
+    // Scale proportionally to match the synth gain staging with the new targetScale
     const voiceGain = 0.45 * this.polyScale;
 
     const attackRate = 1.0 / Math.max(0.001, this.attack * this.sampleRate);
