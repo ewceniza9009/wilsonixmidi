@@ -174,10 +174,11 @@ export class PolyphonicVoice {
     if (isPureSine) {
       // Pure sines have zero harmonics above the fundamental.
       // Setting filter flat & wide open (20kHz, Q=0) eliminates phase jitter,
-      // high-frequency biquad distortion, and filter sweeping buzz.
+      // Setting filter flat & wide open (Nyquist, Q=0.1) eliminates phase jitter
+      const nyquist = (this.ctx.sampleRate || 44100) / 2;
       this.filter.type = "lowpass";
-      this.filter.frequency.setValueAtTime(20000, now);
-      this.filter.Q.setValueAtTime(0.0, now);
+      this.filter.frequency.setValueAtTime(Math.min(20000, nyquist * 0.95), now);
+      this.filter.Q.setValueAtTime(0.1, now);
     } else {
       const baseCutoff = instrumentConfig.filterCutoff || 6000;
       const filterEnv = Math.min(11000, Math.max(baseCutoff * (0.5 + velRatio * 0.8), freq * 1.5));
