@@ -4602,7 +4602,8 @@ export class MultiLayerEngine {
   }
 
   setLayerInstrument(layerIndex, instKey) {
-    if (layerIndex === 1) {
+    // If not in Combi mode, changing layer 1 triggers the simple Dual Layer feature
+    if (layerIndex === 1 && !this.isCombiMode) {
       this.setDualLayerInstrument(instKey);
       return;
     }
