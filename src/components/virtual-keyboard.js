@@ -333,18 +333,18 @@ export class VirtualKeyboardUI {
           <!-- Key Zoom Controls for 88 Keys -->
           <div class="key-zoom-unit">
             <span class="zoom-label">KEYS:</span>
-            <div class="zoom-pill-group">
-              <button class="zoom-btn ${this.currentZoomMode === "touch" ? "active" : ""}" data-zoom="touch" title="2.5 Octaves Wide Touch Keys (C3 to C5/G5) for Android Tablets & Touchscreens">2.5 OCT TOUCH</button>
-              <button class="zoom-btn ${this.currentZoomMode === "wide" ? "active" : ""}" data-zoom="wide" title="Wide Stage Keys (3.5 Octaves)">WIDE</button>
-              <button class="zoom-btn ${this.currentZoomMode === "compact" ? "active" : ""}" data-zoom="compact" title="Compact Stage Keys (5 Octaves)">COMPACT</button>
-              <button class="zoom-btn ${this.currentZoomMode === "full" ? "active" : ""}" data-zoom="full" title="All 88 Grand Piano Keys">88 FULL</button>
-            </div>
+            <select class="hud-dropdown-select zoom-dropdown-select" id="hud-zoom-select" title="Keyboard Zoom Mode">
+              <option value="touch" ${this.currentZoomMode === "touch" ? "selected" : ""}>2.5 OCT TOUCH</option>
+              <option value="wide" ${this.currentZoomMode === "wide" ? "selected" : ""}>WIDE (3.5 OCT)</option>
+              <option value="compact" ${this.currentZoomMode === "compact" ? "selected" : ""}>COMPACT (5 OCT)</option>
+              <option value="full" ${this.currentZoomMode === "full" ? "selected" : ""}>88 FULL</option>
+            </select>
           </div>
 
           <div class="qwerty-toggle-unit">
             <label class="toggle-pill">
-              <input type="checkbox" id="show-qwerty-labels" checked />
-              <span>QWERTY HUD</span>
+              <input type="checkbox" id="show-qwerty-labels" />
+              <span>KB</span>
             </label>
           </div>
 
@@ -466,7 +466,12 @@ export class VirtualKeyboardUI {
       return { midi, rect, el: keyEl };
     };
 
-    const calculateVelocity = (clientY, rect, keyEl = null, isGlissando = false) => {
+    const calculateVelocity = (
+      clientY,
+      rect,
+      keyEl = null,
+      isGlissando = false,
+    ) => {
       // Top of key (0.0) -> pianissimo (velocity 5)
       // Bottom edge of key (1.0) -> fortissimo (velocity 127)
       let relativeY = Math.max(
@@ -708,7 +713,10 @@ export class VirtualKeyboardUI {
             // Finger is still on the held key's footprint; update expression without retriggering
             const relativeY = Math.max(
               0,
-              Math.min(1.0, (t.clientY - prevTouch.rect.top) / prevTouch.rect.height),
+              Math.min(
+                1.0,
+                (t.clientY - prevTouch.rect.top) / prevTouch.rect.height,
+              ),
             );
             multiLayerEngine.setNoteExpression(prevTouch.midi, relativeY);
             continue;
@@ -718,7 +726,11 @@ export class VirtualKeyboardUI {
             const now = performance.now();
             // Rate-limit sweep transitions to max ~35 notes/sec (~28ms dwell) per touch point
             // to eliminate audio thread event queue flooding and voice stacking on 120Hz/240Hz screens
-            if (prevTouch && prevTouch.lastGlissandoTime && (now - prevTouch.lastGlissandoTime < 28)) {
+            if (
+              prevTouch &&
+              prevTouch.lastGlissandoTime &&
+              now - prevTouch.lastGlissandoTime < 28
+            ) {
               continue;
             }
 
@@ -999,7 +1011,10 @@ export class VirtualKeyboardUI {
       });
 
       const onPointerEnd = (e) => {
-        if (activePointerId !== null && (e.pointerId === activePointerId || e.pointerId === undefined)) {
+        if (
+          activePointerId !== null &&
+          (e.pointerId === activePointerId || e.pointerId === undefined)
+        ) {
           activePointerId = null;
           try {
             trackEl.releasePointerCapture(e.pointerId);
@@ -1041,7 +1056,10 @@ export class VirtualKeyboardUI {
       });
 
       const onPointerEnd = (e) => {
-        if (activePointerId !== null && (e.pointerId === activePointerId || e.pointerId === undefined)) {
+        if (
+          activePointerId !== null &&
+          (e.pointerId === activePointerId || e.pointerId === undefined)
+        ) {
           activePointerId = null;
           try {
             trackEl.releasePointerCapture(e.pointerId);
@@ -1223,23 +1241,18 @@ export class VirtualKeyboardUI {
     this.initCurveButtons();
 
     // Mobile / Screen Key Zoom Mode Switcher
-    const zoomBtns = this.container.querySelectorAll(".zoom-btn");
-    zoomBtns.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        zoomBtns.forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-        const mode = btn.getAttribute("data-zoom");
-        this.setZoomMode(mode, true);
+    const zoomSelect = document.getElementById("hud-zoom-select");
+    if (zoomSelect) {
+      zoomSelect.addEventListener("change", (e) => {
+        this.setZoomMode(e.target.value, true);
       });
-    });
+    }
 
     // C3-C5 2.5 Octaves Quick Jump & Frame button
     const c3c5Btn = document.getElementById("hud-c3-c5-btn");
     c3c5Btn?.addEventListener("click", () => {
       this.setZoomMode("touch", false);
-      zoomBtns.forEach((b) =>
-        b.classList.toggle("active", b.getAttribute("data-zoom") === "touch"),
-      );
+      if (zoomSelect) zoomSelect.value = "touch";
       this.frameC3C5(true);
     });
 
@@ -1390,7 +1403,8 @@ export class VirtualKeyboardUI {
   }
 
   updateQwertyLabels() {
-    const show = document.getElementById("show-qwerty-labels")?.checked ?? true;
+    const show =
+      document.getElementById("show-qwerty-labels")?.checked ?? false;
     const keyMap = qwertyKeyboard.activeKeyMap;
     const midiToKey = new Map();
 

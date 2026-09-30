@@ -563,6 +563,14 @@ export function getInstrumentTrimGain(instId) {
   if (INST_TRIM_GAINS[instId] !== undefined) return INST_TRIM_GAINS[instId];
 
   // Smart category-based fallback
+  if (id.startsWith("juno_") || id.startsWith("sc55_")) {
+    if (id.includes("piano") || id.includes("ep") || id.includes("tine") || id.includes("rhodes") || id.includes("grand")) return 0.95; // Give vintage keys more body
+    if (id.includes("pad") || id.includes("string") || id.includes("choir") || id.includes("dream")) return 0.82; // Boost pads slightly without clipping
+    if (id.includes("lead") || id.includes("brass") || id.includes("synth") || id.includes("stab")) return 0.92; // Give synths more bite
+    if (id.includes("bass")) return 0.94;
+    return 0.90; // Default boost for other Juno/SC55 sounds (normally fell to 0.80)
+  }
+
   if (id.startsWith("bloom_") || id.startsWith("animal_") || id.startsWith("edm_") || id.startsWith("omega_")) {
     if (id.includes("pluck") || id.includes("arp")) return 0.64;
     if (id.includes("bass") || id.includes("sub")) return 0.62;

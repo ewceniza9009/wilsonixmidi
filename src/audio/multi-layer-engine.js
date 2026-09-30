@@ -4918,31 +4918,34 @@ export class MultiLayerEngine {
 
     // ALL MODES use PCM samples — never raw oscillator voices
     if (this.isCombiMode) {
-      // Pad sidechain ducking: when Layer 0 strikes, duck Layer 1 down by -6dB so lead melody is clean
+      // Pad sidechain ducking: when Layer 0 strikes, duck Layers 1-3 down so lead melody is clean
       if (this.isPadDuckingEnabled && this.layers[0]?.enabled) {
         this.activeLeadNotes++;
         if (
           this.activeLeadNotes === 1 &&
           this.pcmEngine &&
-          this.pcmEngine.layerInserts &&
-          this.pcmEngine.layerInserts[1]
+          this.pcmEngine.layerInserts
         ) {
           const ctx = audioCore.ctx;
           if (ctx) {
-            this.pcmEngine.layerInserts[1].input.gain.setTargetAtTime(
-              0.35,
-              now,
-              0.025,
-            );
+            for (let i = 1; i < 4; i++) {
+              if (this.pcmEngine.layerInserts[i]) {
+                this.pcmEngine.layerInserts[i].input.gain.setTargetAtTime(
+                  0.15,
+                  now,
+                  0.025,
+                );
+              }
+            }
           }
         }
       }
 
       // Equal-Loudness RMS Preset Normalizer: compute per-layer RMS power using
-      // calibrated trim gains, then scale the entire preset to the standardized
-      // TARGET_RMS so every combi — whether 1, 2, 3 or 4 layers — outputs at
-      // the exact same perceived loudness.
-      const TARGET_RMS = 1.10;
+      // calibrated trim gains. We use a gentler scaling curve here (Math.pow) 
+      // so that multi-layered combis still sound huge and punchy, rather than 
+      // getting squashed down too far below a single instrument's level.
+      const TARGET_RMS = 1.35;
       let sumPower = 0;
       for (let i = 0; i < this.layers.length; i++) {
         const layer = this.layers[i];
@@ -4953,7 +4956,8 @@ export class MultiLayerEngine {
         sumPower += (g * t) * (g * t);
       }
       const rms = Math.sqrt(sumPower);
-      const combiScale = rms > 0.05 ? Math.max(0.60, Math.min(1.40, TARGET_RMS / rms)) : 1.0;
+      // Use a gentler normalization so dense layers actually add power!
+      const combiScale = rms > 0.05 ? Math.max(0.85, Math.min(1.40, TARGET_RMS / Math.pow(rms, 0.70))) : 1.0;
 
       // Chord headroom: only attenuate dense 5+ note clusters; 1–4 note chords
       // retain full volume and power without choking.
@@ -5104,7 +5108,7 @@ export class MultiLayerEngine {
 
     const now = when > 0 ? when : audioCore.ctx ? audioCore.ctx.currentTime : 0;
 
-    // Pad sidechain ducking release: restore Layer 1 volume when all lead keys are released
+    // Pad sidechain ducking release: restore Layers 1-3 volume when all lead keys are released
     if (
       this.isPadDuckingEnabled &&
       this.isCombiMode &&
@@ -5114,16 +5118,19 @@ export class MultiLayerEngine {
       if (
         this.activeLeadNotes === 0 &&
         this.pcmEngine &&
-        this.pcmEngine.layerInserts &&
-        this.pcmEngine.layerInserts[1]
+        this.pcmEngine.layerInserts
       ) {
         const ctx = audioCore.ctx;
         if (ctx) {
-          this.pcmEngine.layerInserts[1].input.gain.setTargetAtTime(
-            1.0,
-            now,
-            0.28,
-          );
+          for (let i = 1; i < 4; i++) {
+            if (this.pcmEngine.layerInserts[i]) {
+              this.pcmEngine.layerInserts[i].input.gain.setTargetAtTime(
+                1.0,
+                now,
+                0.28,
+              );
+            }
+          }
         }
       }
     }
@@ -5216,7 +5223,7 @@ export class MultiLayerEngine {
 
     const now = when > 0 ? when : audioCore.ctx ? audioCore.ctx.currentTime : 0;
 
-    // Pad sidechain ducking release: restore Layer 1 volume when all lead keys are released
+    // Pad sidechain ducking release: restore Layers 1-3 volume when all lead keys are released
     if (
       this.isPadDuckingEnabled &&
       this.isCombiMode &&
@@ -5226,16 +5233,19 @@ export class MultiLayerEngine {
       if (
         this.activeLeadNotes === 0 &&
         this.pcmEngine &&
-        this.pcmEngine.layerInserts &&
-        this.pcmEngine.layerInserts[1]
+        this.pcmEngine.layerInserts
       ) {
         const ctx = audioCore.ctx;
         if (ctx) {
-          this.pcmEngine.layerInserts[1].input.gain.setTargetAtTime(
-            1.0,
-            now,
-            0.28,
-          );
+          for (let i = 1; i < 4; i++) {
+            if (this.pcmEngine.layerInserts[i]) {
+              this.pcmEngine.layerInserts[i].input.gain.setTargetAtTime(
+                1.0,
+                now,
+                0.28,
+              );
+            }
+          }
         }
       }
     }
