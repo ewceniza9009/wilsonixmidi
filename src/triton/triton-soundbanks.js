@@ -1934,8 +1934,8 @@ export const TRITON_BANKS = {
         name: "🌧️ X5D Lo-Fi Rainday Piano",
         category: "Acoustic Piano",
         instId: "abletunes_upright",
-        ifx: "Warm EQ",
-        mfx: "Cathedral Ambient Reverb",
+        ifx: "Cassette Tape Wobble",
+        mfx: "Dark Cathedral Reverb",
       },
       {
         id: "KX_LOFI_03",
@@ -2285,16 +2285,6 @@ export const TRITON_BANKS = {
         mfx: "Tape Delay",
       },
       {
-        id: "YEOS33",
-        num: "33",
-        name: "Gt:Triton Jazz Guitar",
-        category: "Guitar / Clean",
-        eosType: "jazz_guitar",
-        instId: "eos_jazz_guitar",
-        ifx: "Tube Preamp",
-        mfx: "Warm Room",
-      },
-      {
         id: "YEOS34",
         num: "34",
         name: "Pd:Silky Pad",
@@ -2355,16 +2345,6 @@ export const TRITON_BANKS = {
         mfx: "Studio Plate",
       },
       // ── Jnsgm2 Studio GM2 Elite Collection ──
-      {
-        id: "E000",
-        num: "40",
-        name: "Ep:Vintage CP-80",
-        category: "Electric Piano",
-        eosType: "cp80",
-        instId: "eos_cp80",
-        ifx: "Stereo Chorus",
-        mfx: "Studio Plate",
-      },
       {
         id: "E001",
         num: "41",
@@ -2521,7 +2501,7 @@ export const TRITON_BANKS = {
       {
         id: "YEOS47",
         num: "56",
-        name: "Hp:90s House Piano",
+        name: "Hp:Juno House Piano",
         category: "House / Piano",
         eosType: "midi_grand",
         instId: "juno_house_piano",

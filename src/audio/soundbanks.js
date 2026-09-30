@@ -92,7 +92,6 @@ export const HD_SOUNDBANKS = {
   fx_scratch: { id: "fx_scratch", name: "Vinyl Scratch Cut", category: "DJ & Cinematic FX" },
   fx_tapestop: { id: "fx_tapestop", name: "Tape Stop Slow-Down", category: "DJ & Cinematic FX" },
   fx_subboom: { id: "fx_subboom", name: "Sub Bass Impact Boom", category: "DJ & Cinematic FX" },
-  fx_airhorn: { id: "fx_airhorn", name: "Dancehall Reggae Airhorn", category: "DJ & Cinematic FX" },
 
   // Reggae, Dub & Stage Sound FX
   dub_siren: { id: "dub_siren", name: "🚨 Jamaican Dub Siren", category: "Reggae & Dub SFX" },
