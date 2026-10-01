@@ -904,7 +904,19 @@ export class ClipLooper {
           const effectiveGain = (typeof L.gain === "number" ? L.gain : 1.0) * layerNorm * this.looperGain;
           const va = multiLayerEngine.getVaEngineFor(prog, effectiveGain, slot);
           if (va && typeof va.noteOn === "function") {
-            va.noteOn(transposed, velocity, at);
+            const ctx = audioCore.ctx;
+            const now = ctx ? ctx.currentTime : 0;
+            const delaySec = Math.max(0, at - now);
+            if (delaySec > 0.005) {
+              setTimeout(() => {
+                const trk = this.tracks[trackId];
+                if (trk && trk.state === "playing" && this.isPlaying) {
+                  va.noteOn(transposed, velocity, 0);
+                }
+              }, delaySec * 1000);
+            } else {
+              va.noteOn(transposed, velocity, 0);
+            }
             continue;
           }
         }
@@ -950,7 +962,16 @@ export class ClipLooper {
         if (prog && typeof multiLayerEngine.getVaEngineFor === "function") {
           const va = multiLayerEngine.getVaEngineFor(prog, L.gain || 1.0, slot);
           if (va && typeof va.noteOff === "function") {
-            va.noteOff(transposed, at);
+            const ctx = audioCore.ctx;
+            const now = ctx ? ctx.currentTime : 0;
+            const delaySec = Math.max(0, at - now);
+            if (delaySec > 0.005) {
+              setTimeout(() => {
+                va.noteOff(transposed, 0);
+              }, delaySec * 1000);
+            } else {
+              va.noteOff(transposed, 0);
+            }
             continue;
           }
         }
