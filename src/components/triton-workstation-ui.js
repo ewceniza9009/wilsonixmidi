@@ -13,7 +13,7 @@ import { multiLayerEngine, COMBI_PRESETS } from "../audio/multi-layer-engine.js"
 import { HD_SOUNDBANKS } from "../audio/soundbanks.js";
 
 export class TritonWorkstationUI {
-  constructor(containerId) {
+  constructor(containerId, skipEngineBoot = false) {
     this.container = document.getElementById(containerId);
 
     // Restore saved active bank and program from localStorage if available
@@ -76,10 +76,12 @@ export class TritonWorkstationUI {
     this.searchQuery = "";
 
     this.render();
-    if (this.isCombiBank() && this.activeProg) {
-      multiLayerEngine.setCombiPreset(this.activeProg.id);
-    } else if (this.activeProg) {
-      this.applyTritonProgram(this.activeProg);
+    if (!skipEngineBoot) {
+      if (this.isCombiBank() && this.activeProg) {
+        multiLayerEngine.setCombiPreset(this.activeProg.id);
+      } else if (this.activeProg) {
+        this.applyTritonProgram(this.activeProg);
+      }
     }
 
     multiLayerEngine.addLayerChangeListener(() => {
@@ -133,13 +135,8 @@ export class TritonWorkstationUI {
     }
 
     // 3. Single Instrument / Dedicated PCM Mode
-    if (multiLayerEngine.activeSingleInst && this.activeProg) {
-      this.updateLcdAndGridHighlight(
-        this.activeProg.id,
-        this.activeProg.name,
-        `BANK: ${this.activeBankId.replace("_", " ")} ${this.activeProg.num || ""}`,
-        `CATEGORY: ${(this.activeProg.category || "").toUpperCase()}`
-      );
+    if (multiLayerEngine.activeSingleInst) {
+      this.syncLcdFromRigSelection();
     }
   }
 
@@ -698,7 +695,6 @@ export class TritonWorkstationUI {
           this.bindSearch();
         }
       };
-      btn.addEventListener("pointerdown", handleTab);
       btn.addEventListener("click", handleTab);
     });
   }
@@ -745,7 +741,7 @@ export class TritonWorkstationUI {
           }
         }
       };
-      btn.addEventListener("pointerdown", handleBank);
+      btn.addEventListener("click", handleBank);
     });
   }
 
@@ -808,7 +804,7 @@ export class TritonWorkstationUI {
         }
       };
 
-      cell.addEventListener("pointerdown", handleSelect);
+      cell.addEventListener("click", handleSelect);
     });
   }
 
@@ -898,15 +894,6 @@ export class TritonWorkstationUI {
       // Configure matched KORG TRITON IFX & MFX Routing
       if (audioCore.fxRack) {
         this.applyIfxMfx(prog);
-
-        // If user is currently looking at the IFX/MFX tab, update live display
-        if (this.activeSubTab === "IFX/MFX") {
-          const tv = this.container.querySelector(".touchview-screen");
-          if (tv) {
-            tv.innerHTML = this.renderIfxMfxMatrix();
-            this.bindIfxMfxControls();
-          }
-        }
       }
     }
 
@@ -920,6 +907,22 @@ export class TritonWorkstationUI {
     // a pure master volume trim that compensates each preset's FX staging
     // (EQ boosts, compressor makeup, delay/reverb tails) — no tone changes.
     this._applyPresetLevel(prog);
+
+    // If user is currently looking at the IFX/MFX tab, update live display
+    // We do this at the end so it applies to ALL banks (User, M1, EOS, Combi)
+    if (audioCore.fxRack && this.activeSubTab === "IFX/MFX") {
+      const tv = this.container.querySelector(".touchview-screen");
+      if (tv) {
+        tv.innerHTML = this.renderIfxMfxMatrix();
+        this.bindIfxMfxControls();
+      }
+    }
+
+    // Force the FxRackUI (metal rack) to sync with these new settings
+    // so its knobs and "ACTIVE: [Preset]" label update for non-COMBI banks!
+    if (audioCore.fxRack && typeof audioCore.fxRack.onPresetChangeCallback === "function") {
+      audioCore.fxRack.onPresetChangeCallback();
+    }
   }
 
   _applyPresetLayer(prog) {
@@ -1323,8 +1326,10 @@ export class TritonWorkstationUI {
     if (!fx) return;
 
     this.container.querySelectorAll(".slot-toggle[data-fx]").forEach(btn => {
-      btn.addEventListener("click", (e) => {
+      const toggleFn = (e) => {
+        if (e && e.cancelable && e.type === "touchstart") e.preventDefault();
         if (e) e.stopPropagation();
+        
         const fxKey = btn.getAttribute("data-fx");
         const isNowActive = btn.classList.toggle("active");
         btn.innerText = isNowActive ? "ON" : "OFF";
@@ -1353,7 +1358,10 @@ export class TritonWorkstationUI {
         }
 
         this.syncFxPowerButtons();
-      });
+      };
+      
+      btn.addEventListener("click", toggleFn);
+      btn.addEventListener("touchstart", toggleFn, { passive: false });
     });
 
     this.container.querySelectorAll(".fx-slider[data-fx-param]").forEach(slider => {
@@ -1365,12 +1373,17 @@ export class TritonWorkstationUI {
     });
 
     const rotaryBtn = document.getElementById("triton-rotary-speed");
-    rotaryBtn?.addEventListener("click", () => {
-      if (fx.rotary) {
-        fx.rotary.toggleSpeed();
-        rotaryBtn.innerText = fx.rotary.speedMode === "fast" ? "FAST (TREMOLO)" : "SLOW (CHORALE)";
-      }
-    });
+    if (rotaryBtn) {
+      const toggleRotary = (e) => {
+        if (e && e.cancelable && e.type === "touchstart") e.preventDefault();
+        if (fx.rotary) {
+          fx.rotary.toggleSpeed();
+          rotaryBtn.innerText = fx.rotary.speedMode === "fast" ? "FAST (TREMOLO)" : "SLOW (CHORALE)";
+        }
+      };
+      rotaryBtn.addEventListener("click", toggleRotary);
+      rotaryBtn.addEventListener("touchstart", toggleRotary, { passive: false });
+    }
   }
 
   dispatchFxParam(param, val) {

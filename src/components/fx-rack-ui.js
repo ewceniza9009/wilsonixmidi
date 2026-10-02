@@ -856,7 +856,15 @@ export class FxRackUI {
       const presetEl = document.getElementById("rack-active-preset");
       const lineEl = document.getElementById("rack-layer-fx-line");
       if (presetEl) {
-        const name = ml?.activeCombi?.name || ml?.activeSingleInst || null;
+        let name = null;
+        if (ml?.isCombiMode && ml?.activeCombi) {
+          name = ml.activeCombi.name;
+        } else if (ml?.isTritonVaMode && ml?.activeTritonVaProg) {
+          name = ml.activeTritonVaProg.name;
+        } else if (ml?.activeSingleInst) {
+          // If it's a raw PCM instrument, grab the pretty name if available
+          name = window.HD_SOUNDBANKS?.[ml.activeSingleInst]?.name || ml.activeSingleInst;
+        }
         presetEl.textContent = name ? `ACTIVE: ${name}` : "MASTER FX: DEFAULT";
       }
       if (lineEl) {

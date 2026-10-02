@@ -141,7 +141,11 @@ class MidiKeyEliteApp {
         this.unlocked = true;
         try { multiLayerEngine.init(); } catch (e) { console.warn("Engine init:", e); }
         if (this.tritonConsole && this.tritonConsole.activeProg) {
-          try { this.tritonConsole.applyTritonProgram(this.tritonConsole.activeProg); } catch (e) {}
+          if (!restoredSession) {
+            try { this.tritonConsole.applyTritonProgram(this.tritonConsole.activeProg); } catch (e) {}
+          } else {
+            try { this.tritonConsole.syncActiveProgramFromEngine(); } catch(e) {}
+          }
         }
         if (this.fxRack) {
           try { this.fxRack.syncWithRack(); } catch (e) {}
@@ -276,7 +280,7 @@ class MidiKeyEliteApp {
 
     // 4. Korg Triton Hardware TouchView Console (render immediately - default view)
     try {
-      this.tritonConsole = new TritonWorkstationUI("triton-workstation-mount");
+      this.tritonConsole = new TritonWorkstationUI("triton-workstation-mount", !!restoredSession);
       registerComponent("tritonConsole", this.tritonConsole);
       this._viewsRendered.add("triton");
     } catch (e) {

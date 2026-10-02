@@ -4190,6 +4190,7 @@ export class MultiLayerEngine {
     this._clearHeldNoteState();
 
     this.isSplitMode = false;
+    this.isCombiMode = false;
     this.isSynthMode = false;
     this.isTritonVaMode = false;
     this.activeTritonVaProg = null;
@@ -4230,6 +4231,9 @@ export class MultiLayerEngine {
       if (this.layers[3]) this.layers[3].enabled = false;
     } else {
       this.isCombiMode = false;
+      if (this.layers[1]) this.layers[1].enabled = false;
+      if (this.layers[2]) this.layers[2].enabled = false;
+      if (this.layers[3]) this.layers[3].enabled = false;
     }
 
     // Sync worklet parameters to prevent state drift without full recreation
