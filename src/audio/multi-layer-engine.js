@@ -4707,6 +4707,9 @@ export class MultiLayerEngine {
       }
     }
     this.pcmEngine.setPinnedInstruments(ids);
+    if (typeof this.pcmEngine._safeEvictDecodedBuffers === "function") {
+      this.pcmEngine._safeEvictDecodedBuffers(true);
+    }
   }
 
   setSplitPointMidi(midi) {

@@ -186,6 +186,7 @@ export class PolyphonicVoice {
       const qVal = Math.min(1.2, Math.max(0.25, (instrumentConfig.filterQ ?? 1.0) * 0.55));
       this.filter.Q.setValueAtTime(qVal, now);
       this.filter.frequency.cancelScheduledValues(now);
+      this.filter.frequency.setValueAtTime(this.filter.frequency.value, now);
       this.filter.frequency.setTargetAtTime(filterEnv, now, 0.012);
     }
 

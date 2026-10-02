@@ -209,11 +209,14 @@ export class TritonVirtualAnalogEngine {
 
         // Cancel any pending release decay and maintain sustain gain smoothly
         activeVoice.voiceGain.gain.cancelScheduledValues(now);
+        activeVoice.voiceGain.gain.setValueAtTime(activeVoice.voiceGain.gain.value, now);
         activeVoice.voiceGain.gain.setTargetAtTime(sustain, now, 0.006);
 
         // Glide frequencies smoothly: zero DC step discontinuities, zero white noise, continuous liquid tone
         activeVoice.osc1.frequency.cancelScheduledValues(now);
         activeVoice.osc2.frequency.cancelScheduledValues(now);
+        activeVoice.osc1.frequency.setValueAtTime(activeVoice.osc1.frequency.value, now);
+        activeVoice.osc2.frequency.setValueAtTime(activeVoice.osc2.frequency.value, now);
         activeVoice.osc1.frequency.setTargetAtTime(freq * (this.config.osc1Ratio || 1.0), now, 0.010);
         activeVoice.osc2.frequency.setTargetAtTime(freq * (this.config.osc2Ratio || 2.0), now, 0.010);
 
