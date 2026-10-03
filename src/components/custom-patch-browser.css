@@ -1,0 +1,245 @@
+/* custom-patch-browser.css */
+
+.patch-browser-ui {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #1a1a1a;
+  border-right: 1px solid #333;
+  color: #f1f1f1;
+  font-family: 'Inter', sans-serif;
+}
+
+.browser-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background-color: #222;
+  border-bottom: 1px solid #333;
+}
+
+.browser-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #ddd;
+}
+
+.save-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.save-btn:hover {
+  background-color: #45a049;
+}
+
+.browser-search {
+  padding: 10px 15px;
+  border-bottom: 1px solid #333;
+}
+
+.browser-search input {
+  width: 100%;
+  padding: 8px 12px;
+  background-color: #111;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 13px;
+}
+
+.browser-search input:focus {
+  outline: none;
+  border-color: #666;
+}
+
+.patch-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 0;
+}
+
+.patch-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 15px;
+  cursor: pointer;
+  border-bottom: 1px solid #2a2a2a;
+  transition: background-color 0.2s;
+}
+
+.patch-item:hover {
+  background-color: #2c2c2c;
+}
+
+.patch-title {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.patch-del-btn {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 16px;
+  cursor: pointer;
+  visibility: hidden;
+  padding: 4px;
+}
+
+.patch-item:hover .patch-del-btn {
+  visibility: visible;
+}
+
+.patch-del-btn:hover {
+  color: #ff5555;
+}
+
+.empty-state {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* Locked State */
+.patch-browser-locked {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  padding: 30px;
+  text-align: center;
+  background-color: #1a1a1a;
+  border-right: 1px solid #333;
+}
+
+.locked-icon {
+  font-size: 40px;
+  margin-bottom: 15px;
+  opacity: 0.8;
+}
+
+.patch-browser-locked h3 {
+  color: #ddd;
+  margin-bottom: 10px;
+  font-size: 16px;
+}
+
+.patch-browser-locked p {
+  color: #888;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.upgrade-btn {
+  background-color: #e09f3e;
+  color: #000;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 13px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.upgrade-btn:hover {
+  opacity: 0.9;
+}
+
+/* Drone Player UI */
+.drone-player-ui {
+  border-top: 1px solid #333;
+  padding: 15px;
+  background: #111;
+  flex-shrink: 0;
+}
+
+.drone-header {
+  margin-bottom: 12px;
+}
+
+.drone-header h4 {
+  margin: 0;
+  font-size: 11px;
+  color: #888;
+  letter-spacing: 1.5px;
+}
+
+.drone-keys {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 15px;
+}
+
+.drone-key {
+  background: #2a2a2a;
+  border: 1px solid #444;
+  color: #ccc;
+  padding: 8px 0;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.drone-key:hover {
+  background: #3a3a3a;
+  border-color: #666;
+}
+
+.drone-key.active {
+  background: #4a90e2;
+  color: white;
+  border-color: #5aa0f2;
+  box-shadow: 0 0 10px rgba(74, 144, 226, 0.4);
+}
+
+.drone-vol-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.drone-vol-control .vol-icon {
+  font-size: 16px;
+  color: #888;
+}
+
+.drone-vol-control input[type="range"] {
+  flex: 1;
+  height: 4px;
+  background: #333;
+  border-radius: 2px;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.drone-vol-control input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #4a90e2;
+  cursor: pointer;
+}

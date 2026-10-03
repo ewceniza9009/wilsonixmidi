@@ -4,6 +4,8 @@
  * and octave-up shimmer injection strictly limited to prevent runaway resonance.
  */
 
+import { ShimmerWorkletNode } from "../worklet/shimmer-worklet-node.js";
+
 export class ShimmerReverb {
   constructor(ctx) {
     this.ctx = ctx;
@@ -17,7 +19,22 @@ export class ShimmerReverb {
     this.shimmerAmount = 0.35;
     this.enabled = false;
 
+    this.workletBridge = new ShimmerWorkletNode(ctx);
+    
     this.buildNetwork();
+    this.initWorklet();
+  }
+
+  async initWorklet() {
+    await this.workletBridge.init();
+    if (this.workletBridge.isReady) {
+      // Re-route the wet signal through the pitch-shifting worklet instead of just the comb filters
+      try {
+        this.ap2.disconnect(this.shimmerAir);
+        this.ap2.connect(this.workletBridge.getInput());
+        this.workletBridge.getInput().connect(this.shimmerAir);
+      } catch (e) {}
+    }
   }
 
   buildNetwork() {
@@ -113,6 +130,9 @@ export class ShimmerReverb {
     this.mix = Math.max(0, Math.min(0.55, val));
     if (this.enabled) {
       this.wetGain.gain.setTargetAtTime(this.mix, this.ctx.currentTime, 0.03);
+    }
+    if (this.workletBridge && this.workletBridge.isReady) {
+      this.workletBridge.setMix(this.mix);
     }
   }
 

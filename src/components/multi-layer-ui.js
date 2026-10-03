@@ -4,31 +4,70 @@
  * mute buttons, octave transpositions, and instrument selectors.
  */
 
-import { multiLayerEngine, COMBI_PRESETS, COMBI_TIMBRES } from "../audio/multi-layer-engine.js";
+import {
+  multiLayerEngine,
+  COMBI_PRESETS,
+  COMBI_TIMBRES,
+} from "../audio/multi-layer-engine.js";
 import { LAYER_FX_OPTIONS } from "../audio/native-pcm-engine.js";
+import { CustomPatchBrowserUI } from "./custom-patch-browser.js";
+import { CustomModal } from "./custom-modal.js";
 
-const esc = s => String(s).replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+const esc = (s) =>
+  String(s).replace(
+    /[&<>"']/g,
+    (m) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        m
+      ],
+  );
+console.log("Reloading multi-layer-ui.js - Layout Fix v3");
 
-const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-const midiName = m => NOTE_NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
+const NOTE_NAMES = [
+  "C",
+  "C#",
+  "D",
+  "D#",
+  "E",
+  "F",
+  "F#",
+  "G",
+  "G#",
+  "A",
+  "A#",
+  "B",
+];
+const midiName = (m) =>
+  NOTE_NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
 
-const fxOptionsHTML = selectedIx => {
+const fxOptionsHTML = (selectedIx) => {
   const fxList = Object.values(LAYER_FX_OPTIONS);
   const fxCats = [];
-  fxList.forEach(f => {
+  fxList.forEach((f) => {
     const cat = f.category || "General FX";
     if (!fxCats.includes(cat)) fxCats.push(cat);
   });
-  fxCats.sort((a, b) => a.includes("Synthesizer You") ? -1 : (b.includes("Synthesizer You") ? 1 : 0));
-  return fxCats.map(cat => `
+  fxCats.sort((a, b) =>
+    a.includes("Synthesizer You") ? -1 : b.includes("Synthesizer You") ? 1 : 0,
+  );
+  return fxCats
+    .map(
+      (cat) => `
     <optgroup label="${cat.toUpperCase()}">
-      ${fxList.filter(f => (f.category || "General FX") === cat).map(f => `
+      ${fxList
+        .filter((f) => (f.category || "General FX") === cat)
+        .map(
+          (f) => `
         <option value="${f.id}" ${selectedIx === f.id ? "selected" : ""}>
           ${f.name}
         </option>
-      `).join("")}
+      `,
+        )
+        .join("")}
     </optgroup>
-  `).join("");
+  `,
+    )
+    .join("");
 };
 
 export class MultiLayerUI {
@@ -45,11 +84,14 @@ export class MultiLayerUI {
 
     this._splitListener = () => {
       const consoleEl = document.getElementById("split-keyboard-console");
-      if (consoleEl) consoleEl.classList.toggle("active", !!multiLayerEngine.isSplitMode);
+      if (consoleEl)
+        consoleEl.classList.toggle("active", !!multiLayerEngine.isSplitMode);
       const powerBtn = document.getElementById("split-power-btn");
       if (powerBtn) {
         powerBtn.classList.toggle("active", !!multiLayerEngine.isSplitMode);
-        powerBtn.innerText = multiLayerEngine.isSplitMode ? "SPLIT ON" : "SPLIT OFF";
+        powerBtn.innerText = multiLayerEngine.isSplitMode
+          ? "SPLIT ON"
+          : "SPLIT OFF";
       }
       const nameEl = document.getElementById("split-name-lower");
       if (nameEl && multiLayerEngine.splitZones.lower?.name) {
@@ -59,10 +101,15 @@ export class MultiLayerUI {
       const nameUpper = document.getElementById("split-name-upper");
       if (nameUpper && multiLayerEngine.splitZones.upper) {
         const z = multiLayerEngine.splitZones.upper;
-        const nm = (z.inst && z.inst !== "current_stack" && z.name) ? z.name : "Current Stack";
+        const nm =
+          z.inst && z.inst !== "current_stack" && z.name
+            ? z.name
+            : "Current Stack";
         nameUpper.innerText = nm;
         nameUpper.title = nm;
-        nameUpper.closest(".split-zone-strip")?.classList.toggle("stack", !z.inst || z.inst === "current_stack");
+        nameUpper
+          .closest(".split-zone-strip")
+          ?.classList.toggle("stack", !z.inst || z.inst === "current_stack");
       }
     };
     multiLayerEngine.addSplitChangeListener(this._splitListener);
@@ -75,10 +122,12 @@ export class MultiLayerUI {
     if (this._outsideClickHandler) return;
     this._outsideClickHandler = (e) => {
       if (!this.container) return;
-      this.container.querySelectorAll(".timbre-combo-list.open").forEach(list => {
-        const combo = list.closest(".timbre-combo");
-        if (combo && !combo.contains(e.target)) list.classList.remove("open");
-      });
+      this.container
+        .querySelectorAll(".timbre-combo-list.open")
+        .forEach((list) => {
+          const combo = list.closest(".timbre-combo");
+          if (combo && !combo.contains(e.target)) list.classList.remove("open");
+        });
     };
     document.addEventListener("click", this._outsideClickHandler);
   }
@@ -102,8 +151,9 @@ export class MultiLayerUI {
 
     const allPresets = Object.values(COMBI_PRESETS);
     const catOrder = [];
-    allPresets.forEach(cp => {
-      if (cp.category && !catOrder.includes(cp.category)) catOrder.push(cp.category);
+    allPresets.forEach((cp) => {
+      if (cp.category && !catOrder.includes(cp.category))
+        catOrder.push(cp.category);
     });
 
     this.container.innerHTML = `
@@ -121,83 +171,79 @@ export class MultiLayerUI {
             <select class="combi-preset-select" id="combi-preset-select" title="Choose combi preset">
               ${catOrder
                 .map(
-                  cat => `
+                  (cat) => `
                 <optgroup label="${cat}">
                   ${allPresets
-                    .filter(cp => cp.category === cat)
-                    .filter(cp => !this.combiSearchQuery || cp.name.toLowerCase().includes(this.combiSearchQuery.toLowerCase()) || (cp.category && cp.category.toLowerCase().includes(this.combiSearchQuery.toLowerCase())))
+                    .filter((cp) => cp.category === cat)
+                    .filter(
+                      (cp) =>
+                        !this.combiSearchQuery ||
+                        cp.name
+                          .toLowerCase()
+                          .includes(this.combiSearchQuery.toLowerCase()) ||
+                        (cp.category &&
+                          cp.category
+                            .toLowerCase()
+                            .includes(this.combiSearchQuery.toLowerCase())),
+                    )
                     .map(
-                      cp => `
+                      (cp) => `
                     <option value="${esc(cp.id)}" ${multiLayerEngine.activeCombi.id === cp.id ? "selected" : ""}>
                       ${esc(cp.name)}
                     </option>
-                  `
+                  `,
                     )
                     .join("")}
                 </optgroup>
-              `
+              `,
                 )
                 .join("")}
             </select>
             <button class="preset-arrow-btn" id="combi-next-btn" title="Next preset">▶</button>
+            <div style="width: 1px; height: 20px; background: #2a3441; margin: 0 5px;"></div>
+            <button class="combi-preset-btn" id="init-layers-btn" title="Initialize a new blank stack" style="background: rgba(255, 60, 60, 0.2); color: #ff764d; border-color: rgba(255, 60, 60, 0.4);">CLEAR LAYERS</button>
           </div>
         </div>
 
         <!-- Search results as chips (only when searching) -->
-        ${this.combiSearchQuery ? `
+        ${
+          this.combiSearchQuery
+            ? `
         <div class="combi-search-results" id="combi-search-results">
           ${allPresets
-            .filter(cp => cp.name.toLowerCase().includes(this.combiSearchQuery.toLowerCase()) || (cp.category && cp.category.toLowerCase().includes(this.combiSearchQuery.toLowerCase())))
+            .filter(
+              (cp) =>
+                cp.name
+                  .toLowerCase()
+                  .includes(this.combiSearchQuery.toLowerCase()) ||
+                (cp.category &&
+                  cp.category
+                    .toLowerCase()
+                    .includes(this.combiSearchQuery.toLowerCase())),
+            )
             .slice(0, 15)
-            .map(cp => `<button class="combi-search-chip ${multiLayerEngine.activeCombi.id === cp.id ? "active" : ""}" data-combi-search="${esc(cp.id)}">${esc(cp.name)}</button>`)
-            .join("")}
-        </div>` : ""}
-
-        <!-- My Presets (localStorage) -->
-        <div class="user-presets-bar">
-          <span class="combi-pill">MY PRESETS</span>
-          <input id="user-preset-name" class="user-preset-input" maxlength="40" placeholder="Stack name..." />
-          <button class="combi-preset-btn" id="save-user-preset-btn">+ SAVE CURRENT STACK</button>
-          <div class="user-preset-list">
-            ${multiLayerEngine.getUserPresets()
-              .map(
-                up => `
-              <span class="user-preset-chip ${multiLayerEngine.activeCombi.id === up.id ? "active" : ""}">
-                <button class="user-preset-load" data-user-preset="${esc(up.id)}" title="Load ${esc(up.name)}">${esc(up.name)}</button>
-                <button class="user-preset-del" data-user-del="${esc(up.id)}" title="Delete">✕</button>
-              </span>
-            `
-              )
-              .join("")}
-          </div>
-        </div>
-
-        <!-- Gig Setlist (localStorage, ordered) -->
-        <div class="setlist-bar">
-          <span class="combi-pill">SETLIST</span>
-          <button class="combi-preset-btn" id="setlist-add-btn">+ ADD CURRENT</button>
-          <button class="combi-preset-btn" id="setlist-clear-btn">CLEAR</button>
-          <ol class="setlist-list">
-            ${multiLayerEngine.getSetlist()
-              .map(
-                (entry, i) => `
-              <li class="setlist-entry" data-setlist-idx="${i}">
-                <button class="setlist-load" data-setlist-load="${i}" title="Load">${i + 1}. ${esc(entry.name || entry.id)}</button>
-                <button class="setlist-move" data-setlist-move="${i}|-1" title="Move up">▲</button>
-                <button class="setlist-move" data-setlist-move="${i}|1" title="Move down">▼</button>
-                <button class="setlist-del" data-setlist-del="${i}" title="Remove">✕</button>
-              </li>
-            `
-              )
-              .join("")}
-          </ol>
-        </div>
-
-        <!-- 4 Layer Channel Strips (Ableton / Workstation Style) -->
-        <div class="layer-strips-rack">
-          ${multiLayerEngine.layers
             .map(
-              (layer, idx) => `
+              (cp) =>
+                `<button class="combi-search-chip ${multiLayerEngine.activeCombi.id === cp.id ? "active" : ""}" data-combi-search="${esc(cp.id)}">${esc(cp.name)}</button>`,
+            )
+            .join("")}
+        </div>`
+            : ""
+        }
+
+        <!-- Combi Split View: Left Panel (Browser) + Right Panel (Workstation Strips) -->
+        <div style="display: flex; flex-direction: row; gap: 12px; width: 100%; height: 100%; overflow: hidden; padding-bottom: 10px;">
+          
+          <!-- Custom Patch Browser (Setlist + Drone) -->
+          <div id="combi-custom-browser-mount" style="flex: 0 0 280px; background: #0b0f17; border-radius: 8px; border: 1px solid #1a2233; display: flex; flex-direction: column; overflow: hidden; height: 100%;"></div>
+
+          <!-- Right Panel: Stack Layers & Split Zones -->
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; overflow-x: hidden;">
+            <!-- 4 Layer Channel Strips (Ableton / Workstation Style) -->
+            <div class="layer-strips-rack" style="display: grid; grid-template-columns: repeat(4, minmax(160px, 1fr)); gap: 8px; padding-bottom: 5px; flex-shrink: 0;">
+            ${multiLayerEngine.layers
+              .map(
+                (layer, idx) => `
             <div class="layer-channel-strip ${layer.enabled ? "active" : "muted"}" id="layer-strip-${idx}">
               <div class="strip-header">
                 <button class="layer-power-btn ${layer.enabled ? "active" : ""}" data-layer="${idx}">
@@ -225,21 +271,36 @@ export class MultiLayerUI {
                   ${(() => {
                     const fxList = Object.values(LAYER_FX_OPTIONS);
                     const fxCats = [];
-                    fxList.forEach(f => {
+                    fxList.forEach((f) => {
                       const cat = f.category || "General FX";
                       if (!fxCats.includes(cat)) fxCats.push(cat);
                     });
                     // Put Synthesizer You FX at very top
-                    fxCats.sort((a, b) => a.includes("Synthesizer You") ? -1 : (b.includes("Synthesizer You") ? 1 : 0));
-                    return fxCats.map(cat => `
+                    fxCats.sort((a, b) =>
+                      a.includes("Synthesizer You")
+                        ? -1
+                        : b.includes("Synthesizer You")
+                          ? 1
+                          : 0,
+                    );
+                    return fxCats
+                      .map(
+                        (cat) => `
                       <optgroup label="${cat.toUpperCase()}">
-                        ${fxList.filter(f => (f.category || "General FX") === cat).map(f => `
+                        ${fxList
+                          .filter((f) => (f.category || "General FX") === cat)
+                          .map(
+                            (f) => `
                           <option value="${f.id}" ${layer.fx === f.id ? "selected" : ""}>
                             ${f.name}
                           </option>
-                        `).join("")}
+                        `,
+                          )
+                          .join("")}
                       </optgroup>
-                    `).join("");
+                    `,
+                      )
+                      .join("");
                   })()}
                 </select>
               </div>
@@ -269,9 +330,9 @@ export class MultiLayerUI {
                 <span class="strip-role-tag">${idx === 0 ? "PRIMARY" : idx === 1 ? "ENSEMBLE" : idx === 2 ? "ACCENT" : "SUB/BASS"}</span>
               </div>
             </div>
-          `
-            )
-            .join("")}
+          `,
+              )
+              .join("")}
         </div>
 
         <!-- Split Keyboard Zones Console (assignable instrument + insert FX per half) -->
@@ -293,7 +354,10 @@ export class MultiLayerUI {
                     .concat(Array.from({ length: 37 }, (_, i) => i + 48))
                     .filter((v, i, a) => a.indexOf(v) === i)
                     .sort((a, b) => a - b)
-                    .map(m => `<option value="${m}" ${m === p ? "selected" : ""}>${midiName(m)}</option>`)
+                    .map(
+                      (m) =>
+                        `<option value="${m}" ${m === p ? "selected" : ""}>${midiName(m)}</option>`,
+                    )
                     .join("");
                 })()}
               </select>
@@ -301,8 +365,8 @@ export class MultiLayerUI {
           </div>
 
           <div class="split-zones-row">
-            ${
-              ["lower", "upper"].map(zk => {
+            ${["lower", "upper"]
+              .map((zk) => {
                 const z = multiLayerEngine.splitZones[zk];
                 const isStack = !z.inst || z.inst === "current_stack";
                 return `
@@ -316,7 +380,7 @@ export class MultiLayerUI {
                     <div class="timbre-combo" data-split-zone="${zk}">
                       <input type="text" class="timbre-combo-input" data-split-zone="${zk}"
                              placeholder="Search ${COMBI_TIMBRES.length} PCM + VA timbres..."
-                             value="${esc(isStack ? "Follow Current Stack" : (z.name || ""))}" autocomplete="off" spellcheck="false" />
+                             value="${esc(isStack ? "Follow Current Stack" : z.name || "")}" autocomplete="off" spellcheck="false" />
                       <div class="timbre-combo-list" data-split-zone="${zk}"></div>
                     </div>
                   </div>
@@ -336,10 +400,11 @@ export class MultiLayerUI {
                   </div>
                 </div>
               `;
-              }).join("")
-            }
-          </div>
-        </div>
+              })
+              .join("")}
+            </div>
+          </div> <!-- End Right Panel (Column) -->
+        </div> <!-- End Flex Row Split View -->
       </div>
     `;
   }
@@ -347,18 +412,24 @@ export class MultiLayerUI {
   bindEvents() {
     // Combi search (debounced: filter visible results, no full DOM rebuild)
     const searchInput = this.container.querySelector("#combi-search-input");
-    searchInput?.addEventListener("input", e => {
+    searchInput?.addEventListener("input", (e) => {
       this.combiSearchQuery = e.target.value;
       clearTimeout(this._searchDebounce);
       this._searchDebounce = setTimeout(() => {
         this.filterProgramGrid();
         const newInput = this.container.querySelector("#combi-search-input");
-        if (newInput) { newInput.focus(); newInput.setSelectionRange(newInput.value.length, newInput.value.length); }
+        if (newInput) {
+          newInput.focus();
+          newInput.setSelectionRange(
+            newInput.value.length,
+            newInput.value.length,
+          );
+        }
       }, 160);
     });
 
     // Combi search chip clicks
-    this.container.querySelectorAll("[data-combi-search]").forEach(btn => {
+    this.container.querySelectorAll("[data-combi-search]").forEach((btn) => {
       this._bindCombiChip(btn);
     });
 
@@ -374,79 +445,55 @@ export class MultiLayerUI {
         if (id) multiLayerEngine.preloadCombi(id);
       }
     });
-    presetSelect?.addEventListener("change", e => {
+    presetSelect?.addEventListener("change", (e) => {
       multiLayerEngine.setCombiPreset(e.target.value);
       this.combiSearchQuery = "";
       this.updateCombiSelectorActive();
     });
-    const stepPreset = delta => {
+    const stepPreset = (delta) => {
       const ids = Object.keys(COMBI_PRESETS);
       const cur = Math.max(0, ids.indexOf(multiLayerEngine.activeCombi.id));
       const next = ids[(cur + delta + ids.length) % ids.length];
       multiLayerEngine.setCombiPreset(next);
       this.updateCombiSelectorActive();
     };
-    this.container.querySelector("#combi-prev-btn")?.addEventListener("click", () => stepPreset(-1));
-    this.container.querySelector("#combi-next-btn")?.addEventListener("click", () => stepPreset(1));
-
-    // My Presets: save / load / delete
-    const rerender = () => {
+    this.container
+      .querySelector("#combi-prev-btn")
+      ?.addEventListener("click", () => stepPreset(-1));
+    this.container
+      .querySelector("#combi-next-btn")
+      ?.addEventListener("click", () => stepPreset(1));
+      
+    this.container.querySelector("#init-layers-btn")?.addEventListener("click", async () => {
+      const ok = await CustomModal.confirm("Clear Layers", "Are you sure you want to clear all layers and initialize a blank stack?");
+      if (!ok) return;
+      multiLayerEngine.layers.forEach((l, i) => {
+        multiLayerEngine.setLayerInstrument(i, null);
+        multiLayerEngine.setLayerGain(i, 0.85);
+        multiLayerEngine.setLayerOctave(i, 0);
+        multiLayerEngine.setLayerFx(i, null);
+        if (i !== 0) multiLayerEngine.toggleLayer(i, false);
+        else multiLayerEngine.toggleLayer(i, true);
+      });
+      multiLayerEngine.toggleSplitMode(false);
+      multiLayerEngine.activeCombi = { id: "init", name: "Init Program" };
+      this.combiSearchQuery = "";
+      this.updateCombiSelectorActive();
       this.render();
       this.bindEvents();
-    };
-    this.container.querySelector("#save-user-preset-btn")?.addEventListener("click", () => {
-      const input = this.container.querySelector("#user-preset-name");
-      multiLayerEngine.saveUserPreset(input?.value);
-      rerender();
-    });
-    this.container.querySelectorAll("[data-user-preset]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        multiLayerEngine.applyUserPreset(btn.getAttribute("data-user-preset"));
-        rerender();
-      });
-    });
-    this.container.querySelectorAll("[data-user-del]").forEach(btn => {
-      btn.addEventListener("click", e => {
-        e.stopPropagation();
-        multiLayerEngine.deleteUserPreset(btn.getAttribute("data-user-del"));
-        rerender();
-      });
     });
 
-    // Setlist: add current / load / reorder / remove / clear
-    this.container.querySelector("#setlist-add-btn")?.addEventListener("click", () => {
-      const list = multiLayerEngine.getSetlist();
-      list.push(multiLayerEngine.currentStackSnapshot());
-      multiLayerEngine.saveSetlist(list);
-      rerender();
-    });
-    this.container.querySelector("#setlist-clear-btn")?.addEventListener("click", () => {
-      multiLayerEngine.saveSetlist([]);
-      rerender();
-    });
-    this.container.querySelectorAll("[data-setlist-load]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const idx = parseInt(btn.getAttribute("data-setlist-load"));
-        multiLayerEngine.applySetlistEntry(multiLayerEngine.getSetlist()[idx]);
-        rerender();
-      });
-    });
-    this.container.querySelectorAll("[data-setlist-move]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const [idx, delta] = btn.getAttribute("data-setlist-move").split("|").map(Number);
-        multiLayerEngine.moveSetlistEntry(idx, delta);
-        rerender();
-      });
-    });
-    this.container.querySelectorAll("[data-setlist-del]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        multiLayerEngine.removeSetlistEntry(parseInt(btn.getAttribute("data-setlist-del")));
-        rerender();
-      });
-    });
+    // Mount the Custom Patch Browser UI inside this tab
+    setTimeout(() => {
+      // Always create a fresh instance because the mount node is recreated on every render
+      this.customPatchBrowser = new CustomPatchBrowserUI(
+        "combi-custom-browser-mount",
+        window.appCore,
+      );
+    }, 0);
 
     // Layer Mute / Power toggles
-    this.container.querySelectorAll(".layer-power-btn").forEach(btn => {
+    this.container.querySelectorAll(".layer-power-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         const idx = parseInt(btn.getAttribute("data-layer"));
         multiLayerEngine.toggleLayer(idx);
@@ -459,16 +506,16 @@ export class MultiLayerUI {
     this.bindTimbreCombos();
 
     // Effects Combo Box Pickers per Rack
-    this.container.querySelectorAll(".layer-fx-select").forEach(sel => {
-      sel.addEventListener("change", e => {
+    this.container.querySelectorAll(".layer-fx-select").forEach((sel) => {
+      sel.addEventListener("change", (e) => {
         const idx = parseInt(sel.getAttribute("data-layer"));
         multiLayerEngine.setLayerFx(idx, e.target.value);
       });
     });
 
     // Volume Faders
-    this.container.querySelectorAll(".vertical-fader").forEach(fader => {
-      fader.addEventListener("input", e => {
+    this.container.querySelectorAll(".vertical-fader").forEach((fader) => {
+      fader.addEventListener("input", (e) => {
         const idx = parseInt(fader.getAttribute("data-layer"));
         const val = parseFloat(e.target.value);
         multiLayerEngine.setLayerGain(idx, val);
@@ -478,16 +525,19 @@ export class MultiLayerUI {
     });
 
     // Octave Shift Buttons
-    this.container.querySelectorAll(".oct-mini-btn[data-layer]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const idx = parseInt(btn.getAttribute("data-layer"));
-        const delta = parseInt(btn.getAttribute("data-oct"));
-        const currentOct = multiLayerEngine.layers[idx].oct || 0;
-        multiLayerEngine.setLayerOctave(idx, currentOct + delta);
-        const octVal = document.getElementById(`oct-val-${idx}`);
-        if (octVal) octVal.innerText = `${multiLayerEngine.layers[idx].oct >= 0 ? "+" : ""}${multiLayerEngine.layers[idx].oct}`;
+    this.container
+      .querySelectorAll(".oct-mini-btn[data-layer]")
+      .forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const idx = parseInt(btn.getAttribute("data-layer"));
+          const delta = parseInt(btn.getAttribute("data-oct"));
+          const currentOct = multiLayerEngine.layers[idx].oct || 0;
+          multiLayerEngine.setLayerOctave(idx, currentOct + delta);
+          const octVal = document.getElementById(`oct-val-${idx}`);
+          if (octVal)
+            octVal.innerText = `${multiLayerEngine.layers[idx].oct >= 0 ? "+" : ""}${multiLayerEngine.layers[idx].oct}`;
+        });
       });
-    });
 
     // ---- Split Keyboard Console ----
     const splitPowerBtn = this.container.querySelector("#split-power-btn");
@@ -497,20 +547,22 @@ export class MultiLayerUI {
       this.bindEvents();
     });
 
-    const splitPointSelect = this.container.querySelector("#split-point-select");
-    splitPointSelect?.addEventListener("change", e => {
+    const splitPointSelect = this.container.querySelector(
+      "#split-point-select",
+    );
+    splitPointSelect?.addEventListener("change", (e) => {
       multiLayerEngine.setSplitPointMidi(parseInt(e.target.value));
     });
 
-    this.container.querySelectorAll(".split-zone-fx").forEach(sel => {
-      sel.addEventListener("change", e => {
+    this.container.querySelectorAll(".split-zone-fx").forEach((sel) => {
+      sel.addEventListener("change", (e) => {
         const zone = sel.getAttribute("data-split-zone");
         multiLayerEngine.setSplitZoneFx(zone, e.target.value);
       });
     });
 
-    this.container.querySelectorAll(".split-zone-gain").forEach(sl => {
-      sl.addEventListener("input", e => {
+    this.container.querySelectorAll(".split-zone-gain").forEach((sl) => {
+      sl.addEventListener("input", (e) => {
         const zone = sl.getAttribute("data-split-gain");
         const val = parseFloat(e.target.value);
         multiLayerEngine.setSplitZoneGain(zone, val);
@@ -519,20 +571,23 @@ export class MultiLayerUI {
       });
     });
 
-    this.container.querySelectorAll(".oct-mini-btn[data-split-oct]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const zone = btn.getAttribute("data-split-oct");
-        const delta = parseInt(btn.getAttribute("data-oct"));
-        const currentOct = multiLayerEngine.splitZones[zone].oct || 0;
-        multiLayerEngine.setSplitZoneOctave(zone, currentOct + delta);
-        const octVal = document.getElementById(`split-oct-val-${zone}`);
-        if (octVal) octVal.innerText = `${multiLayerEngine.splitZones[zone].oct >= 0 ? "+" : ""}${multiLayerEngine.splitZones[zone].oct}`;
+    this.container
+      .querySelectorAll(".oct-mini-btn[data-split-oct]")
+      .forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const zone = btn.getAttribute("data-split-oct");
+          const delta = parseInt(btn.getAttribute("data-oct"));
+          const currentOct = multiLayerEngine.splitZones[zone].oct || 0;
+          multiLayerEngine.setSplitZoneOctave(zone, currentOct + delta);
+          const octVal = document.getElementById(`split-oct-val-${zone}`);
+          if (octVal)
+            octVal.innerText = `${multiLayerEngine.splitZones[zone].oct >= 0 ? "+" : ""}${multiLayerEngine.splitZones[zone].oct}`;
+        });
       });
-    });
   }
 
   bindTimbreCombos() {
-    this.container.querySelectorAll(".timbre-combo").forEach(combo => {
+    this.container.querySelectorAll(".timbre-combo").forEach((combo) => {
       const input = combo.querySelector(".timbre-combo-input");
       const list = combo.querySelector(".timbre-combo-list");
       if (!input || !list) return;
@@ -540,26 +595,34 @@ export class MultiLayerUI {
       const zoneKey = combo.getAttribute("data-split-zone");
       const layerIdx = zoneKey
         ? null
-        : parseInt((combo.getAttribute("data-layer") || input.getAttribute("data-layer") || "0"));
+        : parseInt(
+            combo.getAttribute("data-layer") ||
+              input.getAttribute("data-layer") ||
+              "0",
+          );
 
-      const selectedValue = () => zoneKey
-        ? multiLayerEngine.splitZones[zoneKey]?.inst
-        : multiLayerEngine.layers[layerIdx]?.inst;
-      const selectedName = () => zoneKey
-        ? multiLayerEngine.splitZones[zoneKey]?.name
-        : multiLayerEngine.layers[layerIdx]?.name;
-      const isStackMode = zoneKey && (!selectedValue() || selectedValue() === "current_stack");
+      const selectedValue = () =>
+        zoneKey
+          ? multiLayerEngine.splitZones[zoneKey]?.inst
+          : multiLayerEngine.layers[layerIdx]?.inst;
+      const selectedName = () =>
+        zoneKey
+          ? multiLayerEngine.splitZones[zoneKey]?.name
+          : multiLayerEngine.layers[layerIdx]?.name;
+      const isStackMode =
+        zoneKey && (!selectedValue() || selectedValue() === "current_stack");
 
       const close = () => list.classList.remove("open");
 
       const renderList = () => {
         const q = input.value.trim().toLowerCase();
-        let items = COMBI_TIMBRES.filter(t =>
-          !q ||
-          (t.name && t.name.toLowerCase().includes(q)) ||
-          (t.bank || "").toLowerCase().includes(q) ||
-          (t.category || "").toLowerCase().includes(q) ||
-          (t.code || "").toLowerCase().includes(q)
+        let items = COMBI_TIMBRES.filter(
+          (t) =>
+            !q ||
+            (t.name && t.name.toLowerCase().includes(q)) ||
+            (t.bank || "").toLowerCase().includes(q) ||
+            (t.category || "").toLowerCase().includes(q) ||
+            (t.code || "").toLowerCase().includes(q),
         );
         items = items.slice(0, 80);
         const selVal = selectedValue();
@@ -572,13 +635,15 @@ export class MultiLayerUI {
             </div>`
           : "";
 
-        const rows = items.map(
-          t => `
+        const rows = items
+          .map(
+            (t) => `
           <div class="timbre-opt ${t.value === selVal || (selName && t.name === selName) ? "selected" : ""}" data-value="${esc(t.value)}">
             <span class="timbre-opt-name">${esc(t.name)}</span>
             <span class="timbre-opt-meta">${t.kind === "va" ? "⚙ VA OSCILLATOR" : "▤ PCM / SAMPLE"} · ${esc(t.bank)}${t.code ? " · " + esc(t.code) : ""}</span>
-          </div>`
-        ).join("");
+          </div>`,
+          )
+          .join("");
 
         if (!rows && !stackRow) {
           list.innerHTML = `<div class="timbre-opt-empty">No timbres match "${esc(input.value)}" — try program names or codes like "A000"</div>`;
@@ -589,7 +654,7 @@ export class MultiLayerUI {
         list.classList.add("open");
       };
 
-      const selectOption = optEl => {
+      const selectOption = (optEl) => {
         if (!optEl) return;
         const value = optEl.getAttribute("data-value");
         if (zoneKey) {
@@ -615,14 +680,19 @@ export class MultiLayerUI {
       // keyboard selection always matches the latest filter.
       let _listDebounce = null;
       const flushListRender = () => {
-        if (_listDebounce) { clearTimeout(_listDebounce); _listDebounce = null; }
+        if (_listDebounce) {
+          clearTimeout(_listDebounce);
+          _listDebounce = null;
+        }
         renderList();
       };
       input.addEventListener("input", () => {
         clearTimeout(_listDebounce);
         _listDebounce = setTimeout(renderList, 160);
       });
-      input.addEventListener("click", () => { if (!list.classList.contains("open")) renderList(); });
+      input.addEventListener("click", () => {
+        if (!list.classList.contains("open")) renderList();
+      });
       input.addEventListener("blur", close);
 
       // Speculative prefetch (P1): hovering/pressing a PCM timbre starts its
@@ -630,7 +700,8 @@ export class MultiLayerUI {
       // list can never blow up decoded RAM.
       let _prefetchAt = 0;
       const prefetchTimbre = (value) => {
-        if (!value || value.startsWith("va:") || value === "current_stack") return;
+        if (!value || value.startsWith("va:") || value === "current_stack")
+          return;
         const now = Date.now();
         if (now - _prefetchAt < 300) return;
         _prefetchAt = now;
@@ -641,7 +712,8 @@ export class MultiLayerUI {
           if (pcm.decodedBuffers?.get(resolved)?.size > 0) return;
           if (typeof pcm.getDecodedBufferStats === "function") {
             const stats = pcm.getDecodedBufferStats();
-            if ((stats?.bytes || 0) + 1024 * 1024 > (stats?.budget || 0) * 0.8) return;
+            if ((stats?.bytes || 0) + 1024 * 1024 > (stats?.budget || 0) * 0.8)
+              return;
           }
           pcm.preloadInstrument(resolved).catch(() => {});
         } catch (e) {}
@@ -655,20 +727,26 @@ export class MultiLayerUI {
         if (opt) prefetchTimbre(opt.getAttribute("data-value"));
       });
 
-      input.addEventListener("keydown", e => {
+      input.addEventListener("keydown", (e) => {
         if (e.key === "ArrowDown" || e.key === "ArrowUp") {
           e.preventDefault();
           const opts = [...list.querySelectorAll(".timbre-opt")];
           if (!opts.length) return;
-          const cur = opts.findIndex(o => o.classList.contains("active"));
-          const next = e.key === "ArrowDown" ? (cur + 1) % opts.length : (cur <= 0 ? opts.length - 1 : cur - 1);
+          const cur = opts.findIndex((o) => o.classList.contains("active"));
+          const next =
+            e.key === "ArrowDown"
+              ? (cur + 1) % opts.length
+              : cur <= 0
+                ? opts.length - 1
+                : cur - 1;
           opts.forEach((o, i) => o.classList.toggle("active", i === next));
           opts[next]?.scrollIntoView({ block: "nearest" });
         } else if (e.key === "Enter") {
           e.preventDefault();
           flushListRender();
           const opts = [...list.querySelectorAll(".timbre-opt")];
-          const active = opts.find(o => o.classList.contains("active")) || opts[0];
+          const active =
+            opts.find((o) => o.classList.contains("active")) || opts[0];
           if (active) selectOption(active);
         } else if (e.key === "Escape") {
           e.preventDefault();
@@ -678,8 +756,8 @@ export class MultiLayerUI {
       });
 
       // mousedown preventDefault keeps input focus so blur->close doesn't race the click
-      list.addEventListener("mousedown", e => e.preventDefault());
-      list.addEventListener("click", e => {
+      list.addEventListener("mousedown", (e) => e.preventDefault());
+      list.addEventListener("click", (e) => {
         const opt = e.target.closest(".timbre-opt");
         if (opt) selectOption(opt);
       });
@@ -689,40 +767,64 @@ export class MultiLayerUI {
   updateLayerFaders() {
     const presetSelect = this.container.querySelector("#combi-preset-select");
     if (presetSelect && multiLayerEngine.activeCombi?.id) {
-      const exists = [...presetSelect.options].some(o => o.value === multiLayerEngine.activeCombi.id);
+      const exists = [...presetSelect.options].some(
+        (o) => o.value === multiLayerEngine.activeCombi.id,
+      );
       if (exists) presetSelect.value = multiLayerEngine.activeCombi.id;
     }
     multiLayerEngine.layers.forEach((l, i) => {
-      const fader = this.container.querySelector(`.vertical-fader[data-layer="${i}"]`);
+      const fader = this.container.querySelector(
+        `.vertical-fader[data-layer="${i}"]`,
+      );
       const readout = document.getElementById(`fader-val-${i}`);
       if (fader) fader.value = l.gain;
       if (readout) readout.innerText = `${Math.round(l.gain * 100)}%`;
 
-      const fxSelect = this.container.querySelector(`.layer-fx-select[data-layer="${i}"]`);
+      const fxSelect = this.container.querySelector(
+        `.layer-fx-select[data-layer="${i}"]`,
+      );
       if (fxSelect && l.fx) fxSelect.value = l.fx;
 
-      const instInput = this.container.querySelector(`.timbre-combo-input[data-layer="${i}"]`);
+      const instInput = this.container.querySelector(
+        `.timbre-combo-input[data-layer="${i}"]`,
+      );
       if (instInput && l.name) instInput.value = l.name;
 
-      const nameEl = this.container.querySelector(`.strip-layer-name[data-layer="${i}"]`);
+      const nameEl = this.container.querySelector(
+        `.strip-layer-name[data-layer="${i}"]`,
+      );
       if (nameEl && l.name) {
         nameEl.innerText = l.name;
         nameEl.title = l.name;
       }
 
       const strip = document.getElementById(`layer-strip-${i}`);
-      if (strip) strip.classList.toggle("active", !!l.enabled);
+      if (strip) {
+        strip.classList.toggle("active", !!l.enabled);
+        strip.classList.toggle("muted", !l.enabled);
+      }
+      const powerBtn = this.container.querySelector(`.layer-power-btn[data-layer="${i}"]`);
+      if (powerBtn) {
+        powerBtn.classList.toggle("active", !!l.enabled);
+        powerBtn.innerText = l.enabled ? "ON" : "MUTE";
+      }
     });
   }
 
   updateCombiSelectorActive() {
     const presetSelect = this.container.querySelector("#combi-preset-select");
     if (presetSelect && multiLayerEngine.activeCombi?.id) {
-      const exists = [...presetSelect.options].some(o => o.value === multiLayerEngine.activeCombi.id);
+      const exists = [...presetSelect.options].some(
+        (o) => o.value === multiLayerEngine.activeCombi.id,
+      );
       if (exists) presetSelect.value = multiLayerEngine.activeCombi.id;
     }
-    this.container.querySelectorAll("[data-combi-search]").forEach(btn => {
-      btn.classList.toggle("active", btn.getAttribute("data-combi-search") === multiLayerEngine.activeCombi?.id);
+    this.container.querySelectorAll("[data-combi-search]").forEach((btn) => {
+      btn.classList.toggle(
+        "active",
+        btn.getAttribute("data-combi-search") ===
+          multiLayerEngine.activeCombi?.id,
+      );
     });
     this.filterProgramGrid();
   }
@@ -756,8 +858,9 @@ export class MultiLayerUI {
     const q = (this.combiSearchQuery || "").toLowerCase();
     const allPresets = Object.values(COMBI_PRESETS);
     const catOrder = [];
-    allPresets.forEach(cp => {
-      if (cp.category && !catOrder.includes(cp.category)) catOrder.push(cp.category);
+    allPresets.forEach((cp) => {
+      if (cp.category && !catOrder.includes(cp.category))
+        catOrder.push(cp.category);
     });
 
     // P1: skip the whole rebuild when the filtered set is unchanged — the
@@ -765,11 +868,16 @@ export class MultiLayerUI {
     // (e.g. a trailing space), and rebuilding 56 <option>s + re-binding for
     // the same set is wasted main-thread work.
     const visibleIds = [];
-    catOrder.forEach(cat => {
+    catOrder.forEach((cat) => {
       allPresets
-        .filter(cp => cp.category === cat)
-        .filter(cp => !q || cp.name.toLowerCase().includes(q) || cp.category.toLowerCase().includes(q))
-        .forEach(cp => visibleIds.push(cp.id));
+        .filter((cp) => cp.category === cat)
+        .filter(
+          (cp) =>
+            !q ||
+            cp.name.toLowerCase().includes(q) ||
+            cp.category.toLowerCase().includes(q),
+        )
+        .forEach((cp) => visibleIds.push(cp.id));
     });
     const sig = `${q}::${visibleIds.join(",")}`;
     if (sig === this._lastFilterSig) return;
@@ -778,15 +886,25 @@ export class MultiLayerUI {
     const presetSelect = this.container?.querySelector("#combi-preset-select");
     if (presetSelect) {
       presetSelect.innerHTML = catOrder
-        .map(cat => `
+        .map(
+          (cat) => `
           <optgroup label="${esc(cat)}">
             ${allPresets
-              .filter(cp => cp.category === cat)
-              .filter(cp => !q || cp.name.toLowerCase().includes(q) || cp.category.toLowerCase().includes(q))
-              .map(cp => `<option value="${esc(cp.id)}" ${multiLayerEngine.activeCombi.id === cp.id ? "selected" : ""}>${esc(cp.name)}</option>`)
+              .filter((cp) => cp.category === cat)
+              .filter(
+                (cp) =>
+                  !q ||
+                  cp.name.toLowerCase().includes(q) ||
+                  cp.category.toLowerCase().includes(q),
+              )
+              .map(
+                (cp) =>
+                  `<option value="${esc(cp.id)}" ${multiLayerEngine.activeCombi.id === cp.id ? "selected" : ""}>${esc(cp.name)}</option>`,
+              )
               .join("")}
           </optgroup>
-        `)
+        `,
+        )
         .join("");
     }
 
@@ -802,13 +920,20 @@ export class MultiLayerUI {
       results.innerHTML = !q
         ? ""
         : allPresets
-            .filter(cp => cp.name.toLowerCase().includes(q) || (cp.category && cp.category.toLowerCase().includes(q)))
+            .filter(
+              (cp) =>
+                cp.name.toLowerCase().includes(q) ||
+                (cp.category && cp.category.toLowerCase().includes(q)),
+            )
             .slice(0, 15)
-            .map(cp => `<button class="combi-search-chip ${multiLayerEngine.activeCombi.id === cp.id ? "active" : ""}" data-combi-search="${esc(cp.id)}">${esc(cp.name)}</button>`)
+            .map(
+              (cp) =>
+                `<button class="combi-search-chip ${multiLayerEngine.activeCombi.id === cp.id ? "active" : ""}" data-combi-search="${esc(cp.id)}">${esc(cp.name)}</button>`,
+            )
             .join("");
     }
 
-    this.container?.querySelectorAll("[data-combi-search]").forEach(btn => {
+    this.container?.querySelectorAll("[data-combi-search]").forEach((btn) => {
       this._bindCombiChip(btn);
     });
   }
