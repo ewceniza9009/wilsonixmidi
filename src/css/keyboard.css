@@ -15,30 +15,32 @@
   box-sizing: border-box;
 }
 
-/* Controls bar above piano roll (Unified Pro Studio DAW Strip) */
+/* Controls bar above piano roll (Unified Flat Studio DAW Strip) */
 .keyboard-controls-bar {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  flex-wrap: nowrap;
+  flex-wrap: nowrap !important;
   overflow-x: auto;
-  gap: 5px;
-  height: 32px;
-  min-height: 32px;
-  max-height: 32px;
-  margin-bottom: 4px;
-  padding: 0 6px;
-  background: linear-gradient(180deg, #181d28 0%, #11141c 100%);
+  overflow-y: hidden;
+  gap: 4px;
+  height: 28px;
+  min-height: 28px;
+  max-height: 28px;
+  margin-bottom: 3px;
+  padding: 2px 4px;
+  background: #0d1017;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 2px 8px rgba(0, 0, 0, 0.5);
+  border-radius: 4px;
+  box-shadow: none;
   box-sizing: border-box;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 .keyboard-controls-bar::-webkit-scrollbar {
-  display: none;
+  display: none !important;
   width: 0;
   height: 0;
 }
@@ -47,52 +49,52 @@
 .wheel-bay {
   display: flex;
   align-items: center;
-  gap: 5px;
-  height: 26px;
-  background: rgba(0, 0, 0, 0.3);
+  gap: 4px;
+  height: 24px;
+  background: #141822;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 0 5px;
-  border-radius: 5px;
+  padding: 0 4px;
+  border-radius: 3px;
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .wheel-unit {
   display: flex;
   align-items: center;
   gap: 3px;
-  height: 24px;
+  height: 20px;
 }
 
 .wheel-unit label {
-  font-size: 0.48rem;
+  font-size: 0.46rem;
   font-weight: 800;
-  color: #94a3b8;
-  letter-spacing: 0.5px;
+  color: #64748b;
+  letter-spacing: 0.4px;
   white-space: nowrap;
 }
 
 .wheel-track {
-  width: 14px;
-  height: 22px;
-  background: #090c12;
-  border-radius: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  width: 12px;
+  height: 18px;
+  background: #080a0f;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   position: relative;
   cursor: ns-resize;
   touch-action: none;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.8);
+  box-shadow: none;
 }
 
 .wheel-thumb {
   width: 100%;
-  height: 6px;
-  background: linear-gradient(180deg, #64748b 0%, #334155 100%);
-  border-radius: 2px;
+  height: 4px;
+  background: #64748b;
+  border-radius: 1px;
   border-top: 2px solid var(--accent-amber);
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
   pointer-events: none;
 }
 
@@ -101,349 +103,396 @@
   border-top-color: var(--accent-cyan);
 }
 
-/* Universal Standardized HUD Buttons & Units */
+/* Universal Standardized HUD Buttons (Flat, Crisp, Uniform 24px) */
 .hud-btn {
-  height: 26px;
+  height: 24px;
+  min-height: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, #242c3b 0%, #191f2b 100%);
-  color: #e2e8f0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 0.60rem;
-  font-weight: 800;
+  background: #141822;
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.58rem;
+  font-weight: 700;
   letter-spacing: 0.3px;
-  padding: 0 8px;
-  border-radius: 5px;
+  padding: 0 7px;
+  border-radius: 3px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
   white-space: nowrap;
   box-sizing: border-box;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  box-shadow: none;
+  flex-shrink: 0;
 }
 
 .hud-btn:hover {
-  background: linear-gradient(180deg, #303b4e 0%, #222a3a 100%);
-  border-color: rgba(255, 255, 255, 0.22);
+  background: #1e2433;
+  border-color: rgba(255, 255, 255, 0.16);
   color: #ffffff;
 }
 
 .hud-btn:active {
-  background: var(--accent-amber);
-  color: #0f1117;
-  border-color: var(--accent-amber);
+  background: #252d40;
 }
 
-/* Modular HUD Units Container */
+/* Compound Multi-Control Capsules (Strict Uniform 24px Height & Border) */
 .octave-hud-unit,
 .scale-hud-unit,
 .velocity-accent-unit,
-.key-zoom-unit,
-.qwerty-toggle-unit,
-.sustain-latch-unit,
-.xy-toggle-unit,
-.chord-hud-unit,
-.layout-hud-unit,
-.stage-toggle-unit,
-.panic-unit,
-.collapse-keys-unit {
-  height: 26px;
+.key-zoom-unit {
+  height: 24px;
+  min-height: 24px;
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  background: rgba(0, 0, 0, 0.28);
-  padding: 0 5px;
-  border-radius: 5px;
+  background: #141822;
+  padding: 0 4px;
+  border-radius: 3px;
   border: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+  box-sizing: border-box;
+  box-shadow: none;
+}
+
+/* Standalone Button Wrappers */
+.xy-toggle-unit,
+.wheels-toggle-unit,
+.chord-hud-unit,
+.layout-hud-unit,
+.sustain-latch-unit,
+.qwerty-toggle-unit,
+.stage-toggle-unit,
+.panic-unit,
+.collapse-keys-unit {
+  height: 24px;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
   flex-shrink: 0;
   box-sizing: border-box;
 }
 
-/* Octave Unit */
+/* Octave Segmented Unit */
 .octave-hud-unit .hud-btn {
-  height: 20px;
-  padding: 0 6px;
-  font-size: 0.56rem;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 4px;
+  height: 18px;
+  min-height: 18px;
+  padding: 0 4px;
+  font-size: 0.54rem;
+  font-weight: 700;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: #94a3b8;
+  border-radius: 2px;
 }
 
 .octave-hud-unit .hud-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
 }
 
 .octave-hud-unit .hud-btn.range-btn {
-  height: 20px;
-  background: linear-gradient(135deg, rgba(2, 132, 199, 0.25), rgba(14, 165, 233, 0.12));
-  border: 1px solid rgba(56, 189, 248, 0.45);
+  height: 18px;
+  min-height: 18px;
+  background: rgba(56, 189, 248, 0.12);
+  border: none;
   color: #38bdf8;
-  font-weight: 900;
-  padding: 0 6px;
+  font-weight: 800;
+  padding: 0 5px;
   letter-spacing: 0.3px;
   font-family: var(--font-family-mono);
+  border-radius: 2px;
 }
 
 .octave-hud-unit .hud-btn.range-btn:hover {
-  background: linear-gradient(135deg, rgba(2, 132, 199, 0.45), rgba(14, 165, 233, 0.25));
+  background: rgba(56, 189, 248, 0.25);
   color: #ffffff;
-  border-color: #38bdf8;
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
 }
 
 .octave-readout {
   font-family: var(--font-family-mono);
-  font-size: 0.82rem;
-  font-weight: 900;
+  font-size: 0.72rem;
+  font-weight: 800;
   color: var(--accent-amber);
-  min-width: 24px;
+  min-width: 20px;
   text-align: center;
-  line-height: 20px;
-  text-shadow: 0 0 6px rgba(255, 118, 77, 0.35);
+  line-height: 18px;
+  text-shadow: none;
 }
 
 /* X/Y Pad Button */
 .xy-btn {
-  background: transparent;
-  border: none;
-  height: 20px;
-  font-size: 0.58rem;
-  padding: 0 4px;
-  gap: 4px;
-  box-shadow: none;
+  gap: 5px;
 }
 
 .xy-led {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: #475569;
   display: inline-block;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease;
+}
+
+.xy-btn.active {
+  background: rgba(56, 189, 248, 0.14);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
 }
 
 .xy-btn.active .xy-led {
-  background: var(--accent-cyan);
-  box-shadow: 0 0 8px var(--accent-cyan);
+  background: #38bdf8;
 }
 
 /* Wheels HUD Button */
 .wheels-btn {
-  background: transparent;
-  border: none;
-  height: 20px;
-  font-size: 0.58rem;
-  padding: 0 4px;
-  gap: 4px;
-  box-shadow: none;
+  gap: 5px;
 }
 
 .wheels-led {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: #475569;
   display: inline-block;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease;
+}
+
+.wheels-btn.active {
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
 }
 
 .wheels-btn.active .wheels-led {
-  background: var(--accent-amber, #f59e0b);
-  box-shadow: 0 0 8px var(--accent-amber, #f59e0b);
+  background: #f59e0b;
 }
 
 /* Scale Lock Unit */
 .scale-label {
-  font-size: 0.52rem;
-  font-weight: 900;
-  color: #94a3b8;
+  font-size: 0.50rem;
+  font-weight: 800;
+  color: #64748b;
   letter-spacing: 0.4px;
 }
 
+/* Uniform Comboboxes / Dropdown Selects Across All Units */
 .hud-select,
 .hud-root-select,
-.hud-scale-select {
-  height: 20px;
-  background: transparent;
+.hud-scale-select,
+.hud-dropdown-select {
+  height: 18px;
+  background-color: #0d1017;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath fill='%2364748b' d='M0 0l4 4 4-4z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+  background-size: 6px 3.5px;
   color: #38bdf8;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
   font-family: var(--font-family-mono);
-  font-size: 0.58rem;
-  font-weight: 800;
-  padding: 0 2px;
+  font-size: 0.56rem;
+  font-weight: 700;
+  padding: 0 13px 0 4px;
   outline: none;
   cursor: pointer;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  color-scheme: dark;
+  -webkit-tap-highlight-color: transparent;
+  vertical-align: middle;
+  box-shadow: none;
 }
 
 .hud-select:hover,
 .hud-root-select:hover,
-.hud-scale-select:hover {
+.hud-scale-select:hover,
+.hud-dropdown-select:hover {
+  border-color: rgba(56, 189, 248, 0.4);
   color: #7dd3fc;
+}
+
+.hud-select:focus,
+.hud-root-select:focus,
+.hud-scale-select:focus,
+.hud-dropdown-select:focus {
+  border-color: #38bdf8;
+}
+
+.hud-select option,
+.hud-root-select option,
+.hud-scale-select option,
+.hud-dropdown-select option {
+  background-color: #141822 !important;
+  color: #f1f5f9 !important;
+  color-scheme: dark;
+}
+
+/* Specific zoom select: ALWAYS visible on both desktop & mobile */
+.zoom-dropdown-select {
+  display: inline-block !important;
 }
 
 /* Chord Voicing Button */
 .chord-btn {
-  background: transparent;
-  border: none;
-  color: #e2e8f0;
-  font-size: 0.58rem;
-  font-weight: 800;
-  padding: 0 4px;
-  box-shadow: none;
+  color: #cbd5e1;
 }
 
 .chord-btn.active {
-  background: linear-gradient(135deg, #9333ea, #c026d3) !important;
-  color: #ffffff !important;
-  border-radius: 4px;
-  padding: 2px 6px;
-  box-shadow: 0 0 8px rgba(192, 38, 211, 0.5);
+  background: rgba(217, 70, 239, 0.14) !important;
+  border-color: rgba(217, 70, 239, 0.4) !important;
+  color: #f0abfc !important;
 }
 
 /* Layout Button */
 .layout-btn {
-  background: transparent;
-  border: none;
   color: var(--accent-cyan);
-  font-size: 0.58rem;
-  font-weight: 800;
-  padding: 0 4px;
-  box-shadow: none;
 }
 
 /* Velocity & Expression HUD Unit */
 .accent-badge {
-  font-size: 0.54rem;
-  font-weight: 900;
-  color: #ffffff;
-  background: linear-gradient(135deg, #ea580c, #c2410c);
+  font-size: 0.50rem;
+  font-weight: 800;
+  color: #ff764d;
+  background: rgba(255, 118, 77, 0.15);
   padding: 1px 4px;
-  border-radius: 3px;
-  box-shadow: 0 1px 3px rgba(234, 88, 12, 0.4);
+  border-radius: 2px;
 }
 
 .velocity-readout {
   font-family: var(--font-family-mono);
-  font-size: 0.58rem;
-  font-weight: 800;
-  color: #cbd5e1;
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: #94a3b8;
 }
 
 .accent-preset-btns {
   display: inline-flex;
-  gap: 2px;
+  gap: 1px;
 }
 
 .accent-mini-btn {
   height: 18px;
-  background: rgba(255, 255, 255, 0.06);
+  min-height: 18px;
+  background: transparent;
   color: #94a3b8;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: none;
   font-size: 0.52rem;
-  font-weight: 800;
-  padding: 0 5px;
-  border-radius: 3px;
+  font-weight: 700;
+  padding: 0 4px;
+  border-radius: 2px;
   cursor: pointer;
   transition: all 0.12s ease;
+  box-shadow: none;
 }
 
 .accent-mini-btn:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
   color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .accent-mini-btn.active {
-  background: linear-gradient(135deg, #ff764d 0%, #ea580c 100%);
-  color: #ffffff;
-  border-color: var(--accent-amber);
-  box-shadow: 0 1px 4px rgba(255, 118, 77, 0.4);
+  background: rgba(255, 118, 77, 0.22);
+  color: #ff764d;
+  font-weight: 800;
+}
+
+#hud-curve-btns .accent-mini-btn.active {
+  background: rgba(56, 189, 248, 0.22);
+  color: #38bdf8;
+  font-weight: 800;
 }
 
 /* Sustain / Damper Button */
 .sustain-btn {
-  background: transparent;
-  border: none;
-  height: 20px;
-  font-size: 0.58rem;
   gap: 5px;
-  padding: 0 4px;
-  box-shadow: none;
 }
 
 .pedal-led {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: #475569;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease;
 }
 
 .sustain-btn.active {
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(16, 185, 129, 0.4);
   color: #34d399;
 }
 
 .sustain-btn.active .pedal-led {
   background: #10b981;
-  box-shadow: 0 0 8px #10b981;
 }
 
 /* Key Zoom Unit */
 .zoom-label {
-  font-size: 0.52rem;
-  font-weight: 900;
-  color: #94a3b8;
+  font-size: 0.50rem;
+  font-weight: 800;
+  color: #64748b;
   letter-spacing: 0.4px;
 }
 
 .zoom-pill-group {
   display: inline-flex;
-  gap: 2px;
+  gap: 1px;
 }
 
 .zoom-btn {
   height: 18px;
-  background: rgba(255, 255, 255, 0.06);
+  min-height: 18px;
+  background: transparent;
   color: #94a3b8;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: none;
   font-size: 0.52rem;
-  font-weight: 800;
-  padding: 0 5px;
-  border-radius: 3px;
+  font-weight: 700;
+  padding: 0 4px;
+  border-radius: 2px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.12s ease;
 }
 
 .zoom-btn:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
   color: #ffffff;
 }
 
 .zoom-btn.active {
-  background: linear-gradient(135deg, #ff764d 0%, #ea580c 100%);
-  color: #ffffff;
-  border-color: var(--accent-amber);
-  box-shadow: 0 1px 4px rgba(255, 118, 77, 0.4);
+  background: rgba(255, 118, 77, 0.22);
+  color: #ff764d;
+  font-weight: 800;
 }
 
 /* QWERTY HUD Toggle */
 .toggle-pill {
-  height: 20px;
+  height: 24px;
+  min-height: 24px;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 0.56rem;
+  gap: 3px;
+  font-size: 0.54rem;
   font-weight: 800;
-  color: #94a3b8;
+  color: #64748b;
   cursor: pointer;
   user-select: none;
-  padding: 0 2px;
+  padding: 0 5px;
+  border-radius: 3px;
+  background: #141822;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
 }
 
 .toggle-pill input[type="checkbox"] {
-  width: 12px;
-  height: 12px;
+  width: 11px;
+  height: 11px;
   accent-color: var(--accent-amber);
   margin: 0;
   cursor: pointer;
@@ -453,107 +502,69 @@
   color: var(--accent-cyan);
 }
 
+/* Stage Mode Button */
+.stage-mode-btn {
+  background: rgba(56, 189, 248, 0.08);
+  border-color: rgba(56, 189, 248, 0.25);
+  color: #38bdf8;
+  gap: 4px;
+}
+
+.stage-mode-btn:hover {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: rgba(56, 189, 248, 0.45);
+  color: #ffffff;
+}
+
 /* Panic Safety Button */
 .panic-btn {
-  height: 20px;
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(220, 38, 38, 0.12));
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.25);
   color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.45);
-  font-size: 0.56rem;
-  font-weight: 900;
+  font-weight: 800;
   letter-spacing: 0.4px;
-  padding: 0 7px;
-  border-radius: 4px;
-  box-shadow: none;
 }
 
 .panic-btn:hover {
   background: #ef4444;
   color: #ffffff;
   border-color: #ef4444;
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
 }
 
 /* Collapse Keys Button */
 .collapse-keys-btn {
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
   gap: 4px;
-  background: linear-gradient(180deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.08) 100%);
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.2);
   color: #fbbf24;
-  font-size: 0.56rem;
-  font-weight: 900;
+  font-weight: 800;
   letter-spacing: 0.3px;
-  padding: 0 7px;
-  border-radius: 4px;
-  cursor: pointer;
-  box-shadow: none;
-  transition: all 0.15s ease;
 }
 
 .collapse-keys-btn:hover {
-  background: linear-gradient(180deg, rgba(245, 158, 11, 0.3) 0%, rgba(217, 119, 6, 0.18) 100%);
-  border-color: rgba(245, 158, 11, 0.7);
+  background: rgba(245, 158, 11, 0.18);
+  border-color: rgba(245, 158, 11, 0.4);
   color: #ffffff;
-  box-shadow: 0 0 8px rgba(245, 158, 11, 0.35);
 }
 
 .collapse-keys-btn.active {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  background: #f59e0b;
   color: #000000;
   border-color: transparent;
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
 }
 
 .collapse-icon {
-  font-size: 0.62rem;
+  font-size: 0.60rem;
   line-height: 1;
 }
 
-/* Dynamic Velocity & Curve Dropdowns for Tablet & Mobile */
-.hud-dropdown-select {
-  display: none;
-  background-color: #0b0e14;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath fill='%2338bdf8' d='M0 0l4 4 4-4z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 4px center;
-  background-size: 7px 4px;
-  color: #38bdf8;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 4px;
-  font-family: var(--font-family-mono);
-  font-size: 0.58rem;
-  font-weight: 800;
-  padding: 1px 14px 1px 5px;
-  height: 20px;
-  outline: none;
-  cursor: pointer;
-  box-sizing: border-box;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-  color-scheme: dark;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.hud-dropdown-select:focus {
-  border-color: #38bdf8;
-}
-
-.hud-dropdown-select option {
-  background-color: #151923 !important;
-  color: #f1f5f9 !important;
-  color-scheme: dark;
-}
-
-/* On mobile & tablet touch screens (< 1024px or pointer: coarse), swap wide velocity/curve button lists for sleek dropdowns */
+/* Responsive Adaptive Visibility (Desktop vs Mobile/Touch) */
 @media (max-width: 1024px), (pointer: coarse) {
   .accent-preset-btns {
     display: none !important;
   }
-  .hud-dropdown-select {
+  .velocity-dropdown-select,
+  .curve-dropdown-select {
     display: inline-block !important;
   }
   #hud-velocity-readout {
@@ -561,77 +572,37 @@
   }
 }
 
-/* Desktop-Only Zero-Scroll Toolbar Architecture (pointer: fine & >= 1024px) */
 @media (min-width: 1024px) and (pointer: fine) {
   .keyboard-controls-bar {
-    flex-wrap: wrap !important;
-    overflow-x: visible !important;
-    overflow-y: visible !important;
-    height: auto !important;
-    min-height: 30px !important;
-    max-height: none !important;
-    gap: 3px 5px !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    max-height: 28px !important;
+    gap: 4px !important;
     padding: 2px 4px !important;
   }
 
-  /* Desktop hides mobile/tablet-specific helpers so every desktop control is 100% accessible */
-  .stage-toggle-unit,
-  #btn-tablet-multitouch-help {
+  .stage-toggle-unit {
     display: none !important;
   }
 
-  /* Keep desktop velocity & curve buttons visible and compact */
   .accent-preset-btns,
   #hud-curve-btns {
     display: inline-flex !important;
   }
-  .hud-dropdown-select {
+
+  .velocity-dropdown-select,
+  .curve-dropdown-select {
     display: none !important;
   }
-  #hud-velocity-readout {
+
+  .zoom-dropdown-select {
     display: inline-block !important;
   }
 
-  .hud-btn {
-    height: 26px !important;
-    padding: 0 6px !important;
-    font-size: 0.60rem !important;
-  }
-
-  .octave-hud-unit,
-  .velocity-accent-unit,
-  .key-zoom-unit,
-  .qwerty-toggle-unit,
-  .toggle-pill,
-  .collapse-keys-btn,
-  .scale-hud-unit,
-  .chord-hud-unit,
-  .layout-hud-unit,
-  .sustain-latch-unit,
-  .panic-unit {
-    height: 26px !important;
-  }
-
-  .octave-hud-unit .hud-btn {
-    height: 20px !important;
-    padding: 0 5px !important;
-  }
-
-  .accent-mini-btn,
-  .zoom-btn {
-    height: 18px !important;
-    padding: 0 5px !important;
-    font-size: 0.52rem !important;
-  }
-
-  .wheel-bay,
-  .wheel-unit {
-    height: 26px !important;
-  }
-
-  .wheel-track {
-    width: 14px !important;
-    height: 26px !important;
+  #hud-velocity-readout {
+    display: inline-block !important;
   }
 }
 
@@ -1099,9 +1070,8 @@ body.mobile-stage-keys .wheel-track {
   .black-key { height: 65px; }
   .piano-roll-container.zoom-touch .white-key { height: clamp(120px, 28vh, 140px); min-width: 54px; }
   .piano-roll-container.zoom-touch .black-key { height: clamp(75px, 18vh, 90px); width: 34px; margin-left: -17px; margin-right: -17px; }
-  .keyboard-controls-bar { margin-bottom: 2px; padding-bottom: 2px; }
-  .hud-btn { padding: 4px 6px; font-size: 0.60rem; }
-  .octave-readout { font-size: 0.82rem; min-width: 30px; }
+  .keyboard-controls-bar { margin-bottom: 2px; }
+  .octave-readout { font-size: 0.72rem; min-width: 20px; }
   .white-key .key-qwerty-label { bottom: 26px; font-size: 0.52rem; padding: 1px 3px; }
   .black-key .key-qwerty-label { bottom: 6px; font-size: 0.52rem; padding: 1px 3px; }
   .key-note-name { bottom: 6px; font-size: 0.62rem; font-weight: 900; }
@@ -1111,22 +1081,24 @@ body.mobile-stage-keys .wheel-track {
 @media (max-width: 768px) {
   .keyboard-controls-bar {
     gap: 4px;
-    padding-bottom: 3px;
+    height: 28px;
+    min-height: 28px;
+    max-height: 28px;
+    padding: 2px 4px;
     -webkit-overflow-scrolling: touch;
     overflow-x: auto;
     scrollbar-width: none !important;
-    mask-image: linear-gradient(to right, black 88%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to right, black 88%, transparent 100%);
   }
   .keyboard-controls-bar::-webkit-scrollbar { display: none !important; }
   .hud-btn {
-    min-height: 34px;
-    padding: 4px 8px;
-    font-size: 0.62rem;
+    height: 24px;
+    min-height: 24px;
+    padding: 0 6px;
+    font-size: 0.58rem;
   }
   .wheel-track {
-    width: 18px;
-    height: 36px;
+    width: 12px;
+    height: 18px;
   }
 }
 

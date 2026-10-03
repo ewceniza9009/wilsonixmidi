@@ -517,6 +517,18 @@ export class GigHudUI {
         label: "🎷 STAGE SOLO RIGS & FAMOUS SOUNDS",
         items: [
           {
+            id: "inst:violin",
+            name: "🎻 Solo Violin (Expressive Acoustic)",
+            type: "inst",
+            instId: "violin",
+          },
+          {
+            id: "inst:cello",
+            name: "🎻 Warm Cello (Solo Acoustic)",
+            type: "inst",
+            instId: "cello",
+          },
+          {
             id: "inst:sax_genuine_solo",
             name: "🎷 Solo Alto Sax (Expressive Breath & Vibrato)",
             type: "inst",

@@ -41,18 +41,24 @@
 [data-theme="light"] .octave-hud-unit,
 [data-theme="light"] .scale-hud-unit,
 [data-theme="light"] .velocity-accent-unit,
-[data-theme="light"] .key-zoom-unit,
-[data-theme="light"] .qwerty-toggle-unit,
-[data-theme="light"] .sustain-latch-unit,
+[data-theme="light"] .key-zoom-unit {
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: none;
+}
+
 [data-theme="light"] .xy-toggle-unit,
+[data-theme="light"] .wheels-toggle-unit,
 [data-theme="light"] .chord-hud-unit,
 [data-theme="light"] .layout-hud-unit,
+[data-theme="light"] .sustain-latch-unit,
+[data-theme="light"] .qwerty-toggle-unit,
 [data-theme="light"] .stage-toggle-unit,
 [data-theme="light"] .panic-unit,
 [data-theme="light"] .collapse-keys-unit {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(0, 0, 0, 0.10);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 /* ----------------------------------------------------------------------------
@@ -70,18 +76,18 @@
 }
 
 [data-theme="light"] .octave-hud-unit .hud-btn {
-  background: #f1f4f8;
-  color: #334155;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: transparent;
+  color: #475569;
+  border: none;
 }
 [data-theme="light"] .octave-hud-unit .hud-btn:hover {
-  background: #e2e8f0;
+  background: rgba(0, 0, 0, 0.06);
   color: #0f172a;
 }
 [data-theme="light"] .octave-hud-unit .hud-btn.range-btn {
   background: rgba(2, 132, 199, 0.12);
   color: #0284c7;
-  border: 1px solid rgba(2, 132, 199, 0.35);
+  border: none;
 }
 [data-theme="light"] .octave-hud-unit .hud-btn.range-btn:hover {
   background: #0284c7;
@@ -121,19 +127,13 @@
    ---------------------------------------------------------------------------- */
 [data-theme="light"] .hud-select,
 [data-theme="light"] .hud-root-select,
-[data-theme="light"] .hud-scale-select {
-  background: transparent !important;
-  color: #0284c7 !important;
-  border: none !important;
-  box-shadow: none !important;
-  color-scheme: light !important;
-}
-
+[data-theme="light"] .hud-scale-select,
 [data-theme="light"] .hud-dropdown-select {
-  background-color: #f1f4f8 !important;
+  background-color: #ffffff !important;
   color: #0284c7 !important;
   border: 1px solid rgba(0, 0, 0, 0.12) !important;
   color-scheme: light !important;
+  box-shadow: none !important;
 }
 
 [data-theme="light"] .hud-select option,

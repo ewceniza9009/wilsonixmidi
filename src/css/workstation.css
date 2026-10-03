@@ -277,8 +277,8 @@ body.mobile-stage-keys .studio-keyboard-deck {
 /* Floating Non-Invasive License Pill Widget (Draggable) */
 .floating-license-pill {
   position: fixed !important;
-  top: 48px;
-  right: 14px;
+  top: 6px;
+  right: 52px;
   z-index: 99999 !important;
   display: inline-flex !important;
   align-items: center !important;
@@ -342,8 +342,8 @@ body.mobile-stage-keys .studio-keyboard-deck {
 
 @media (max-width: 960px), (max-height: 560px) {
   .floating-license-pill {
-    top: 48px !important;
-    right: 8px !important;
+    top: 6px !important;
+    right: 44px !important;
     font-size: 0.48rem !important;
     padding: 2px 7px !important;
   }

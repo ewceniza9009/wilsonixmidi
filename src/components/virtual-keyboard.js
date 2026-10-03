@@ -358,7 +358,6 @@ export class VirtualKeyboardUI {
 
           <div class="panic-unit">
             <button class="hud-btn panic-btn" id="master-panic-btn" title="Silence All Notes (ESC)">PANIC</button>
-            <button class="hud-btn" id="btn-tablet-multitouch-help" title="Xiaomi Pad & Android Tablet Multi-Touch Setup" style="font-size: 10px; padding: 2px 7px; color: #a5b4fc; border-color: rgba(165,180,252,0.3); margin-left: 4px;">📱 TABLET TIP</button>
           </div>
 
           <!-- Collapse / Expand Piano Keys Button (Expands Workstation & Effects to Full Screen) -->
@@ -1188,18 +1187,6 @@ export class VirtualKeyboardUI {
       this.updateHudState();
     });
 
-    const tabletHelpBtn = document.getElementById("btn-tablet-multitouch-help");
-    tabletHelpBtn?.addEventListener("click", () => {
-      alert(
-        "📱 XIAOMI PAD / ANDROID MULTI-TOUCH TIP:\n\n" +
-          "If playing chords with 3 or more fingers triggers Xiaomi's screenshot snipping tool:\n\n" +
-          "1. Open your tablet's Settings app.\n" +
-          "2. Tap 'Additional settings' → 'Gesture shortcuts'.\n" +
-          "3. Tap 'Take a screenshot' and set to 'None' (or turn off 'Slide 3 fingers down').\n" +
-          "4. Tap 'Partial screenshot' and turn off 'Press and hold with 3 fingers'.\n\n" +
-          "Alternatively, open Xiaomi 'Game Turbo' and enable 'Turn off 3-finger screenshot'.",
-      );
-    });
 
     qwertyToggle?.addEventListener("change", () => {
       this.updateQwertyLabels();

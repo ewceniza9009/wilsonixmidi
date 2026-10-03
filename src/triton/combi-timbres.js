@@ -167,6 +167,8 @@ export function resolvePcmByProgram(prog) {
   if (cat.includes("piano") || cat.includes("keyboard")) return "acoustic_grand_piano";
 
   // Choirs & Strings
+  if (name.includes("violin") || cat.includes("violin")) return "violin";
+  if (name.includes("cello") || cat.includes("cello")) return "cello";
   if (cat.includes("choir") || cat.includes("vocal") || name.includes("choir") || name.includes("voice") || name.includes("vox") || name.includes("ooh") || name.includes("ahh")) return "choir_aahs";
   if (cat.includes("strings") || cat.includes("pad") || name.includes("chair of light") || prog.id === "A000") return "string_ensemble_1";
 
