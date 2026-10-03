@@ -14,6 +14,7 @@ import { LAYER_FX_OPTIONS } from "../audio/native-pcm-engine.js";
 import { CustomPatchBrowserUI } from "./custom-patch-browser.js";
 import { CustomModal } from "./custom-modal.js";
 import { timbreSearchModal } from "./timbre-search-modal.js";
+import { tonicDroneEngine } from "../audio/tonic-drone-engine.js";
 
 const esc = (s) =>
   String(s).replace(
@@ -75,6 +76,15 @@ export class MultiLayerUI {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
     this.combiSearchQuery = "";
+    this.viewMode = localStorage.getItem("wilsonix_combi_view_mode") || "perform";
+    if (!multiLayerEngine.macros) {
+      multiLayerEngine.macros = { swell: 0.35, shimmer: 0.2, tone: 0.5, pad: 0.5 };
+    }
+    if (!multiLayerEngine.snapshots) {
+      multiLayerEngine.snapshots = [null, null, null, null, null, null, null, null];
+    }
+    multiLayerEngine.activeSnapshotIndex = multiLayerEngine.activeSnapshotIndex ?? 0;
+
     this._bindDocClickOutside();
     this.render();
     this.bindEvents();
@@ -163,6 +173,10 @@ export class MultiLayerUI {
         catOrder.push(cp.category);
     });
 
+    const macros = multiLayerEngine.macros || { swell: 0.35, shimmer: 0.2, tone: 0.5, pad: 0.5 };
+    const snapshots = multiLayerEngine.snapshots || [null, null, null, null, null, null, null, null];
+    const activeSnap = multiLayerEngine.activeSnapshotIndex ?? 0;
+
     this.container.innerHTML = `
       <div class="combi-layers-console">
         <!-- Combi Header & Compact Preset Selector -->
@@ -170,6 +184,10 @@ export class MultiLayerUI {
           <div class="combi-title-group">
             <span class="combi-pill">WORKSTATION COMBI</span>
             <span class="combi-main-title">4-TIMBRE MULTI-LAYER INPUT MATRIX</span>
+            <div class="combi-view-mode-toggle" title="Toggle Compact Live Performance View / Deep Edit Strips">
+              <button class="view-mode-btn ${this.viewMode === 'perform' ? 'active' : ''}" data-view="perform">PERFORM</button>
+              <button class="view-mode-btn ${this.viewMode === 'edit' ? 'active' : ''}" data-view="edit">EDIT</button>
+            </div>
           </div>
 
           <div class="combi-selector-row">
@@ -239,205 +257,365 @@ export class MultiLayerUI {
         }
 
         <!-- Combi Split View: Left Panel (Browser) + Right Panel (Workstation Strips) -->
-        <div style="display: flex; flex-direction: row; gap: 12px; width: 100%; height: 100%; overflow: hidden; padding-bottom: 10px;">
+        <div style="display: flex; flex-direction: row; gap: 8px; width: 100%; height: 100%; overflow: hidden; padding-bottom: 6px;">
           
-          <!-- Custom Patch Browser (Setlist + Drone) -->
-          <div id="combi-custom-browser-mount" style="flex: 0 0 280px; background: #0b0f17; border-radius: 8px; border: 1px solid #1a2233; display: flex; flex-direction: column; overflow: hidden; height: 100%;"></div>
+          <!-- Custom Patch Browser (Setlist + Drone - Compact 210px for Medium Tablet) -->
+          <div id="combi-custom-browser-mount" style="flex: 0 0 210px; min-width: 195px; max-width: 220px; background: #0b0f17; border-radius: 6px; border: 1px solid #1a2233; display: flex; flex-direction: column; overflow: hidden; height: 100%;"></div>
 
           <!-- Right Panel: Stack Layers & Split Zones -->
-          <div style="flex: 1; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; overflow-x: hidden;">
-            <!-- 4 Layer Channel Strips (Ableton / Workstation Style) -->
-            <div class="layer-strips-rack" style="display: grid; grid-template-columns: repeat(4, minmax(160px, 1fr)); gap: 8px; padding-bottom: 5px; flex-shrink: 0;">
-            ${multiLayerEngine.layers
-              .map(
-                (layer, idx) => {
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; overflow-x: hidden;">
+            
+            <!-- Performance Macro Sliders & Snapshots Strip -->
+            <div class="combi-macro-strip">
+              <div class="macro-cell" title="Swell: Master Reverb Wet">
+                <span class="macro-label">SWELL</span>
+                <input type="range" class="macro-slider" data-macro="swell" min="0" max="1" step="0.01" value="${macros.swell}" />
+                <span class="macro-val" id="macro-val-swell">${Math.round(macros.swell * 100)}%</span>
+              </div>
+              <div class="macro-cell" title="Shimmer: Shimmer Reverb Mix">
+                <span class="macro-label">SHIMMER</span>
+                <input type="range" class="macro-slider" data-macro="shimmer" min="0" max="1" step="0.01" value="${macros.shimmer}" />
+                <span class="macro-val" id="macro-val-shimmer">${Math.round(macros.shimmer * 100)}%</span>
+              </div>
+              <div class="macro-cell" title="Tone: Lowpass Filter / High-End Tilt">
+                <span class="macro-label">TONE</span>
+                <input type="range" class="macro-slider" data-macro="tone" min="0" max="1" step="0.01" value="${macros.tone}" />
+                <span class="macro-val" id="macro-val-tone">${Math.round(macros.tone * 100)}%</span>
+              </div>
+              <div class="macro-cell" title="Pad: Tonic Ambient Drone Volume">
+                <span class="macro-label">PAD</span>
+                <input type="range" class="macro-slider" data-macro="pad" min="0" max="1" step="0.01" value="${macros.pad}" />
+                <span class="macro-val" id="macro-val-pad">${Math.round(macros.pad * 100)}%</span>
+              </div>
+
+              <div class="snapshots-bay" title="Scene Snapshots: Click to recall scene, right-click to overwrite">
+                <span class="snapshots-label">SCENES</span>
+                <div class="snapshot-btns">
+                  ${[1, 2, 3, 4, 5, 6, 7, 8].map((num, i) => `
+                    <button class="snapshot-btn ${activeSnap === i ? 'active' : ''} ${snapshots[i] ? 'has-data' : ''}" data-snapshot="${i}" title="${snapshots[i] ? `Scene ${num} (Click to recall, right-click to overwrite)` : `Scene ${num} (Empty: click/right-click to save)`}">
+                      ${num}
+                    </button>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+
+            ${this.viewMode === "perform" ? `
+              <!-- Compact PERFORM Mode Layer Rack (28px rows) -->
+              <div class="perform-layer-rack">
+                ${multiLayerEngine.layers.map((layer, idx) => {
                   const hasSolo = multiLayerEngine.layers.some((l) => l.solo);
                   const isDimmed = hasSolo && !layer.solo;
                   return `
-            <div class="layer-channel-strip ${layer.enabled ? "active" : "muted"} ${layer.solo ? "is-soloed" : ""} ${isDimmed ? "solo-dimmed" : ""}" id="layer-strip-${idx}">
-              <div class="strip-header">
-                <div style="display:flex;align-items:center;gap:4px;">
-                  <button class="layer-power-btn ${layer.enabled ? "active" : ""}" data-layer="${idx}" title="${layer.enabled ? "Mute" : "Unmute"} Layer ${idx + 1}">
-                    ${layer.enabled ? "ON" : "MUTE"}
-                  </button>
-                  <button class="layer-solo-btn ${layer.solo ? "active" : ""}" data-layer="${idx}" title="Solo Layer ${idx + 1}">
-                    S
-                  </button>
-                </div>
-                <div style="display:flex;align-items:center;gap:6px;">
-                  <span class="strip-sig-led" id="sig-led-${idx}" title="Audio Signal Activity"></span>
-                  <span class="strip-num">L${idx + 1}</span>
-                </div>
-              </div>
-              <div class="strip-layer-name" data-layer="${idx}" title="${esc(getTimbreDisplayName(layer.inst, layer.name))}">${esc(getTimbreDisplayName(layer.inst, layer.name))}</div>
+                    <div class="perform-layer-row ${layer.enabled ? "active" : "muted"} ${layer.solo ? "is-soloed" : ""} ${isDimmed ? "solo-dimmed" : ""}" id="perform-layer-${idx}">
+                      <span class="perform-layer-badge">L${idx + 1}</span>
+                      <button class="layer-power-btn ${layer.enabled ? "active" : ""}" data-layer="${idx}" title="${layer.enabled ? "Mute" : "Unmute"} Layer ${idx + 1}">
+                        ${layer.enabled ? "ON" : "MUTE"}
+                      </button>
+                      <button class="layer-solo-btn ${layer.solo ? "active" : ""}" data-layer="${idx}" title="Solo Layer ${idx + 1}">S</button>
+                      <span class="strip-sig-led" id="sig-led-perf-${idx}"></span>
 
-              <!-- Instrument Picker (Touch-friendly trigger: opens Soundbank Popup Modal) -->
-              <div class="strip-inst-picker timbre-picker" data-layer="${idx}">
-                <label class="strip-picker-label">TIMBRE / SOUNDBANK</label>
-                <button type="button" class="timbre-picker-trigger" data-layer="${idx}" title="Click to browse sounds">
-                  <div class="timbre-trigger-info">
-                    <span class="timbre-trigger-badge ${layer.inst?.startsWith("va:") ? "badge-va" : "badge-pcm"}">
-                      ${layer.inst?.startsWith("va:") ? "VA" : "PCM"}
-                    </span>
-                    <span class="timbre-trigger-name">${esc(getTimbreDisplayName(layer.inst, layer.name))}</span>
+                      <div class="perform-timbre-bay timbre-picker" data-layer="${idx}">
+                        <button type="button" class="timbre-picker-trigger" data-layer="${idx}" title="Click to browse sounds">
+                          <span class="timbre-trigger-badge ${layer.inst?.startsWith("va:") ? "badge-va" : "badge-pcm"}">
+                            ${layer.inst?.startsWith("va:") ? "VA" : "PCM"}
+                          </span>
+                          <span class="timbre-trigger-name">${esc(getTimbreDisplayName(layer.inst, layer.name))}</span>
+                          <span class="timbre-trigger-icon">🔍</span>
+                        </button>
+                      </div>
+
+                      <div class="perform-fader-bay">
+                        <span class="fader-label">VOL</span>
+                        <input type="range" class="horizontal-fader layer-gain-slider" min="0" max="1.5" step="0.05" value="${layer.gain}" data-layer="${idx}" />
+                        <span class="fader-readout" id="perf-fader-val-${idx}">${Math.round(layer.gain * 100)}%</span>
+                      </div>
+
+                      <div class="perform-fx-bay">
+                        <select class="layer-fx-select" data-layer="${idx}">
+                          ${fxOptionsHTML(layer.fx || "clean")}
+                        </select>
+                      </div>
+
+                      <div class="octave-mini-picker">
+                        <button class="oct-mini-btn" data-layer="${idx}" data-oct="-1">-12</button>
+                        <span class="oct-mini-val" id="perf-oct-val-${idx}">${layer.oct >= 0 ? "+" : ""}${layer.oct}</span>
+                        <button class="oct-mini-btn" data-layer="${idx}" data-oct="1">+12</button>
+                      </div>
+                    </div>
+                  `;
+                }).join("")}
+              </div>
+            ` : `
+              <!-- Full EDIT Mode 4 Layer Channel Strips Rack -->
+              <div class="layer-strips-rack" style="display: grid; grid-template-columns: repeat(4, minmax(160px, 1fr)); gap: 8px; padding-bottom: 5px; flex-shrink: 0;">
+              ${multiLayerEngine.layers
+                .map(
+                  (layer, idx) => {
+                    const hasSolo = multiLayerEngine.layers.some((l) => l.solo);
+                    const isDimmed = hasSolo && !layer.solo;
+                    return `
+              <div class="layer-channel-strip ${layer.enabled ? "active" : "muted"} ${layer.solo ? "is-soloed" : ""} ${isDimmed ? "solo-dimmed" : ""}" id="layer-strip-${idx}">
+                <div class="strip-header">
+                  <div style="display:flex;align-items:center;gap:4px;">
+                    <button class="layer-power-btn ${layer.enabled ? "active" : ""}" data-layer="${idx}" title="${layer.enabled ? "Mute" : "Unmute"} Layer ${idx + 1}">
+                      ${layer.enabled ? "ON" : "MUTE"}
+                    </button>
+                    <button class="layer-solo-btn ${layer.solo ? "active" : ""}" data-layer="${idx}" title="Solo Layer ${idx + 1}">
+                      S
+                    </button>
                   </div>
-                  <span class="timbre-trigger-icon">🔍</span>
-                </button>
-              </div>
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <span class="strip-sig-led" id="sig-led-${idx}" title="Audio Signal Activity"></span>
+                    <span class="strip-num">L${idx + 1}</span>
+                  </div>
+                </div>
+                <div class="strip-layer-name" data-layer="${idx}" title="${esc(getTimbreDisplayName(layer.inst, layer.name))}">${esc(getTimbreDisplayName(layer.inst, layer.name))}</div>
 
-              <!-- Dedicated Layer Effects Combo Box (Rack FX Insert) -->
-              <div class="strip-fx-picker">
-                <label class="strip-picker-label">INSERT EFFECT / DSP</label>
-                <select class="layer-fx-select" data-layer="${idx}">
+                <!-- Instrument Picker -->
+                <div class="strip-inst-picker timbre-picker" data-layer="${idx}">
+                  <label class="strip-picker-label">TIMBRE / SOUNDBANK</label>
+                  <button type="button" class="timbre-picker-trigger" data-layer="${idx}" title="Click to browse sounds">
+                    <div class="timbre-trigger-info">
+                      <span class="timbre-trigger-badge ${layer.inst?.startsWith("va:") ? "badge-va" : "badge-pcm"}">
+                        ${layer.inst?.startsWith("va:") ? "VA" : "PCM"}
+                      </span>
+                      <span class="timbre-trigger-name">${esc(getTimbreDisplayName(layer.inst, layer.name))}</span>
+                    </div>
+                    <span class="timbre-trigger-icon">🔍</span>
+                  </button>
+                </div>
+
+                <!-- Dedicated Layer Effects Combo Box -->
+                <div class="strip-fx-picker">
+                  <label class="strip-picker-label">INSERT EFFECT / DSP</label>
+                  <select class="layer-fx-select" data-layer="${idx}">
+                    ${fxOptionsHTML(layer.fx || "clean")}
+                  </select>
+                </div>
+
+                <!-- Volume Fader & Meter -->
+                <div class="strip-fader-bay">
+                  <span class="fader-label">GAIN</span>
+                  <div class="fader-track">
+                    <input type="range" 
+                           class="vertical-fader layer-gain-slider" 
+                           min="0" 
+                           max="1.5" 
+                           step="0.05" 
+                           value="${layer.gain}" 
+                           data-layer="${idx}"/>
+                    <div class="strip-meter-track" title="Real-Time Signal Level">
+                      <div class="strip-meter-fill" id="meter-fill-${idx}"></div>
+                    </div>
+                  </div>
+                  <div class="fader-readout" id="fader-val-${idx}">${Math.round(layer.gain * 100)}%</div>
+                </div>
+
+                <!-- Layer Meta Controls: Octave & Pan -->
+                <div class="strip-footer-controls">
+                  <div class="octave-mini-picker">
+                    <button class="oct-mini-btn" data-layer="${idx}" data-oct="-1">-12</button>
+                    <span class="oct-mini-val" id="oct-val-${idx}">${layer.oct >= 0 ? "+" : ""}${layer.oct}</span>
+                    <button class="oct-mini-btn" data-layer="${idx}" data-oct="1">+12</button>
+                  </div>
+                  <span class="strip-role-tag">${idx === 0 ? "PRIMARY" : idx === 1 ? "ENSEMBLE" : idx === 2 ? "ACCENT" : "SUB/BASS"}</span>
+                </div>
+              </div>
+            `;
+                  },
+                )
+                .join("")}
+          </div>
+
+          <!-- Split Keyboard Zones Console -->
+          <div class="split-keyboard-console ${multiLayerEngine.isSplitMode ? "active" : ""}" id="split-keyboard-console">
+            <div class="combi-header-bar">
+              <div class="combi-title-group">
+                <span class="combi-pill">SPLIT KEYBOARD</span>
+                <span class="combi-main-title">TWO-ZONE PERFORMANCE SPLIT</span>
+              </div>
+              <div class="split-master-row">
+                <button class="layer-power-btn split-power-btn ${multiLayerEngine.isSplitMode ? "active" : ""}" id="split-power-btn">
+                  ${multiLayerEngine.isSplitMode ? "SPLIT ON" : "SPLIT OFF"}
+                </button>
+                <label class="strip-picker-label">POINT</label>
+                <select class="split-point-select" id="split-point-select" title="Split point">
                   ${(() => {
-                    const fxList = Object.values(LAYER_FX_OPTIONS);
-                    const fxCats = [];
-                    fxList.forEach((f) => {
-                      const cat = f.category || "General FX";
-                      if (!fxCats.includes(cat)) fxCats.push(cat);
-                    });
-                    // Put Synthesizer You FX at very top
-                    fxCats.sort((a, b) =>
-                      a.includes("Synthesizer You")
-                        ? -1
-                        : b.includes("Synthesizer You")
-                          ? 1
-                          : 0,
-                    );
-                    return fxCats
+                    const p = multiLayerEngine.splitPointMidi;
+                    return [48, 55, 60, 62, 67, 72]
+                      .concat(Array.from({ length: 37 }, (_, i) => i + 48))
+                      .filter((v, i, a) => a.indexOf(v) === i)
+                      .sort((a, b) => a - b)
                       .map(
-                        (cat) => `
-                      <optgroup label="${cat.toUpperCase()}">
-                        ${fxList
-                          .filter((f) => (f.category || "General FX") === cat)
-                          .map(
-                            (f) => `
-                          <option value="${f.id}" ${layer.fx === f.id ? "selected" : ""}>
-                            ${f.name}
-                          </option>
-                        `,
-                          )
-                          .join("")}
-                      </optgroup>
-                    `,
+                        (m) =>
+                          `<option value="${m}" ${m === p ? "selected" : ""}>${midiName(m)}</option>`,
                       )
                       .join("");
                   })()}
                 </select>
               </div>
-
-              <!-- Volume Fader & Meter -->
-              <div class="strip-fader-bay">
-                <span class="fader-label">GAIN</span>
-                <div class="fader-track">
-                  <input type="range" 
-                         class="vertical-fader layer-gain-slider" 
-                         min="0" 
-                         max="1.5" 
-                         step="0.05" 
-                         value="${layer.gain}" 
-                         data-layer="${idx}"/>
-                  <div class="strip-meter-track" title="Real-Time Signal Level">
-                    <div class="strip-meter-fill" id="meter-fill-${idx}"></div>
-                  </div>
-                </div>
-                <div class="fader-readout" id="fader-val-${idx}">${Math.round(layer.gain * 100)}%</div>
-              </div>
-
-              <!-- Layer Meta Controls: Octave & Pan -->
-              <div class="strip-footer-controls">
-                <div class="octave-mini-picker">
-                  <button class="oct-mini-btn" data-layer="${idx}" data-oct="-1">-12</button>
-                  <span class="oct-mini-val" id="oct-val-${idx}">${layer.oct >= 0 ? "+" : ""}${layer.oct}</span>
-                  <button class="oct-mini-btn" data-layer="${idx}" data-oct="1">+12</button>
-                </div>
-                <span class="strip-role-tag">${idx === 0 ? "PRIMARY" : idx === 1 ? "ENSEMBLE" : idx === 2 ? "ACCENT" : "SUB/BASS"}</span>
-              </div>
             </div>
-          `;
-                },
-              )
-              .join("")}
-        </div>
 
-        <!-- Split Keyboard Zones Console (assignable instrument + insert FX per half) -->
-        <div class="split-keyboard-console ${multiLayerEngine.isSplitMode ? "active" : ""}" id="split-keyboard-console">
-          <div class="combi-header-bar">
-            <div class="combi-title-group">
-              <span class="combi-pill">SPLIT KEYBOARD</span>
-              <span class="combi-main-title">TWO-ZONE PERFORMANCE SPLIT</span>
-            </div>
-            <div class="split-master-row">
-              <button class="layer-power-btn split-power-btn ${multiLayerEngine.isSplitMode ? "active" : ""}" id="split-power-btn">
-                ${multiLayerEngine.isSplitMode ? "SPLIT ON" : "SPLIT OFF"}
-              </button>
-              <label class="strip-picker-label">POINT</label>
-              <select class="split-point-select" id="split-point-select" title="Split point (notes below → LOWER zone, at/above → UPPER zone)">
-                ${(() => {
-                  const p = multiLayerEngine.splitPointMidi;
-                  return [48, 55, 60, 62, 67, 72]
-                    .concat(Array.from({ length: 37 }, (_, i) => i + 48))
-                    .filter((v, i, a) => a.indexOf(v) === i)
-                    .sort((a, b) => a - b)
-                    .map(
-                      (m) =>
-                        `<option value="${m}" ${m === p ? "selected" : ""}>${midiName(m)}</option>`,
-                    )
-                    .join("");
-                })()}
-              </select>
-            </div>
-          </div>
-
-          <div class="split-zones-row">
-            ${["lower", "upper"]
-              .map((zk) => {
-                const z = multiLayerEngine.splitZones[zk];
-                const isStack = !z.inst || z.inst === "current_stack";
-                return `
-                <div class="layer-channel-strip split-zone-strip ${isStack ? "stack" : ""}" id="split-strip-${zk}">
-                  <div class="strip-header">
-                    <span class="strip-num">${zk === "lower" ? "LOWER ZONE" : "UPPER ZONE"} · ${zk === "lower" ? "BELOW POINT" : "AT/ABOVE POINT"}</span>
-                  </div>
-                  <div class="strip-layer-name split-zone-name" id="split-name-${zk}" title="${esc(z.name || "Current Stack")}">${esc(z.name || "Current Stack")}</div>
-                  <div class="strip-inst-picker timbre-picker" data-split-zone="${zk}">
-                    <label class="strip-picker-label">ZONE TIMBRE</label>
-                    <button type="button" class="timbre-picker-trigger" data-split-zone="${zk}" title="Click to browse zone sound">
-                      <div class="timbre-trigger-info">
-                        <span class="timbre-trigger-badge ${isStack ? "badge-auto" : (z.inst?.startsWith("va:") ? "badge-va" : "badge-pcm")}">
-                          ${isStack ? "AUTO" : (z.inst?.startsWith("va:") ? "VA" : "PCM")}
-                        </span>
-                        <span class="timbre-trigger-name">${esc(isStack ? "Follow Current Stack" : z.name || "Select Sound")}</span>
-                      </div>
-                      <span class="timbre-trigger-icon">🔍</span>
-                    </button>
-                  </div>
-                  <div class="strip-fx-picker">
-                    <label class="strip-picker-label">INSERT EFFECT / DSP</label>
-                    <select class="layer-fx-select split-zone-fx" data-split-zone="${zk}">${fxOptionsHTML(z.fx || "clean")}</select>
-                  </div>
-                  <div class="strip-footer-controls">
-                    <div class="octave-mini-picker">
-                      <button class="oct-mini-btn" data-split-oct="${zk}" data-oct="-1">-12</button>
-                      <span class="oct-mini-val" id="split-oct-val-${zk}">${z.oct >= 0 ? "+" : ""}${z.oct}</span>
-                      <button class="oct-mini-btn" data-split-oct="${zk}" data-oct="1">+12</button>
+            <div class="split-zones-row">
+              ${["lower", "upper"]
+                .map((zk) => {
+                  const z = multiLayerEngine.splitZones[zk];
+                  const isStack = !z.inst || z.inst === "current_stack";
+                  return `
+                  <div class="layer-channel-strip split-zone-strip ${isStack ? "stack" : ""}" id="split-strip-${zk}">
+                    <div class="strip-header">
+                      <span class="strip-num">${zk === "lower" ? "LOWER ZONE" : "UPPER ZONE"} · ${zk === "lower" ? "BELOW POINT" : "AT/ABOVE POINT"}</span>
                     </div>
-                    <span class="strip-role-tag">GAIN</span>
-                    <input type="range" class="split-zone-gain" data-split-gain="${zk}" min="0" max="1.5" step="0.05" value="${z.gain}" title="Zone volume" />
-                    <span class="split-gain-val" id="split-gain-val-${zk}">${Math.round(z.gain * 100)}%</span>
+                    <div class="strip-layer-name split-zone-name" id="split-name-${zk}" title="${esc(z.name || "Current Stack")}">${esc(z.name || "Current Stack")}</div>
+                    <div class="strip-inst-picker timbre-picker" data-split-zone="${zk}">
+                      <label class="strip-picker-label">ZONE TIMBRE</label>
+                      <button type="button" class="timbre-picker-trigger" data-split-zone="${zk}" title="Click to browse zone sound">
+                        <div class="timbre-trigger-info">
+                          <span class="timbre-trigger-badge ${isStack ? "badge-auto" : (z.inst?.startsWith("va:") ? "badge-va" : "badge-pcm")}">
+                            ${isStack ? "AUTO" : (z.inst?.startsWith("va:") ? "VA" : "PCM")}
+                          </span>
+                          <span class="timbre-trigger-name">${esc(isStack ? "Follow Current Stack" : z.name || "Select Sound")}</span>
+                        </div>
+                        <span class="timbre-trigger-icon">🔍</span>
+                      </button>
+                    </div>
+                    <div class="strip-fx-picker">
+                      <label class="strip-picker-label">INSERT EFFECT / DSP</label>
+                      <select class="layer-fx-select split-zone-fx" data-split-zone="${zk}">${fxOptionsHTML(z.fx || "clean")}</select>
+                    </div>
+                    <div class="strip-footer-controls">
+                      <div class="octave-mini-picker">
+                        <button class="oct-mini-btn" data-split-oct="${zk}" data-oct="-1">-12</button>
+                        <span class="oct-mini-val" id="split-oct-val-${zk}">${z.oct >= 0 ? "+" : ""}${z.oct}</span>
+                        <button class="oct-mini-btn" data-split-oct="${zk}" data-oct="1">+12</button>
+                      </div>
+                      <span class="strip-role-tag">GAIN</span>
+                      <input type="range" class="split-zone-gain" data-split-gain="${zk}" min="0" max="1.5" step="0.05" value="${z.gain}" title="Zone volume" />
+                      <span class="split-gain-val" id="split-gain-val-${zk}">${Math.round(z.gain * 100)}%</span>
+                    </div>
                   </div>
-                </div>
-              `;
-              })
-              .join("")}
-            </div>
-          </div> <!-- End Right Panel (Column) -->
-        </div> <!-- End Flex Row Split View -->
+                `;
+                })
+                .join("")}
+              </div>
+            </div> <!-- End Split Keyboard Console -->
+            `}
+          </div> <!-- End Right Panel -->
+        </div> <!-- End Flex Row -->
       </div>
     `;
   }
 
+  setMacro(name, val) {
+    if (!multiLayerEngine.macros) {
+      multiLayerEngine.macros = { swell: 0.35, shimmer: 0.2, tone: 0.5, pad: 0.5 };
+    }
+    multiLayerEngine.macros[name] = val;
+    if (name === "swell") {
+      audioCore.fxRack?.reverb?.setMix?.(val);
+    } else if (name === "shimmer") {
+      audioCore.fxRack?.shimmerReverb?.setMix?.(val);
+    } else if (name === "tone") {
+      if (audioCore.fxRack?.masterEq?.setHighShelf) {
+        audioCore.fxRack.masterEq.setHighShelf((val - 0.5) * 20);
+      }
+    } else if (name === "pad") {
+      tonicDroneEngine.setVolume(val);
+      const droneVol = document.getElementById("drone-vol-slider");
+      if (droneVol) droneVol.value = val;
+    }
+  }
+
+  saveSnapshot(idx) {
+    if (!multiLayerEngine.snapshots) {
+      multiLayerEngine.snapshots = [null, null, null, null, null, null, null, null];
+    }
+    multiLayerEngine.snapshots[idx] = {
+      name: `Scene ${idx + 1}`,
+      gains: multiLayerEngine.layers.map((l) => l.gain),
+      enabled: multiLayerEngine.layers.map((l) => !!l.enabled),
+      macros: { ...(multiLayerEngine.macros || { swell: 0.35, shimmer: 0.2, tone: 0.5, pad: 0.5 }) },
+    };
+    multiLayerEngine.activeSnapshotIndex = idx;
+    this.updateSnapshotButtons();
+  }
+
+  recallSnapshot(idx) {
+    if (!multiLayerEngine.snapshots || !multiLayerEngine.snapshots[idx]) {
+      this.saveSnapshot(idx);
+      return;
+    }
+    const snap = multiLayerEngine.snapshots[idx];
+    multiLayerEngine.activeSnapshotIndex = idx;
+    
+    // Smoothly apply gains and enabled states
+    snap.gains.forEach((gain, i) => {
+      multiLayerEngine.setLayerGain(i, gain);
+    });
+    snap.enabled.forEach((en, i) => {
+      if (multiLayerEngine.layers[i] && multiLayerEngine.layers[i].enabled !== en) {
+        multiLayerEngine.toggleLayer(i, en);
+      }
+    });
+    if (snap.macros) {
+      Object.entries(snap.macros).forEach(([k, v]) => {
+        this.setMacro(k, v);
+        const sl = this.container?.querySelector(`.macro-slider[data-macro="${k}"]`);
+        if (sl) sl.value = v;
+        const readout = document.getElementById(`macro-val-${k}`);
+        if (readout) readout.innerText = `${Math.round(v * 100)}%`;
+      });
+    }
+    this.updateLayerFaders();
+    this.updateSnapshotButtons();
+  }
+
+  updateSnapshotButtons() {
+    this.container?.querySelectorAll(".snapshot-btn").forEach((btn) => {
+      const i = parseInt(btn.getAttribute("data-snapshot"));
+      const hasData = !!(multiLayerEngine.snapshots && multiLayerEngine.snapshots[i]);
+      const isActive = multiLayerEngine.activeSnapshotIndex === i;
+      btn.classList.toggle("has-data", hasData);
+      btn.classList.toggle("active", isActive);
+    });
+  }
+
   bindEvents() {
+    // View mode toggle
+    this.container.querySelectorAll(".view-mode-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const mode = btn.getAttribute("data-view");
+        this.viewMode = mode;
+        localStorage.setItem("wilsonix_combi_view_mode", mode);
+        this.render();
+        this.bindEvents();
+      });
+    });
+
+    // Macro sliders
+    this.container.querySelectorAll(".macro-slider").forEach((sl) => {
+      sl.addEventListener("input", (e) => {
+        const key = sl.getAttribute("data-macro");
+        const val = parseFloat(e.target.value);
+        this.setMacro(key, val);
+        const readout = document.getElementById(`macro-val-${key}`);
+        if (readout) readout.innerText = `${Math.round(val * 100)}%`;
+      });
+    });
+
+    // Snapshot buttons (Click to recall, contextmenu/long-press to save)
+    this.container.querySelectorAll(".snapshot-btn").forEach((btn) => {
+      const idx = parseInt(btn.getAttribute("data-snapshot"));
+      btn.addEventListener("click", () => {
+        this.recallSnapshot(idx);
+      });
+      btn.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        this.saveSnapshot(idx);
+      });
+    });
+
     // Combi search (debounced: filter visible results, no full DOM rebuild)
     const searchInput = this.container.querySelector("#combi-search-input");
     searchInput?.addEventListener("input", (e) => {
@@ -463,8 +641,6 @@ export class MultiLayerUI {
 
     // Combi preset selector + steppers
     const presetSelect = this.container.querySelector("#combi-preset-select");
-    // Speculative prefetch (P1): while the user is choosing in the dropdown,
-    // decode the presets adjacent to the current selection (budget-guarded).
     presetSelect?.addEventListener("mousedown", () => {
       const ids = Object.keys(COMBI_PRESETS);
       const cur = Math.max(0, ids.indexOf(multiLayerEngine.activeCombi.id));
@@ -550,14 +726,16 @@ export class MultiLayerUI {
       });
     });
 
-    // Volume Faders
-    this.container.querySelectorAll(".vertical-fader").forEach((fader) => {
+    // Volume Faders (supports both vertical fader and horizontal fader in perform mode)
+    this.container.querySelectorAll(".layer-gain-slider").forEach((fader) => {
       fader.addEventListener("input", (e) => {
         const idx = parseInt(fader.getAttribute("data-layer"));
         const val = parseFloat(e.target.value);
         multiLayerEngine.setLayerGain(idx, val);
-        const readout = document.getElementById(`fader-val-${idx}`);
-        if (readout) readout.innerText = `${Math.round(val * 100)}%`;
+        const readout1 = document.getElementById(`fader-val-${idx}`);
+        if (readout1) readout1.innerText = `${Math.round(val * 100)}%`;
+        const readout2 = document.getElementById(`perf-fader-val-${idx}`);
+        if (readout2) readout2.innerText = `${Math.round(val * 100)}%`;
       });
     });
 
@@ -570,9 +748,12 @@ export class MultiLayerUI {
           const delta = parseInt(btn.getAttribute("data-oct"));
           const currentOct = multiLayerEngine.layers[idx].oct || 0;
           multiLayerEngine.setLayerOctave(idx, currentOct + delta);
-          const octVal = document.getElementById(`oct-val-${idx}`);
-          if (octVal)
-            octVal.innerText = `${multiLayerEngine.layers[idx].oct >= 0 ? "+" : ""}${multiLayerEngine.layers[idx].oct}`;
+          const octVal1 = document.getElementById(`oct-val-${idx}`);
+          if (octVal1)
+            octVal1.innerText = `${multiLayerEngine.layers[idx].oct >= 0 ? "+" : ""}${multiLayerEngine.layers[idx].oct}`;
+          const octVal2 = document.getElementById(`perf-oct-val-${idx}`);
+          if (octVal2)
+            octVal2.innerText = `${multiLayerEngine.layers[idx].oct >= 0 ? "+" : ""}${multiLayerEngine.layers[idx].oct}`;
         });
       });
 
@@ -672,11 +853,13 @@ export class MultiLayerUI {
     }
     multiLayerEngine.layers.forEach((l, i) => {
       const fader = this.container.querySelector(
-        `.vertical-fader[data-layer="${i}"]`,
+        `.layer-gain-slider[data-layer="${i}"]`,
       );
       const readout = document.getElementById(`fader-val-${i}`);
+      const perfReadout = document.getElementById(`perf-fader-val-${i}`);
       if (fader) fader.value = l.gain;
       if (readout) readout.innerText = `${Math.round(l.gain * 100)}%`;
+      if (perfReadout) perfReadout.innerText = `${Math.round(l.gain * 100)}%`;
 
       const fxSelect = this.container.querySelector(
         `.layer-fx-select[data-layer="${i}"]`,
@@ -707,39 +890,51 @@ export class MultiLayerUI {
       }
 
       const strip = document.getElementById(`layer-strip-${i}`);
+      const perfRow = document.getElementById(`perform-layer-${i}`);
       const hasSolo = multiLayerEngine.layers.some((l) => l.solo);
-      if (strip) {
-        strip.classList.toggle("active", !!l.enabled);
-        strip.classList.toggle("muted", !l.enabled);
-        strip.classList.toggle("is-soloed", !!l.solo);
-        strip.classList.toggle("solo-dimmed", hasSolo && !l.solo);
-      }
-      const powerBtn = this.container.querySelector(`.layer-power-btn[data-layer="${i}"]`);
-      if (powerBtn) {
-        powerBtn.classList.toggle("active", !!l.enabled);
-        powerBtn.innerText = l.enabled ? "ON" : "MUTE";
-      }
-      const soloBtn = this.container.querySelector(`.layer-solo-btn[data-layer="${i}"]`);
-      if (soloBtn) {
-        soloBtn.classList.toggle("active", !!l.solo);
-      }
+      [strip, perfRow].forEach((el) => {
+        if (!el) return;
+        el.classList.toggle("active", !!l.enabled);
+        el.classList.toggle("muted", !l.enabled);
+        el.classList.toggle("is-soloed", !!l.solo);
+        el.classList.toggle("solo-dimmed", hasSolo && !l.solo);
+      });
+
+      const powerBtns = this.container.querySelectorAll(
+        `.layer-power-btn[data-layer="${i}"]`,
+      );
+      powerBtns.forEach((btn) => {
+        btn.classList.toggle("active", !!l.enabled);
+        btn.innerText = l.enabled ? "ON" : "MUTE";
+      });
+
+      const soloBtns = this.container.querySelectorAll(
+        `.layer-solo-btn[data-layer="${i}"]`,
+      );
+      soloBtns.forEach((btn) => {
+        btn.classList.toggle("active", !!l.solo);
+      });
 
       const octVal = document.getElementById(`oct-val-${i}`);
-      if (octVal) {
-        const oct = l.oct || 0;
-        octVal.innerText = `${oct >= 0 ? "+" : ""}${oct}`;
-      }
+      const perfOctVal = document.getElementById(`perf-oct-val-${i}`);
+      const oct = l.oct || 0;
+      const octText = `${oct >= 0 ? "+" : ""}${oct}`;
+      if (octVal) octVal.innerText = octText;
+      if (perfOctVal) perfOctVal.innerText = octText;
     });
   }
 
   triggerLayerActivity(layerIdx, vel, gain) {
-    const led = document.getElementById(`sig-led-${layerIdx}`);
-    if (led) {
-      led.classList.add("active");
+    const leds = [
+      document.getElementById(`sig-led-${layerIdx}`),
+      document.getElementById(`sig-led-perf-${layerIdx}`),
+    ].filter(Boolean);
+    if (leds.length > 0) {
+      leds.forEach((led) => led.classList.add("active"));
       clearTimeout(this._ledTimers?.[layerIdx]);
       if (!this._ledTimers) this._ledTimers = {};
       this._ledTimers[layerIdx] = setTimeout(() => {
-        led.classList.remove("active");
+        leds.forEach((led) => led.classList.remove("active"));
       }, 150);
     }
     const fill = document.getElementById(`meter-fill-${layerIdx}`);

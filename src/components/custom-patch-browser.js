@@ -1,15 +1,19 @@
 import { patchStorage } from "../storage/patch-storage-manager.js";
 import { licenseManager } from "../security/license-manager.js";
-import { tonicDroneEngine } from "../audio/tonic-drone-engine.js";
+import { tonicDroneEngine, DRONE_SOUND_PROFILES } from "../audio/tonic-drone-engine.js";
 import { CustomModal } from "./custom-modal.js";
 import { multiLayerEngine, getTimbreDisplayName } from "../audio/multi-layer-engine.js";
 import { audioCore } from "../audio/audio-core.js";
+
+const DEFAULT_PATCH_COLORS = ["#38bdf8", "#f59e0b", "#10b981", "#c084fc", "#ec4899", "#f97316"];
 
 export class CustomPatchBrowserUI {
   constructor(containerId, appCore) {
     this.container = document.getElementById(containerId);
     this.appCore = appCore || { multiLayerEngine, get fxRack() { return audioCore.fxRack; } };
     this.patches = [];
+    this.activePatchId = null;
+    this.keySync = localStorage.getItem("wilsonix_drone_key_sync") !== "false";
     this.render();
     this.loadPatches();
   }
@@ -25,9 +29,9 @@ export class CustomPatchBrowserUI {
         <div class="patch-browser-locked">
           <div class="locked-icon">🔒</div>
           <h3>SETLIST & CUSTOM PATCHES</h3>
-          <p>This premium feature allows you to save custom layer mixes, FX, and organize gig setlists.</p>
+          <p>Save custom layer mixes, FX, macros, and organize worship setlists.</p>
           <button class="upgrade-btn" onclick="document.getElementById('license-modal-trigger')?.click()">
-            UNLOCK WITH PRO OR TRIAL
+            UNLOCK PRO
           </button>
         </div>
       `;
@@ -35,105 +39,42 @@ export class CustomPatchBrowserUI {
     }
 
     this.container.innerHTML = `
-      <style>
-        .patch-browser-ui {
-          display: flex; flex-direction: column; height: 100%; padding: 10px; gap: 10px;
-          background: #0b0f17; box-sizing: border-box; width: 100%;
-        }
-        .browser-header {
-          display: flex; justify-content: space-between; align-items: center; 
-          border-bottom: 1px solid #2a3441; padding-bottom: 8px;
-        }
-        .browser-header h3 {
-          margin: 0; font-size: 13px; color: #fff; letter-spacing: 1.5px; font-weight: 800;
-        }
-        .save-btn {
-          background: #ff764d; color: #000; border: none; border-radius: 4px; 
-          padding: 5px 10px; font-weight: 800; font-size: 11px; cursor: pointer; 
-          display: flex; align-items: center; gap: 5px; transition: all 0.2s;
-        }
-        .save-btn:hover { background: #ff8b66; transform: scale(1.05); }
-        .browser-search input {
-          width: 100%; background: #151a26; border: 1px solid #2a3441; border-radius: 4px; 
-          padding: 8px 10px; color: #fff; font-size: 12px; outline: none; box-sizing: border-box;
-          transition: border-color 0.2s;
-        }
-        .browser-search input:focus { border-color: #00d2ff; }
-        .patch-list {
-          flex: 1 1 auto; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;
-        }
-        .patch-item {
-          display: flex; justify-content: space-between; align-items: center;
-          background: #151a26; border: 1px solid #2a3441; padding: 8px 10px;
-          border-radius: 4px; cursor: pointer; transition: all 0.15s;
-        }
-        .patch-item:hover { background: #1f2738; border-color: #38bdf8; }
-        .patch-item.active { background: rgba(0, 210, 255, 0.1); border-color: #00d2ff; }
-        .patch-name { font-size: 12px; font-weight: 700; color: #cbd5e1; }
-        .patch-item:hover .patch-name { color: #fff; }
-        .patch-del-btn {
-          background: transparent; color: #94a3b8; border: none; font-size: 12px;
-          cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: all 0.15s;
-        }
-        .patch-del-btn:hover { background: #e74c3c; color: #fff; }
-        
-        .drone-player-ui {
-          background: linear-gradient(180deg, #111520 0%, #0a0c10 100%);
-          border-top: 1px solid #2a3441; padding: 6px 8px; 
-          flex-shrink: 0; display: flex; flex-direction: column; gap: 4px; 
-        }
-        .drone-header {
-          display: flex; justify-content: center; align-items: center;
-        }
-        .drone-header h4 {
-          margin: 0; font-size: 9px; color: #00d2ff; letter-spacing: 1px; 
-          font-weight: 800; text-shadow: 0 0 8px rgba(0, 210, 255, 0.4);
-        }
-        .drone-keys {
-          display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px;
-        }
-        .drone-key {
-          background: #1a2233; color: #94a3b8; border: 1px solid #2a3441; 
-          border-radius: 3px; font-weight: 700; font-size: 10px; padding: 4px 0; 
-          cursor: pointer; transition: all 0.1s ease;
-        }
-        .drone-key:hover { background: #2b3348; color: #fff; }
-        .drone-key.active {
-          background: linear-gradient(180deg, #00d2ff 0%, #0284c7 100%);
-          color: #0b0f17; border-color: #38bdf8;
-          box-shadow: 0 0 8px rgba(0, 210, 255, 0.6);
-        }
-        .drone-vol-control {
-          display: flex; align-items: center; gap: 6px; background: #06080b; 
-          padding: 4px 8px; border-radius: 4px; border: 1px solid #1a2233;
-        }
-        .drone-vol-control input[type="range"] {
-          flex: 1; accent-color: #00d2ff; height: 3px; background: #1a2233;
-          border-radius: 2px; outline: none; -webkit-appearance: none;
-        }
-        .drone-vol-control input[type="range"]::-webkit-slider-thumb {
-          -webkit-appearance: none; width: 12px; height: 12px; background: #fff;
-          border-radius: 50%; cursor: pointer;
-        }
-      </style>
       <div class="patch-browser-ui">
         <div class="browser-header">
-          <h3>CUSTOM SETLIST</h3>
-          <button id="save-patch-btn" class="save-btn" title="Save Current Mix as Patch">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg> SAVE
-          </button>
+          <h3>SETLIST</h3>
+          <div class="browser-header-tools">
+            <button id="patch-prev-btn" class="patch-nav-btn" title="Previous Patch (Up)">◀</button>
+            <button id="patch-next-btn" class="patch-nav-btn" title="Next Patch (Down)">▶</button>
+            <button id="save-patch-btn" class="save-btn" title="Save Current Mix as Patch">+ SAVE</button>
+          </div>
         </div>
+
         <div class="browser-search">
-          <input type="text" id="patch-search-input" placeholder="Search patches..." />
+          <input type="text" id="patch-search-input" placeholder="Search setlist..." />
         </div>
+
         <div class="patch-list" id="patch-list-container">
           <!-- Patches injected here -->
         </div>
 
+        <!-- Ambient Tonic Pad (Compact 12-key strip with crossfade & auto-sync) -->
         <div class="drone-player-ui">
-          <div class="drone-header" style="justify-content: space-between; padding: 0 4px;">
-            <h4>AMBIENT TONIC PAD</h4>
-            <button id="drone-stop-btn" class="drone-stop-btn" title="Stop Ambient Drone" style="background:#2a1515;border:1px solid #ff4444;color:#ff8888;font-size:9px;font-weight:700;padding:2px 8px;border-radius:3px;cursor:pointer;line-height:1.2;">■ STOP</button>
+          <div class="drone-header">
+            <h4>TONIC PAD</h4>
+            <div class="drone-header-tools">
+              <button id="drone-sync-btn" class="drone-sync-btn ${this.keySync ? 'active' : ''}" title="Auto-switch drone key when loading patch">
+                ${this.keySync ? 'SYNC ON' : 'SYNC OFF'}
+              </button>
+              <button id="drone-stop-btn" class="drone-stop-btn" title="Fade Out Drone">■ FADE</button>
+            </div>
+          </div>
+          <div class="drone-profile-bar">
+            <span class="drone-profile-label">PAD SOUND</span>
+            <select id="drone-profile-select" class="drone-profile-select" title="Select Pad Sound Texture">
+              ${Object.values(DRONE_SOUND_PROFILES).map(p => `
+                <option value="${p.id}" ${tonicDroneEngine.currentProfile === p.id ? 'selected' : ''}>${p.name}</option>
+              `).join('')}
+            </select>
           </div>
           <div class="drone-keys">
             ${["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"].map(k => `
@@ -141,8 +82,8 @@ export class CustomPatchBrowserUI {
             `).join("")}
           </div>
           <div class="drone-vol-control">
-            <span class="vol-icon" style="font-size: 14px; color: #00d2ff;">🔉</span>
-            <input type="range" id="drone-vol-slider" min="0" max="1" step="0.01" value="${tonicDroneEngine.volume}" />
+            <span class="vol-icon">PAD</span>
+            <input type="range" id="drone-vol-slider" min="0" max="1" step="0.01" value="${tonicDroneEngine.volume}" title="Tonic Pad Volume" />
           </div>
         </div>
       </div>
@@ -154,6 +95,9 @@ export class CustomPatchBrowserUI {
   bindEvents() {
     const saveBtn = this.container.querySelector("#save-patch-btn");
     const searchInput = this.container.querySelector("#patch-search-input");
+    const prevBtn = this.container.querySelector("#patch-prev-btn");
+    const nextBtn = this.container.querySelector("#patch-next-btn");
+    const syncBtn = this.container.querySelector("#drone-sync-btn");
 
     if (saveBtn) {
       saveBtn.addEventListener("click", () => this.handleSavePatch());
@@ -165,26 +109,45 @@ export class CustomPatchBrowserUI {
       });
     }
 
+    if (prevBtn) {
+      prevBtn.addEventListener("click", () => this.stepPatch(-1));
+    }
+
+    if (nextBtn) {
+      nextBtn.addEventListener("click", () => this.stepPatch(1));
+    }
+
+    if (syncBtn) {
+      syncBtn.addEventListener("click", () => {
+        this.keySync = !this.keySync;
+        localStorage.setItem("wilsonix_drone_key_sync", String(this.keySync));
+        syncBtn.classList.toggle("active", this.keySync);
+        syncBtn.textContent = this.keySync ? "SYNC ON" : "SYNC OFF";
+      });
+    }
+
     // Drone Bindings
     const droneKeys = this.container.querySelectorAll(".drone-key");
     droneKeys.forEach(btn => {
       btn.addEventListener("click", (e) => {
         const note = e.target.getAttribute("data-note");
         tonicDroneEngine.playDrone(note);
-        
-        // UI feedback
-        droneKeys.forEach(b => b.classList.remove("active"));
-        if (tonicDroneEngine.activeKey === note) {
-          e.target.classList.add("active");
-        }
+        this.updateDroneActiveKeys();
       });
     });
 
     const stopBtn = this.container.querySelector("#drone-stop-btn");
     if (stopBtn) {
       stopBtn.addEventListener("click", () => {
-        tonicDroneEngine.stopDrone();
-        droneKeys.forEach(b => b.classList.remove("active"));
+        tonicDroneEngine.stopDrone({ fadeSec: 1.8 });
+        this.updateDroneActiveKeys();
+      });
+    }
+
+    const profileSelect = this.container.querySelector("#drone-profile-select");
+    if (profileSelect) {
+      profileSelect.addEventListener("change", (e) => {
+        tonicDroneEngine.setProfile(e.target.value, { crossfade: true });
       });
     }
 
@@ -196,6 +159,14 @@ export class CustomPatchBrowserUI {
     }
   }
 
+  updateDroneActiveKeys() {
+    const droneKeys = this.container.querySelectorAll(".drone-key");
+    droneKeys.forEach(b => {
+      const note = b.getAttribute("data-note");
+      b.classList.toggle("active", tonicDroneEngine.activeKey === note);
+    });
+  }
+
   async loadPatches() {
     try {
       this.patches = await patchStorage.getAllPatches();
@@ -203,6 +174,16 @@ export class CustomPatchBrowserUI {
     } catch (e) {
       console.error("[CustomPatchBrowser] Failed to load patches", e);
     }
+  }
+
+  stepPatch(delta) {
+    if (!this.patches.length) return;
+    const curIdx = this.patches.findIndex(p => p.id === this.activePatchId);
+    let nextIdx = curIdx + delta;
+    if (nextIdx < 0) nextIdx = this.patches.length - 1;
+    if (nextIdx >= this.patches.length) nextIdx = 0;
+    const target = this.patches[nextIdx];
+    if (target) this.handleLoadPatch(target);
   }
 
   renderPatchList(filter = "") {
@@ -214,19 +195,36 @@ export class CustomPatchBrowserUI {
     const filtered = this.patches.filter(p => p.name.toLowerCase().includes(filter));
 
     if (filtered.length === 0) {
-      listContainer.innerHTML = `<div class="empty-state">No custom patches found.</div>`;
+      listContainer.innerHTML = `<div class="empty-state">No saved patches. Click + SAVE to add one.</div>`;
       return;
     }
 
-    filtered.forEach(patch => {
+    filtered.forEach((patch, idx) => {
       const el = document.createElement("div");
-      el.className = "patch-item";
+      el.className = `patch-item ${this.activePatchId === patch.id ? 'active' : ''}`;
+      el.setAttribute("data-id", patch.id);
+
+      // Color tag bar
+      const colorBar = document.createElement("div");
+      colorBar.className = "patch-color-bar";
+      colorBar.style.backgroundColor = patch.data?.color || DEFAULT_PATCH_COLORS[idx % DEFAULT_PATCH_COLORS.length];
+      el.appendChild(colorBar);
       
+      // Patch Title
       const titleEl = document.createElement("div");
       titleEl.className = "patch-title";
       titleEl.textContent = patch.name;
       el.appendChild(titleEl);
 
+      // Optional Key badge
+      if (patch.data?.key) {
+        const keyBadge = document.createElement("span");
+        keyBadge.className = "patch-key-badge";
+        keyBadge.textContent = patch.data.key;
+        el.appendChild(keyBadge);
+      }
+
+      // Delete Button
       const delBtn = document.createElement("button");
       delBtn.className = "patch-del-btn";
       delBtn.innerHTML = "✕";
@@ -245,13 +243,32 @@ export class CustomPatchBrowserUI {
   }
 
   async handleSavePatch() {
-    const patchName = await CustomModal.prompt("Save Custom Patch", "Enter a name for this custom patch:");
-    if (!patchName) return;
+    const rawInput = await CustomModal.prompt(
+      "Save Custom Patch",
+      "Enter patch name (optionally add [Key], e.g. 'Sunday Praise [G]'):",
+      "Patch Name [Key]"
+    );
+    if (!rawInput) return;
+
+    let patchName = rawInput.trim();
+    let detectedKey = "";
+
+    // Parse [Key] or / Key if provided in name
+    const keyMatch = patchName.match(/\[([A-G][b#]?)\]/i) || patchName.match(/\/\s*([A-G][b#]?)$/i);
+    if (keyMatch) {
+      detectedKey = keyMatch[1].toUpperCase();
+      if (detectedKey.length === 2 && detectedKey[1] === 'B') {
+        detectedKey = detectedKey[0] + 'b';
+      }
+      patchName = patchName.replace(keyMatch[0], "").trim();
+    } else if (tonicDroneEngine.activeKey) {
+      // Default to current playing drone key if active
+      detectedKey = tonicDroneEngine.activeKey;
+    }
 
     const mle = this.appCore?.multiLayerEngine || multiLayerEngine;
     const fxRack = this.appCore?.fxRack || audioCore.fxRack;
 
-    // Build the state object using multiLayerEngine and fxRack with resolved timbre names
     const layersCopy = JSON.parse(JSON.stringify(mle.layers || [])).map((l) => ({
       ...l,
       name: getTimbreDisplayName(l.inst, l.name),
@@ -273,12 +290,18 @@ export class CustomPatchBrowserUI {
     const state = {
       layers: layersCopy,
       fx: fxState,
+      key: detectedKey,
+      color: DEFAULT_PATCH_COLORS[Math.floor(Math.random() * DEFAULT_PATCH_COLORS.length)],
+      macros: mle.macros ? { ...mle.macros } : { swell: 0.3, shimmer: 0.2, tone: 0.5, pad: tonicDroneEngine.volume },
+      snapshots: mle.snapshots ? JSON.parse(JSON.stringify(mle.snapshots)) : null,
+      padProfile: tonicDroneEngine.currentProfile,
       timestamp: Date.now()
     };
 
     try {
-      await patchStorage.savePatch(patchName, state);
-      await this.loadPatches(); // Refresh list
+      const saved = await patchStorage.savePatch(patchName, state);
+      this.activePatchId = saved.id;
+      await this.loadPatches();
     } catch (e) {
       CustomModal.alert("Error", "Failed to save patch: " + e.message);
     }
@@ -288,8 +311,9 @@ export class CustomPatchBrowserUI {
     const confirmed = await CustomModal.confirm("Delete Patch", "Are you sure you want to delete this patch?");
     if (!confirmed) return;
     try {
+      if (this.activePatchId === id) this.activePatchId = null;
       await patchStorage.deletePatch(id);
-      await this.loadPatches(); // Refresh list
+      await this.loadPatches();
     } catch (e) {
       CustomModal.alert("Error", "Failed to delete patch.");
     }
@@ -297,12 +321,13 @@ export class CustomPatchBrowserUI {
 
   handleLoadPatch(patch) {
     if (!patch || !patch.data) return;
-    console.log("Loading custom patch:", patch.name);
+    this.activePatchId = patch.id;
+    this.renderPatchList();
     
     const mle = this.appCore?.multiLayerEngine || multiLayerEngine;
     const fxRack = this.appCore?.fxRack || audioCore.fxRack;
 
-    // Inject layers back into multiLayerEngine with resolved names
+    // Inject layers back into multiLayerEngine with resolved names (seamlessly)
     if (patch.data.layers) {
       mle.layers = JSON.parse(JSON.stringify(patch.data.layers)).map((l) => ({
         ...l,
@@ -362,6 +387,27 @@ export class CustomPatchBrowserUI {
           if (typeof fxRack.masterEq.setHighGain === "function") fxRack.masterEq.setHighGain(fx.eq.high ?? 0);
         }
       }
+    }
+
+    // Restore Macros & Snapshots if available
+    if (patch.data.macros && mle.setMacros) {
+      mle.setMacros(patch.data.macros);
+    }
+    if (patch.data.snapshots && mle.setSnapshots) {
+      mle.setSnapshots(patch.data.snapshots);
+    }
+
+    // Auto-sync Tonic Drone key if enabled
+    if (this.keySync && patch.data.key) {
+      tonicDroneEngine.playDrone(patch.data.key, { crossfadeSec: 1.5 });
+      this.updateDroneActiveKeys();
+    }
+
+    // Restore Tonic Pad sound profile if saved
+    if (patch.data.padProfile && tonicDroneEngine.currentProfile !== patch.data.padProfile) {
+      tonicDroneEngine.setProfile(patch.data.padProfile, { crossfade: true });
+      const profSelect = this.container.querySelector("#drone-profile-select");
+      if (profSelect) profSelect.value = patch.data.padProfile;
     }
   }
 

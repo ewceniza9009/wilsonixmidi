@@ -1,119 +1,206 @@
-/* custom-patch-browser.css */
+/* custom-patch-browser.css - Compact Sunday Keys Setlist & Tonic Pad */
 
 .patch-browser-ui {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: #1a1a1a;
-  border-right: 1px solid #333;
-  color: #f1f1f1;
-  font-family: 'Inter', sans-serif;
+  background-color: #0d1017;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+  font-family: var(--font-family-sans, system-ui, sans-serif);
+  padding: 6px 6px 4px;
+  gap: 4px;
+  box-sizing: border-box;
 }
 
 .browser-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px;
-  background-color: #222;
-  border-bottom: 1px solid #333;
+  padding: 0 0 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  height: 24px;
 }
 
 .browser-header h3 {
   margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  color: #ddd;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: #94a3b8;
+}
+
+.browser-header-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.patch-nav-btn {
+  height: 20px;
+  width: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #141822;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  border-radius: 3px;
+  font-size: 0.52rem;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.12s ease;
+}
+
+.patch-nav-btn:hover {
+  background: #1e2433;
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
 .save-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: bold;
+  gap: 3px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  padding: 0 6px;
+  height: 20px;
+  border-radius: 3px;
+  font-size: 0.54rem;
+  font-weight: 800;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.12s ease;
 }
 
 .save-btn:hover {
-  background-color: #45a049;
+  background: rgba(245, 158, 11, 0.22);
+  color: #ffffff;
+  border-color: rgba(245, 158, 11, 0.5);
 }
 
 .browser-search {
-  padding: 10px 15px;
-  border-bottom: 1px solid #333;
+  padding: 0;
 }
 
 .browser-search input {
   width: 100%;
-  padding: 8px 12px;
-  background-color: #111;
-  border: 1px solid #444;
-  border-radius: 4px;
-  color: #fff;
-  font-size: 13px;
+  height: 22px;
+  padding: 0 6px;
+  background-color: #141822;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  color: #ffffff;
+  font-size: 0.56rem;
+  font-weight: 600;
+  outline: none;
+  box-sizing: border-box;
 }
 
 .browser-search input:focus {
-  outline: none;
-  border-color: #666;
+  border-color: #38bdf8;
 }
 
 .patch-list {
-  flex: 1;
+  flex: 1 1 auto;
   overflow-y: auto;
-  padding: 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 2px 0;
+  scrollbar-width: thin;
 }
 
 .patch-item {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 12px 15px;
+  justify-content: space-between;
+  gap: 5px;
+  height: 28px;
+  min-height: 28px;
+  max-height: 28px;
+  padding: 0 6px;
+  background: #141822;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
   cursor: pointer;
-  border-bottom: 1px solid #2a2a2a;
-  transition: background-color 0.2s;
+  box-sizing: border-box;
+  transition: background 0.12s ease, border-color 0.12s ease;
 }
 
 .patch-item:hover {
-  background-color: #2c2c2c;
+  background: #1e2433;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.patch-item.active {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.patch-color-bar {
+  width: 3px;
+  height: 16px;
+  border-radius: 1px;
+  flex-shrink: 0;
 }
 
 .patch-title {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 0.60rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.patch-item.active .patch-title {
+  color: #ffffff;
+}
+
+.patch-key-badge {
+  font-family: var(--font-family-mono, monospace);
+  font-size: 0.48rem;
+  font-weight: 800;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 2px;
+  padding: 0 4px;
+  line-height: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }
 
 .patch-del-btn {
   background: none;
   border: none;
-  color: #888;
-  font-size: 16px;
+  color: #64748b;
+  font-size: 0.62rem;
+  line-height: 1;
   cursor: pointer;
-  visibility: hidden;
-  padding: 4px;
+  padding: 2px 4px;
+  border-radius: 2px;
+  opacity: 0.6;
+  transition: all 0.12s ease;
 }
 
 .patch-item:hover .patch-del-btn {
-  visibility: visible;
+  opacity: 1;
 }
 
 .patch-del-btn:hover {
-  color: #ff5555;
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
 }
 
 .empty-state {
-  padding: 20px;
+  padding: 12px;
   text-align: center;
-  color: #666;
-  font-size: 13px;
+  color: #64748b;
+  font-size: 0.56rem;
   font-style: italic;
 }
 
@@ -124,122 +211,204 @@
   justify-content: center;
   align-items: center;
   height: 100%;
-  padding: 30px;
+  padding: 16px;
   text-align: center;
-  background-color: #1a1a1a;
-  border-right: 1px solid #333;
+  background-color: #0d1017;
 }
 
 .locked-icon {
-  font-size: 40px;
-  margin-bottom: 15px;
+  font-size: 24px;
+  margin-bottom: 8px;
   opacity: 0.8;
 }
 
 .patch-browser-locked h3 {
   color: #ddd;
-  margin-bottom: 10px;
-  font-size: 16px;
+  margin: 0 0 6px;
+  font-size: 0.70rem;
 }
 
 .patch-browser-locked p {
   color: #888;
-  font-size: 13px;
-  line-height: 1.5;
-  margin-bottom: 20px;
+  font-size: 0.56rem;
+  line-height: 1.4;
+  margin: 0 0 12px;
 }
 
 .upgrade-btn {
   background-color: #e09f3e;
   color: #000;
   border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  font-weight: bold;
-  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 3px;
+  font-weight: 800;
+  font-size: 0.58rem;
   cursor: pointer;
-  transition: opacity 0.2s;
 }
 
-.upgrade-btn:hover {
-  opacity: 0.9;
-}
-
-/* Drone Player UI */
+/* Tonic Drone Player UI */
 .drone-player-ui {
-  border-top: 1px solid #333;
-  padding: 15px;
-  background: #111;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 2px 2px;
+  background: #0d1017;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
 .drone-header {
-  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2px;
 }
 
 .drone-header h4 {
   margin: 0;
-  font-size: 11px;
-  color: #888;
-  letter-spacing: 1.5px;
+  font-size: 0.52rem;
+  color: #38bdf8;
+  letter-spacing: 0.6px;
+  font-weight: 800;
+}
+
+.drone-header-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.drone-sync-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #64748b;
+  font-size: 0.48rem;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.drone-sync-btn.active {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+.drone-stop-btn {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+  font-size: 0.48rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 2px;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.drone-stop-btn:hover {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.drone-profile-bar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #11151f;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+  padding: 1px 4px;
+  margin-bottom: 1px;
+}
+
+.drone-profile-label {
+  font-family: var(--font-family-mono, monospace);
+  font-size: 0.46rem;
+  font-weight: 800;
+  color: #64748b;
+  letter-spacing: 0.4px;
+  flex-shrink: 0;
+}
+
+.drone-profile-select {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #38bdf8;
+  font-size: 0.52rem;
+  font-weight: 700;
+  height: 18px;
+  line-height: 18px;
+  padding: 0 2px;
+  cursor: pointer;
+  outline: none;
+}
+
+.drone-profile-select option {
+  background: #0f172a;
+  color: #e2e8f0;
 }
 
 .drone-keys {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-  margin-bottom: 15px;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 2px;
 }
 
 .drone-key {
-  background: #2a2a2a;
-  border: 1px solid #444;
-  color: #ccc;
-  padding: 8px 0;
-  border-radius: 4px;
-  font-size: 13px;
-  font-weight: 600;
+  background: #141822;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  height: 18px;
+  padding: 0;
+  border-radius: 2px;
+  font-size: 0.50rem;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.12s ease;
 }
 
 .drone-key:hover {
-  background: #3a3a3a;
-  border-color: #666;
+  background: #1e2433;
+  color: #ffffff;
 }
 
 .drone-key.active {
-  background: #4a90e2;
-  color: white;
-  border-color: #5aa0f2;
-  box-shadow: 0 0 10px rgba(74, 144, 226, 0.4);
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  border-color: #38bdf8;
+  font-weight: 800;
 }
 
 .drone-vol-control {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
+  padding: 2px 2px 0;
 }
 
 .drone-vol-control .vol-icon {
-  font-size: 16px;
-  color: #888;
+  font-size: 0.58rem;
+  color: #38bdf8;
 }
 
 .drone-vol-control input[type="range"] {
   flex: 1;
-  height: 4px;
-  background: #333;
+  height: 3px;
+  background: #141822;
   border-radius: 2px;
   outline: none;
   -webkit-appearance: none;
+  accent-color: #38bdf8;
 }
 
 .drone-vol-control input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  background: #4a90e2;
+  background: #38bdf8;
   cursor: pointer;
 }

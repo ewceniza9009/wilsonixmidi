@@ -175,6 +175,61 @@ export const DEFAULT_COMBI_FX_PRESETS = {
 };
 
 export const COMBI_PRESETS = {
+  rnb_ballad_one_last_cry: {
+    id: "rnb_ballad_one_last_cry",
+    name: "🎹 90s R&B Ballad Grand (One Last Cry)",
+    category: "Signature Ballad",
+    layers: [
+      {
+        id: 0,
+        name: "Concert Grand Core",
+        inst: "acoustic_grand_piano",
+        fx: "clean",
+        gain: 1.0,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 1,
+        name: "Roland SA Bright Tine",
+        inst: "roland_bright_ep",
+        fx: "analog_juno_chorus",
+        gain: 0.38,
+        pan: 0.05,
+        oct: 0,
+        minVel: 20,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 2,
+        name: "SC-55 Silky Warm Pad",
+        inst: "roland_sc55_warm_pad",
+        fx: "reverb_hall",
+        gain: 0.28,
+        pan: -0.05,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+      },
+      {
+        id: 3,
+        name: "Sub Bass Foundation",
+        inst: "synth_bass_1",
+        fx: "clean",
+        gain: 0.50,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: false,
+      },
+    ],
+  },
   sunday_worship_shimmer_piano: {
     id: "sunday_worship_shimmer_piano",
     name: "⛪ Sunday Keys Shimmer Grand",
@@ -4692,20 +4747,28 @@ export class MultiLayerEngine {
     }
   }
 
-  async setCombiPreset(presetId) {
+  async setCombiPreset(presetId, { seamless = true } = {}) {
     if (!COMBI_PRESETS[presetId]) return;
 
     const newCombi = COMBI_PRESETS[presetId];
 
-    // Clear sustain pedal first — prevents sustained voices bleeding into new preset
-    this.setSustainPedal(false);
-    if (this.pcmEngine) this.pcmEngine.allNotesOff(true);
-    tritonVaEngine.allNotesOff();
-    this.vaAllNotesOff();
-    synthEngine.panic();
-    if (this._workletReady && this._workletNode)
-      this._workletNode.allNotesOff();
-    this._clearHeldNoteState();
+    if (!seamless) {
+      // Hard reset requested (e.g. panic or clean init)
+      this.setSustainPedal(false);
+      if (this.pcmEngine) this.pcmEngine.allNotesOff(true);
+      tritonVaEngine.allNotesOff();
+      this.vaAllNotesOff();
+      synthEngine.panic();
+      if (this._workletReady && this._workletNode)
+        this._workletNode.allNotesOff();
+      this._clearHeldNoteState();
+    } else {
+      // Seamless transition: existing sounding notes continue ringing & release naturally
+      // Clean up held note tracking for new strokes only
+      if (typeof this._cleanOrphanHeldNotes === "function") {
+        this._cleanOrphanHeldNotes();
+      }
+    }
 
     this.activeCombi = newCombi;
     this.isCombiMode = true;
