@@ -1,5 +1,12 @@
 import { mediaPlayer } from "../audio/media-player-engine.js";
 
+const SVG_PLAY = `<svg class="media-svg-icon media-svg-play" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5.14v13.72a1 1 0 001.5.86l11-6.86a1 1 0 000-1.72l-11-6.86a1 1 0 00-1.5-.86z"/></svg>`;
+const SVG_PAUSE = `<svg class="media-svg-icon media-svg-pause" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M7 5a1 1 0 011 1v12a1 1 0 11-2 0V6a1 1 0 011-1zm10 0a1 1 0 011 1v12a1 1 0 11-2 0V6a1 1 0 011-1z"/></svg>`;
+const SVG_STOP = `<svg class="media-svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>`;
+const SVG_PREV = `<svg class="media-svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M6 6a1 1 0 012 0v12a1 1 0 11-2 0V6zm4.5 6.75l7.5 5.25a1 1 0 001.5-.82V6.82a1 1 0 00-1.5-.82L10.5 11.25a1 1 0 000 1.5z"/></svg>`;
+const SVG_NEXT = `<svg class="media-svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M18 6a1 1 0 00-2 0v12a1 1 0 102 0V6zm-4.5 6.75L6 18a1 1 0 01-1.5-.82V6.82a1 1 0 011.5-.82l7.5 5.25a1 1 0 010 1.5z"/></svg>`;
+const SVG_VOLUME = `<svg class="media-svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
+
 const EXT_META = {
   mp3: { icon: "♪", color: "#f59e0b", label: "MP3" },
   mp2: { icon: "♪", color: "#f59e0b", label: "MP2" },
@@ -102,11 +109,17 @@ export class MediaPlayerUI {
               <canvas class="media-waveform" id="media-wave-canvas" width="900" height="160"></canvas>
 
               <div class="media-meters">
-                <div class="media-meter">
-                  <div class="media-meter-fill" id="media-meter-l"></div>
+                <div class="media-meter-ch">
+                  <span class="media-meter-lbl">L</span>
+                  <div class="media-meter">
+                    <div class="media-meter-fill" id="media-meter-l"></div>
+                  </div>
                 </div>
-                <div class="media-meter">
-                  <div class="media-meter-fill" id="media-meter-r"></div>
+                <div class="media-meter-ch">
+                  <span class="media-meter-lbl">R</span>
+                  <div class="media-meter">
+                    <div class="media-meter-fill" id="media-meter-r"></div>
+                  </div>
                 </div>
               </div>
 
@@ -118,10 +131,10 @@ export class MediaPlayerUI {
 
               <div class="media-transport">
                 <div class="media-transport-left">
-                  <button class="media-tbtn" id="btn-media-prev" aria-label="Previous" title="Previous">⏮</button>
-                  <button class="media-tbtn media-tbtn-play" id="btn-media-play" aria-label="Play / Pause" title="Play / Pause">▶</button>
-                  <button class="media-tbtn" id="btn-media-stop" aria-label="Stop" title="Stop">⏹</button>
-                  <button class="media-tbtn" id="btn-media-next" aria-label="Next" title="Next">⏭</button>
+                  <button class="media-tbtn" id="btn-media-prev" aria-label="Previous" title="Previous">${SVG_PREV}</button>
+                  <button class="media-tbtn media-tbtn-play" id="btn-media-play" aria-label="Play / Pause" title="Play / Pause">${SVG_PLAY}</button>
+                  <button class="media-tbtn" id="btn-media-stop" aria-label="Stop" title="Stop">${SVG_STOP}</button>
+                  <button class="media-tbtn" id="btn-media-next" aria-label="Next" title="Next">${SVG_NEXT}</button>
                 </div>
                 <div class="media-transport-right">
                   <button class="media-chip" id="btn-media-loop" title="Loop mode">🔁 OFF</button>
@@ -133,8 +146,11 @@ export class MediaPlayerUI {
                     <option value="1.5">1.5×</option>
                     <option value="2">2.0×</option>
                   </select>
-                  <input type="range" class="media-volume" id="media-volume" min="0" max="100" value="100" title="Volume" />
-                  <span class="media-vol-text" id="media-vol-text">100%</span>
+                  <div class="media-vol-wrap">
+                    <span class="media-vol-icon">${SVG_VOLUME}</span>
+                    <input type="range" class="media-volume" id="media-volume" min="0" max="100" value="100" title="Volume" />
+                    <span class="media-vol-text" id="media-vol-text">100%</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -247,6 +263,26 @@ export class MediaPlayerUI {
       mediaPlayer.seek(ratio * track.duration);
     });
 
+    const handleFiles = (fileList) => {
+      if (!fileList || !fileList.length) return;
+      mediaPlayer.addFiles(fileList).then((added) => {
+        const pending = this._pendingPick;
+        if (pending) {
+          this._pendingPick = null;
+          const rebound = mediaPlayer.playlist.find(
+            (t) => t.id === pending && !t.missing && !t.placeholder,
+          );
+          if (rebound) {
+            mediaPlayer.play(rebound.id);
+            return;
+          }
+        }
+        if (added.length && !mediaPlayer.isPlaying && mediaPlayer.currentIndex < 0) {
+          this._selectTrack(added[0].id);
+        }
+      });
+    };
+
     ["dragenter", "dragover"].forEach((ev) => {
       this.els.dropzone.addEventListener(ev, (e) => {
         e.preventDefault();
@@ -254,16 +290,17 @@ export class MediaPlayerUI {
         this.els.dropzone.classList.add("media-dropzone-over");
       });
     });
-    ["dragleave", "drop"].forEach((ev) => {
-      this.els.dropzone.addEventListener(ev, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this.els.dropzone.classList.remove("media-dropzone-over");
-      });
+    this.els.dropzone.addEventListener("dragleave", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.els.dropzone.classList.remove("media-dropzone-over");
     });
     this.els.dropzone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.els.dropzone.classList.remove("media-dropzone-over");
       if (e.dataTransfer && e.dataTransfer.files.length) {
-        mediaPlayer.addFiles(e.dataTransfer.files);
+        handleFiles(e.dataTransfer.files);
       }
     });
 
@@ -272,22 +309,7 @@ export class MediaPlayerUI {
     window.addEventListener("drop", (e) => {
       e.preventDefault();
       if (e.dataTransfer && e.dataTransfer.files.length) {
-        mediaPlayer.addFiles(e.dataTransfer.files).then((added) => {
-          const pending = this._pendingPick;
-          if (pending) {
-            this._pendingPick = null;
-            const rebound = mediaPlayer.playlist.find(
-              (t) => t.id === pending && !t.missing && !t.placeholder,
-            );
-            if (rebound) {
-              mediaPlayer.play(rebound.id);
-              return;
-            }
-          }
-          if (added.length && !mediaPlayer.isPlaying) {
-            this._selectTrack(added[0].id);
-          }
-        });
+        handleFiles(e.dataTransfer.files);
       }
     });
 
@@ -399,14 +421,18 @@ export class MediaPlayerUI {
       const playing =
         realIdx === mediaPlayer.currentIndex && mediaPlayer.isPlaying;
 
+      const playIconHtml = playing
+        ? `<span class="media-pl-eq" title="Playing"><span class="eq-bar b1"></span><span class="eq-bar b2"></span><span class="eq-bar b3"></span></span>`
+        : `<span class="media-pl-badge" style="color:${meta.color};border-color:${meta.color}44">${meta.label}</span>`;
+
       row.innerHTML = `
         <span class="media-pl-idx">${String(realIdx + 1).padStart(2, "0")}</span>
-        <span class="media-pl-icon" style="color:${meta.color}">${playing ? "►" : meta.icon}</span>
+        <div class="media-pl-icon-box">${playIconHtml}</div>
         <div class="media-pl-info">
           <span class="media-pl-name">${this._esc(t.name)}</span>
-          <span class="media-pl-meta">${meta.label} · ${fmtTime(t.duration)} · ${fmtSize(t.size)}</span>
+          <span class="media-pl-meta">${fmtTime(t.duration)} · ${fmtSize(t.size)}</span>
         </div>
-        <span class="media-pl-status" title="${t.missing ? (t.placeholder ? "File path is not stored (privacy): re-add this file to play again" : "File not found on disk") : t.source === "session" ? "Session file (re-add after restart in browser)" : "Resolved this session"}">${t.missing ? (t.placeholder ? "↪" : "✕") : "✓"}</span>
+        <span class="media-pl-status" title="${t.missing ? (t.placeholder ? "File path is not stored (privacy): re-add this file to play again" : "File not found on disk") : t.source === "session" ? "Session file (re-add after restart in browser)" : "Ready"}">${t.missing ? (t.placeholder ? "↪" : "✕") : "✓"}</span>
         <button class="media-pl-del" data-id="${this._esc(t.id)}" title="Remove">✕</button>
       `;
 
@@ -481,6 +507,28 @@ export class MediaPlayerUI {
           : mediaPlayer.isPlaying
             ? "PLAYING"
             : "READY";
+    this._updatePlayButtonState();
+  }
+
+  _updatePlayButtonState() {
+    const playBtn = this.els ? this.els.play : null;
+    if (!playBtn) return;
+    const isPlaying = mediaPlayer && mediaPlayer.isPlaying;
+    if (isPlaying) {
+      if (!playBtn.classList.contains("media-tbtn-playing") || !playBtn.querySelector(".media-svg-pause")) {
+        playBtn.innerHTML = SVG_PAUSE;
+        playBtn.classList.add("media-tbtn-playing");
+        playBtn.setAttribute("title", "Pause");
+        playBtn.setAttribute("aria-label", "Pause");
+      }
+    } else {
+      if (playBtn.classList.contains("media-tbtn-playing") || !playBtn.querySelector(".media-svg-play")) {
+        playBtn.innerHTML = SVG_PLAY;
+        playBtn.classList.remove("media-tbtn-playing");
+        playBtn.setAttribute("title", "Play");
+        playBtn.setAttribute("aria-label", "Play");
+      }
+    }
   }
 
   _drawStaticWave() {
@@ -545,53 +593,52 @@ export class MediaPlayerUI {
     const timeCur = this.container.querySelector("#media-time-cur");
     const timeTotal = this.container.querySelector("#media-time-total");
     const seek = this.els.seek;
-    const playBtn = this.els.play;
 
-    if (track && mediaPlayer.audioEl && Number.isFinite(track.duration)) {
+    if (track && mediaPlayer.audioEl) {
       const ct = mediaPlayer.getCurrentTime();
+      const dur = (track.duration > 0)
+        ? track.duration
+        : (Number.isFinite(mediaPlayer.audioEl.duration) && mediaPlayer.audioEl.duration > 0)
+          ? mediaPlayer.audioEl.duration
+          : 0;
+
       if (timeCur) timeCur.textContent = fmtTime(ct);
-      if (timeTotal) timeTotal.textContent = fmtTime(track.duration);
-      if (track.duration > 0 && seek) {
+      if (timeTotal) timeTotal.textContent = fmtTime(dur);
+      if (dur > 0 && seek) {
         seek.value = String(
-          Math.min(1000, Math.round((ct / track.duration) * 1000)),
+          Math.min(1000, Math.round((ct / dur) * 1000)),
         );
-      }
-      if (playBtn && isPlaying) {
-        playBtn.textContent = "❚❚";
-        playBtn.classList.add("media-tbtn-playing");
-      } else if (playBtn) {
-        playBtn.textContent = "▶";
-        playBtn.classList.remove("media-tbtn-playing");
       }
     } else {
       if (timeCur) timeCur.textContent = "0:00";
       if (timeTotal) timeTotal.textContent = "0:00";
-      if (playBtn) {
-        playBtn.textContent = isPlaying ? "❚❚" : "▶";
-      }
     }
 
-    // Meter fills only when active
+    this._updatePlayButtonState();
+
+    // Stereo meter fills with frequency tracking
     if (isPlaying) {
       const freq = mediaPlayer.getFrequencyData();
       if (freq && this.meterL && this.meterR) {
         const avg = (arr, from, to) => {
           let s = 0;
-          const n = Math.max(1, arr.length / 10);
+          const count = Math.max(1, to - from);
           for (let i = from; i < to && i < arr.length; i++) s += arr[i];
-          return s / n;
+          return s / count;
         };
-        const lvl = Math.min(100, (avg(freq, 0, freq.length / 2) / 255) * 100);
-        this.meterL.style.height = `${lvl}%`;
-        this.meterR.style.height = `${lvl}%`;
+        const half = Math.floor(freq.length / 2);
+        const lvlL = Math.min(100, Math.round((avg(freq, 0, half) / 255) * 125));
+        const lvlR = Math.min(100, Math.round((avg(freq, Math.floor(half / 2), freq.length) / 255) * 125));
+        this.meterL.style.width = `${lvlL}%`;
+        this.meterR.style.width = `${lvlR}%`;
       }
     } else if (
       this.meterL &&
       this.meterR &&
-      this.meterL.style.height !== "0%"
+      (this.meterL.style.width !== "0%" || this.meterR.style.width !== "0%")
     ) {
-      this.meterL.style.height = "0%";
-      this.meterR.style.height = "0%";
+      this.meterL.style.width = "0%";
+      this.meterR.style.width = "0%";
     }
 
     this._raf = requestAnimationFrame(() => this._tick());

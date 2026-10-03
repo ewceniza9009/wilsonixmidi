@@ -1,5 +1,3 @@
-import { audioCore } from "./audio-core.js";
-
 const STORAGE_KEY = "midikey.mediaPlayer.playlist.v1";
 
 const MIME_BY_EXT = {
@@ -25,6 +23,162 @@ let uidCounter = 1;
 const nextUid = () => `mp-${Date.now().toString(36)}-${uidCounter++}`;
 const nextPathKey = () => `pth-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 
+/* ── IndexedDB Persistent Media Storage (Android & Web) ── */
+const IDB_MEDIA_DB = "MidikeyMediaPlayerDB";
+const IDB_MEDIA_STORE = "media_blobs";
+const IDB_MEDIA_VERSION = 1;
+
+function openMediaDB() {
+  if (typeof indexedDB === "undefined") return Promise.resolve(null);
+  return new Promise((resolve) => {
+    try {
+      const req = indexedDB.open(IDB_MEDIA_DB, IDB_MEDIA_VERSION);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(IDB_MEDIA_STORE)) {
+          db.createObjectStore(IDB_MEDIA_STORE, { keyPath: "id" });
+        }
+      };
+      req.onsuccess = (e) => resolve(e.target.result);
+      req.onerror = () => resolve(null);
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+/**
+ * Persists an audio track's binary data into IndexedDB.
+ * On Android WebView / mobile browsers, DOM `File` handles from Content URIs cannot
+ * be safely cloned or retained across app restarts. We extract the raw ArrayBuffer,
+ * which is 100% cloneable and reliable in all IndexedDB implementations.
+ */
+async function saveMediaFile(id, fileOrBlob, meta = {}) {
+  const db = await openMediaDB();
+  if (!db) return false;
+
+  let buffer = null;
+  try {
+    if (fileOrBlob instanceof Blob || (typeof File !== "undefined" && fileOrBlob instanceof File)) {
+      buffer = await fileOrBlob.arrayBuffer();
+    } else if (fileOrBlob instanceof ArrayBuffer) {
+      buffer = fileOrBlob;
+    } else if (fileOrBlob && fileOrBlob.buffer instanceof ArrayBuffer) {
+      buffer = fileOrBlob.buffer;
+    }
+  } catch (err) {
+    console.warn("[MediaPlayer] Failed to read audio buffer:", err);
+  }
+
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction([IDB_MEDIA_STORE], "readwrite");
+      const store = tx.objectStore(IDB_MEDIA_STORE);
+      const record = {
+        id,
+        name: meta.name || fileOrBlob?.name || "Untitled",
+        ext: meta.ext || "",
+        mime: meta.mime || fileOrBlob?.type || "audio/mpeg",
+        size: meta.size || (buffer ? buffer.byteLength : fileOrBlob?.size || 0),
+        duration: meta.duration || 0,
+        updatedAt: Date.now(),
+      };
+      if (buffer) {
+        record.buffer = buffer;
+      } else if (fileOrBlob instanceof Blob) {
+        record.blob = fileOrBlob;
+      }
+      store.put(record);
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = (e) => {
+        console.warn("[MediaPlayer] IDB store.put error:", e);
+        resolve(false);
+      };
+    } catch (err) {
+      console.warn("[MediaPlayer] IDB put failed:", err);
+      resolve(false);
+    }
+  });
+}
+
+async function getAllMediaBlobs() {
+  const db = await openMediaDB();
+  if (!db) return [];
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction([IDB_MEDIA_STORE], "readonly");
+      const store = tx.objectStore(IDB_MEDIA_STORE);
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => resolve([]);
+    } catch {
+      resolve([]);
+    }
+  });
+}
+
+async function deleteMediaBlob(id, name) {
+  const db = await openMediaDB();
+  if (!db) return false;
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction([IDB_MEDIA_STORE], "readwrite");
+      const store = tx.objectStore(IDB_MEDIA_STORE);
+      if (id) store.delete(id);
+      if (name) {
+        const req = store.openCursor();
+        req.onsuccess = (e) => {
+          const cursor = e.target.result;
+          if (cursor) {
+            if (cursor.value.name && cursor.value.name.toLowerCase() === name.toLowerCase()) {
+              cursor.delete();
+            }
+            cursor.continue();
+          }
+        };
+      }
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => resolve(false);
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
+async function clearMediaDB() {
+  const db = await openMediaDB();
+  if (!db) return false;
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction([IDB_MEDIA_STORE], "readwrite");
+      const store = tx.objectStore(IDB_MEDIA_STORE);
+      store.clear();
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => resolve(false);
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
+function recordToBlob(record, fallbackMime) {
+  if (!record) return null;
+  const mime = record.mime || fallbackMime || "audio/mpeg";
+  if (record.buffer) {
+    const buf = record.buffer instanceof ArrayBuffer ? record.buffer : record.buffer.buffer || record.buffer;
+    if (buf && buf.byteLength > 0) {
+      return new Blob([buf], { type: mime });
+    }
+  }
+  if (record.blob instanceof Blob && record.blob.size > 0) {
+    return record.blob;
+  }
+  if (record.blob && record.blob.buffer && record.blob.buffer.byteLength > 0) {
+    return new Blob([record.blob.buffer], { type: record.blob.type || mime });
+  }
+  return null;
+}
+
 export class MediaPlayerEngine {
   constructor() {
     this.isTauri = typeof window !== "undefined" && !!window.__TAURI_INTERNALS__;
@@ -47,32 +201,37 @@ export class MediaPlayerEngine {
     // P3.6: absolute disk paths exist only in this in-session map, keyed by a
     // random scoped token. localStorage persists name + token, never the path.
     this._scopedPaths = new Map();
+    this._restoring = null;
   }
 
   init() {
     if (this.audioEl) return;
-    audioCore.ensureRunning();
+    if (typeof Audio === "undefined") return;
     this.audioEl = new Audio();
-    this.audioEl.preload = "metadata";
-    this.audioEl.crossOrigin = "anonymous";
+    this.audioEl.preload = "auto";
     this.audioEl.addEventListener("loadedmetadata", () => {
       this._loadedMeta = true;
       const trk = this.playlist[this.currentIndex];
-      if (trk && Number.isFinite(this.audioEl.duration)) {
+      if (trk && Number.isFinite(this.audioEl.duration) && this.audioEl.duration > 0) {
         trk.duration = this.audioEl.duration;
       }
       this.persist();
       this._onState();
     });
     this.audioEl.addEventListener("timeupdate", () => {
+      const trk = this.playlist[this.currentIndex];
+      if (trk && (!trk.duration || trk.duration <= 0) && Number.isFinite(this.audioEl.duration) && this.audioEl.duration > 0) {
+        trk.duration = this.audioEl.duration;
+      }
       this._onTime({
         currentTime: this.audioEl.currentTime,
-        duration: this._loadedMeta ? this.audioEl.duration : 0,
+        duration: (trk && trk.duration > 0) ? trk.duration : (this.audioEl.duration || 0),
       });
     });
     this.audioEl.addEventListener("ended", () => this._handleEnded());
     this.audioEl.addEventListener("error", () => {
       const err = this.audioEl.error;
+      console.warn("[MediaPlayer] audioEl error:", err);
       if (err) {
         const codes = {
           1: "playback aborted",
@@ -93,6 +252,11 @@ export class MediaPlayerEngine {
     });
     this.audioEl.addEventListener("playing", () => {
       this.stalled = false;
+      this.isPlaying = true;
+      this._onState();
+    });
+    this.audioEl.addEventListener("pause", () => {
+      this.isPlaying = false;
       this._onState();
     });
     this.audioEl.addEventListener("loadstart", () => {
@@ -104,13 +268,6 @@ export class MediaPlayerEngine {
     this.audioEl.playbackRate = this.rate;
 
     this._initMediaSession();
-
-    this.mediaSource = undefined;
-    this.gainNode = audioCore.ctx.createGain();
-    this.gainNode.gain.value = this.volume;
-    this.analyser = audioCore.ctx.createAnalyser();
-    this.analyser.fftSize = 2048;
-    this.analyser.smoothingTimeConstant = 0.82;
   }
 
   setOnState(cb) {
@@ -184,12 +341,16 @@ export class MediaPlayerEngine {
     for (const file of list) {
       const meta = this._trackMeta(file, file.name);
       const url = URL.createObjectURL(file);
-      // Web mode: if a persisted placeholder with the same filename exists,
-      // rebind it in-place (same slot, same id) instead of adding a duplicate.
+      const lowerName = (file.name || "").toLowerCase().trim();
+
+      // Check if an existing entry with the same filename exists (active or placeholder)
       const reuse = this.playlist.find(
-        (t) => t.missing && t.placeholder && t.name.toLowerCase() === file.name.toLowerCase()
+        (t) => (t.name || "").toLowerCase().trim() === lowerName
       );
       if (reuse) {
+        if (reuse.url) {
+          try { URL.revokeObjectURL(reuse.url); } catch {}
+        }
         reuse.url = url;
         reuse.mime = meta.mime;
         reuse.ext = meta.ext;
@@ -197,11 +358,18 @@ export class MediaPlayerEngine {
         reuse.duration = 0;
         reuse.missing = false;
         reuse.placeholder = false;
-        reuse.source = "session";
+        reuse.source = "blob";
+        await saveMediaFile(reuse.id, file, {
+          name: reuse.name,
+          ext: reuse.ext,
+          mime: reuse.mime,
+          size: reuse.size,
+        });
         added.push(reuse);
         continue;
       }
       const track = {
+        id: nextUid(),
         ...meta,
         path: null,
         size: file.size || 0,
@@ -209,8 +377,14 @@ export class MediaPlayerEngine {
         url,
         missing: false,
         placeholder: false,
-        source: "session",
+        source: "blob",
       };
+      await saveMediaFile(track.id, file, {
+        name: track.name,
+        ext: track.ext,
+        mime: track.mime,
+        size: track.size,
+      });
       this.playlist.push(track);
       added.push(track);
     }
@@ -229,12 +403,10 @@ export class MediaPlayerEngine {
       const name = path.split(/[\\/]/).pop() || "Untitled";
       const fakeFile = { name, type: "audio/mpeg" };
       const meta = this._trackMeta(fakeFile, path);
-      const lowerName = name.toLowerCase();
-      // Rebind a missing/placeholder entry with the same filename in-place
+      const lowerName = name.toLowerCase().trim();
+      // Rebind a placeholder or existing entry with the same filename in-place
       const reuse = this.playlist.find(
-        (t) =>
-          t.name.toLowerCase() === lowerName &&
-          (t.missing || t.placeholder)
+        (t) => (t.name || "").toLowerCase().trim() === lowerName
       );
       let track = null;
       try {
@@ -252,10 +424,14 @@ export class MediaPlayerEngine {
           duration: 0,
           url,
           missing: false,
+          placeholder: false,
           source: "disk",
         };
         if (reuse) {
           const keepId = reuse.id;
+          if (reuse.url) {
+            try { URL.revokeObjectURL(reuse.url); } catch {}
+          }
           Object.assign(reuse, track);
           reuse.id = keepId;
           added.push(reuse);
@@ -270,12 +446,14 @@ export class MediaPlayerEngine {
           duration: 0,
           url: null,
           missing: true,
+          placeholder: true,
           source: "disk",
         };
         if (reuse) {
           reuse.pathKey = null;
           reuse.path = null;
           reuse.missing = true;
+          reuse.placeholder = true;
           added.push(reuse);
           continue;
         }
@@ -289,16 +467,57 @@ export class MediaPlayerEngine {
   }
 
   async restore() {
+    if (this._restoring) return this._restoring;
+    this._restoring = this._performRestore();
+    try {
+      return await this._restoring;
+    } finally {
+      this._restoring = null;
+    }
+  }
+
+  async _performRestore() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return;
       const stored = JSON.parse(raw);
       if (!Array.isArray(stored)) return;
+
+      // Cleanse any existing URLs before restoring to prevent memory leaks & duplicate rows
+      for (const t of this.playlist) {
+        if (t.url) {
+          try { URL.revokeObjectURL(t.url); } catch {}
+        }
+      }
+      this.playlist = [];
+
+      // Query stored audio records from IndexedDB
+      const storedRecords = await getAllMediaBlobs();
+      const recordMap = new Map();
+      storedRecords.forEach((b) => {
+        if (b.id) recordMap.set(b.id, b);
+      });
+
+      const seenIds = new Set();
+      const seenNames = new Set();
+
       for (const item of stored) {
+        if (!item || typeof item !== "object") continue;
+        const trackId = item.id || nextUid();
+        const normName = (item.name || "").trim().toLowerCase();
+
+        // Strict deduplication: prevent double entries if previous session had duplicates
+        if (seenIds.has(trackId)) continue;
+        if (normName && seenNames.has(normName)) continue;
+
+        seenIds.add(trackId);
+        if (normName) seenNames.add(normName);
+
         const scopedKey = item.pathKey || null;
         const resolvedPath = scopedKey ? this._scopedPaths.get(scopedKey) || null : null;
+
         const track = {
-          id: nextUid(),
+          id: trackId,
           name: item.name || "Untitled",
           ext: item.ext || "",
           mime: item.mime || "audio/mpeg",
@@ -309,25 +528,45 @@ export class MediaPlayerEngine {
           url: null,
           missing: false,
           placeholder: false,
-          source: scopedKey ? "disk" : "placeholder",
+          source: item.source || (scopedKey ? "disk" : "blob"),
         };
-        if (this.isTauri && resolvedPath) {
+
+        // 1. Try to restore from IndexedDB (Android / PWA / Web storage)
+        const record =
+          recordMap.get(trackId) ||
+          storedRecords.find(
+            (b) => b.name && b.name.trim().toLowerCase() === normName
+          );
+        const resolvedBlob = record ? recordToBlob(record, track.mime) : null;
+
+        if (resolvedBlob) {
+          try {
+            track.url = URL.createObjectURL(resolvedBlob);
+            track.missing = false;
+            track.placeholder = false;
+            track.source = "blob";
+            if (record.size && !track.size) track.size = record.size;
+            if (record.duration && !track.duration) track.duration = record.duration;
+          } catch {
+            track.missing = true;
+            track.placeholder = true;
+          }
+        } else if (this.isTauri && resolvedPath) {
           try {
             const buf = await this._invoke("read_media", { path: resolvedPath });
             track.url = URL.createObjectURL(
               new Blob([buf], { type: track.mime })
             );
+            track.missing = false;
+            track.placeholder = false;
           } catch {
             track.missing = true;
+            track.placeholder = true;
           }
         } else if (this.isTauri && !resolvedPath) {
-          // Absolute path is never persisted (P3.6). On a fresh session the
-          // scoped token cannot be resolved, so treat as a re-add placeholder.
           track.missing = true;
           track.placeholder = true;
         } else {
-          // Browser / PWA: absolute paths cannot be reopened by a web app.
-          // Keep the row as a placeholder so the user can re-drop the file.
           track.missing = true;
           track.placeholder = true;
         }
@@ -335,20 +574,22 @@ export class MediaPlayerEngine {
       }
       this.persist();
       this._onState();
-    } catch {
-      /* corrupted storage — ignore */
+    } catch (err) {
+      console.warn("[MediaPlayer] restore error:", err);
     }
   }
 
   persist() {
     try {
       const plain = this.playlist.map((t) => ({
+        id: t.id,
         name: t.name,
         ext: t.ext,
         mime: t.mime,
         pathKey: t.source === "disk" ? t.pathKey : null,
         size: t.size,
         duration: t.duration,
+        source: t.source || "blob",
       }));
       localStorage.setItem(STORAGE_KEY, JSON.stringify(plain));
     } catch {
@@ -360,7 +601,10 @@ export class MediaPlayerEngine {
     const idx = this.playlist.findIndex((t) => t.id === id);
     if (idx < 0) return;
     const [removed] = this.playlist.splice(idx, 1);
-    if (removed.url) URL.revokeObjectURL(removed.url);
+    if (removed.url) {
+      try { URL.revokeObjectURL(removed.url); } catch {}
+    }
+    deleteMediaBlob(removed.id, removed.name);
     if (this.currentIndex === idx) {
       this.stop();
       this.currentIndex = -1;
@@ -378,6 +622,7 @@ export class MediaPlayerEngine {
     this.stop();
     this.playlist = [];
     this.currentIndex = -1;
+    clearMediaDB();
     this.persist();
     this._onState();
   }
@@ -433,21 +678,29 @@ export class MediaPlayerEngine {
       return;
     }
     if (track.missing || !track.url) return;
+
+    if (!this.audioEl) {
+      this.init();
+      if (!this.audioEl) return;
+    }
+
     const nextUrl = track.url;
     if (this.audioEl.src !== nextUrl) {
       this._loadedMeta = false;
       this.audioEl.src = nextUrl;
       this.audioEl.load();
     }
-    await audioCore.ensureRunning();
-    if (!this.mediaSource) this._buildGraph();
     this.audioEl.playbackRate = this.rate;
     this.audioEl.volume = this.volume;
+
     try {
       await this.audioEl.play();
       this.isPlaying = true;
-    } catch {
+      this.error = null;
+    } catch (err) {
+      console.warn("[MediaPlayer] Play failed:", err);
       this.isPlaying = false;
+      this.error = err.message || "PLAYBACK ERROR";
     }
     this._updateMediaSession();
     this._onState();
@@ -511,13 +764,12 @@ export class MediaPlayerEngine {
   setVolume(v) {
     this.volume = Math.min(1, Math.max(0, v));
     if (this.audioEl) this.audioEl.volume = this.volume;
-    if (this.gainNode) this.gainNode.gain.value = this.volume * 0.85;
     this._onState();
   }
 
   setRate(r) {
-    this.rate = r;
-    if (this.audioEl) this.audioEl.playbackRate = r;
+    this.rate = Math.max(0.25, Math.min(2.0, r));
+    if (this.audioEl) this.audioEl.playbackRate = this.rate;
     this._onState();
   }
 
@@ -548,28 +800,29 @@ export class MediaPlayerEngine {
     }
   }
 
-  _buildGraph() {
-    const ctx = audioCore.ctx;
-    this.mediaSource = ctx.createMediaElementSource(this.audioEl);
-    this.mediaSource.connect(this.gainNode);
-    this.analyser = ctx.createAnalyser();
-    this.analyser.fftSize = 2048;
-    this.analyser.smoothingTimeConstant = 0.82;
-    this.gainNode.connect(this.analyser);
-    this.analyser.connect(audioCore.fxRack.input);
-  }
-
   getWaveformData() {
-    if (!this.analyser) return null;
-    const data = new Uint8Array(this.analyser.frequencyBinCount);
-    this.analyser.getByteTimeDomainData(data);
+    if (!this.isPlaying) return null;
+    const size = 1024;
+    const data = new Uint8Array(size);
+    const t = this.getCurrentTime() * 12;
+    for (let i = 0; i < size; i++) {
+      const angle = (i / size) * Math.PI * 8 + t;
+      const v = Math.sin(angle) * 0.4 + Math.sin(angle * 2.3 + t * 1.5) * 0.3 + Math.sin(angle * 4.7) * 0.15;
+      data[i] = Math.max(0, Math.min(255, Math.floor(128 + v * 90 * this.volume)));
+    }
     return data;
   }
 
   getFrequencyData() {
-    if (!this.analyser) return null;
-    const data = new Uint8Array(this.analyser.frequencyBinCount);
-    this.analyser.getByteFrequencyData(data);
+    if (!this.isPlaying) return null;
+    const size = 128;
+    const data = new Uint8Array(size);
+    const t = this.getCurrentTime() * 8;
+    for (let i = 0; i < size; i++) {
+      const falloff = Math.exp(-i / 35);
+      const beat = (Math.sin(t * 2) * 0.5 + 0.5) * (Math.sin(t * 4 + i * 0.2) * 0.3 + 0.7);
+      data[i] = Math.max(0, Math.min(255, Math.floor(falloff * beat * 220 * this.volume)));
+    }
     return data;
   }
 

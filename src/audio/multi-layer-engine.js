@@ -5348,10 +5348,9 @@ export class MultiLayerEngine {
       }
 
       // Equal-Loudness RMS Preset Normalizer: compute per-layer RMS power using
-      // calibrated trim gains. We use a gentler scaling curve here (Math.pow) 
-      // so that multi-layered combis still sound huge and punchy, rather than 
-      // getting squashed down too far below a single instrument's level.
-      const TARGET_RMS = 1.35;
+      // calibrated trim gains. Boosts quiet presets and normalizes dense stacks
+      // so all presets across the app maintain a consistent, solid volume level.
+      const TARGET_RMS = 1.10;
       let sumPower = 0;
       for (let i = 0; i < this.layers.length; i++) {
         const layer = this.layers[i];
@@ -5362,8 +5361,8 @@ export class MultiLayerEngine {
         sumPower += (g * t) * (g * t);
       }
       const rms = Math.sqrt(sumPower);
-      // Use a gentler normalization so dense layers actually add power!
-      const combiScale = rms > 0.05 ? Math.max(0.85, Math.min(1.40, TARGET_RMS / Math.pow(rms, 0.70))) : 1.0;
+      // Directly scale combis to target RMS reference without dampening quiet presets
+      const combiScale = rms > 0.05 ? Math.max(0.60, Math.min(1.65, TARGET_RMS / rms)) : 1.0;
 
       // Chord headroom: only attenuate dense 5+ note clusters; 1–4 note chords
       // retain full volume and power without choking.
@@ -5385,10 +5384,8 @@ export class MultiLayerEngine {
         const isBassLayer = !isLeadLayer && /(bass|sub)/i.test((layer.name || "") + " " + (layer.inst || ""));
         if (isBassLayer && midiNote > (layer.maxNote || 60)) continue;
 
-        // Musical balance: Layer 0 is the primary lead/piano sound.
-        // Secondary accompaniment layers (strings, pads, warm swells) sit gracefully behind
-        // the lead at 0.52 (-5.7dB) so the main instrument always cuts through clearly.
-        const layerRoleTrim = isLeadLayer ? 1.0 : 0.52;
+        // Trust user/preset layer gain: do not artificially halve secondary layers with 0.52 penalty!
+        const layerRoleTrim = 1.0;
         const effectiveGain = (layer.gain ?? 1.0) * combiScale * polyHeadroom * layerRoleTrim;
         const transposedMidi = Math.max(
           21,

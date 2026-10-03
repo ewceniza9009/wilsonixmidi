@@ -512,19 +512,53 @@ export class MultiLayerUI {
       multiLayerEngine.macros = { swell: 0.35, shimmer: 0.2, tone: 0.5, pad: 0.5 };
     }
     multiLayerEngine.macros[name] = val;
+    const rack = audioCore.fxRack;
+
     if (name === "swell") {
-      audioCore.fxRack?.reverb?.setMix?.(val);
+      if (rack && rack.reverb) {
+        if (val > 0.01) {
+          rack.reverb.setBypass(false);
+          rack.reverb.setMix(Math.min(0.85, val * 0.8));
+          rack.reverb.setDecay(1.4 + val * 2.6);
+        } else {
+          rack.reverb.setBypass(true);
+          rack.reverb.setMix(0);
+        }
+      }
     } else if (name === "shimmer") {
-      audioCore.fxRack?.shimmerReverb?.setMix?.(val);
+      if (rack && rack.shimmerReverb) {
+        if (val > 0.01) {
+          rack.shimmerReverb.setBypass(false);
+          rack.shimmerReverb.setMix(Math.min(0.65, val * 0.7));
+          rack.shimmerReverb.setShimmer(val);
+          rack.shimmerReverb.setDecay(1.8 + val * 2.2);
+        } else {
+          rack.shimmerReverb.setBypass(true);
+          rack.shimmerReverb.setMix(0);
+        }
+      }
     } else if (name === "tone") {
-      if (audioCore.fxRack?.masterEq?.setHighShelf) {
-        audioCore.fxRack.masterEq.setHighShelf((val - 0.5) * 20);
+      const eq = rack?.masterEq;
+      if (eq) {
+        if (typeof eq.setHighGain === "function") {
+          eq.setHighGain((val - 0.5) * 20); // -10dB (dark/warm) to +10dB (bright air)
+        }
+        if (typeof eq.setMidGain === "function") {
+          eq.setMidGain((val - 0.5) * 6);
+        }
       }
     } else if (name === "pad") {
       tonicDroneEngine.setVolume(val);
       const droneVol = document.getElementById("drone-vol-slider");
       if (droneVol) droneVol.value = val;
     }
+  }
+
+  applyAllMacros() {
+    const macros = multiLayerEngine.macros || { swell: 0.35, shimmer: 0.2, tone: 0.5, pad: 0.5 };
+    Object.entries(macros).forEach(([k, v]) => {
+      this.setMacro(k, v);
+    });
   }
 
   saveSnapshot(idx) {
@@ -603,6 +637,7 @@ export class MultiLayerUI {
         if (readout) readout.innerText = `${Math.round(val * 100)}%`;
       });
     });
+    this.applyAllMacros();
 
     // Snapshot buttons (Click to recall, contextmenu/long-press to save)
     this.container.querySelectorAll(".snapshot-btn").forEach((btn) => {
