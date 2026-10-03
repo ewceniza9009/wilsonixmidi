@@ -306,3 +306,131 @@ test("activate() rejects hardware-locked key for wrong device", async () => {
   const res = await licenseManager.activate(license.licenseKey);
   assert.equal(res.success, false);
 });
+
+// =====================================================
+// Trial Anti-Reset & Persistent Vault across Reinstall
+// =====================================================
+test("initOrLoadTrial() does NOT reset an expired trial back to 30 days", () => {
+  const fp = licenseManager.deviceFingerprint;
+  const expiredTime = Date.now() - 5 * 24 * 60 * 60 * 1000;
+  const startedAt = Date.now() - 35 * 24 * 60 * 60 * 1000;
+  const sig = licenseManager.computeSignatureSync(
+    `TRIAL:${fp}:${startedAt}:${expiredTime}`,
+    "MK_ELITE_TRIAL_PROTECT_2026"
+  );
+  localStorageStore["midikey_elite_trial_state"] = JSON.stringify({
+    startedAt,
+    expiresAt: expiredTime,
+    device: fp,
+    signature: sig,
+    trialDaysTotal: 30,
+  });
+
+  const lm = new LicenseManager();
+  assert.equal(lm.trialData.expiresAt, expiredTime);
+  assert.equal(lm.trialData.isExpired, true);
+  const status = lm.getAccessStatus();
+  assert.equal(status.isExpired, true);
+  assert.equal(status.daysRemaining, 0);
+  assert.equal(lm.hasProAccess(), false);
+});
+
+test("initOrLoadTrial() marks tampered trial as TAMPERED and does NOT give 30 days", () => {
+  localStorageStore["midikey_elite_trial_state"] = JSON.stringify({
+    startedAt: Date.now(),
+    expiresAt: Date.now() + 30 * 86400000,
+    device: licenseManager.deviceFingerprint,
+    signature: "TAMPERED_SIG",
+    trialDaysTotal: 30,
+  });
+
+  const lm = new LicenseManager();
+  assert.equal(lm.trialData.signature, "TAMPERED");
+  assert.equal(lm.trialData.isExpired, true);
+  const status = lm.getAccessStatus();
+  assert.equal(status.isExpired, true);
+  assert.equal(status.daysRemaining, 0);
+  assert.equal(lm.hasProAccess(), false);
+});
+
+test("syncPersistentTrial() restores earlier trial start date across reinstall / wiped localStorage", async () => {
+  const fp = licenseManager.deviceFingerprint;
+  const originalStartedAt = Date.now() - 15 * 86400000; // 15 days ago
+  const originalExpiresAt = originalStartedAt + 30 * 86400000;
+  const vaultSig = licenseManager.computeSignatureSync(
+    `TRIAL_VAULT:${fp}:${originalStartedAt}:${originalExpiresAt}`,
+    "MK_ELITE_TRIAL_PROTECT_2026"
+  );
+
+  const vaultPayload = JSON.stringify({
+    version: 1,
+    device: fp,
+    startedAt: originalStartedAt,
+    expiresAt: originalExpiresAt,
+    lastSeenAt: Date.now() - 1 * 86400000,
+    isExpired: false,
+    signature: vaultSig,
+  });
+
+  globalThis.window.__TAURI_INTERNALS__ = {
+    invoke: async (cmd) => {
+      if (cmd === "load_persistent_trial_vault") return vaultPayload;
+      return null;
+    },
+  };
+
+  delete localStorageStore["midikey_elite_trial_state"];
+  const lm = new LicenseManager();
+  assert.ok(lm.trialData.startedAt > originalStartedAt);
+
+  await lm.syncPersistentTrial();
+
+  assert.equal(lm.trialData.startedAt, originalStartedAt);
+  assert.equal(lm.trialData.expiresAt, originalExpiresAt);
+  const status = lm.getAccessStatus();
+  assert.equal(status.isTrial, true);
+  assert.equal(status.daysRemaining, 15);
+
+  delete globalThis.window.__TAURI_INTERNALS__;
+});
+
+test("syncPersistentTrial() preserves expired trial across reinstall / wiped localStorage", async () => {
+  const fp = licenseManager.deviceFingerprint;
+  const originalStartedAt = Date.now() - 40 * 86400000;
+  const originalExpiresAt = originalStartedAt + 30 * 86400000;
+  const vaultSig = licenseManager.computeSignatureSync(
+    `TRIAL_VAULT:${fp}:${originalStartedAt}:${originalExpiresAt}`,
+    "MK_ELITE_TRIAL_PROTECT_2026"
+  );
+
+  const vaultPayload = JSON.stringify({
+    version: 1,
+    device: fp,
+    startedAt: originalStartedAt,
+    expiresAt: originalExpiresAt,
+    lastSeenAt: Date.now() - 10 * 86400000,
+    isExpired: true,
+    signature: vaultSig,
+  });
+
+  globalThis.window.__TAURI_INTERNALS__ = {
+    invoke: async (cmd) => {
+      if (cmd === "load_persistent_trial_vault") return vaultPayload;
+      return null;
+    },
+  };
+
+  delete localStorageStore["midikey_elite_trial_state"];
+  const lm = new LicenseManager();
+  await lm.syncPersistentTrial();
+
+  assert.equal(lm.trialData.startedAt, originalStartedAt);
+  assert.equal(lm.trialData.isExpired, true);
+  const status = lm.getAccessStatus();
+  assert.equal(status.isExpired, true);
+  assert.equal(status.daysRemaining, 0);
+  assert.equal(lm.hasProAccess(), false);
+
+  delete globalThis.window.__TAURI_INTERNALS__;
+});
+

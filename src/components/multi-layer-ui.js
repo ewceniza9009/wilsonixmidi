@@ -7,11 +7,13 @@
 import {
   multiLayerEngine,
   COMBI_PRESETS,
-  COMBI_TIMBRES,
+  getTimbreDisplayName,
 } from "../audio/multi-layer-engine.js";
+import { audioCore } from "../audio/audio-core.js";
 import { LAYER_FX_OPTIONS } from "../audio/native-pcm-engine.js";
 import { CustomPatchBrowserUI } from "./custom-patch-browser.js";
 import { CustomModal } from "./custom-modal.js";
+import { timbreSearchModal } from "./timbre-search-modal.js";
 
 const esc = (s) =>
   String(s).replace(
@@ -21,7 +23,6 @@ const esc = (s) =>
         m
       ],
   );
-console.log("Reloading multi-layer-ui.js - Layout Fix v3");
 
 const NOTE_NAMES = [
   "C",
@@ -78,8 +79,14 @@ export class MultiLayerUI {
     this.render();
     this.bindEvents();
 
-    multiLayerEngine.onLayerChangeCallback = () => {
+    this._layerChangeListener = () => {
       this.updateLayerFaders();
+    };
+    multiLayerEngine.addLayerChangeListener(this._layerChangeListener);
+    multiLayerEngine.onLayerChangeCallback = this._layerChangeListener;
+
+    multiLayerEngine.onLayerActivityCallback = (layerIdx, vel, gain) => {
+      this.triggerLayerActivity(layerIdx, vel, gain);
     };
 
     this._splitListener = () => {
@@ -243,25 +250,39 @@ export class MultiLayerUI {
             <div class="layer-strips-rack" style="display: grid; grid-template-columns: repeat(4, minmax(160px, 1fr)); gap: 8px; padding-bottom: 5px; flex-shrink: 0;">
             ${multiLayerEngine.layers
               .map(
-                (layer, idx) => `
-            <div class="layer-channel-strip ${layer.enabled ? "active" : "muted"}" id="layer-strip-${idx}">
+                (layer, idx) => {
+                  const hasSolo = multiLayerEngine.layers.some((l) => l.solo);
+                  const isDimmed = hasSolo && !layer.solo;
+                  return `
+            <div class="layer-channel-strip ${layer.enabled ? "active" : "muted"} ${layer.solo ? "is-soloed" : ""} ${isDimmed ? "solo-dimmed" : ""}" id="layer-strip-${idx}">
               <div class="strip-header">
-                <button class="layer-power-btn ${layer.enabled ? "active" : ""}" data-layer="${idx}">
-                  ${layer.enabled ? "ON" : "MUTE"}
-                </button>
-                <span class="strip-num">LAYER ${idx + 1}</span>
-              </div>
-              <div class="strip-layer-name" data-layer="${idx}" title="${esc(layer.name)}">${esc(layer.name)}</div>
-
-              <!-- Instrument Picker (searchable: all PCM workstation banks + every Triton tab bank incl. VA) -->
-              <div class="strip-inst-picker timbre-picker" data-layer="${idx}">
-                <label class="strip-picker-label">TIMBRE / SOUNDBANK 🔍</label>
-                <div class="timbre-combo">
-                  <input type="text" class="timbre-combo-input" data-layer="${idx}"
-                         placeholder="Search ${COMBI_TIMBRES.length} PCM + VA timbres..."
-                         value="${esc(layer.name || "")}" autocomplete="off" spellcheck="false" />
-                  <div class="timbre-combo-list" data-layer="${idx}"></div>
+                <div style="display:flex;align-items:center;gap:4px;">
+                  <button class="layer-power-btn ${layer.enabled ? "active" : ""}" data-layer="${idx}" title="${layer.enabled ? "Mute" : "Unmute"} Layer ${idx + 1}">
+                    ${layer.enabled ? "ON" : "MUTE"}
+                  </button>
+                  <button class="layer-solo-btn ${layer.solo ? "active" : ""}" data-layer="${idx}" title="Solo Layer ${idx + 1}">
+                    S
+                  </button>
                 </div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span class="strip-sig-led" id="sig-led-${idx}" title="Audio Signal Activity"></span>
+                  <span class="strip-num">L${idx + 1}</span>
+                </div>
+              </div>
+              <div class="strip-layer-name" data-layer="${idx}" title="${esc(getTimbreDisplayName(layer.inst, layer.name))}">${esc(getTimbreDisplayName(layer.inst, layer.name))}</div>
+
+              <!-- Instrument Picker (Touch-friendly trigger: opens Soundbank Popup Modal) -->
+              <div class="strip-inst-picker timbre-picker" data-layer="${idx}">
+                <label class="strip-picker-label">TIMBRE / SOUNDBANK</label>
+                <button type="button" class="timbre-picker-trigger" data-layer="${idx}" title="Click to browse sounds">
+                  <div class="timbre-trigger-info">
+                    <span class="timbre-trigger-badge ${layer.inst?.startsWith("va:") ? "badge-va" : "badge-pcm"}">
+                      ${layer.inst?.startsWith("va:") ? "VA" : "PCM"}
+                    </span>
+                    <span class="timbre-trigger-name">${esc(getTimbreDisplayName(layer.inst, layer.name))}</span>
+                  </div>
+                  <span class="timbre-trigger-icon">🔍</span>
+                </button>
               </div>
 
               <!-- Dedicated Layer Effects Combo Box (Rack FX Insert) -->
@@ -316,6 +337,9 @@ export class MultiLayerUI {
                          step="0.05" 
                          value="${layer.gain}" 
                          data-layer="${idx}"/>
+                  <div class="strip-meter-track" title="Real-Time Signal Level">
+                    <div class="strip-meter-fill" id="meter-fill-${idx}"></div>
+                  </div>
                 </div>
                 <div class="fader-readout" id="fader-val-${idx}">${Math.round(layer.gain * 100)}%</div>
               </div>
@@ -330,7 +354,8 @@ export class MultiLayerUI {
                 <span class="strip-role-tag">${idx === 0 ? "PRIMARY" : idx === 1 ? "ENSEMBLE" : idx === 2 ? "ACCENT" : "SUB/BASS"}</span>
               </div>
             </div>
-          `,
+          `;
+                },
               )
               .join("")}
         </div>
@@ -376,13 +401,16 @@ export class MultiLayerUI {
                   </div>
                   <div class="strip-layer-name split-zone-name" id="split-name-${zk}" title="${esc(z.name || "Current Stack")}">${esc(z.name || "Current Stack")}</div>
                   <div class="strip-inst-picker timbre-picker" data-split-zone="${zk}">
-                    <label class="strip-picker-label">ZONE TIMBRE 🔍</label>
-                    <div class="timbre-combo" data-split-zone="${zk}">
-                      <input type="text" class="timbre-combo-input" data-split-zone="${zk}"
-                             placeholder="Search ${COMBI_TIMBRES.length} PCM + VA timbres..."
-                             value="${esc(isStack ? "Follow Current Stack" : z.name || "")}" autocomplete="off" spellcheck="false" />
-                      <div class="timbre-combo-list" data-split-zone="${zk}"></div>
-                    </div>
+                    <label class="strip-picker-label">ZONE TIMBRE</label>
+                    <button type="button" class="timbre-picker-trigger" data-split-zone="${zk}" title="Click to browse zone sound">
+                      <div class="timbre-trigger-info">
+                        <span class="timbre-trigger-badge ${isStack ? "badge-auto" : (z.inst?.startsWith("va:") ? "badge-va" : "badge-pcm")}">
+                          ${isStack ? "AUTO" : (z.inst?.startsWith("va:") ? "VA" : "PCM")}
+                        </span>
+                        <span class="timbre-trigger-name">${esc(isStack ? "Follow Current Stack" : z.name || "Select Sound")}</span>
+                      </div>
+                      <span class="timbre-trigger-icon">🔍</span>
+                    </button>
                   </div>
                   <div class="strip-fx-picker">
                     <label class="strip-picker-label">INSERT EFFECT / DSP</label>
@@ -467,16 +495,7 @@ export class MultiLayerUI {
     this.container.querySelector("#init-layers-btn")?.addEventListener("click", async () => {
       const ok = await CustomModal.confirm("Clear Layers", "Are you sure you want to clear all layers and initialize a blank stack?");
       if (!ok) return;
-      multiLayerEngine.layers.forEach((l, i) => {
-        multiLayerEngine.setLayerInstrument(i, null);
-        multiLayerEngine.setLayerGain(i, 0.85);
-        multiLayerEngine.setLayerOctave(i, 0);
-        multiLayerEngine.setLayerFx(i, null);
-        if (i !== 0) multiLayerEngine.toggleLayer(i, false);
-        else multiLayerEngine.toggleLayer(i, true);
-      });
-      multiLayerEngine.toggleSplitMode(false);
-      multiLayerEngine.activeCombi = { id: "init", name: "Init Program" };
+      multiLayerEngine.clearAllLayers();
       this.combiSearchQuery = "";
       this.updateCombiSelectorActive();
       this.render();
@@ -485,10 +504,18 @@ export class MultiLayerUI {
 
     // Mount the Custom Patch Browser UI inside this tab
     setTimeout(() => {
-      // Always create a fresh instance because the mount node is recreated on every render
+      if (this.customPatchBrowser && typeof this.customPatchBrowser.destroy === "function") {
+        this.customPatchBrowser.destroy();
+        this.customPatchBrowser = null;
+      }
       this.customPatchBrowser = new CustomPatchBrowserUI(
         "combi-custom-browser-mount",
-        window.appCore,
+        {
+          multiLayerEngine,
+          get fxRack() {
+            return audioCore.fxRack;
+          },
+        },
       );
     }, 0);
 
@@ -502,8 +529,18 @@ export class MultiLayerUI {
       });
     });
 
-    // Instrument Pickers (searchable timbre combobox)
-    this.bindTimbreCombos();
+    // Layer Solo toggles
+    this.container.querySelectorAll(".layer-solo-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const idx = parseInt(btn.getAttribute("data-layer"));
+        multiLayerEngine.toggleLayerSolo(idx);
+        this.render();
+        this.bindEvents();
+      });
+    });
+
+    // Instrument Pickers (modal popup trigger)
+    this.bindTimbreTriggers();
 
     // Effects Combo Box Pickers per Rack
     this.container.querySelectorAll(".layer-fx-select").forEach((sel) => {
@@ -586,180 +623,41 @@ export class MultiLayerUI {
       });
   }
 
-  bindTimbreCombos() {
-    this.container.querySelectorAll(".timbre-combo").forEach((combo) => {
-      const input = combo.querySelector(".timbre-combo-input");
-      const list = combo.querySelector(".timbre-combo-list");
-      if (!input || !list) return;
+  bindTimbreTriggers() {
+    this.container.querySelectorAll(".timbre-picker-trigger").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const zoneKey = btn.getAttribute("data-split-zone");
+        const layerIdx = zoneKey ? null : parseInt(btn.getAttribute("data-layer") || "0", 10);
 
-      const zoneKey = combo.getAttribute("data-split-zone");
-      const layerIdx = zoneKey
-        ? null
-        : parseInt(
-            combo.getAttribute("data-layer") ||
-              input.getAttribute("data-layer") ||
-              "0",
-          );
-
-      const selectedValue = () =>
-        zoneKey
-          ? multiLayerEngine.splitZones[zoneKey]?.inst
-          : multiLayerEngine.layers[layerIdx]?.inst;
-      const selectedName = () =>
-        zoneKey
-          ? multiLayerEngine.splitZones[zoneKey]?.name
-          : multiLayerEngine.layers[layerIdx]?.name;
-      const isStackMode =
-        zoneKey && (!selectedValue() || selectedValue() === "current_stack");
-
-      const close = () => list.classList.remove("open");
-
-      const renderList = () => {
-        const q = input.value.trim().toLowerCase();
-        let items = COMBI_TIMBRES.filter(
-          (t) =>
-            !q ||
-            (t.name && t.name.toLowerCase().includes(q)) ||
-            (t.bank || "").toLowerCase().includes(q) ||
-            (t.category || "").toLowerCase().includes(q) ||
-            (t.code || "").toLowerCase().includes(q),
-        );
-        items = items.slice(0, 80);
-        const selVal = selectedValue();
-        const selName = selectedName();
-
-        const stackRow = zoneKey
-          ? `<div class="timbre-opt ${isStackMode ? "selected" : ""}" data-value="current_stack">
-              <span class="timbre-opt-name">Follow Current Stack</span>
-              <span class="timbre-opt-meta">▸ PLAYS THE ACTIVE COMBI / SINGLE PROGRAM</span>
-            </div>`
-          : "";
-
-        const rows = items
-          .map(
-            (t) => `
-          <div class="timbre-opt ${t.value === selVal || (selName && t.name === selName) ? "selected" : ""}" data-value="${esc(t.value)}">
-            <span class="timbre-opt-name">${esc(t.name)}</span>
-            <span class="timbre-opt-meta">${t.kind === "va" ? "⚙ VA OSCILLATOR" : "▤ PCM / SAMPLE"} · ${esc(t.bank)}${t.code ? " · " + esc(t.code) : ""}</span>
-          </div>`,
-          )
-          .join("");
-
-        if (!rows && !stackRow) {
-          list.innerHTML = `<div class="timbre-opt-empty">No timbres match "${esc(input.value)}" — try program names or codes like "A000"</div>`;
-          list.classList.add("open");
-          return;
-        }
-        list.innerHTML = stackRow + rows;
-        list.classList.add("open");
-      };
-
-      const selectOption = (optEl) => {
-        if (!optEl) return;
-        const value = optEl.getAttribute("data-value");
         if (zoneKey) {
-          if (value === "current_stack") {
-            multiLayerEngine.setSplitZoneStack(zoneKey);
-          } else {
-            multiLayerEngine.setSplitZoneInstrument(zoneKey, value);
-          }
-          const nameEl = optEl.querySelector(".timbre-opt-name");
-          if (nameEl) input.value = nameEl.textContent;
+          const zone = multiLayerEngine.splitZones[zoneKey];
+          timbreSearchModal.open({
+            zoneKey,
+            currentInst: zone?.inst,
+            currentName: zone?.name || "Follow Current Stack",
+            onSelect: (val) => {
+              if (val === "current_stack") {
+                multiLayerEngine.setSplitZoneStack(zoneKey);
+              } else {
+                multiLayerEngine.setSplitZoneInstrument(zoneKey, val);
+              }
+              this.render();
+              this.bindEvents();
+            },
+          });
         } else {
-          multiLayerEngine.setLayerInstrument(layerIdx, value);
-          const nameEl = optEl.querySelector(".timbre-opt-name");
-          if (nameEl) input.value = nameEl.textContent;
+          const layer = multiLayerEngine.layers[layerIdx];
+          timbreSearchModal.open({
+            layerIndex: layerIdx,
+            currentInst: layer?.inst,
+            currentName: layer?.name,
+            onSelect: (val) => {
+              multiLayerEngine.setLayerInstrument(layerIdx, val);
+              this.render();
+              this.bindEvents();
+            },
+          });
         }
-        close();
-        input.focus();
-      };
-
-      input.addEventListener("focus", renderList);
-      // Debounced (P1): the list rebuild (~80 rows of innerHTML) used to run
-      // synchronously on every keystroke. Enter flushes the pending render so
-      // keyboard selection always matches the latest filter.
-      let _listDebounce = null;
-      const flushListRender = () => {
-        if (_listDebounce) {
-          clearTimeout(_listDebounce);
-          _listDebounce = null;
-        }
-        renderList();
-      };
-      input.addEventListener("input", () => {
-        clearTimeout(_listDebounce);
-        _listDebounce = setTimeout(renderList, 160);
-      });
-      input.addEventListener("click", () => {
-        if (!list.classList.contains("open")) renderList();
-      });
-      input.addEventListener("blur", close);
-
-      // Speculative prefetch (P1): hovering/pressing a PCM timbre starts its
-      // decode before selection. Throttled + budget-guarded so scrolling the
-      // list can never blow up decoded RAM.
-      let _prefetchAt = 0;
-      const prefetchTimbre = (value) => {
-        if (!value || value.startsWith("va:") || value === "current_stack")
-          return;
-        const now = Date.now();
-        if (now - _prefetchAt < 300) return;
-        _prefetchAt = now;
-        try {
-          const pcm = multiLayerEngine.pcmEngine;
-          if (!pcm || typeof pcm.preloadInstrument !== "function") return;
-          const resolved = multiLayerEngine.resolveBankKey(value);
-          if (pcm.decodedBuffers?.get(resolved)?.size > 0) return;
-          if (typeof pcm.getDecodedBufferStats === "function") {
-            const stats = pcm.getDecodedBufferStats();
-            if ((stats?.bytes || 0) + 1024 * 1024 > (stats?.budget || 0) * 0.8)
-              return;
-          }
-          pcm.preloadInstrument(resolved).catch(() => {});
-        } catch (e) {}
-      };
-      list.addEventListener("pointerover", (e) => {
-        const opt = e.target.closest(".timbre-opt");
-        if (opt) prefetchTimbre(opt.getAttribute("data-value"));
-      });
-      list.addEventListener("pointerdown", (e) => {
-        const opt = e.target.closest(".timbre-opt");
-        if (opt) prefetchTimbre(opt.getAttribute("data-value"));
-      });
-
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-          e.preventDefault();
-          const opts = [...list.querySelectorAll(".timbre-opt")];
-          if (!opts.length) return;
-          const cur = opts.findIndex((o) => o.classList.contains("active"));
-          const next =
-            e.key === "ArrowDown"
-              ? (cur + 1) % opts.length
-              : cur <= 0
-                ? opts.length - 1
-                : cur - 1;
-          opts.forEach((o, i) => o.classList.toggle("active", i === next));
-          opts[next]?.scrollIntoView({ block: "nearest" });
-        } else if (e.key === "Enter") {
-          e.preventDefault();
-          flushListRender();
-          const opts = [...list.querySelectorAll(".timbre-opt")];
-          const active =
-            opts.find((o) => o.classList.contains("active")) || opts[0];
-          if (active) selectOption(active);
-        } else if (e.key === "Escape") {
-          e.preventDefault();
-          close();
-          input.blur();
-        }
-      });
-
-      // mousedown preventDefault keeps input focus so blur->close doesn't race the click
-      list.addEventListener("mousedown", (e) => e.preventDefault());
-      list.addEventListener("click", (e) => {
-        const opt = e.target.closest(".timbre-opt");
-        if (opt) selectOption(opt);
       });
     });
   }
@@ -785,30 +683,75 @@ export class MultiLayerUI {
       );
       if (fxSelect && l.fx) fxSelect.value = l.fx;
 
-      const instInput = this.container.querySelector(
-        `.timbre-combo-input[data-layer="${i}"]`,
+      const trigger = this.container.querySelector(
+        `.timbre-picker-trigger[data-layer="${i}"]`,
       );
-      if (instInput && l.name) instInput.value = l.name;
+      const displayName = getTimbreDisplayName(l.inst, l.name);
+      if (trigger) {
+        const nameSpan = trigger.querySelector(".timbre-trigger-name");
+        const badgeSpan = trigger.querySelector(".timbre-trigger-badge");
+        if (nameSpan) nameSpan.textContent = displayName;
+        if (badgeSpan) {
+          const isVa = l.inst?.startsWith("va:");
+          badgeSpan.className = `timbre-trigger-badge ${isVa ? "badge-va" : "badge-pcm"}`;
+          badgeSpan.textContent = isVa ? "VA" : "PCM";
+        }
+      }
 
       const nameEl = this.container.querySelector(
         `.strip-layer-name[data-layer="${i}"]`,
       );
-      if (nameEl && l.name) {
-        nameEl.innerText = l.name;
-        nameEl.title = l.name;
+      if (nameEl) {
+        nameEl.innerText = displayName;
+        nameEl.title = displayName;
       }
 
       const strip = document.getElementById(`layer-strip-${i}`);
+      const hasSolo = multiLayerEngine.layers.some((l) => l.solo);
       if (strip) {
         strip.classList.toggle("active", !!l.enabled);
         strip.classList.toggle("muted", !l.enabled);
+        strip.classList.toggle("is-soloed", !!l.solo);
+        strip.classList.toggle("solo-dimmed", hasSolo && !l.solo);
       }
       const powerBtn = this.container.querySelector(`.layer-power-btn[data-layer="${i}"]`);
       if (powerBtn) {
         powerBtn.classList.toggle("active", !!l.enabled);
         powerBtn.innerText = l.enabled ? "ON" : "MUTE";
       }
+      const soloBtn = this.container.querySelector(`.layer-solo-btn[data-layer="${i}"]`);
+      if (soloBtn) {
+        soloBtn.classList.toggle("active", !!l.solo);
+      }
+
+      const octVal = document.getElementById(`oct-val-${i}`);
+      if (octVal) {
+        const oct = l.oct || 0;
+        octVal.innerText = `${oct >= 0 ? "+" : ""}${oct}`;
+      }
     });
+  }
+
+  triggerLayerActivity(layerIdx, vel, gain) {
+    const led = document.getElementById(`sig-led-${layerIdx}`);
+    if (led) {
+      led.classList.add("active");
+      clearTimeout(this._ledTimers?.[layerIdx]);
+      if (!this._ledTimers) this._ledTimers = {};
+      this._ledTimers[layerIdx] = setTimeout(() => {
+        led.classList.remove("active");
+      }, 150);
+    }
+    const fill = document.getElementById(`meter-fill-${layerIdx}`);
+    if (fill) {
+      const pct = Math.min(100, Math.max(15, Math.round((vel / 127) * Math.min(1.25, gain || 1.0) * 100)));
+      fill.style.height = `${pct}%`;
+      clearTimeout(this._meterTimers?.[layerIdx]);
+      if (!this._meterTimers) this._meterTimers = {};
+      this._meterTimers[layerIdx] = setTimeout(() => {
+        fill.style.height = "0%";
+      }, 260);
+    }
   }
 
   updateCombiSelectorActive() {
@@ -836,6 +779,8 @@ export class MultiLayerUI {
    * and any new chips must carry the prefetch handlers too.
    */
   _bindCombiChip(btn) {
+    if (!btn || btn._bound) return;
+    btn._bound = true;
     btn.addEventListener("pointerenter", () => {
       multiLayerEngine.preloadCombi(btn.getAttribute("data-combi-search"));
     });
@@ -931,10 +876,10 @@ export class MultiLayerUI {
                 `<button class="combi-search-chip ${multiLayerEngine.activeCombi.id === cp.id ? "active" : ""}" data-combi-search="${esc(cp.id)}">${esc(cp.name)}</button>`,
             )
             .join("");
-    }
 
-    this.container?.querySelectorAll("[data-combi-search]").forEach((btn) => {
-      this._bindCombiChip(btn);
-    });
+      results.querySelectorAll("[data-combi-search]").forEach((btn) => {
+        this._bindCombiChip(btn);
+      });
+    }
   }
 }

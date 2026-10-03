@@ -165,6 +165,18 @@ test("KorgStereoChorus: bypass starts/stops LFO", () => {
   assert.equal(c._lfoRunning, false);
 });
 
+import { StudioEqLimiter } from "../src/audio/effects/eq-limiter.js";
+
+test("StudioEqLimiter: setEq sets low, mid, and high gains and exposes gain getters", () => {
+  const ctx = createMockAudioContext();
+  const eq = new StudioEqLimiter(ctx);
+  assert.equal(typeof eq.setEq, "function");
+  eq.setEq(2.5, -1.0, 3.0);
+  assert.equal(eq.lowGain.value, 2.5);
+  assert.equal(eq.midGain.value, -1.0);
+  assert.equal(eq.highGain.value, 3.0);
+});
+
 test("Effects export matching class names", () => {
   assert.equal(typeof StudioCompressor, "function");
   assert.equal(typeof BitcrusherDecimator, "function");
@@ -172,4 +184,5 @@ test("Effects export matching class names", () => {
   assert.equal(typeof HaasStereoWidener, "function");
   assert.equal(typeof TubeDrive, "function");
   assert.equal(typeof KorgStereoChorus, "function");
+  assert.equal(typeof StudioEqLimiter, "function");
 });

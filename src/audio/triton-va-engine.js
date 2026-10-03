@@ -111,17 +111,7 @@ export class TritonVirtualAnalogEngine {
     // The engine only re-reads the preset's own fields — no hardcoded DSP.
     let cutoffHz = prog.cutoff || 6000;
     let attackVal = prog.attack ?? 0.01;
-    if (prog.id === "A036") {
-      // Velo Piano ST → bright punchy bell-tine EP: triangle + octave
-      // triangle (hair of detune), bright open filter, percussive pluck body.
-      osc2 = safeWave(prog.osc2);
-      r2 = prog.r2;
-      gain1 = prog.gain1;
-      gain2 = prog.gain2;
-      gain3 = prog.gain3;
-      cutoffHz = prog.cutoff;
-      attackVal = Math.max(0.005, prog.attack ?? 0.002);
-    } else if (prog.id === "A013") {
+    if (prog.id === "A013") {
       // Piano Pad 2 → warm, soft, slow-swelling pad: near-unison detuned
       // triangles, gentle low-pass, slow attack. Reads as a pad, not a piano.
       osc2 = safeWave(prog.osc2);

@@ -2,11 +2,13 @@ import { patchStorage } from "../storage/patch-storage-manager.js";
 import { licenseManager } from "../security/license-manager.js";
 import { tonicDroneEngine } from "../audio/tonic-drone-engine.js";
 import { CustomModal } from "./custom-modal.js";
+import { multiLayerEngine, getTimbreDisplayName } from "../audio/multi-layer-engine.js";
+import { audioCore } from "../audio/audio-core.js";
 
 export class CustomPatchBrowserUI {
   constructor(containerId, appCore) {
     this.container = document.getElementById(containerId);
-    this.appCore = appCore; // Needed to interact with multi-layer-engine and fx-rack
+    this.appCore = appCore || { multiLayerEngine, get fxRack() { return audioCore.fxRack; } };
     this.patches = [];
     this.render();
     this.loadPatches();
@@ -129,8 +131,9 @@ export class CustomPatchBrowserUI {
         </div>
 
         <div class="drone-player-ui">
-          <div class="drone-header">
+          <div class="drone-header" style="justify-content: space-between; padding: 0 4px;">
             <h4>AMBIENT TONIC PAD</h4>
+            <button id="drone-stop-btn" class="drone-stop-btn" title="Stop Ambient Drone" style="background:#2a1515;border:1px solid #ff4444;color:#ff8888;font-size:9px;font-weight:700;padding:2px 8px;border-radius:3px;cursor:pointer;line-height:1.2;">■ STOP</button>
           </div>
           <div class="drone-keys">
             ${["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"].map(k => `
@@ -176,6 +179,14 @@ export class CustomPatchBrowserUI {
         }
       });
     });
+
+    const stopBtn = this.container.querySelector("#drone-stop-btn");
+    if (stopBtn) {
+      stopBtn.addEventListener("click", () => {
+        tonicDroneEngine.stopDrone();
+        droneKeys.forEach(b => b.classList.remove("active"));
+      });
+    }
 
     const volSlider = this.container.querySelector("#drone-vol-slider");
     if (volSlider) {
@@ -237,19 +248,25 @@ export class CustomPatchBrowserUI {
     const patchName = await CustomModal.prompt("Save Custom Patch", "Enter a name for this custom patch:");
     if (!patchName) return;
 
-    // Build the state object using the appCore public interfaces
-    const layersCopy = JSON.parse(JSON.stringify(this.appCore.multiLayerEngine.layers || []));
+    const mle = this.appCore?.multiLayerEngine || multiLayerEngine;
+    const fxRack = this.appCore?.fxRack || audioCore.fxRack;
+
+    // Build the state object using multiLayerEngine and fxRack with resolved timbre names
+    const layersCopy = JSON.parse(JSON.stringify(mle.layers || [])).map((l) => ({
+      ...l,
+      name: getTimbreDisplayName(l.inst, l.name),
+    }));
     
     const fxState = {
-      reverb: this.appCore.fxRack.reverb?.mix || 0,
-      delay: this.appCore.fxRack.delay?.mix || 0,
-      chorus: this.appCore.fxRack.chorus?.mix || 0,
-      phaser: this.appCore.fxRack.phaser?.mix || 0,
-      tube: this.appCore.fxRack.tube?.mix || 0,
+      reverb: fxRack?.reverb?.mix || 0,
+      delay: fxRack?.delay?.mix || 0,
+      chorus: fxRack?.chorus?.mix || 0,
+      phaser: fxRack?.phaser?.mix || 0,
+      tube: fxRack?.tube?.mix || 0,
       eq: {
-        low: this.appCore.fxRack.masterEq?.lowGain.value || 0,
-        mid: this.appCore.fxRack.masterEq?.midGain.value || 0,
-        high: this.appCore.fxRack.masterEq?.highGain.value || 0,
+        low: fxRack?.masterEq?.lowShelf?.gain?.value ?? fxRack?.masterEq?.lowGain?.value ?? 0,
+        mid: fxRack?.masterEq?.midPeak?.gain?.value ?? fxRack?.masterEq?.midGain?.value ?? 0,
+        high: fxRack?.masterEq?.highShelf?.gain?.value ?? fxRack?.masterEq?.highGain?.value ?? 0,
       }
     };
 
@@ -282,25 +299,76 @@ export class CustomPatchBrowserUI {
     if (!patch || !patch.data) return;
     console.log("Loading custom patch:", patch.name);
     
-    // Inject layers back into multiLayerEngine
+    const mle = this.appCore?.multiLayerEngine || multiLayerEngine;
+    const fxRack = this.appCore?.fxRack || audioCore.fxRack;
+
+    // Inject layers back into multiLayerEngine with resolved names
     if (patch.data.layers) {
-      this.appCore.multiLayerEngine.layers = JSON.parse(JSON.stringify(patch.data.layers));
-      this.appCore.multiLayerEngine._resolveLayerVaProgs(this.appCore.multiLayerEngine.layers);
-      this.appCore.multiLayerEngine.notifyLayerChange();
+      mle.layers = JSON.parse(JSON.stringify(patch.data.layers)).map((l) => ({
+        ...l,
+        name: getTimbreDisplayName(l.inst, l.name),
+      }));
+      while (mle.layers.length < 4) {
+        const idx = mle.layers.length;
+        mle.layers.push({
+          id: idx,
+          name: idx === 3 ? "Sub / Bass Layer" : `Layer ${idx + 1}`,
+          inst: "synth_bass_1",
+          fx: "clean",
+          gain: 0.7,
+          pan: 0,
+          oct: idx === 3 ? -1 : 0,
+          minVel: 1,
+          maxVel: 127,
+          enabled: false,
+        });
+      }
+      mle.isCombiMode = true;
+      mle.activeCombi = {
+        id: patch.id || "custom",
+        name: patch.name || "Custom Mix",
+      };
+      if (typeof mle._resolveLayerVaProgs === "function") {
+        mle._resolveLayerVaProgs(mle.layers);
+      }
+      if (mle.pcmEngine) {
+        mle.layers.forEach((layer) => {
+          if (layer.inst && !layer.inst.startsWith("va:")) {
+            const key = mle.resolveBankKey(layer.inst);
+            mle.pcmEngine.preloadInstrument(key).catch(() => {});
+          }
+        });
+      }
+      mle.syncLayerFx();
+      mle.syncPinnedInstruments();
+      mle.notifyLayerChange();
     }
     
     // Restore FX State
-    if (patch.data.fx && this.appCore.fxRack) {
+    if (patch.data.fx && fxRack) {
       const fx = patch.data.fx;
-      if (fx.reverb !== undefined) this.appCore.fxRack.reverb?.setMix(fx.reverb);
-      if (fx.delay !== undefined) this.appCore.fxRack.delay?.setMix(fx.delay);
-      if (fx.chorus !== undefined) this.appCore.fxRack.chorus?.setMix(fx.chorus);
-      if (fx.phaser !== undefined) this.appCore.fxRack.phaser?.setMix(fx.phaser);
-      if (fx.tube !== undefined) this.appCore.fxRack.tube?.setMix(fx.tube);
+      if (fx.reverb !== undefined) fxRack.reverb?.setMix(fx.reverb);
+      if (fx.delay !== undefined) fxRack.delay?.setMix(fx.delay);
+      if (fx.chorus !== undefined) fxRack.chorus?.setMix(fx.chorus);
+      if (fx.phaser !== undefined) fxRack.phaser?.setMix(fx.phaser);
+      if (fx.tube !== undefined) fxRack.tube?.setMix(fx.tube);
       
-      if (fx.eq && this.appCore.fxRack.masterEq) {
-        this.appCore.fxRack.masterEq.setEq(fx.eq.low, fx.eq.mid, fx.eq.high);
+      if (fx.eq && fxRack.masterEq) {
+        if (typeof fxRack.masterEq.setEq === "function") {
+          fxRack.masterEq.setEq(fx.eq.low ?? 0, fx.eq.mid ?? 0, fx.eq.high ?? 0);
+        } else {
+          if (typeof fxRack.masterEq.setLowGain === "function") fxRack.masterEq.setLowGain(fx.eq.low ?? 0);
+          if (typeof fxRack.masterEq.setMidGain === "function") fxRack.masterEq.setMidGain(fx.eq.mid ?? 0);
+          if (typeof fxRack.masterEq.setHighGain === "function") fxRack.masterEq.setHighGain(fx.eq.high ?? 0);
+        }
       }
     }
+  }
+
+  destroy() {
+    if (this.container) {
+      this.container.innerHTML = "";
+    }
+    this.patches = [];
   }
 }

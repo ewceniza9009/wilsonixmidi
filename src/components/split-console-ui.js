@@ -5,6 +5,7 @@
 
 import { multiLayerEngine, COMBI_TIMBRES } from "../audio/multi-layer-engine.js";
 import { LAYER_FX_OPTIONS } from "../audio/native-pcm-engine.js";
+import { timbreSearchModal } from "./timbre-search-modal.js";
 
 const esc = s => String(s).replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
 
@@ -68,12 +69,17 @@ export class SplitConsoleUI {
             <p class="split-card-hint">${isLower ? "Plays any note BELOW the split point" : "Plays any note AT or ABOVE the split point"}</p>
           </div>
           <div class="split-card-controls">
-            <label class="split-label">SOUND / INSTRUMENT — type to search</label>
-            <div class="timbre-combo" data-split-zone="${zk}">
-              <input type="text" class="timbre-combo-input" data-split-zone="${zk}"
-                     placeholder="Search ${COMBI_TIMBRES.length} PCM + VA timbres..."
-                     value="${esc(this.displayForZone(z))}" autocomplete="off" spellcheck="false" />
-              <div class="timbre-combo-list" data-split-zone="${zk}"></div>
+            <label class="split-label">SOUND / INSTRUMENT</label>
+            <div class="strip-inst-picker" data-split-zone="${zk}">
+              <button type="button" class="timbre-picker-trigger split-timbre-trigger" data-split-zone="${zk}" title="Click to browse zone sound">
+                <div class="timbre-trigger-info">
+                  <span class="timbre-trigger-badge ${!z.inst || z.inst === "current_stack" ? "badge-auto" : (z.inst?.startsWith("va:") ? "badge-va" : "badge-pcm")}">
+                    ${!z.inst || z.inst === "current_stack" ? "AUTO" : (z.inst?.startsWith("va:") ? "VA" : "PCM")}
+                  </span>
+                  <span class="timbre-trigger-name">${esc(this.displayForZone(z))}</span>
+                </div>
+                <span class="timbre-trigger-icon">🔍</span>
+              </button>
             </div>
             <label class="split-label">INSERT EFFECT</label>
             <select class="split-fx-select" data-zone="${zk}">
@@ -146,10 +152,17 @@ export class SplitConsoleUI {
     this.container?.querySelector(".split-console-view")?.classList.toggle("on", on);
 
     ["lower", "upper"].forEach(zk => {
-      const z = split[zk];
-      const input = this.container?.querySelector(`.timbre-combo-input[data-split-zone="${zk}"]`);
-      if (input && !input.matches(":focus")) {
-        input.value = this.displayForZone(z);
+      const trigger = this.container?.querySelector(`.timbre-picker-trigger[data-split-zone="${zk}"]`);
+      if (trigger) {
+        const nameSpan = trigger.querySelector(".timbre-trigger-name");
+        const badgeSpan = trigger.querySelector(".timbre-trigger-badge");
+        const isStack = !z.inst || z.inst === "current_stack";
+        const isVa = z.inst?.startsWith("va:");
+        if (nameSpan) nameSpan.textContent = this.displayForZone(z);
+        if (badgeSpan) {
+          badgeSpan.className = `timbre-trigger-badge ${isStack ? "badge-auto" : isVa ? "badge-va" : "badge-pcm"}`;
+          badgeSpan.textContent = isStack ? "AUTO" : isVa ? "VA" : "PCM";
+        }
       }
       const fx = this.container?.querySelector(`.split-fx-select[data-zone="${zk}"]`);
       if (fx && z.fx) fx.value = z.fx;
@@ -169,100 +182,25 @@ export class SplitConsoleUI {
 
   bindCombos() {
     if (!this.container) return;
-    this.container.querySelectorAll(".timbre-combo").forEach(combo => {
-      const input = combo.querySelector(".timbre-combo-input");
-      const list = combo.querySelector(".timbre-combo-list");
-      if (!input || !list) return;
-
-      const zk = combo.getAttribute("data-split-zone");
-      const selectedValue = () => multiLayerEngine.splitZones[zk]?.inst;
-      const selectedName = () => this.displayForZone(multiLayerEngine.splitZones[zk]);
-      const isStackMode = () => {
-        const v = selectedValue();
-        return !v || v === "current_stack";
-      };
-
-      const close = () => list.classList.remove("open");
-
-      const renderList = () => {
-        const q = input.value.trim().toLowerCase();
-        let items = COMBI_TIMBRES.filter(t =>
-          !q ||
-          (t.name && t.name.toLowerCase().includes(q)) ||
-          (t.bank || "").toLowerCase().includes(q) ||
-          (t.category || "").toLowerCase().includes(q) ||
-          (t.code || "").toLowerCase().includes(q)
-        );
-        items = items.slice(0, 60);
-        const selVal = selectedValue();
-        const selName = selectedName();
-
-        const stackRow = `
-          <div class="timbre-opt ${isStackMode() ? "selected" : ""}" data-value="current_stack">
-            <span class="timbre-opt-name">Follow Current Stack</span>
-            <span class="timbre-opt-meta">&#9654; PLAYS THE ACTIVE COMBI / SINGLE PROGRAM</span>
-          </div>`;
-
-        const rows = items.map(
-          t => `
-          <div class="timbre-opt ${t.value === selVal || (selName && t.name === selName) ? "selected" : ""}" data-value="${esc(t.value)}">
-            <span class="timbre-opt-name">${esc(t.name)}</span>
-            <span class="timbre-opt-meta">${t.kind === "va" ? "VA OSCILLATOR" : "PCM / SAMPLE"} · ${esc(t.bank)}${t.code ? " · " + esc(t.code) : ""}</span>
-          </div>`
-        ).join("");
-
-        if (!rows && !stackRow) {
-          list.innerHTML = `<div class="timbre-opt-empty">No timbres match "${esc(input.value)}"</div>`;
-          list.classList.add("open");
-          return;
-        }
-        list.innerHTML = stackRow + rows;
-        list.classList.add("open");
-      };
-
-      const selectOption = optEl => {
-        if (!optEl) return;
-        const value = optEl.getAttribute("data-value");
-        if (value === "current_stack") {
-          multiLayerEngine.setSplitZoneStack(zk);
-        } else {
-          multiLayerEngine.setSplitZoneInstrument(zk, value);
-        }
-        const nameEl = optEl.querySelector(".timbre-opt-name");
-        if (nameEl) input.value = nameEl.textContent;
-        close();
-        input.focus();
-      };
-
-      input.addEventListener("focus", renderList);
-      input.addEventListener("input", renderList);
-      input.addEventListener("click", () => { if (!list.classList.contains("open")) renderList(); });
-      input.addEventListener("blur", close);
-
-      input.addEventListener("keydown", e => {
-        const opts = [...list.querySelectorAll(".timbre-opt")];
-        if (!opts.length) return;
-        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-          e.preventDefault();
-          const cur = opts.findIndex(o => o.classList.contains("active"));
-          const next = e.key === "ArrowDown" ? (cur + 1) % opts.length : (cur <= 0 ? opts.length - 1 : cur - 1);
-          opts.forEach((o, i) => o.classList.toggle("active", i === next));
-          opts[next]?.scrollIntoView({ block: "nearest" });
-        } else if (e.key === "Enter") {
-          e.preventDefault();
-          const active = opts.find(o => o.classList.contains("active")) || opts[0];
-          if (active) selectOption(active);
-        } else if (e.key === "Escape") {
-          e.preventDefault();
-          close();
-          input.blur();
-        }
-      });
-
-      list.addEventListener("mousedown", e => e.preventDefault());
-      list.addEventListener("click", e => {
-        const opt = e.target.closest(".timbre-opt");
-        if (opt) selectOption(opt);
+    this.container.querySelectorAll(".timbre-picker-trigger").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const zk = btn.getAttribute("data-split-zone");
+        const z = multiLayerEngine.splitZones[zk];
+        timbreSearchModal.open({
+          zoneKey: zk,
+          currentInst: z?.inst,
+          currentName: this.displayForZone(z),
+          onSelect: (val) => {
+            if (val === "current_stack") {
+              multiLayerEngine.setSplitZoneStack(zk);
+            } else {
+              multiLayerEngine.setSplitZoneInstrument(zk, val);
+            }
+            this.render();
+            this.bindCombos();
+            this.bindEvents();
+          },
+        });
       });
     });
   }

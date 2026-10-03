@@ -63,6 +63,24 @@ export class StudioEqLimiter {
     this.highShelf.gain.setTargetAtTime(Math.max(-12, Math.min(12, db)), this.ctx.currentTime, 0.02);
   }
 
+  setEq(lowDb = 0, midDb = 0, highDb = 0) {
+    this.setLowGain(lowDb);
+    this.setMidGain(midDb);
+    this.setHighGain(highDb);
+  }
+
+  get lowGain() {
+    return this.lowShelf.gain;
+  }
+
+  get midGain() {
+    return this.midPeak.gain;
+  }
+
+  get highGain() {
+    return this.highShelf.gain;
+  }
+
   setBypass(bypassed) {
     this.enabled = !bypassed;
     if (bypassed) {

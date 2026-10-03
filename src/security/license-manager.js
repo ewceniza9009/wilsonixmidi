@@ -1,4 +1,8 @@
 import { LICENSE_PUBLIC_KEY_SPKI, LICENSE_ALGORITHM } from "./license-public-key.js";
+import {
+  loadPersistentTrialVault,
+  savePersistentTrialVault,
+} from "./persistent-trial-vault.js";
 
 function hexOrBase64ToUint8Array(str) {
   const clean = str.trim();
@@ -39,6 +43,7 @@ export class LicenseManager {
     this.licenseData = this.loadLicense();
     this.trialData = this.initOrLoadTrial();
     this.revalidateLicense();
+    this.syncPersistentTrial();
   }
 
   async getCryptoPublicKey() {
@@ -195,6 +200,8 @@ export class LicenseManager {
           device: this.deviceFingerprint,
           signature: "NODE_TEST",
           trialDaysTotal: 30,
+          lastSeenAt: Date.now(),
+          isExpired: false,
         };
       }
 
@@ -203,42 +210,52 @@ export class LicenseManager {
       const trialDurationMs = 30 * 24 * 60 * 60 * 1000; // 30 Days
 
       if (stored) {
-        const parsed = JSON.parse(stored);
-        // Verify tamper signature
-        const expectedSig = this.computeSignatureSync(
-          `TRIAL:${this.deviceFingerprint}:${parsed.startedAt}:${parsed.expiresAt}`,
-          TRIAL_SALT
-        );
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed && typeof parsed.startedAt === "number" && typeof parsed.expiresAt === "number") {
+            const expectedSig = this.computeSignatureSync(
+              `TRIAL:${this.deviceFingerprint}:${parsed.startedAt}:${parsed.expiresAt}`,
+              TRIAL_SALT
+            );
 
-        if (parsed.signature === expectedSig && typeof parsed.expiresAt === "number") {
-          return parsed;
-        } else if (typeof parsed.expiresAt === "number" && parsed.expiresAt > now && parsed.startedAt <= now) {
-          // Gracefully re-sign valid active trial from previous version
-          parsed.signature = expectedSig;
-          parsed.device = this.deviceFingerprint;
-          localStorage.setItem(this.trialStorageKey, JSON.stringify(parsed));
-          return parsed;
-        } else {
-          console.warn("Trial state expired or invalid. Resetting to new 30-Day trial.");
-          const startedAt = now;
-          const expiresAt = now + trialDurationMs;
-          const signature = this.computeSignatureSync(
-            `TRIAL:${this.deviceFingerprint}:${startedAt}:${expiresAt}`,
-            TRIAL_SALT
-          );
-          const newTrial = {
-            startedAt,
-            expiresAt,
-            device: this.deviceFingerprint,
-            signature,
-            trialDaysTotal: 30,
-          };
-          localStorage.setItem(this.trialStorageKey, JSON.stringify(newTrial));
-          return newTrial;
+            // Monotonic time anchor — mitigate system clock rollback tampering
+            const lastSeen = typeof parsed.lastSeenAt === "number" ? parsed.lastSeenAt : parsed.startedAt;
+            if (now < lastSeen - (2 * 3600 * 1000)) {
+              console.warn("[LicenseManager] Clock rollback detected.");
+            }
+            parsed.lastSeenAt = Math.max(now, lastSeen);
+
+            const isSigMatch = parsed.signature === expectedSig;
+            const isLegacyValid = !parsed.signature && typeof parsed.expiresAt === "number" && parsed.expiresAt > now && parsed.startedAt <= now;
+
+            if (isSigMatch || isLegacyValid) {
+              if (!isSigMatch) {
+                parsed.signature = expectedSig;
+                parsed.device = this.deviceFingerprint;
+              }
+              if (parsed.expiresAt <= now || parsed.isExpired === true) {
+                parsed.isExpired = true;
+              }
+              localStorage.setItem(this.trialStorageKey, JSON.stringify(parsed));
+              return parsed;
+            }
+
+            // Tampered trial record: lock Pro access, DO NOT reset to a new trial
+            console.warn("[LicenseManager] Tampered trial state detected.");
+            parsed.signature = "TAMPERED";
+            parsed.isExpired = true;
+            localStorage.setItem(this.trialStorageKey, JSON.stringify(parsed));
+            return parsed;
+          }
+        } catch (e) {
+          console.warn("[LicenseManager] Corrupted trial in storage:", e);
         }
       }
 
-      // First run: create new 30-Day Trial record
+      // First run in this localStorage partition:
+      // Note: syncPersistentTrial() will immediately check external persistent anchors
+      // (Desktop Tauri vault / Android Documents anchor / IndexedDB) to restore any previous
+      // trial progress if the app was uninstalled and reinstalled.
       const startedAt = now;
       const expiresAt = now + trialDurationMs;
       const signature = this.computeSignatureSync(
@@ -252,6 +269,8 @@ export class LicenseManager {
         device: this.deviceFingerprint,
         signature,
         trialDaysTotal: 30,
+        lastSeenAt: now,
+        isExpired: false,
       };
 
       localStorage.setItem(this.trialStorageKey, JSON.stringify(newTrial));
@@ -264,7 +283,100 @@ export class LicenseManager {
         device: this.deviceFingerprint,
         signature: "FALLBACK",
         trialDaysTotal: 30,
+        lastSeenAt: Date.now(),
+        isExpired: false,
       };
+    }
+  }
+
+  /**
+   * Synchronizes trial state with persistent storage outside the app sandbox
+   * (survives uninstall and reinstall on both Desktop and Android).
+   */
+  async syncPersistentTrial() {
+    try {
+      const vaultStr = await loadPersistentTrialVault();
+      const now = Date.now();
+
+      if (vaultStr) {
+        let vault = null;
+        try {
+          vault = JSON.parse(vaultStr);
+        } catch {
+          vault = null;
+        }
+
+        if (vault && typeof vault.startedAt === "number" && typeof vault.expiresAt === "number") {
+          const expectedVaultSig = this.computeSignatureSync(
+            `TRIAL_VAULT:${this.deviceFingerprint}:${vault.startedAt}:${vault.expiresAt}`,
+            TRIAL_SALT
+          );
+
+          if (vault.signature === expectedVaultSig && vault.device === this.deviceFingerprint) {
+            const isVaultExpired = vault.expiresAt <= now || vault.isExpired === true;
+            const currentStartedAt = this.trialData ? this.trialData.startedAt : now;
+
+            // If this device was previously installed and has an earlier start date or was expired:
+            if (isVaultExpired || vault.startedAt < currentStartedAt) {
+              console.log("[LicenseManager] Persistent hardware anchor found across reinstall. Restoring true trial progress.");
+              const restoredTrial = {
+                startedAt: vault.startedAt,
+                expiresAt: vault.expiresAt,
+                device: this.deviceFingerprint,
+                signature: this.computeSignatureSync(
+                  `TRIAL:${this.deviceFingerprint}:${vault.startedAt}:${vault.expiresAt}`,
+                  TRIAL_SALT
+                ),
+                trialDaysTotal: 30,
+                lastSeenAt: Math.max(now, vault.lastSeenAt || 0),
+                isExpired: isVaultExpired,
+              };
+              this.trialData = restoredTrial;
+              if (typeof localStorage !== "undefined") {
+                localStorage.setItem(this.trialStorageKey, JSON.stringify(restoredTrial));
+              }
+              if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+                window.dispatchEvent(
+                  new CustomEvent("wilsonix-access-changed", {
+                    detail: this.getAccessStatus(),
+                  })
+                );
+              }
+              return;
+            }
+          } else {
+            console.warn("[LicenseManager] Persistent anchor signature mismatch or different device.");
+          }
+        }
+      }
+
+      // Save current valid trial state to persistent anchor if not yet present
+      if (this.trialData && this.trialData.signature !== "NODE_TEST" && this.trialData.signature !== "FALLBACK") {
+        await this.savePersistentAnchor(this.trialData);
+      }
+    } catch (e) {
+      console.warn("[LicenseManager] Persistent trial sync error:", e);
+    }
+  }
+
+  async savePersistentAnchor(trial) {
+    if (!trial || typeof trial.startedAt !== "number" || typeof trial.expiresAt !== "number") return;
+    try {
+      const vaultPayload = {
+        version: 1,
+        device: this.deviceFingerprint,
+        startedAt: trial.startedAt,
+        expiresAt: trial.expiresAt,
+        lastSeenAt: trial.lastSeenAt || Date.now(),
+        isExpired: trial.expiresAt <= Date.now() || trial.isExpired === true,
+        signature: this.computeSignatureSync(
+          `TRIAL_VAULT:${this.deviceFingerprint}:${trial.startedAt}:${trial.expiresAt}`,
+          TRIAL_SALT
+        ),
+      };
+      await savePersistentTrialVault(JSON.stringify(vaultPayload));
+    } catch (e) {
+      console.warn("[LicenseManager] Failed to save persistent anchor:", e);
     }
   }
 
@@ -292,10 +404,11 @@ export class LicenseManager {
     // Check 30-day trial status
     const now = Date.now();
     const trial = this.trialData;
-    const remainingMs = trial ? trial.expiresAt - now : 0;
+    const effectiveNow = Math.max(now, trial?.lastSeenAt || 0);
+    const remainingMs = trial ? trial.expiresAt - effectiveNow : 0;
     const daysRemaining = Math.max(0, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)));
 
-    if (remainingMs > 0 && trial?.signature !== "TAMPERED") {
+    if (remainingMs > 0 && trial?.signature !== "TAMPERED" && !trial?.isExpired) {
       return {
         isLicensed: false,
         isTrial: true,

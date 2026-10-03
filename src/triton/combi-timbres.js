@@ -10,6 +10,7 @@
  */
 
 import { TRITON_BANKS } from "./triton-soundbanks.js";
+import { HD_SOUNDBANKS } from "../audio/soundbanks.js";
 
 // Mirror of applyM1Program(): m1Type -> final playable PCM instKey
 const M1_INST = {
@@ -201,14 +202,6 @@ export function resolveTritonProgram(prog) {
   if (prog.id === "A030" && (prog.osc1 || prog.osc2)) {
     return { type: "va", prog };
   }
-  // A036 "Velo Piano ST" is a dual-triangle synth voice whose category
-  // ("Keyboard") is blacklisted by isSynthTimbre(); it therefore fell through
-  // to resolvePcmByProgram() line 123 and played the exact same PCM bank as
-  // KX_STUDIO_01 "X5D Studio Grand 96k". Route it to VA so each program has
-  // its own distinct sound.
-  if (prog.id === "A036" && (prog.osc1 || prog.osc2)) {
-    return { type: "va", prog };
-  }
   if (isSynthTimbre(prog)) {
     return { type: "va", prog };
   }
@@ -220,9 +213,19 @@ const TRITON_PCM_ENTRIES = [];
 const TRITON_PROGRAMS_BY_ID = new Map();
 const TRITON_BANK_NAME = {};
 
+const seenBanks = new Set();
+const seenProgramIds = new Set();
+
 Object.entries(TRITON_BANKS).forEach(([bankId, bank]) => {
+  if (!bank) return;
   TRITON_BANK_NAME[bankId] = bank.name;
+  if (seenBanks.has(bank)) return;
+  seenBanks.add(bank);
+
   (bank.programs || []).forEach(prog => {
+    if (seenProgramIds.has(prog.id)) return;
+    seenProgramIds.add(prog.id);
+
     const progWithBank = { ...prog, bank: bankId };
     TRITON_PROGRAMS_BY_ID.set(prog.id, progWithBank);
     const resolved = resolveTritonProgram(prog);
@@ -254,4 +257,18 @@ export function getTritonPcmEntries() {
 
 export function getTritonVaPrograms() {
   return TRITON_VA_PROGRAMS;
+}
+
+export function getTimbreDisplayName(instKey, fallbackName = "") {
+  if (!instKey) return fallbackName || "Select Timbre";
+  if (instKey === "current_stack") return "Follow Current Stack";
+  if (typeof instKey === "string" && instKey.startsWith("va:")) {
+    const progId = instKey.slice(3);
+    const prog = getTritonProgramById(progId);
+    if (prog && prog.name) return prog.name;
+  }
+  if (HD_SOUNDBANKS[instKey]?.name) return HD_SOUNDBANKS[instKey].name;
+  const pcmEntry = TRITON_PCM_ENTRIES.find((e) => e.instKey === instKey);
+  if (pcmEntry && pcmEntry.name) return pcmEntry.name;
+  return fallbackName || instKey;
 }

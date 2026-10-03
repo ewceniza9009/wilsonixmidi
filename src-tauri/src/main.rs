@@ -119,9 +119,62 @@ fn read_media(path: String) -> Result<Response, String> {
     }
 }
 
+#[tauri::command]
+fn load_persistent_trial_vault() -> Result<Option<String>, String> {
+    let mut paths = Vec::new();
+    if let Ok(home) = std::env::var("USERPROFILE").or_else(|_| std::env::var("HOME")) {
+        paths.push(PathBuf::from(home).join(".wilsonix_vault.dat"));
+    }
+    if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+        paths.push(PathBuf::from(local_app_data).join("Wilsonix").join(".sys_vault.bin"));
+    }
+    if let Ok(program_data) = std::env::var("PROGRAMDATA") {
+        paths.push(PathBuf::from(program_data).join("Wilsonix").join(".sys_vault.bin"));
+    }
+
+    for path in paths {
+        if path.exists() {
+            if let Ok(content) = std::fs::read_to_string(&path) {
+                let trimmed = content.trim();
+                if !trimmed.is_empty() {
+                    return Ok(Some(trimmed.to_string()));
+                }
+            }
+        }
+    }
+    Ok(None)
+}
+
+#[tauri::command]
+fn save_persistent_trial_vault(payload: String) -> Result<(), String> {
+    let mut paths = Vec::new();
+    if let Ok(home) = std::env::var("USERPROFILE").or_else(|_| std::env::var("HOME")) {
+        paths.push(PathBuf::from(home).join(".wilsonix_vault.dat"));
+    }
+    if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+        paths.push(PathBuf::from(local_app_data).join("Wilsonix").join(".sys_vault.bin"));
+    }
+    if let Ok(program_data) = std::env::var("PROGRAMDATA") {
+        paths.push(PathBuf::from(program_data).join("Wilsonix").join(".sys_vault.bin"));
+    }
+
+    for path in paths {
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let _ = std::fs::write(&path, &payload);
+    }
+    Ok(())
+}
+
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![pick_media, read_media])
+        .invoke_handler(tauri::generate_handler![
+            pick_media,
+            read_media,
+            load_persistent_trial_vault,
+            save_persistent_trial_vault
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

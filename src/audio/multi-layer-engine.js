@@ -32,7 +32,13 @@ export { HD_SOUNDBANKS };
 // picker UI read from one source of truth.
 export const COMBI_TIMBRES = (() => {
   const out = [];
+  const seenValues = new Set();
+  const seenNames = new Set();
+
   Object.values(HD_SOUNDBANKS).forEach((inst) => {
+    if (seenValues.has(inst.id)) return;
+    seenValues.add(inst.id);
+    seenNames.add(inst.name.toLowerCase());
     out.push({
       value: inst.id,
       name: inst.name,
@@ -43,7 +49,11 @@ export const COMBI_TIMBRES = (() => {
     });
   });
   getTritonPcmEntries().forEach((entry) => {
-    if (HD_SOUNDBANKS[entry.instKey]) return;
+    if (HD_SOUNDBANKS[entry.instKey] || seenValues.has(entry.instKey)) return;
+    const nameKey = entry.name.toLowerCase();
+    if (seenNames.has(nameKey)) return;
+    seenValues.add(entry.instKey);
+    seenNames.add(nameKey);
     out.push({
       value: entry.instKey,
       name: entry.name,
@@ -54,8 +64,14 @@ export const COMBI_TIMBRES = (() => {
     });
   });
   getTritonVaPrograms().forEach((prog) => {
+    const val = "va:" + prog.id;
+    if (seenValues.has(val)) return;
+    const nameKey = prog.name.toLowerCase();
+    if (seenNames.has(nameKey)) return;
+    seenValues.add(val);
+    seenNames.add(nameKey);
     out.push({
-      value: "va:" + prog.id,
+      value: val,
       name: prog.name,
       category: prog.category || "VA Synth",
       bank: getTritonBankName(prog.bank),
@@ -82,6 +98,22 @@ export const COMBI_TIMBRES = (() => {
   out.sort((a, b) => rank(a.category) - rank(b.category));
   return out;
 })();
+
+export function getTimbreDisplayName(instKey, fallbackName = "") {
+  if (!instKey) return fallbackName || "Select Timbre";
+  if (instKey === "current_stack") return "Follow Current Stack";
+  const found = COMBI_TIMBRES.find((t) => t.value === instKey);
+  if (found && found.name) return found.name;
+  if (typeof instKey === "string" && instKey.startsWith("va:")) {
+    const progId = instKey.slice(3);
+    const prog = getTritonProgramById(progId);
+    if (prog && prog.name) return prog.name;
+  }
+  const aliased = INST_ALIASES?.[instKey] || instKey;
+  if (HD_SOUNDBANKS[aliased]?.name) return HD_SOUNDBANKS[aliased].name;
+  if (HD_SOUNDBANKS[instKey]?.name) return HD_SOUNDBANKS[instKey].name;
+  return fallbackName || instKey;
+}
 
 /**
  * Default master-chain FX preset per combi id — used when the combi object
@@ -184,6 +216,18 @@ export const COMBI_PRESETS = {
         maxVel: 127,
         enabled: true,
       },
+      {
+        id: 3,
+        name: "Analog Worship Sub Bass",
+        inst: "synth_bass_1",
+        fx: "clean",
+        gain: 0.70,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: false,
+      },
     ],
   },
   sunday_worship_ambient_cloud: {
@@ -227,6 +271,18 @@ export const COMBI_PRESETS = {
         maxVel: 127,
         enabled: true,
       },
+      {
+        id: 3,
+        name: "Sub Bass Foundation",
+        inst: "synth_bass_1",
+        fx: "clean",
+        gain: 0.70,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: false,
+      },
     ],
   },
   sunday_worship_pulse_lead: {
@@ -269,6 +325,18 @@ export const COMBI_PRESETS = {
         minVel: 1,
         maxVel: 127,
         enabled: true,
+      },
+      {
+        id: 3,
+        name: "Analog Sub Bass",
+        inst: "synth_bass_1",
+        fx: "clean",
+        gain: 0.70,
+        pan: 0,
+        oct: -1,
+        minVel: 1,
+        maxVel: 127,
+        enabled: false,
       },
     ],
   },
@@ -3636,6 +3704,8 @@ export class MultiLayerEngine {
 
     this.onLayerChangeCallback = null;
     this.layerChangeListeners = new Set();
+    this.onLayerActivityCallback = null;
+    this._layerActivityListeners = new Set();
     this._vaEngines = new Map(); // VA oscillator engine per combi layer program
 
     // Sound-loading feedback: fires true while a newly selected preset's
@@ -4647,6 +4717,25 @@ export class MultiLayerEngine {
     // Preserve worklet nodes across combi changes — only update layer state,
     // don't recreate worklets which causes 2-4s main-thread blocks on Android.
     this.layers = JSON.parse(JSON.stringify(this.activeCombi.layers));
+    // Guard: always guarantee exactly 4 layers in combi mode
+    while (this.layers.length < 4) {
+      const idx = this.layers.length;
+      this.layers.push({
+        id: idx,
+        name: idx === 3 ? "Sub / Bass Layer" : `Layer ${idx + 1}`,
+        inst: "synth_bass_1",
+        fx: "clean",
+        gain: 0.7,
+        pan: 0,
+        oct: idx === 3 ? -1 : 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: false,
+      });
+    }
+    this.layers.forEach((l) => {
+      l.solo = false;
+    });
     this._resolveLayerVaProgs(this.layers);
 
     // Budget guard: if decoded RAM is near budget, skip eager preloads and
@@ -4705,7 +4794,7 @@ export class MultiLayerEngine {
   }
 
   toggleLayer(layerIndex, enabled) {
-    if (layerIndex === 1) {
+    if (layerIndex === 1 && !this.isCombiMode) {
       this.setDualLayerEnabled(enabled);
       return;
     }
@@ -4717,6 +4806,26 @@ export class MultiLayerEngine {
       this.syncPinnedInstruments();
       this.init();
       this.notifyLayerChange();
+    }
+  }
+
+  toggleLayerSolo(layerIndex) {
+    if (this.layers[layerIndex]) {
+      this.layers[layerIndex].solo = !this.layers[layerIndex].solo;
+      this.notifyLayerChange();
+    }
+  }
+
+  _notifyLayerActivity(layerIndex, velocity, gain) {
+    if (this.onLayerActivityCallback) {
+      try {
+        this.onLayerActivityCallback(layerIndex, velocity, gain);
+      } catch (e) {}
+    }
+    for (const cb of this._layerActivityListeners) {
+      try {
+        cb(layerIndex, velocity, gain);
+      } catch (e) {}
     }
   }
 
@@ -4740,32 +4849,129 @@ export class MultiLayerEngine {
       this.setDualLayerInstrument(instKey);
       return;
     }
-    if (this.layers[layerIndex] && instKey) {
-      if (instKey.startsWith("va:")) {
-        const prog = getTritonProgramById(instKey.slice(3));
-        if (prog) {
-          this.layers[layerIndex].inst = instKey;
-          this.layers[layerIndex].vaProg = prog;
-          this.layers[layerIndex].name = prog.name;
-        }
-      } else {
-        const resolvedKey = this.resolveBankKey(instKey);
-        this.layers[layerIndex].inst = resolvedKey;
-        delete this.layers[layerIndex].vaProg;
-        this.layers[layerIndex].name =
-          HD_SOUNDBANKS[resolvedKey]?.name ||
-          HD_SOUNDBANKS[instKey]?.name ||
-          instKey;
-        if (this.pcmEngine) {
-          this.pcmEngine.preloadInstrument(resolvedKey);
-        }
-      }
-      this.isCombiMode = true;
-      this.isSynthMode = false;
+    if (!this.layers[layerIndex]) return;
+
+    if (!instKey) {
+      this.layers[layerIndex].inst = null;
+      delete this.layers[layerIndex].vaProg;
+      this.layers[layerIndex].name = "Empty Layer";
       this.syncPinnedInstruments();
-      this.init();
       this.notifyLayerChange();
+      return;
     }
+
+    if (instKey.startsWith("va:")) {
+      const prog = getTritonProgramById(instKey.slice(3));
+      if (prog) {
+        this.layers[layerIndex].inst = instKey;
+        this.layers[layerIndex].vaProg = prog;
+        this.layers[layerIndex].name = prog.name;
+      }
+    } else {
+      const resolvedKey = this.resolveBankKey(instKey);
+      this.layers[layerIndex].inst = resolvedKey;
+      delete this.layers[layerIndex].vaProg;
+      this.layers[layerIndex].name =
+        HD_SOUNDBANKS[resolvedKey]?.name ||
+        HD_SOUNDBANKS[instKey]?.name ||
+        instKey;
+      if (this.pcmEngine) {
+        this.pcmEngine.preloadInstrument(resolvedKey);
+      }
+    }
+    this.isCombiMode = true;
+    this.isSynthMode = false;
+    this.syncPinnedInstruments();
+    this.init();
+    this.notifyLayerChange();
+  }
+
+  clearAllLayers() {
+    this.setSustainPedal(false);
+    if (this.pcmEngine) this.pcmEngine.allNotesOff(true);
+    tritonVaEngine.allNotesOff();
+    this.vaAllNotesOff();
+    synthEngine.panic();
+    if (this._workletReady && this._workletNode)
+      this._workletNode.allNotesOff();
+    this._clearHeldNoteState();
+
+    this.isCombiMode = true;
+    this.isSplitMode = false;
+    this.isSynthMode = false;
+    this.isTritonVaMode = false;
+    this.activeTritonVaProg = null;
+    this.isDualLayerActive = false;
+
+    this.layers = [
+      {
+        id: 0,
+        name: "Stage Grand Piano",
+        inst: "acoustic_grand_piano",
+        fx: "clean",
+        gain: 0.85,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: true,
+        solo: false,
+      },
+      {
+        id: 1,
+        name: "Empty Layer",
+        inst: null,
+        fx: "clean",
+        gain: 0.85,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: false,
+        solo: false,
+      },
+      {
+        id: 2,
+        name: "Empty Layer",
+        inst: null,
+        fx: "clean",
+        gain: 0.85,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: false,
+        solo: false,
+      },
+      {
+        id: 3,
+        name: "Empty Layer",
+        inst: null,
+        fx: "clean",
+        gain: 0.85,
+        pan: 0,
+        oct: 0,
+        minVel: 1,
+        maxVel: 127,
+        enabled: false,
+        solo: false,
+      },
+    ];
+
+    this.activeCombi = {
+      id: "init",
+      name: "Init Program",
+      category: "User Custom",
+      layers: JSON.parse(JSON.stringify(this.layers)),
+    };
+
+    if (this.pcmEngine) {
+      this.pcmEngine.preloadInstrument("acoustic_grand_piano");
+    }
+    this.syncLayerFx();
+    this.syncPinnedInstruments();
+    this.notifyLayerChange();
+    this.notifySplitChange();
   }
 
   toggleSplitMode(enabled) {
@@ -5104,9 +5310,11 @@ export class MultiLayerEngine {
           : 1.0;
 
       // COMBI MODE: Synchronous sample-0 trigger on all enabled PCM layers
+      const hasSolo = this.layers.some((l) => l.solo);
       for (let i = 0; i < this.layers.length; i++) {
         const layer = this.layers[i];
         if (!layer.enabled) continue;
+        if (hasSolo && !layer.solo) continue;
         if (velocity < (layer.minVel || 1) || velocity > (layer.maxVel || 127)) continue;
         if (layer.minNote != null && midiNote < layer.minNote) continue;
         if (layer.maxNote != null && midiNote > layer.maxNote) continue;
@@ -5152,6 +5360,7 @@ export class MultiLayerEngine {
             when,
           );
         }
+        this._notifyLayerActivity(i, velocity, effectiveGain);
       }
     } else {
       // SINGLE PROGRAM MODE: Normalized to match combi loudness reference

@@ -28,7 +28,8 @@ test("HD_SOUNDBANKS ids are non-empty with only the documented alias duplicate",
   const ids = Object.values(HD_SOUNDBANKS).map(e => e.id);
   assert.equal(ids.every(id => id.length > 0), true, "empty soundbank id detected");
   const dupes = [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))];
-  assert.deepEqual(dupes, ["taiko_drum"], "only the percussion_taiko alias may repeat an id");
+  const expectedDupes = HD_SOUNDBANKS.percussion_taiko ? ["taiko_drum"] : [];
+  assert.deepEqual(dupes, expectedDupes, "only known aliases may repeat an id");
 });
 
 test("HD_SOUNDBANKS includes the canonical piano and layer instruments", () => {
@@ -44,3 +45,20 @@ test("HD_SOUNDBANKS aliased keys point at their canonical instrument", () => {
     assert.equal(HD_SOUNDBANKS.percussion_taiko.id, HD_SOUNDBANKS.taiko_drum.id);
   }
 });
+
+test("Triton soundbanks and combi timbres have no duplicate preset names", async () => {
+  const { getTritonPcmEntries } = await import("../src/triton/combi-timbres.js");
+  const pcm = getTritonPcmEntries();
+  const oldRoads = pcm.filter(p => p.name.toLowerCase().includes("old roads"));
+  assert.equal(oldRoads.length, 1, "Pf:Old Roads should only appear once");
+});
+
+test("getTimbreDisplayName resolves genuine preset names for PCM, VA, and aliases", async () => {
+  const { getTimbreDisplayName } = await import("../src/triton/combi-timbres.js");
+  assert.equal(getTimbreDisplayName("acoustic_grand_piano"), "Velo Piano Concert Grand");
+  assert.equal(getTimbreDisplayName("synth_bass_1"), "Moog Prodigy Punch Bass");
+  assert.equal(getTimbreDisplayName("eos_oldroads"), "Pf:Old Roads");
+  assert.equal(getTimbreDisplayName("current_stack"), "Follow Current Stack");
+  assert.equal(getTimbreDisplayName(null, "Fallback"), "Fallback");
+});
+

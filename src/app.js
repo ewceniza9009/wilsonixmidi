@@ -82,6 +82,13 @@ class MidiKeyEliteApp {
   start() {
     console.log("Initializing MidiKey Elite Workstation...");
     this.installGlobalErrorReporter();
+    window.appCore = {
+      multiLayerEngine,
+      audioCore,
+      get fxRack() {
+        return audioCore.fxRack;
+      },
+    };
     initMobileDevice();
 
     // Memory pressure monitor - MUST start early to catch OOM
@@ -190,6 +197,10 @@ class MidiKeyEliteApp {
         syncFloatingLicense();
       });
       syncFloatingLicense();
+      window.addEventListener("wilsonix-access-changed", () => {
+        syncFloatingLicense();
+        if (this.gigHud) this.gigHud.refresh();
+      });
 
       // Draggable license pill — restore saved position, distinguish drag vs click
       const pill = document.getElementById("floating-license-btn");
