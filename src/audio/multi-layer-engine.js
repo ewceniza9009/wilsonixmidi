@@ -6237,10 +6237,10 @@ export class MultiLayerEngine {
       typeof activeId === "string" &&
       activeId.startsWith("user_");
     if (isUser) {
-      return { kind: "user", id: activeId, name: this.activeCombi.name };
+      return { kind: "user", id: activeId, name: this.activeCombi?.name || "User Mix" };
     }
     if (this.isCombiMode) {
-      return { kind: "combi", id: activeId, name: this.activeCombi.name };
+      return { kind: "combi", id: activeId, name: this.activeCombi?.name || "Layer Mix" };
     }
     return {
       kind: "single",

@@ -237,7 +237,7 @@ export class MultiLayerUI {
                     )
                     .map(
                       (cp) => `
-                    <option value="${esc(cp.id)}" ${multiLayerEngine.activeCombi.id === cp.id ? "selected" : ""}>
+                    <option value="${esc(cp.id)}" ${multiLayerEngine.activeCombi?.id === cp.id ? "selected" : ""}>
                       ${esc(cp.name)}
                     </option>
                   `,
@@ -273,7 +273,7 @@ export class MultiLayerUI {
             .slice(0, 15)
             .map(
               (cp) =>
-                `<button class="combi-search-chip ${multiLayerEngine.activeCombi.id === cp.id ? "active" : ""}" data-combi-search="${esc(cp.id)}">${esc(cp.name)}</button>`,
+                `<button class="combi-search-chip ${multiLayerEngine.activeCombi?.id === cp.id ? "active" : ""}" data-combi-search="${esc(cp.id)}">${esc(cp.name)}</button>`,
             )
             .join("")}
         </div>`
@@ -740,20 +740,21 @@ export class MultiLayerUI {
     const presetSelect = this.container.querySelector("#combi-preset-select");
     presetSelect?.addEventListener("mousedown", () => {
       const ids = Object.keys(COMBI_PRESETS);
-      const cur = Math.max(0, ids.indexOf(multiLayerEngine.activeCombi.id));
+      const cur = Math.max(0, multiLayerEngine.activeCombi?.id ? ids.indexOf(multiLayerEngine.activeCombi.id) : 0);
       for (const d of [-1, 1]) {
         const id = ids[(cur + d + ids.length) % ids.length];
         if (id) multiLayerEngine.preloadCombi(id);
       }
     });
     presetSelect?.addEventListener("change", (e) => {
+      if (!e.target.value) return;
       multiLayerEngine.setCombiPreset(e.target.value);
       this.combiSearchQuery = "";
       this.updateCombiSelectorActive();
     });
     const stepPreset = (delta) => {
       const ids = Object.keys(COMBI_PRESETS);
-      const cur = Math.max(0, ids.indexOf(multiLayerEngine.activeCombi.id));
+      const cur = Math.max(0, multiLayerEngine.activeCombi?.id ? ids.indexOf(multiLayerEngine.activeCombi.id) : 0);
       const next = ids[(cur + delta + ids.length) % ids.length];
       multiLayerEngine.setCombiPreset(next);
       this.updateCombiSelectorActive();
@@ -1138,7 +1139,7 @@ export class MultiLayerUI {
               )
               .map(
                 (cp) =>
-                  `<option value="${esc(cp.id)}" ${multiLayerEngine.activeCombi.id === cp.id ? "selected" : ""}>${esc(cp.name)}</option>`,
+                  `<option value="${esc(cp.id)}" ${multiLayerEngine.activeCombi?.id === cp.id ? "selected" : ""}>${esc(cp.name)}</option>`,
               )
               .join("")}
           </optgroup>
@@ -1167,7 +1168,7 @@ export class MultiLayerUI {
             .slice(0, 15)
             .map(
               (cp) =>
-                `<button class="combi-search-chip ${multiLayerEngine.activeCombi.id === cp.id ? "active" : ""}" data-combi-search="${esc(cp.id)}">${esc(cp.name)}</button>`,
+                `<button class="combi-search-chip ${multiLayerEngine.activeCombi?.id === cp.id ? "active" : ""}" data-combi-search="${esc(cp.id)}">${esc(cp.name)}</button>`,
             )
             .join("");
 

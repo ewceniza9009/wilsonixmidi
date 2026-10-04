@@ -20,7 +20,7 @@ export class CustomPatchBrowserUI {
 
     this._layerChangeListener = () => {
       const mle = this.appCore?.multiLayerEngine || multiLayerEngine;
-      if (this.activePatchId && mle.activeCombi && mle.activeCombi.id !== this.activePatchId) {
+      if (this.activePatchId && (!mle.activeCombi || mle.activeCombi.id !== this.activePatchId)) {
         this.activePatchId = null;
         try {
           localStorage.removeItem("wilsonix_active_patch_id");
@@ -193,10 +193,10 @@ export class CustomPatchBrowserUI {
     try {
       this.patches = await patchStorage.getAllPatches();
       this.renderPatchList();
-      if (this.activePatchId) {
+      const mle = this.appCore?.multiLayerEngine || multiLayerEngine;
+      if (this.activePatchId && !mle.isDualLayerActive) {
         const activePatch = this.patches.find((p) => p.id === this.activePatchId);
         if (activePatch) {
-          const mle = this.appCore?.multiLayerEngine || multiLayerEngine;
           if (!mle.activeCombi || mle.activeCombi.id !== activePatch.id) {
             this.handleLoadPatch(activePatch);
           }
