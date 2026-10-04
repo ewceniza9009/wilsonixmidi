@@ -1,7 +1,7 @@
 # WILSONIX MIDIKEY 🎹✨
 
-> **Professional Zero-Latency Live Performance Digital Audio Workstation, Hybrid Rompler & Synthesizer**
-> _Engineered for high-pressure live stage gigs, church worship, recording studios, and mobile performance. Built Android-first, with Windows desktop and web/PWA builds from the same codebase._
+> **Professional Ultra-Low Latency Live Performance Workstation, Hybrid Rompler & Synthesizer**
+> _Engineered for high-pressure live stage gigs, touring keyboardists, bands, session players, and mobile performance. Built Android-first, with Windows desktop and web/PWA builds from the same unified codebase._
 
 [![Platform: Android](https://img.shields.io/badge/Platform-Android%207.0%2B%20%7C%20ARM64-3DDC84?style=for-the-badge&logo=android)](https://github.com/ewceniza9009/wilsonixmidi/releases)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011%20(x64)-0078D6?style=for-the-badge&logo=windows)](https://github.com/ewceniza9009/wilsonixmidi/releases)
@@ -9,6 +9,26 @@
 [![Framework: Tauri v2 + Vite](https://img.shields.io/badge/Framework-Tauri%20v2%20%7C%20Rust-673AB7?style=for-the-badge)](https://tauri.app/)
 [![License: Proprietary](https://img.shields.io/badge/License-WILSONIX%20Commercial-red?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi)
 [![Version: v2.2.5](https://img.shields.io/badge/Version-v2.2.5%20(Build%2029)-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
+
+---
+
+## 🎯 The Vision: A Pro Live Stage Rig in Your Backpack Without the $3,000 Price Tag
+
+Traditional live keyboard rigs are heavy, fragile, and absurdly expensive:
+- Dragging a 45-lb, $3,000 workstation keyboard or a fragile $1,500 laptop with tangled dongles, external power bricks, and audio interfaces.
+- Spending 15 minutes setting up cables, worrying about whether an OS update or a 3rd-party plugin will crash in the middle of a live set.
+- Paying **hundreds of dollars every year** on predatory subscriptions just to keep live host apps running.
+
+### The WILSONIX MIDIKEY Solution:
+**A complete, concert-grade live workstation running on an affordable Android tablet ($100–$150) or lightweight Windows laptop paired with any simple, compact MIDI keyboard.**
+
+- 🏷️ **One-Time Purchase, Zero Subscriptions** — Buy it once, own it forever. Works 100% offline without needing an internet connection at the venue.
+- 📱 **The Tablet IS the Control Center** — You don't need a heavy keyboard with dozens of expensive motorized knobs and faders. Place an Android tablet on your music stand and connect a single USB cable.
+- 🎚️ **Tactile Live Touch Mixing** — Real-time touch faders to balance Concert Grand Piano, Warm Ambient Pad, Shimmer Strings, and Sub Bass on the fly.
+- 🧘 **Continuous Tonic Drone Pad** — Integrated ambient pad engine with smooth 1.5-second crossfades and per-patch key sync. Keeps sound beds flowing with zero dead silence between songs.
+- 🎬 **8 Combi Scene Snapshots Per Patch** — Effortlessly transition from a delicate verse (soft piano + felt pad) straight into an explosive chorus (full layer stack + shimmer swell) with a single tap.
+- ⚡ **Instant 2-Second Boot** — No waiting 3 to 5 minutes for 50GB sample libraries to load into RAM. Ready to play before the band counts in the intro.
+- ☀️ **High-Visibility Sunlight Mode** — Crystal-clear stage visibility whether under blazing outdoor afternoon sun or dark stage spotlights.
 
 ---
 
@@ -34,8 +54,10 @@ A full stability, audio, and security hardening pass across the entire engine:
 - **Capability-level Pro gates** — master WAV recording, setlist & custom patch storage, and rig export/import are enforced at the engine/storage layer, not just in the UI.
 - **XSS hardening** — all modal dialogs and log panes entity-escape user/file-derived strings.
 
-### 🎚️ Audio Engine Fixes
-- Voice pool recycling can no longer create duplicate node pairs during panic/all-notes-off.
+### 🎚️ Audio & Combi Engine Enhancements
+- **Per-Patch Scene Persistence** — all 8 Combi scene snapshots and macro states auto-sync directly to your custom patches in IndexedDB and restore seamlessly across app reloads.
+- **Real Latency & Acoustic Benchmarking** — live input delivery & dispatch tracking (MIDI, Touch, QWERTY) plus an acoustic speaker→mic loopback test bench to evaluate physical audio paths accurately.
+- **Voice pool recycling** can no longer create duplicate node pairs during panic/all-notes-off.
 - Note-off release semantics fixed for held pitches, layered combi voices, and looper bus routing (no more stuck or prematurely cut notes).
 - Insert FX `flush` now restores dry/wet gains after the choke window instead of leaving the chain muted.
 - Sustain-pedal release on insert FX now ramps to silence (no clicks), and parked `pendingReuse` voices are cleared on note-off.
@@ -49,7 +71,7 @@ A full stability, audio, and security hardening pass across the entire engine:
 - Scale-lock octave snapping corrected (worst-case distance: 2 semitones).
 
 ### 🧪 Developer Infrastructure
-- **207 unit tests** passing (`node --test`, zero dependencies on real audio hardware), up from 167.
+- **217 unit tests** passing (`node --test`, zero dependencies on real audio hardware).
 - **Strict ESLint**: warnings are errors, including a custom rule banning CSP-breaking inline event handlers.
 - **CI on every push**: unit tests + lint + production web build, plus a dedicated **Android job that assembles the APK** (`cap sync` + `gradlew assembleDebug`) so Android — the primary target — is continuously verified.
 - Removed leaked signing material from the repository tree and untracked `node_modules`.
@@ -58,13 +80,13 @@ A full stability, audio, and security hardening pass across the entire engine:
 
 ## ✨ Key Features at a Glance
 
-- 🎹 **Hybrid Dual-Core Sound Engine** — Direct multi-layer PCM Rompler, dual-oscillator Virtual Analog subtractive synth (TVA/TVF, hard-sync leads), and physical-modeling brass, reeds, drums & percussion, engineered for zero-latency live performance.
+- 🎹 **Hybrid Dual-Core Sound Engine** — Direct multi-layer PCM Rompler, dual-oscillator Virtual Analog subtractive synth (TVA/TVF, hard-sync leads), and physical-modeling brass, reeds, drums & percussion, engineered for stage-calibrated ultra-low-latency live performance.
 - 🔌 **Web MIDI OUT & Master Clock Forwarding** — Turn WILSONIX MIDIKEY into a master stage controller. Multi-port simultaneous output routing, channel assignment (Ch 1–16), and master MIDI Clock pulse transmission synced to live tap tempo.
 - 🎛️ **Elite TouchView Tablet UI** — Balanced 3-column workstation cockpit with centered workspace tabs, high-precision master studio fader with live dB readout, and enlarged tactile Rig Bank/Slot keypads optimized for Android touchscreens.
 - 🎚️ **4-Timbre Combi Stacking** — Stack up to four layers with per-layer volume, pan, octave, semitone and velocity control, plus a dual-zone split console with dynamic split point selection.
 - 🎛️ **23-Device Hardware Master FX Rack** — Optical compressor, auto-wah, talkbox formant filter, tube drive, bitcrusher, vinyl lo-fi tape, Haas stereo widener, auto-pan, 6-stage phaser, flanger, Dimension-D chorus, Leslie rotary, tremolo, slapback, dub echo, ping-pong delay, spring/shimmer/gated/algorithmic reverb, tape saturation, and a master EQ-limiter.
 - 🎧 **Binaural Stage Monitor — 3D Spatial Audio** — HRTF-based 3D spatialization for in-ear headphones simulating concert hall, studio, stadium, and cathedral acoustic environments.
-- 🥁 **Physical-Modeling Drums & Percussion** — Acoustic kick, wood-shell snare, bronze hi-hats, and chromatically tuned Latin percussion with zero-latency response.
+- 🥁 **Physical-Modeling Drums & Percussion** — Acoustic kick, wood-shell snare, bronze hi-hats, and chromatically tuned Latin percussion with immediate tactile response.
 - 💾 **Stage Registration Memory (32 Rigs)** — 4 Banks × 8 Slots with instant recall, full live-state snapshots, and schema-validated JSON setlist import/export.
 - 🎹 **12-Pad MPC Chord Matrix & Scale Engine** — One-touch Jazz, Gospel, Neo-Soul and Pop voicings with quantizing scale/key lock.
 - 🔁 **Clock-Anchored Arpeggiator & Multi-Track Looper** — Web Audio look-ahead scheduling keeps tempo rock-solid under heavy stage load.
@@ -95,7 +117,7 @@ A full stability, audio, and security hardening pass across the entire engine:
 
 ### 🎛️ 4. 23-Device Hardware Master FX Rack
 
-- **Chain & Per-Layer Insert FX (80+ Algorithm Choices)**: Dynamically rebuilt serial FX chain with zero-latency fast-path bypass, plus 22 Triton IFX/MFX algorithms and 35 per-layer insert FX.
+- **Chain & Per-Layer Insert FX (80+ Algorithm Choices)**: Dynamically rebuilt serial FX chain with direct hardware fast-path bypass, plus 22 Triton IFX/MFX algorithms and 35 per-layer insert FX.
 - **IFX Opto-Compressor (Studio Dynamics)**: Optical-style peak leveling, threshold, ratio, attack, release, and makeup gain for drum punch and piano sustain.
 - **IFX Rhodes Auto-Pan**: Dynamic stereo ping-pong panning with speed and depth modulation.
 - **IFX Dimension D Stereo Chorus**: Multi-voice Dimension-D style analog chorus widening.
@@ -117,7 +139,7 @@ A full stability, audio, and security hardening pass across the entire engine:
 
 ### 🥁 5. Real Acoustic Drum Kit & Physical Modeling Percussion
 
-- **Zero-Latency Physical Synthesis**: Instant strike response with 0.00ms latency.
+- **Direct Physical Modeling Synthesis**: Immediate strike response with sample-level AudioWorklet synthesis.
 - **Acoustic Sub-Kick**: Dual-layer 52Hz/36Hz resonant pitch envelope with acoustic wood beater transient.
 - **Wood Shell Snare**: Dual-band filtered wire rattle (>3.8kHz) with rimshot impact dynamics.
 - **Optical Choke Bronze Hi-Hats**: Dynamic open-hat decay with instant sub-millisecond optical choking on closed hits or pedal triggers.
@@ -133,7 +155,7 @@ A full stability, audio, and security hardening pass across the entire engine:
 
 ### 🎛️ 7. 12-Pad MPC Chord Trigger Matrix & Scale Engine
 
-- **12 Velocity-Sensitive Chord Pads per Bank**: 11 banks — Basic Chords (all 24 major/minor triads), Worship & Ballad, Neo-Soul, Gospel Praise, 90s R&B, Jazz Fusion, Pop Anthems, City Pop, Lo-Fi Chill, Latin Bossa, and 80s Synthwave — each triggering rich multi-note voicings with a single touch.
+- **12 Velocity-Sensitive Chord Pads per Bank**: 11 banks — Basic Chords (all 24 major/minor triads), Ambient Ballad & Cinematic, Neo-Soul, Gospel Praise, 90s R&B, Jazz Fusion, Pop Anthems, City Pop, Lo-Fi Chill, Latin Bossa, and 80s Synthwave — each triggering rich multi-note voicings with a single touch.
 - **Custom Voicings & Strumming**: Realistic humanized strum offsets, adjustable velocity curves, and chord editing.
 - **Scale & Key Lock Engine**: Quantize all incoming keyboard and pad notes to Chromatic (off), Major, Natural Minor, Harmonic Minor, Pentatonic Major, Pentatonic Minor, Gospel Blues, or Dorian scales.
 
@@ -212,7 +234,7 @@ The signing private key never ships with the app — only the public verificatio
 - **`A037` Overdriven Guitar**: Tube-driven rock guitar with natural harmonic feedback.
 - **`A042` Distortion Guitar**: Heavy power-chord distortion guitar for rock and metal accompaniment.
 - **`A043` Abletunes FM DX7 Piano**: Crisp 6-operator FM electric piano.
-- **`A044` Abletunes Studio Upright Piano**: Intimate, felted upright piano for lo-fi and worship ballads.
+- **`A044` Abletunes Studio Upright Piano**: Intimate, felted upright piano for lo-fi, film score, and acoustic ballads.
 
 ### 2. 🌌 Korg M1 Legendary Soundbank
 
