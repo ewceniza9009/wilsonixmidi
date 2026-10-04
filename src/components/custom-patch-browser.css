@@ -174,21 +174,43 @@
   flex-shrink: 0;
 }
 
+.patch-actions-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.patch-action-btn,
 .patch-del-btn {
   background: none;
   border: none;
   color: #64748b;
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   line-height: 1;
   cursor: pointer;
-  padding: 2px 4px;
+  padding: 2px 3px;
   border-radius: 2px;
-  opacity: 0.6;
+  opacity: 0.7;
   transition: all 0.12s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
+.patch-item:hover .patch-action-btn,
 .patch-item:hover .patch-del-btn {
   opacity: 1;
+}
+
+.patch-rename-btn:hover {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+}
+
+.patch-update-btn:hover {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
 }
 
 .patch-del-btn:hover {

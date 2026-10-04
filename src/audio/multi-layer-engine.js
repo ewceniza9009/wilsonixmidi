@@ -4076,6 +4076,36 @@ export class MultiLayerEngine {
     this._sessTimer = setTimeout(() => this.saveSessionNow(), 400);
   }
 
+  // ---- Combi Scenes (8 fixed mix-variation slots) & performance macros ----
+  _sanitizeSnapshots(snaps) {
+    return Array.from({ length: 8 }, (_, i) => {
+      const s = Array.isArray(snaps) ? snaps[i] : null;
+      if (!s || !Array.isArray(s.gains) || !Array.isArray(s.enabled)) return null;
+      return JSON.parse(JSON.stringify(s));
+    });
+  }
+
+  setSnapshots(snaps, activeIdx = null) {
+    this.snapshots = this._sanitizeSnapshots(snaps);
+    this.activeSnapshotIndex =
+      Number.isInteger(activeIdx) && this.snapshots[activeIdx] ? activeIdx : null;
+    this._notifyScenesChanged();
+    this.saveSessionSoon();
+  }
+
+  setMacros(macros) {
+    if (!macros || typeof macros !== "object") return;
+    this.macros = { swell: 0.35, shimmer: 0.2, tone: 0.5, pad: 0.5, ...macros };
+    this._notifyScenesChanged();
+    this.saveSessionSoon();
+  }
+
+  _notifyScenesChanged() {
+    try {
+      window.dispatchEvent(new CustomEvent("wilsonix-scenes-changed"));
+    } catch (e) {}
+  }
+
   saveSessionNow() {
     try {
       if (typeof localStorage === "undefined") return;
@@ -4093,6 +4123,9 @@ export class MultiLayerEngine {
             pointMidi: this.splitPointMidi,
             zones: this.splitZones,
           },
+          snapshots: this.snapshots || null,
+          activeSnapshotIndex: this.activeSnapshotIndex ?? null,
+          macros: this.macros || null,
         }),
       );
     } catch (e) {}
@@ -4140,6 +4173,16 @@ export class MultiLayerEngine {
             ...this.splitZones.upper,
             ...s.split.zones.upper,
           };
+      }
+      if (Array.isArray(s.snapshots)) {
+        this.snapshots = this._sanitizeSnapshots(s.snapshots);
+        this.activeSnapshotIndex =
+          Number.isInteger(s.activeSnapshotIndex) && this.snapshots[s.activeSnapshotIndex]
+            ? s.activeSnapshotIndex
+            : null;
+      }
+      if (s.macros && typeof s.macros === "object") {
+        this.macros = { swell: 0.35, shimmer: 0.2, tone: 0.5, pad: 0.5, ...s.macros };
       }
       this.init();
       this.syncLayerFx();

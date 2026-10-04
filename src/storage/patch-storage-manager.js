@@ -98,8 +98,14 @@ class PatchStorageManager {
       const request = index.getAll();
 
       request.onsuccess = () => {
-        // Sort newest first
-        const patches = request.result.sort((a, b) => b.updatedAt - a.updatedAt);
+
+        // Stable setlist order: creation order (oldest first, new patches append),
+        // so updating/editing a patch or saving does not randomly jump patch positions.
+        const patches = request.result.sort((a, b) => {
+          const timeA = a.createdAt || a.updatedAt || 0;
+          const timeB = b.createdAt || b.updatedAt || 0;
+          return timeA - timeB;
+        });
         resolve(patches);
       };
       request.onerror = (e) => reject(e.target.error);

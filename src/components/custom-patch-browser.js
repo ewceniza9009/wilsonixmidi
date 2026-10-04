@@ -230,22 +230,102 @@ export class CustomPatchBrowserUI {
         el.appendChild(keyBadge);
       }
 
+      // Actions Group (Rename, Update/Overwrite with current mix, Delete)
+      const actionsGroup = document.createElement("div");
+      actionsGroup.className = "patch-actions-group";
+
+      // Rename Button
+      const renameBtn = document.createElement("button");
+      renameBtn.className = "patch-action-btn patch-rename-btn";
+      renameBtn.innerHTML = "✏️";
+      renameBtn.title = "Rename Patch";
+      renameBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.handleRenamePatch(patch);
+      });
+      actionsGroup.appendChild(renameBtn);
+
+      // Overwrite/Update with current live mix button
+      const updateBtn = document.createElement("button");
+      updateBtn.className = "patch-action-btn patch-update-btn";
+      updateBtn.innerHTML = "💾";
+      updateBtn.title = "Overwrite Patch with Current Live Mix & FX";
+      updateBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.handleUpdatePatch(patch);
+      });
+      actionsGroup.appendChild(updateBtn);
+
       // Delete Button
       const delBtn = document.createElement("button");
-      delBtn.className = "patch-del-btn";
+      delBtn.className = "patch-action-btn patch-del-btn";
       delBtn.innerHTML = "✕";
       delBtn.title = "Delete Patch";
       delBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         this.handleDeletePatch(patch.id);
       });
-      el.appendChild(delBtn);
+      actionsGroup.appendChild(delBtn);
+
+      el.appendChild(actionsGroup);
 
       // Load patch on click
       el.addEventListener("click", () => this.handleLoadPatch(patch));
 
       listContainer.appendChild(el);
     });
+  }
+
+  _captureCurrentState(detectedKey = "") {
+    const mle = this.appCore?.multiLayerEngine || multiLayerEngine;
+    const fxRack = this.appCore?.fxRack || audioCore.fxRack;
+
+    const layersCopy = JSON.parse(JSON.stringify(mle.layers || [])).map((l) => ({
+      ...l,
+      name: getTimbreDisplayName(l.inst, l.name),
+    }));
+
+    const fxState = {
+      reverb: fxRack?.reverb?.mix || 0,
+      delay: fxRack?.delay?.mix || 0,
+      chorus: fxRack?.chorus?.mix || 0,
+      phaser: fxRack?.phaser?.mix || 0,
+      tube: fxRack?.tube?.mix || 0,
+      eq: {
+        low: fxRack?.masterEq?.lowShelf?.gain?.value ?? fxRack?.masterEq?.lowGain?.value ?? 0,
+        mid: fxRack?.masterEq?.midPeak?.gain?.value ?? fxRack?.masterEq?.midGain?.value ?? 0,
+        high: fxRack?.masterEq?.highShelf?.gain?.value ?? fxRack?.masterEq?.highGain?.value ?? 0,
+      }
+    };
+
+    return {
+      layers: layersCopy,
+      fx: fxState,
+      key: detectedKey,
+      color: DEFAULT_PATCH_COLORS[Math.floor(Math.random() * DEFAULT_PATCH_COLORS.length)],
+      macros: mle.macros ? { ...mle.macros } : { swell: 0.3, shimmer: 0.2, tone: 0.5, pad: tonicDroneEngine.volume },
+      snapshots: mle.snapshots ? JSON.parse(JSON.stringify(mle.snapshots)) : null,
+      padProfile: tonicDroneEngine.currentProfile,
+      timestamp: Date.now()
+    };
+  }
+
+  _parsePatchNameAndKey(rawInput) {
+    let patchName = rawInput.trim();
+    let detectedKey = "";
+
+    const keyMatch = patchName.match(/\[([A-G][b#]?)\]/i) || patchName.match(/\/\s*([A-G][b#]?)$/i);
+    if (keyMatch) {
+      detectedKey = keyMatch[1].toUpperCase();
+      if (detectedKey.length === 2 && detectedKey[1] === 'B') {
+        detectedKey = detectedKey[0] + 'b';
+      }
+      patchName = patchName.replace(keyMatch[0], "").trim();
+    } else if (tonicDroneEngine.activeKey) {
+      detectedKey = tonicDroneEngine.activeKey;
+    }
+
+    return { patchName, detectedKey };
   }
 
   async handleSavePatch() {
@@ -260,53 +340,8 @@ export class CustomPatchBrowserUI {
     );
     if (!rawInput) return;
 
-    let patchName = rawInput.trim();
-    let detectedKey = "";
-
-    // Parse [Key] or / Key if provided in name
-    const keyMatch = patchName.match(/\[([A-G][b#]?)\]/i) || patchName.match(/\/\s*([A-G][b#]?)$/i);
-    if (keyMatch) {
-      detectedKey = keyMatch[1].toUpperCase();
-      if (detectedKey.length === 2 && detectedKey[1] === 'B') {
-        detectedKey = detectedKey[0] + 'b';
-      }
-      patchName = patchName.replace(keyMatch[0], "").trim();
-    } else if (tonicDroneEngine.activeKey) {
-      // Default to current playing drone key if active
-      detectedKey = tonicDroneEngine.activeKey;
-    }
-
-    const mle = this.appCore?.multiLayerEngine || multiLayerEngine;
-    const fxRack = this.appCore?.fxRack || audioCore.fxRack;
-
-    const layersCopy = JSON.parse(JSON.stringify(mle.layers || [])).map((l) => ({
-      ...l,
-      name: getTimbreDisplayName(l.inst, l.name),
-    }));
-    
-    const fxState = {
-      reverb: fxRack?.reverb?.mix || 0,
-      delay: fxRack?.delay?.mix || 0,
-      chorus: fxRack?.chorus?.mix || 0,
-      phaser: fxRack?.phaser?.mix || 0,
-      tube: fxRack?.tube?.mix || 0,
-      eq: {
-        low: fxRack?.masterEq?.lowShelf?.gain?.value ?? fxRack?.masterEq?.lowGain?.value ?? 0,
-        mid: fxRack?.masterEq?.midPeak?.gain?.value ?? fxRack?.masterEq?.midGain?.value ?? 0,
-        high: fxRack?.masterEq?.highShelf?.gain?.value ?? fxRack?.masterEq?.highGain?.value ?? 0,
-      }
-    };
-
-    const state = {
-      layers: layersCopy,
-      fx: fxState,
-      key: detectedKey,
-      color: DEFAULT_PATCH_COLORS[Math.floor(Math.random() * DEFAULT_PATCH_COLORS.length)],
-      macros: mle.macros ? { ...mle.macros } : { swell: 0.3, shimmer: 0.2, tone: 0.5, pad: tonicDroneEngine.volume },
-      snapshots: mle.snapshots ? JSON.parse(JSON.stringify(mle.snapshots)) : null,
-      padProfile: tonicDroneEngine.currentProfile,
-      timestamp: Date.now()
-    };
+    const { patchName, detectedKey } = this._parsePatchNameAndKey(rawInput);
+    const state = this._captureCurrentState(detectedKey);
 
     try {
       const saved = await patchStorage.savePatch(patchName, state);
@@ -314,6 +349,53 @@ export class CustomPatchBrowserUI {
       await this.loadPatches();
     } catch (e) {
       CustomModal.alert("Error", "Failed to save patch: " + e.message);
+    }
+  }
+
+  async handleRenamePatch(patch) {
+    if (!patch) return;
+    const currentDisplayName = patch.data?.key ? `${patch.name} [${patch.data.key}]` : patch.name;
+    const rawInput = await CustomModal.prompt(
+      "Rename Patch",
+      "Enter new patch name (optionally include [Key]):",
+      "Patch Name [Key]",
+      currentDisplayName
+    );
+    if (!rawInput) return;
+
+    const { patchName, detectedKey } = this._parsePatchNameAndKey(rawInput);
+    const updatedData = {
+      ...(patch.data || {}),
+      key: detectedKey || patch.data?.key || ""
+    };
+
+    try {
+      await patchStorage.updatePatch(patch.id, patchName, updatedData);
+      await this.loadPatches();
+    } catch (e) {
+      CustomModal.alert("Error", "Failed to rename patch: " + e.message);
+    }
+  }
+
+  async handleUpdatePatch(patch) {
+    if (!patch) return;
+    const confirmed = await CustomModal.confirm(
+      "Overwrite Patch",
+      `Overwrite "${patch.name}" with the current live layers, FX rack, macros, and scenes?`
+    );
+    if (!confirmed) return;
+
+    const state = this._captureCurrentState(patch.data?.key || "");
+    // Preserve existing color tag
+    if (patch.data?.color) state.color = patch.data.color;
+
+    try {
+      await patchStorage.updatePatch(patch.id, patch.name, state);
+      this.activePatchId = patch.id;
+      await this.loadPatches();
+      audioCore._diagToast?.(`Updated "${patch.name}" with current mix`);
+    } catch (e) {
+      CustomModal.alert("Error", "Failed to update patch: " + e.message);
     }
   }
 

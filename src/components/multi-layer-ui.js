@@ -83,7 +83,15 @@ export class MultiLayerUI {
     if (!multiLayerEngine.snapshots) {
       multiLayerEngine.snapshots = [null, null, null, null, null, null, null, null];
     }
-    multiLayerEngine.activeSnapshotIndex = multiLayerEngine.activeSnapshotIndex ?? 0;
+    // No slot is "active" until it actually holds a scene (an empty highlighted
+    // slot 1 made it look like a scene already existed there).
+    const curSnap = multiLayerEngine.activeSnapshotIndex;
+    multiLayerEngine.activeSnapshotIndex =
+      Number.isInteger(curSnap) && multiLayerEngine.snapshots[curSnap] ? curSnap : null;
+
+    // Refresh scene buttons/macros when scenes are loaded externally (custom patch load)
+    this._scenesChangedListener = () => this.refreshScenesFromEngine();
+    window.addEventListener("wilsonix-scenes-changed", this._scenesChangedListener);
 
     this._bindDocClickOutside();
     this.render();
@@ -151,6 +159,10 @@ export class MultiLayerUI {
   }
 
   dispose() {
+    if (this._scenesChangedListener) {
+      window.removeEventListener("wilsonix-scenes-changed", this._scenesChangedListener);
+      this._scenesChangedListener = null;
+    }
     if (this._outsideClickHandler) {
       document.removeEventListener("click", this._outsideClickHandler);
       this._outsideClickHandler = null;
@@ -187,7 +199,7 @@ export class MultiLayerUI {
 
     const macros = multiLayerEngine.macros || { swell: 0.35, shimmer: 0.2, tone: 0.5, pad: 0.5 };
     const snapshots = multiLayerEngine.snapshots || [null, null, null, null, null, null, null, null];
-    const activeSnap = multiLayerEngine.activeSnapshotIndex ?? 0;
+    const activeSnap = multiLayerEngine.activeSnapshotIndex ?? null;
 
     this.container.innerHTML = `
       <div class="combi-layers-console">
@@ -300,11 +312,11 @@ export class MultiLayerUI {
                 <span class="macro-val" id="macro-val-pad">${Math.round(macros.pad * 100)}%</span>
               </div>
 
-              <div class="snapshots-bay" title="Scene Snapshots: Click to recall scene, right-click to overwrite">
+              <div class="snapshots-bay" title="Scenes: tap an empty slot to create a scene, tap a filled slot to recall it. Edits auto-save to the active scene. Right-click to overwrite.">
                 <span class="snapshots-label">SCENES</span>
                 <div class="snapshot-btns">
                   ${[1, 2, 3, 4, 5, 6, 7, 8].map((num, i) => `
-                    <button class="snapshot-btn ${activeSnap === i ? 'active' : ''} ${snapshots[i] ? 'has-data' : ''}" data-snapshot="${i}" title="${snapshots[i] ? `Scene ${num} (Click to recall, right-click to overwrite)` : `Scene ${num} (Empty: click/right-click to save)`}">
+                    <button class="snapshot-btn ${activeSnap === i ? 'active' : ''} ${snapshots[i] ? 'has-data' : ''}" data-snapshot="${i}" title="${snapshots[i] ? `Scene ${num} (Tap to recall, right-click to overwrite)` : `Scene ${num} (Empty: tap to create a new scene here)`}">
                       ${num}
                     </button>
                   `).join('')}
@@ -573,22 +585,41 @@ export class MultiLayerUI {
     });
   }
 
-  saveSnapshot(idx) {
-    if (!multiLayerEngine.snapshots) {
-      multiLayerEngine.snapshots = [null, null, null, null, null, null, null, null];
-    }
-    multiLayerEngine.snapshots[idx] = {
+  _captureScene(idx) {
+    return {
       name: `Scene ${idx + 1}`,
       gains: multiLayerEngine.layers.map((l) => l.gain),
       enabled: multiLayerEngine.layers.map((l) => !!l.enabled),
       macros: { ...(multiLayerEngine.macros || { swell: 0.35, shimmer: 0.2, tone: 0.5, pad: 0.5 }) },
     };
+  }
+
+  saveSnapshot(idx) {
+    if (!multiLayerEngine.snapshots) {
+      multiLayerEngine.snapshots = [null, null, null, null, null, null, null, null];
+    }
+    multiLayerEngine.snapshots[idx] = this._captureScene(idx);
     multiLayerEngine.activeSnapshotIndex = idx;
     this.updateSnapshotButtons();
+    multiLayerEngine.saveSessionSoon?.();
+  }
+
+  /**
+   * Live-edit model: any fader / mute / macro change is written straight into
+   * the active scene, so building a mix never leaves the slot holding a stale
+   * state (which made scene 1's mix get captured into slot 2 on "new scene").
+   */
+  syncActiveScene() {
+    const idx = multiLayerEngine.activeSnapshotIndex;
+    if (!Number.isInteger(idx) || !multiLayerEngine.snapshots?.[idx]) return;
+    multiLayerEngine.snapshots[idx] = this._captureScene(idx);
+    multiLayerEngine.saveSessionSoon?.();
   }
 
   recallSnapshot(idx) {
     if (!multiLayerEngine.snapshots || !multiLayerEngine.snapshots[idx]) {
+      // Empty slot → create a NEW scene here, seeded from the current mix,
+      // and make it the active scene. Earlier scenes keep their own slots.
       this.saveSnapshot(idx);
       return;
     }
@@ -614,6 +645,21 @@ export class MultiLayerUI {
       });
     }
     this.updateLayerFaders();
+    this.updateSnapshotButtons();
+    multiLayerEngine.saveSessionSoon?.();
+  }
+
+  refreshScenesFromEngine() {
+    const macros = multiLayerEngine.macros;
+    if (macros) {
+      Object.entries(macros).forEach(([k, v]) => {
+        this.setMacro(k, v);
+        const sl = this.container?.querySelector(`.macro-slider[data-macro="${k}"]`);
+        if (sl) sl.value = v;
+        const readout = document.getElementById(`macro-val-${k}`);
+        if (readout) readout.innerText = `${Math.round(v * 100)}%`;
+      });
+    }
     this.updateSnapshotButtons();
   }
 
@@ -647,6 +693,7 @@ export class MultiLayerUI {
         this.setMacro(key, val);
         const readout = document.getElementById(`macro-val-${key}`);
         if (readout) readout.innerText = `${Math.round(val * 100)}%`;
+        this.syncActiveScene();
       });
     });
     this.applyAllMacros();
@@ -747,6 +794,7 @@ export class MultiLayerUI {
       btn.addEventListener("click", () => {
         const idx = parseInt(btn.getAttribute("data-layer"));
         multiLayerEngine.toggleLayer(idx);
+        this.syncActiveScene();
         this.render();
         this.bindEvents();
       });
@@ -783,6 +831,7 @@ export class MultiLayerUI {
         if (readout1) readout1.innerText = `${Math.round(val * 100)}%`;
         const readout2 = document.getElementById(`perf-fader-val-${idx}`);
         if (readout2) readout2.innerText = `${Math.round(val * 100)}%`;
+        this.syncActiveScene();
       });
     });
 
