@@ -123,7 +123,7 @@ function refineByHarmonics(x, rate, candLags) {
  * correctly-measured sources is validated by the identical measurement.
  * The attack is skipped because an MP3 decode starts with codec padding.
  */
-function analysisWindow(x, rate) {
+function analysisWindow(x, _rate) {
   const skip = Math.floor(x.length * 0.06);
   return x.subarray(skip, Math.min(x.length, skip + 16384));
 }

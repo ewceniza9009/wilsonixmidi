@@ -18,9 +18,7 @@ const MULTI_LAYER_ENGINE_PATH = path.resolve(__dirname, "../src/audio/multi-laye
 function parseCombiPresets() {
   const src = fs.readFileSync(MULTI_LAYER_ENGINE_PATH, "utf-8");
   const presets = {};
-  // Match each preset block
-  const presetRegex = /^\s{2}([a-zA-Z0-9_]+):\s*\{[^}]*?id:\s*"([^"]+)"[^]*?layers:\s*\[([\s\S]*?)\]\s*,?\s*\}/gm;
-  // Simpler approach: parse line by line
+  // Match each preset block — parse line by line below.
   const lines = src.split("\n");
   let inPresets = false;
   let curId = null;

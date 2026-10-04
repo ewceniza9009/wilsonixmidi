@@ -5,7 +5,8 @@
  */
 import { spawnSync } from "node:child_process";
 
-const FF = "C:\\Users\\EWCEN\\AppData\\Roaming\\npm\\node_modules\\ffmpeg-static\\ffmpeg.exe";
+// ffmpeg from PATH by default; override with FFMPEG_PATH if it is not installed system-wide.
+const FF = process.env.FFMPEG_PATH || "ffmpeg";
 
 function decode(file) {
   const r = spawnSync(FF, ["-v", "error", "-i", file, "-f", "f32le", "-ac", "1", "-"],

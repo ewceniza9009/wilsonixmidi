@@ -3,6 +3,8 @@
  * Handles saving, loading, and deleting user custom patches (Combi tweaks) to IndexedDB.
  */
 
+import { licenseManager } from "../security/license-manager.js";
+
 const DB_NAME = "MidikeyCustomPatchesDB";
 const STORE_NAME = "custom_patches";
 const DB_VERSION = 1;
@@ -39,6 +41,11 @@ class PatchStorageManager {
   }
 
   async savePatch(patchName, patchData) {
+    // Capability gate: custom patches are a Pro entitlement, so enforcement
+    // lives here rather than only in the browser UI that calls this.
+    if (!licenseManager.requirePro("Setlist & Custom Patches")) {
+      throw new Error("Saving custom patches requires a Pro license.");
+    }
     await this.initPromise;
     return new Promise((resolve, reject) => {
       const id = "custom_" + Date.now() + "_" + Math.floor(Math.random() * 1000);

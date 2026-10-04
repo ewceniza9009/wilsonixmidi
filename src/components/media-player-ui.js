@@ -189,6 +189,8 @@ export class MediaPlayerUI {
 
     this._bind();
     this._drawStaticWave();
+    // Re-starting the loop must not orphan a previously scheduled rAF chain.
+    if (this._raf) cancelAnimationFrame(this._raf);
     this._raf = requestAnimationFrame(() => this._tick());
 
     mediaPlayer.restore().then(() => {
@@ -304,22 +306,28 @@ export class MediaPlayerUI {
       }
     });
 
-    // Global drop: graceful anywhere in the bay
-    window.addEventListener("dragover", (e) => e.preventDefault());
-    window.addEventListener("drop", (e) => {
-      e.preventDefault();
-      if (e.dataTransfer && e.dataTransfer.files.length) {
-        handleFiles(e.dataTransfer.files);
-      }
-    });
-
-    document.addEventListener("keydown", (e) => {
-      if (e.defaultPrevented) return;
-      if (e.code === "Space" && e.target === document.body) {
+    // Global drop + Space shortcut: bound exactly once. mount() rewrites
+    // container HTML, but window/document listeners would stack on every
+    // re-render (handleFiles only touches instance state, so the first
+    // closure stays valid).
+    if (!this._globalEventsBound) {
+      this._globalEventsBound = true;
+      window.addEventListener("dragover", (e) => e.preventDefault());
+      window.addEventListener("drop", (e) => {
         e.preventDefault();
-        mediaPlayer.toggle();
-      }
-    });
+        if (e.dataTransfer && e.dataTransfer.files.length) {
+          handleFiles(e.dataTransfer.files);
+        }
+      });
+
+      document.addEventListener("keydown", (e) => {
+        if (e.defaultPrevented) return;
+        if (e.code === "Space" && e.target === document.body) {
+          e.preventDefault();
+          mediaPlayer.toggle();
+        }
+      });
+    }
   }
 
   /* ===================== Internal actions ===================== */

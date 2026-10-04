@@ -20,7 +20,7 @@ import subprocess
 import shutil
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-SF2_DIR = r"C:\Users\EWCEN\Downloads\Korg X5-D"
+SF2_DIR = os.path.expanduser(os.path.join("~", "Downloads", "Korg X5-D"))
 OUT_DIR = os.path.join(ROOT_DIR, "public", "soundfonts-bin")
 
 NOTE_NAMES = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"]

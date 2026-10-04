@@ -323,6 +323,7 @@ export class RegistrationManager {
   }
 
   exportSetlist() {
+    if (!licenseManager.requirePro("Exporting Stage Rigs & Setlist")) return;
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.banks, null, 2));
     const dlAnchor = document.createElement("a");
     dlAnchor.setAttribute("href", dataStr);
@@ -331,6 +332,7 @@ export class RegistrationManager {
   }
 
   importSetlist(jsonString) {
+    if (!licenseManager.requirePro("Importing Stage Rigs & Setlist")) return false;
     try {
       if (typeof jsonString !== "string" || jsonString.length === 0) return false;
       const parsed = JSON.parse(jsonString);

@@ -465,6 +465,18 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
     const delayFrames = Number.isFinite(delaySec) && delaySec > 0 ? Math.round(delaySec * this.sampleRate) : 0;
     for (let i = 0; i < maxV; i++) {
       const v = this.voices[i];
+      // A note-off that lands inside the click-free steal window (the new note
+      // is parked on `pendingReuse` until the tail fades) used to be dropped,
+      // so the parked note started anyway and rang until the 15s auto-release.
+      // Clearing the park lets the voice keep sounding only if its CURRENT
+      // note is a different pitch (checked below).
+      if (
+        v.pendingReuse &&
+        v.pendingReuse[1] === midiNote &&
+        (layerIndex === undefined || layerIndex === null || v.pendingReuse[4] === layerIndex)
+      ) {
+        v.pendingReuse = null;
+      }
       if (v.active && v.midiNote === midiNote) {
         if (layerIndex === undefined || layerIndex === null || v.layerIndex === layerIndex) {
           if (delayFrames > 0) {
@@ -484,6 +496,13 @@ class WilsonixPcmProcessor extends AudioWorkletProcessor {
     const delayFrames = Number.isFinite(delaySec) && delaySec > 0 ? Math.round(delaySec * this.sampleRate) : 0;
     for (let i = 0; i < maxV; i++) {
       const v = this.voices[i];
+      if (
+        v.pendingReuse &&
+        v.pendingReuse[1] === midiNote &&
+        (layerIndex === undefined || layerIndex === null || v.pendingReuse[4] === layerIndex)
+      ) {
+        v.pendingReuse = null;
+      }
       if (v.active && v.midiNote === midiNote) {
         if (layerIndex === undefined || layerIndex === null || v.layerIndex === layerIndex) {
           if (delayFrames > 0) {

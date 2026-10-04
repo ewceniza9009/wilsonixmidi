@@ -114,7 +114,7 @@ test("NativePcmEngine voice pool guarantees zero duplicate nodes and supports fa
     destination: {},
   };
 
-  const engine = new NativePcmEngine(mockCtx, mockCtx.destination);
+  const engine = new NativePcmEngine(mockCtx, mockCtx.destination, { deferAssetLoading: true });
   assert.equal(typeof engine.fastStopNote, "function", "engine must expose fastStopNote");
 
   // Test pool uniqueness: pushing the same node pair multiple times must be prevented
@@ -162,7 +162,7 @@ test("NativePcmEngine fastStopNote respects sustainPedal when active", async () 
     destination: {},
   };
 
-  const engine = new NativePcmEngine(mockCtx, mockCtx.destination);
+  const engine = new NativePcmEngine(mockCtx, mockCtx.destination, { deferAssetLoading: true });
   engine.setSustainPedal(true);
   assert.equal(engine.sustainPedal, true);
 

@@ -115,8 +115,13 @@ export class ScaleLock {
       }
     }
 
-    const octBase = Math.floor(midiNote / 12) * 12;
-    const snapped = octBase + this.rootNote + bestInterval;
+    // Reconstruct the note in ROOT-relative octave space. The old
+    // `octBase + rootNote + bestInterval` used the note's own octave base and
+    // then added rootNote again, which overshoots by up to a full octave when
+    // rootNote > 0 (e.g. root B, note D → snapped to D an octave up).
+    const rel = midiNote - this.rootNote;
+    const rootOctave = Math.floor(rel / 12);
+    const snapped = this.rootNote + rootOctave * 12 + bestInterval;
     return Math.max(21, Math.min(108, snapped));
   }
 

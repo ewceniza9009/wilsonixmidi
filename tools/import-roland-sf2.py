@@ -16,7 +16,7 @@ import array
 import math
 import shutil
 
-SF2_DEFAULT = r"C:\Users\EWCEN\Downloads\MV30__SC-55_Version_.sf2"
+SF2_DEFAULT = os.path.expanduser(os.path.join("~", "Downloads", "MV30__SC-55_Version_.sf2"))
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 OUT_DIR = os.path.join(ROOT_DIR, "public", "soundfonts-bin")
 

@@ -45,7 +45,7 @@ function createTestEngine() {
     this.isReady = true;
     return Promise.resolve();
   };
-  const engine = new NativePcmEngine(mockCtx);
+  const engine = new NativePcmEngine(mockCtx, undefined, { deferAssetLoading: true });
   NativePcmEngine.prototype.initBuffers = origInit;
   return { engine, mockCtx };
 }

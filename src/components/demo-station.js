@@ -43,13 +43,13 @@ export class DemoStationUI {
     this.renderList();
     this.bindEvents();
 
+    // Exactly one registration — panic() runs hooks AND the window event.
     if (typeof multiLayerEngine?.registerPanicHook === "function") {
       multiLayerEngine.registerPanicHook(() => {
         this.stop(false);
         this.exitPractice();
       });
-    }
-    if (typeof window !== "undefined") {
+    } else if (typeof window !== "undefined") {
       window.addEventListener("wilsonix:panic", () => {
         this.stop(false);
         this.exitPractice();

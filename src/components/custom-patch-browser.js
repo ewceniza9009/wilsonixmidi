@@ -30,11 +30,17 @@ export class CustomPatchBrowserUI {
           <div class="locked-icon">🔒</div>
           <h3>SETLIST & CUSTOM PATCHES</h3>
           <p>Save custom layer mixes, FX, macros, and organize worship setlists.</p>
-          <button class="upgrade-btn" onclick="document.getElementById('license-modal-trigger')?.click()">
+          <button type="button" class="upgrade-btn">
             UNLOCK PRO
           </button>
         </div>
       `;
+      // Inline onclick is blocked by our own CSP (script-src 'self'), and the
+      // old `#license-modal-trigger` target never existed. Route through the
+      // standard license modal event instead.
+      this.container.querySelector(".upgrade-btn")?.addEventListener("click", () => {
+        licenseManager.requirePro("Setlist & Custom Patches");
+      });
       return;
     }
 
@@ -243,6 +249,10 @@ export class CustomPatchBrowserUI {
   }
 
   async handleSavePatch() {
+    if (!licenseManager.hasProAccess()) {
+      licenseManager.requirePro("Setlist & Custom Patches");
+      return;
+    }
     const rawInput = await CustomModal.prompt(
       "Save Custom Patch",
       "Enter patch name (optionally add [Key], e.g. 'Sunday Praise [G]'):",

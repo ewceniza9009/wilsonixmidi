@@ -10,6 +10,7 @@ import { audioCore } from "../audio/audio-core.js";
 import { getDeviceConfig } from "../audio/device-capabilities.js";
 import { synthEngine } from "../audio/synth-engine.js";
 import { multiLayerEngine } from "../audio/multi-layer-engine.js";
+import { escapeHtml } from "../utils/escape-html.js";
 
 const LOG_MAX_ROWS = 500;
 const SAMPLE_INTERVAL_MS = 1000;
@@ -467,16 +468,19 @@ export class LoggerUI {
     if (!body) return;
     const term = (this._searchTerm || "").toLowerCase();
     const filtered = term ? this.logs.filter(l => l.message.toLowerCase().includes(term) || l.level.toLowerCase().includes(term) || l.ts.toLowerCase().includes(term)) : this.logs;
-    body.innerHTML = filtered.map((l)=>`
-      <div class="logger-row logger-${l.level}" data-idx="${this.logs.indexOf(l)}">
-        <span class="logger-ts">${l.ts}</span>
-        <span class="logger-msg">${this.escapeHtml(l.message)}</span>
+    body.innerHTML = filtered.map((l)=>{
+      // `level` is interpolated into a class attribute — keep it to plain
+      // lowercase letters so a stray value can never break out of the attribute.
+      const lvl = /^[a-z]+$/.test(String(l.level)) ? l.level : "info";
+      return `
+      <div class="logger-row logger-${lvl}" data-idx="${this.logs.indexOf(l)}">
+        <span class="logger-ts">${escapeHtml(l.ts)}</span>
+        <span class="logger-msg">${escapeHtml(l.message)}</span>
       </div>
-    `).join("");
-    document.getElementById("logger-count").textContent = filtered.length;
+    `;}).join("");
+    const count = document.getElementById("logger-count");
+    if (count) count.textContent = filtered.length;
   }
-
-  escapeHtml(s){ return s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
   copyLogs() {
     const text = this.logs.map(l => `[${l.ts}] ${l.level.toUpperCase()} ${l.message}`).join("\n");

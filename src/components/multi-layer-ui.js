@@ -95,9 +95,10 @@ export class MultiLayerUI {
     multiLayerEngine.addLayerChangeListener(this._layerChangeListener);
     multiLayerEngine.onLayerChangeCallback = this._layerChangeListener;
 
-    multiLayerEngine.onLayerActivityCallback = (layerIdx, vel, gain) => {
+    this._layerActivityCallback = (layerIdx, vel, gain) => {
       this.triggerLayerActivity(layerIdx, vel, gain);
     };
+    multiLayerEngine.onLayerActivityCallback = this._layerActivityCallback;
 
     this._splitListener = () => {
       const consoleEl = document.getElementById("split-keyboard-console");
@@ -158,8 +159,19 @@ export class MultiLayerUI {
       multiLayerEngine.removeSplitChangeListener(this._splitListener);
       this._splitListener = null;
     }
-    if (multiLayerEngine.onLayerChangeCallback) {
-      multiLayerEngine.onLayerChangeCallback = null;
+    if (this._layerChangeListener) {
+      multiLayerEngine.removeLayerChangeListener(this._layerChangeListener);
+      if (multiLayerEngine.onLayerChangeCallback === this._layerChangeListener) {
+        multiLayerEngine.onLayerChangeCallback = null;
+      }
+      this._layerChangeListener = null;
+    }
+    if (
+      this._layerActivityCallback &&
+      multiLayerEngine.onLayerActivityCallback === this._layerActivityCallback
+    ) {
+      multiLayerEngine.onLayerActivityCallback = null;
+      this._layerActivityCallback = null;
     }
   }
 

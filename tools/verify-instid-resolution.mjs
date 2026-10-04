@@ -7,7 +7,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-const data = fs.readFileSync("src/audio/yamaha-eos-pcm-data.js", "utf8");
 // pull the bank map out of the module without executing app code
 const mod = await import(pathToFileURL(path.resolve("src/audio/yamaha-eos-pcm-data.js")).href);
 const BANKS = mod.YAMHAHA_EOS_BANKS || Object.values(mod).find((v) => v && typeof v === "object" && !Array.isArray(v) && Object.values(v)[0]?.anchors);

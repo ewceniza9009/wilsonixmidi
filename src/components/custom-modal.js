@@ -1,3 +1,5 @@
+import { escapeHtml } from "../utils/escape-html.js";
+
 export class CustomModal {
   static createOverlay() {
     const existing = document.getElementById("custom-modal-overlay");
@@ -21,9 +23,9 @@ export class CustomModal {
       
       overlay.innerHTML = `
         <div class="custom-modal-card">
-          <h3 class="custom-modal-title">${title}</h3>
-          <p class="custom-modal-message">${message}</p>
-          <input type="text" id="custom-modal-input" class="custom-modal-input" placeholder="${placeholder}" value="${defaultValue}" autocomplete="off" spellcheck="false" />
+          <h3 class="custom-modal-title">${escapeHtml(title)}</h3>
+          <p class="custom-modal-message">${escapeHtml(message)}</p>
+          <input type="text" id="custom-modal-input" class="custom-modal-input" placeholder="${escapeHtml(placeholder)}" value="${escapeHtml(defaultValue)}" autocomplete="off" spellcheck="false" />
           <div class="custom-modal-actions">
             <button class="custom-modal-btn secondary" id="custom-modal-cancel">CANCEL</button>
             <button class="custom-modal-btn primary" id="custom-modal-ok">OK</button>
@@ -64,8 +66,8 @@ export class CustomModal {
       
       overlay.innerHTML = `
         <div class="custom-modal-card">
-          <h3 class="custom-modal-title">${title}</h3>
-          <p class="custom-modal-message">${message}</p>
+          <h3 class="custom-modal-title">${escapeHtml(title)}</h3>
+          <p class="custom-modal-message">${escapeHtml(message)}</p>
           <div class="custom-modal-actions">
             <button class="custom-modal-btn secondary" id="custom-modal-cancel">CANCEL</button>
             <button class="custom-modal-btn danger" id="custom-modal-ok">CONFIRM</button>
@@ -90,8 +92,8 @@ export class CustomModal {
       
       overlay.innerHTML = `
         <div class="custom-modal-card">
-          <h3 class="custom-modal-title">${title}</h3>
-          <p class="custom-modal-message">${message}</p>
+          <h3 class="custom-modal-title">${escapeHtml(title)}</h3>
+          <p class="custom-modal-message">${escapeHtml(message)}</p>
           <div class="custom-modal-actions">
             <button class="custom-modal-btn primary" id="custom-modal-ok">OK</button>
           </div>

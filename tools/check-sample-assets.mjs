@@ -15,7 +15,7 @@
  */
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { join, dirname } from "node:path";
+import { join } from "node:path";
 
 import { ABLETUNES_BANKS } from "../src/audio/abletunes-manifest.js";
 import { BLOOM_EDM_BANKS } from "../src/audio/bloom-edm-manifest.js";

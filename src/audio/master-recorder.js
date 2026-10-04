@@ -14,6 +14,7 @@ import { audioCore } from "./audio-core.js";
 import tapProcessorCode from "./worklet/audio-tap-processor.js?raw";
 
 import { downloadBlob } from "../utils/download-blob.js";
+import { licenseManager } from "../security/license-manager.js";
 
 export class MasterRecorder {
   constructor() {
@@ -41,6 +42,12 @@ export class MasterRecorder {
 
   start() {
     if (this.isRecording) return;
+    // Capability gate: the record button is gated in the HUD, but this is the
+    // single entry point that actually arms the master bus tap.
+    if (!licenseManager.hasProAccess()) {
+      licenseManager.requirePro("Master WAV Audio Recording");
+      return;
+    }
     const ctx = audioCore.ctx;
     if (!ctx) return;
 

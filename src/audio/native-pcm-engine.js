@@ -872,6 +872,7 @@ export class LayerInsertProcessor {
     this.wetGain.connect(this.destination);
 
     this.activeFxNodes = [];
+    this._flushRestore = null;
     this.engine = null;
     this.sustainActive = false;
     this.sustainedVoices = new Set();
@@ -885,12 +886,33 @@ export class LayerInsertProcessor {
       this.sustainedVoices.forEach((v) => {
         try {
           if (v.src) v.src.loop = false;
+          // Ramp to silence: the old setValueAtTime(0.0) + disconnect-while-
+          // still-audible was a hard step discontinuity (audible pop on every
+          // sustain release / looper stop).
           v.voiceGain.gain.cancelScheduledValues(now);
-          v.voiceGain.gain.setValueAtTime(0.0, now);
-          v.src.stop(now + 0.01);
-          v.src.disconnect();
+          v.voiceGain.gain.setValueAtTime(v.voiceGain.gain.value || 0.0, now);
+          v.voiceGain.gain.setTargetAtTime(0.0, now, 0.012);
+          if (v.src) {
+            try { v.src.stop(now + 0.08); } catch (e) {}
+          }
+          if (this.engine) {
+            // Disconnect + return the nodes to the pool only once silent.
+            if (v.src) {
+              v.src.onended = () => {
+                try { v.src.onended = null; } catch (e) {}
+                this.engine.removeVoice(v.midiNote, v);
+              };
+            } else {
+              this.engine.removeVoice(v.midiNote, v);
+            }
+          } else if (v.src) {
+            // No engine back-reference (standalone insert): still disconnect,
+            // but after the fade - the old code cut the source mid-signal.
+            setTimeout(() => {
+              try { v.src.disconnect(); } catch (e) {}
+            }, 150);
+          }
         } catch (e) {}
-        if (this.engine) this.engine.removeVoice(v.midiNote, v);
       });
       this.sustainedVoices.clear();
     }
@@ -909,20 +931,29 @@ export class LayerInsertProcessor {
       });
       this.sustainedVoices?.clear();
 
+      // Capture the pre-choke state ONCE per mute window. wetGain and the FX
+      // node gains used to be zeroed with no restore at all (and dryGain was
+      // forced back to 1.0, which bypasses serial inserts that require 0.0),
+      // so a single panic() left every layer's insert FX silent until the user
+      // re-picked the effect. A re-entrant flush() inside the window must reuse
+      // the pending record, otherwise it would capture 0.0 as "previous".
+      const restore = this._flushRestore || {
+        input: this.input?.gain ? this.input.gain.value : null,
+        dry: this.dryGain?.gain ? this.dryGain.gain.value : null,
+        wet: this.wetGain?.gain ? this.wetGain.gain.value : null,
+        fx: this.activeFxNodes.map((node) => (node.gain ? node.gain.value : null)),
+        timer: 0,
+      };
+      this._flushRestore = restore;
+
       // Temporarily mute insert input & dryGain to choke ANY orphaned or zombie nodes
       if (this.input?.gain) {
         this.input.gain.cancelScheduledValues(now);
         this.input.gain.setValueAtTime(0.0, now);
-        setTimeout(() => {
-          try { this.input.gain.setTargetAtTime(1.0, this.ctx.currentTime, 0.02); } catch (e) {}
-        }, 40);
       }
       if (this.dryGain?.gain) {
         this.dryGain.gain.cancelScheduledValues(now);
         this.dryGain.gain.setValueAtTime(0.0, now);
-        setTimeout(() => {
-          try { this.dryGain.gain.setTargetAtTime(1.0, this.ctx.currentTime, 0.02); } catch (e) {}
-        }, 40);
       }
 
       this.wetGain.gain.cancelScheduledValues(now);
@@ -935,10 +966,42 @@ export class LayerInsertProcessor {
           }
         } catch (e) {}
       });
+
+      if (!restore.timer) {
+        restore.timer = setTimeout(() => {
+          restore.timer = 0;
+          // setEffect() superseded this window - its gains are authoritative.
+          if (this._flushRestore !== restore) return;
+          this._flushRestore = null;
+          const t = this.ctx.currentTime;
+          try {
+            if (restore.input !== null && this.input?.gain) {
+              this.input.gain.setTargetAtTime(restore.input, t, 0.02);
+            }
+            if (restore.dry !== null && this.dryGain?.gain) {
+              this.dryGain.gain.setTargetAtTime(restore.dry, t, 0.02);
+            }
+            if (restore.wet !== null && this.wetGain?.gain) {
+              this.wetGain.gain.setTargetAtTime(restore.wet, t, 0.02);
+            }
+            this.activeFxNodes.forEach((node, i) => {
+              if (node.gain && restore.fx[i] != null) {
+                node.gain.setTargetAtTime(restore.fx[i], t, 0.02);
+              }
+            });
+          } catch (e) {}
+        }, 40);
+      }
     } catch (e) {}
   }
 
   setEffect(fxType) {
+    // A pending flush() restore would otherwise fire 40ms later and overwrite
+    // the gains this call is about to set authoritatively.
+    if (this._flushRestore) {
+      if (this._flushRestore.timer) clearTimeout(this._flushRestore.timer);
+      this._flushRestore = null;
+    }
     this.currentFx = fxType || "clean";
     const ctx = this.ctx;
 
@@ -1674,7 +1737,12 @@ export class LayerInsertProcessor {
 }
 
 export class NativePcmEngine {
-  constructor(ctx, destinationNode) {
+  /**
+   * @param {{deferAssetLoading?: boolean}} [options] `deferAssetLoading: true`
+   *   skips the boot-time sample decode (initBuffers). Used by the unit suite
+   *   so constructing the engine never performs network fetches.
+   */
+  constructor(ctx, destinationNode, options = {}) {
     this.ctx = ctx;
     this.destination = destinationNode;
     // P1 code splitting: the 111KB SFX generator is dynamically imported on
@@ -1684,14 +1752,20 @@ export class NativePcmEngine {
     this.sfxGenerator = null;
     this._sfxLoadPromise = null;
 
-    this.layerInserts = createLazyInsertGrid(
-      () => new LayerInsertProcessor(ctx, destinationNode),
-      4,
-    );
+    // engine back-reference lets every insert recycle its sustained voices
+    // through removeVoice() (only looper buses had it, so layer/split inserts
+    // never returned nodes to the voice pool).
+    this.layerInserts = createLazyInsertGrid(() => {
+      const bus = new LayerInsertProcessor(ctx, destinationNode);
+      bus.engine = this;
+      return bus;
+    }, 4);
 
-    this.splitZoneInserts = createLazySplitZone(
-      () => new LayerInsertProcessor(ctx, destinationNode),
-    );
+    this.splitZoneInserts = createLazySplitZone(() => {
+      const bus = new LayerInsertProcessor(ctx, destinationNode);
+      bus.engine = this;
+      return bus;
+    });
 
     this.looperInserts = createLazyInsertGrid(
       () => createLazyInsertGrid(() => {
@@ -1784,7 +1858,9 @@ export class NativePcmEngine {
     // Set of instIds whose prewarm was scheduled before pcmWorkletNode became ready
     this._pendingPrewarms = new Set();
 
-    this.initBuffers();
+    if (options.deferAssetLoading !== true) {
+      this.initBuffers();
+    }
   }
 
 
@@ -1818,8 +1894,16 @@ export class NativePcmEngine {
     const bus = this.looperInserts[trackIndex]?.[layerSlot];
     if (!bus) return;
 
+    // playNote() flags every pitch as held; looper notes were never unflagged
+    // here, so the Set grew for the whole session and voice-stealing refused
+    // to reclaim those pitches.
     const voices = this.activeVoices.get(midiNote);
-    if (!voices || voices.length === 0) return;
+    if (!voices || voices.length === 0) {
+      if (this.heldNotes && !this._isPitchHeldByKeyboard(midiNote)) {
+        this.heldNotes.delete(midiNote);
+      }
+      return;
+    }
 
     const ctx = this.ctx;
     const now = when > 0 ? Math.max(when, ctx.currentTime) : ctx.currentTime;
@@ -1851,6 +1935,21 @@ export class NativePcmEngine {
 
     if (remaining.length > 0) this.activeVoices.set(midiNote, remaining);
     else this.activeVoices.delete(midiNote);
+
+    if (this.heldNotes && !this._isPitchHeldByKeyboard(midiNote)) {
+      this.heldNotes.delete(midiNote);
+    }
+  }
+
+  /** True when a non-looper voice is still sounding at this pitch. */
+  _isPitchHeldByKeyboard(midiNote) {
+    const isKeyboard = (v) =>
+      !(this._findLooperBusByDest && this._findLooperBusByDest(v.dest));
+    const active = this.activeVoices.get(midiNote);
+    if (active && active.some(isKeyboard)) return true;
+    const sustained = this.sustainedVoices.get(midiNote);
+    if (sustained && sustained.some(isKeyboard)) return true;
+    return false;
   }
 
   setLooperTrackFx(trackIndex, layerSlot, fxId) {
@@ -1883,10 +1982,52 @@ export class NativePcmEngine {
     if (trackIndex < 0 || trackIndex > 3) return;
     const buses = this.looperInserts[trackIndex];
     if (!buses) return;
+    const busInputs = new Set();
     buses.forEach((bus) => {
+      if (!bus) return;
+      if (bus.input) busInputs.add(bus.input);
       try {
         bus.flush();
       } catch (e) {}
+    });
+    if (busInputs.size === 0) return;
+
+    // bus.flush() only chokes the insert for 40ms and clears the bus's own
+    // sustained set: voices already sounding into this track stayed in
+    // activeVoices and faded back in when the input gain was restored, so
+    // "clear track" did not actually clear it.
+    const now = this.ctx.currentTime;
+    const doomed = [];
+    this.activeVoices.forEach((list, midiNote) => {
+      list.forEach((v) => {
+        if (v.dest && busInputs.has(v.dest)) doomed.push([midiNote, v]);
+      });
+    });
+    doomed.forEach(([midiNote, v]) => {
+      try {
+        if (v.src) {
+          v.src.onended = null;
+          v.src.loop = false;
+          try { v.src.stop(now + 0.02); } catch (e) {}
+        }
+        if (v.voiceGain) {
+          v.voiceGain.gain.cancelScheduledValues(now);
+          v.voiceGain.gain.setValueAtTime(0.0, now);
+        }
+        if (v.vibLfo) { try { v.vibLfo.stop(now + 0.03); } catch (e) {} }
+        if (v.growlLfo) { try { v.growlLfo.stop(now + 0.03); } catch (e) {} }
+      } catch (e) {}
+      this._removeFromTracking(midiNote, v);
+      const stopTimer = setTimeout(() => {
+        this._scheduledStops.delete(stopTimer);
+        this._disconnectAndRecycle(midiNote, v);
+      }, 60);
+      this._scheduledStops.add(stopTimer);
+    });
+    doomed.forEach(([midiNote]) => {
+      if (this.heldNotes && !this._isPitchHeldByKeyboard(midiNote)) {
+        this.heldNotes.delete(midiNote);
+      }
     });
   }
 
@@ -4228,6 +4369,11 @@ export class NativePcmEngine {
     if (!voiceRecord || voiceRecord._isRecycled) return;
     voiceRecord._isRecycled = true;
     voiceRecord._isRemoved = true;
+    // Every voice that ends via the retrigger-fade, steal, sustained-eviction or
+    // fastStopNote path lands here; without this the record stayed in
+    // _allActiveVoices forever (unbounded Set of dead nodes) and every later
+    // allNotesOff re-ran killVoice over it.
+    this._allActiveVoices.delete(voiceRecord);
     try {
       if (voiceRecord.src) {
         voiceRecord.src.onended = null;
@@ -4439,7 +4585,12 @@ export class NativePcmEngine {
   }
 
   stopNote(instId, midiNote, when = 0, layerIndex = null) {
-    if (this.heldNotes) this.heldNotes.delete(midiNote);
+    // MUST be captured before the delete: the release guard below asks "is this
+    // pitch still held?" to decide whether the instId/layer filter may be
+    // ignored. Deleting first made that test always true, so one note-off
+    // released EVERY voice at that pitch (other layers, other instruments, the
+    // looper).
+    const wasHeld = this.heldNotes ? this.heldNotes.delete(midiNote) : false;
 
     // AudioWorklet path: forward to audio thread (immediate or scheduled)
     if (this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
@@ -4464,13 +4615,18 @@ export class NativePcmEngine {
     const remaining = [];
 
     voices.forEach((v) => {
-      if (!instId || v.instId === instId || !this.heldNotes.has(v.midiNote)) {
-        const bus = this._findLooperBusByDest(v.dest);
-        if (bus && bus.sustainActive) {
-          bus.sustainedVoices.add(v);
-          return;
-        }
-
+      // A looper-bus voice is released only by stopLooperNote() - a keyboard
+      // note-off for the same pitch must never cut recorded looper playback.
+      if (this._findLooperBusByDest && this._findLooperBusByDest(v.dest)) {
+        remaining.push(v);
+        return;
+      }
+      if (
+        (layerIndex !== null && layerIndex !== undefined && v.layerIndex !== null && v.layerIndex !== undefined
+          ? v.layerIndex === layerIndex
+          : !instId || v.instId === instId) ||
+        !wasHeld
+      ) {
         if (this.sustainPedal) {
           if (!this.sustainedVoices.has(midiNote))
             this.sustainedVoices.set(midiNote, []);
@@ -4617,7 +4773,8 @@ export class NativePcmEngine {
   }
 
   fastStopNote(instId, midiNote, when = 0, layerIndex = null) {
-    if (this.heldNotes) this.heldNotes.delete(midiNote);
+    // Captured before delete - see stopNote().
+    const wasHeld = this.heldNotes ? this.heldNotes.delete(midiNote) : false;
 
     if (this.pcmWorkletNode && this.pcmWorkletNode.isReady) {
       const delaySec = when > 0 ? Math.max(0, when - this.ctx.currentTime) : 0;
@@ -4649,7 +4806,17 @@ export class NativePcmEngine {
     const remaining = [];
 
     voices.forEach((v) => {
-      if (!instId || v.instId === instId || !this.heldNotes.has(v.midiNote)) {
+      // See stopNote(): looper-bus voices belong to stopLooperNote().
+      if (this._findLooperBusByDest && this._findLooperBusByDest(v.dest)) {
+        remaining.push(v);
+        return;
+      }
+      if (
+        (layerIndex !== null && layerIndex !== undefined && v.layerIndex !== null && v.layerIndex !== undefined
+          ? v.layerIndex === layerIndex
+          : !instId || v.instId === instId) ||
+        !wasHeld
+      ) {
         if (this.sustainPedal) {
           if (!this.sustainedVoices.has(midiNote)) {
             this.sustainedVoices.set(midiNote, []);
@@ -4672,6 +4839,7 @@ export class NativePcmEngine {
           }
           this._removeFromTracking(midiNote, v);
           const stopTimer = setTimeout(() => {
+            this._scheduledStops.delete(stopTimer);
             this._disconnectAndRecycle(midiNote, v);
           }, 45);
           this._scheduledStops.add(stopTimer);
@@ -4737,6 +4905,16 @@ export class NativePcmEngine {
               }
               const qi = this.voiceQueue.indexOf(v);
               if (qi !== -1) this.voiceQueue.splice(qi, 1);
+              // onended was nulled above, so removeVoice() can never run for
+              // these: without this they leaked src/filter/2 gains per cancel
+              // and stayed in _allActiveVoices for allNotesOff to re-kill.
+              v._isRemoved = true;
+              this._allActiveVoices.delete(v);
+              const stopTimer = setTimeout(() => {
+                this._scheduledStops.delete(stopTimer);
+                this._disconnectAndRecycle(v.midiNote, v);
+              }, 60);
+              this._scheduledStops.add(stopTimer);
             } catch (e) {}
           } else {
             keep.push(v);
@@ -4766,6 +4944,15 @@ export class NativePcmEngine {
       if (preserveLooper && this._findLooperBusByDest(v.dest)) {
         return; // Retain active playing looper voice!
       }
+      // allNotesOff walks activeVoices, sustainedVoices AND _allActiveVoices,
+      // so the same record is visited 2x. Without this guard the second pass
+      // scheduled a second disconnect+pool and pushed the SAME node pair into
+      // _voiceNodePool twice; the next playNote then popped one pair twice and
+      // two live voices shared one gain node.
+      if (v._isRecycled) return;
+      v._isRecycled = true;
+      v._isRemoved = true;
+      this._allActiveVoices.delete(v);
       try {
         if (v.src) {
           v.src.onended = null;
@@ -4794,7 +4981,12 @@ export class NativePcmEngine {
             if (v.filter) v.filter.disconnect();
             if (v.voiceGain) v.voiceGain.disconnect();
             if (this._voiceNodePool.length < this.MAX_VOICES) {
-              this._voiceNodePool.push({ filter: v.filter, voiceGain: v.voiceGain });
+              const isDuplicate = this._voiceNodePool.some(
+                (p) => p.filter === v.filter || p.voiceGain === v.voiceGain,
+              );
+              if (!isDuplicate) {
+                this._voiceNodePool.push({ filter: v.filter, voiceGain: v.voiceGain });
+              }
             }
           } catch (e) {}
         }, 30);

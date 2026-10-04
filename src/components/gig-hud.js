@@ -103,8 +103,8 @@ export class GigHudUI {
     this.bindPillInteractions();
     this.bindRecorder();
     this.bindRegistration();
-    this._vuRunning = false;
-    if (this.vuAnimationId) cancelAnimationFrame(this.vuAnimationId);
+    // Re-render replaced the DOM, so restart the VU loop to re-capture nodes.
+    this.stopVuMonitor();
     if (!this.gigMode) {
       this.startVuMonitor();
     }
@@ -1050,7 +1050,9 @@ export class GigHudUI {
       const text = await file.text();
       const ok = registrationManager.importSetlist(text);
       if (ok) {
-        this.render();
+        // Full refresh: render() alone leaves every pill/slot/recorder control
+        // unbound (bindings live in refresh()).
+        this.refresh();
         this.syncSoundDisplay();
       } else {
         alert("Invalid .mkgig file — could not import setlist.");
@@ -1192,8 +1194,13 @@ export class GigHudUI {
       return;
     }
 
-    // Direct fallback
+    // Direct fallback (raw combi id, no "combi:" prefix)
     if (COMBI_PRESETS[selectedId]) {
+      if (!licenseManager.hasProAccess()) {
+        licenseManager.requirePro("4-Timbre Layered Combi Presets");
+        this.syncSoundDisplay();
+        return;
+      }
       multiLayerEngine.setCombiPreset(selectedId);
       this.syncSoundDisplay();
       getComponent("tritonConsole")?.syncLcdFromRigSelection?.();
@@ -1360,6 +1367,12 @@ export class GigHudUI {
 
     layerBtn?.addEventListener("click", () => {
       const nextActive = !multiLayerEngine.isCombiMode;
+      // Turning on combi mode enables all four layers, which is the same
+      // Pro capability as picking a combi from the sound list.
+      if (nextActive && !licenseManager.hasProAccess()) {
+        licenseManager.requirePro("4-Timbre Layered Combi Presets");
+        return;
+      }
 
       multiLayerEngine.isCombiMode = nextActive;
       multiLayerEngine.isSplitMode = false;
@@ -1399,6 +1412,12 @@ export class GigHudUI {
 
     layerSelect?.addEventListener("change", (e) => {
       const bankId = e.target.value;
+      if (!licenseManager.hasProAccess()) {
+        licenseManager.requirePro("4-Timbre Layered Combi Presets");
+        // Revert the dropdown to whatever layer is actually sounding.
+        e.target.value = multiLayerEngine.layers[1]?.inst ?? "";
+        return;
+      }
       if (multiLayerEngine.layers[1]) {
         multiLayerEngine.layers[1].inst = bankId;
         multiLayerEngine.layers[1].enabled = true;

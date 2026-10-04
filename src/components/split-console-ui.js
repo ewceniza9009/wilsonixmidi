@@ -114,7 +114,7 @@ export class SplitConsoleUI {
             <label class="split-label">SPLIT MODE</label>
             <div class="split-status-badge ${on ? "on" : ""}" id="split-status-badge">${on ? "SPLIT IS ON" : "SPLIT IS OFF"}</div>
             <label class="split-label">SPLIT POINT</label>
-            <select id="split-point-select" class="split-point-select">
+            <select id="split-console-point-select" class="split-point-select">
               ${[48, 55, 60, 62, 67, 72]
                 .concat(Array.from({ length: 37 }, (_, i) => i + 48))
                 .filter((v, i, a) => a.indexOf(v) === i)
@@ -144,7 +144,7 @@ export class SplitConsoleUI {
     const split = multiLayerEngine.splitZones;
     const on = multiLayerEngine.isSplitMode;
 
-    const badge = document.getElementById("split-status-badge");
+    const badge = this.container?.querySelector("#split-status-badge");
     if (badge) {
       badge.classList.toggle("on", on);
       badge.textContent = on ? "SPLIT IS ON" : "SPLIT IS OFF";
@@ -152,6 +152,8 @@ export class SplitConsoleUI {
     this.container?.querySelector(".split-console-view")?.classList.toggle("on", on);
 
     ["lower", "upper"].forEach(zk => {
+      const z = split[zk];
+      if (!z) return;
       const trigger = this.container?.querySelector(`.timbre-picker-trigger[data-split-zone="${zk}"]`);
       if (trigger) {
         const nameSpan = trigger.querySelector(".timbre-trigger-name");
@@ -166,17 +168,17 @@ export class SplitConsoleUI {
       }
       const fx = this.container?.querySelector(`.split-fx-select[data-zone="${zk}"]`);
       if (fx && z.fx) fx.value = z.fx;
-      const oct = document.getElementById(`split-card-oct-${zk}`);
+      const oct = this.container?.querySelector(`#split-card-oct-${zk}`);
       if (oct) oct.textContent = `${z.oct >= 0 ? "+" : ""}${z.oct}`;
       const vol = this.container?.querySelector(`.split-vol[data-zone="${zk}"]`);
       if (vol) vol.value = z.gain;
-      const volVal = document.getElementById(`split-card-vol-${zk}`);
+      const volVal = this.container?.querySelector(`#split-card-vol-${zk}`);
       if (volVal) volVal.textContent = `${Math.round(z.gain * 100)}%`;
-      const cur = document.getElementById(`split-card-current-${zk}`);
+      const cur = this.container?.querySelector(`#split-card-current-${zk}`);
       if (cur) cur.innerHTML = this.currentLabel(zk, z);
     });
 
-    const pointSel = document.getElementById("split-point-select");
+    const pointSel = this.container.querySelector("#split-console-point-select");
     if (pointSel) pointSel.value = multiLayerEngine.splitPointMidi;
   }
 
@@ -206,7 +208,7 @@ export class SplitConsoleUI {
   }
 
   bindEvents() {
-    document.getElementById("split-point-select")?.addEventListener("change", e => {
+    this.container?.querySelector("#split-console-point-select")?.addEventListener("change", e => {
       multiLayerEngine.setSplitPointMidi(parseInt(e.target.value, 10));
     });
 

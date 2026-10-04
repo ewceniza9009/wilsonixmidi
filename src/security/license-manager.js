@@ -32,11 +32,23 @@ function base64ToUint8Array(b64) {
 
 const TRIAL_SALT = "MK_ELITE_TRIAL_PROTECT_2026";
 const ACTIVATION_HMAC_SALT = "MKPRO_ACTIVATION_HMAC_SALT_2026";
+// Longest trial a stored record may ever describe. The FNV/HMAC bindings below
+// ship inside the bundle, so they are tamper-EVIDENT only: an attacker who
+// reads them can mint any signature they like. Capping the duration is what
+// actually bounds a forged record to "at most one fresh trial".
+const TRIAL_MAX_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
+const TRIAL_DURATION_SLACK_MS = 60 * 60 * 1000; // clock skew / re-signing drift
 
 export class LicenseManager {
-  constructor() {
+  /**
+   * @param {{publicKeySpki?: string}} [options] Test-only escape hatch: lets the
+   *   unit suite verify signatures made with a throwaway test keypair instead of
+   *   the production key. Never pass anything here outside of tests.
+   */
+  constructor(options = {}) {
     this.storageKey = "midikey_elite_license";
     this.trialStorageKey = "midikey_elite_trial_state";
+    this.publicKeySpki = options.publicKeySpki || LICENSE_PUBLIC_KEY_SPKI;
     this.deviceFingerprint = this.generateDeviceFingerprint();
     this.cryptoPublicKeyPromise = null;
     this._licenseConfirmed = null; // null = pending optimistic, true/false = verified
@@ -55,7 +67,7 @@ export class LicenseManager {
           : (typeof crypto !== "undefined" && crypto.webcrypto?.subtle ? crypto.webcrypto.subtle : null);
         if (!cryptoObj) return null;
 
-        const pubKeyDer = base64ToUint8Array(LICENSE_PUBLIC_KEY_SPKI);
+        const pubKeyDer = base64ToUint8Array(this.publicKeySpki);
         return await cryptoObj.importKey(
           "spki",
           pubKeyDer,
@@ -226,9 +238,19 @@ export class LicenseManager {
             parsed.lastSeenAt = Math.max(now, lastSeen);
 
             const isSigMatch = parsed.signature === expectedSig;
-            const isLegacyValid = !parsed.signature && typeof parsed.expiresAt === "number" && parsed.expiresAt > now && parsed.startedAt <= now;
+            // A record with no signature at all is only trusted for a normal
+            // trial window - previously any duration was accepted, so editing
+            // one localStorage field bought a 10-year "trial" with no crypto.
+            const legacyDuration = parsed.expiresAt - parsed.startedAt;
+            const isDurationOk =
+              legacyDuration <= trialDurationMs + TRIAL_DURATION_SLACK_MS &&
+              legacyDuration > 0;
+            const isLegacyValid =
+              !parsed.signature &&
+              parsed.startedAt <= now &&
+              isDurationOk;
 
-            if (isSigMatch || isLegacyValid) {
+            if ((isSigMatch || isLegacyValid) && isDurationOk) {
               if (!isSigMatch) {
                 parsed.signature = expectedSig;
                 parsed.device = this.deviceFingerprint;
@@ -241,7 +263,10 @@ export class LicenseManager {
             }
 
             // Tampered trial record: lock Pro access, DO NOT reset to a new trial
-            console.warn("[LicenseManager] Tampered trial state detected.");
+            console.warn(
+              "[LicenseManager] Tampered trial state detected" +
+                (!isDurationOk ? " (impossible trial duration)." : "."),
+            );
             parsed.signature = "TAMPERED";
             parsed.isExpired = true;
             localStorage.setItem(this.trialStorageKey, JSON.stringify(parsed));
@@ -312,7 +337,16 @@ export class LicenseManager {
             TRIAL_SALT
           );
 
-          if (vault.signature === expectedVaultSig && vault.device === this.deviceFingerprint) {
+          const vaultDuration = vault.expiresAt - vault.startedAt;
+          const isVaultDurationOk =
+            vaultDuration > 0 &&
+            vaultDuration <= TRIAL_MAX_DURATION_MS + TRIAL_DURATION_SLACK_MS;
+
+          if (
+            vault.signature === expectedVaultSig &&
+            vault.device === this.deviceFingerprint &&
+            isVaultDurationOk
+          ) {
             const isVaultExpired = vault.expiresAt <= now || vault.isExpired === true;
             const currentStartedAt = this.trialData ? this.trialData.startedAt : now;
 
@@ -424,6 +458,32 @@ export class LicenseManager {
       };
     }
 
+    // No trial access, but a license record exists: say why it is not
+    // granting access instead of reporting a trial expiry that has nothing
+    // to do with the user's actual situation.
+    if (this.licenseData && this.licenseData.rawKey) {
+      const expMs =
+        typeof this.licenseData.expiresAtMs === "number"
+          ? this.licenseData.expiresAtMs
+          : this._keyExpiryMs(this.licenseData.rawKey);
+      const expired = expMs !== null && Date.now() > expMs;
+      return {
+        isLicensed: false,
+        isTrial: false,
+        isExpired: true,
+        canPlayFull: false,
+        badgeText: expired ? "⌛ EXPIRED" : "✖ UNVERIFIED",
+        badgeClass: "expired",
+        type: expired ? "License Expired" : "License Not Verified",
+        licensee: this.licenseData.licensee || "Unlicensed",
+        expires: expired ? new Date(expMs).toLocaleDateString() : this.licenseData.expires || "—",
+        daysRemaining: 0,
+        reason: expired
+          ? `Your license expired on ${new Date(expMs).toLocaleDateString()}. Enter a renewed license key to continue using Pro features.`
+          : "The stored license could not be verified on this device. Re-enter your license key to continue using Pro features.",
+      };
+    }
+
     // Trial expired
     return {
       isLicensed: false,
@@ -479,6 +539,60 @@ export class LicenseManager {
     }
   }
 
+  /** Device ids are always DEV_XXXXXXXX / DEV-XXXXXXXX (see fingerprint). */
+  _looksLikeDeviceId(seg) {
+    return /^DEV[_-]/i.test(seg || "");
+  }
+
+  /**
+   * Splits `MKPRO-<NAME>-<EXPIRY>-<SIG>` / `MKPRO-<NAME>-<EXPIRY>-<DEV>-<SIG>`.
+   *
+   * `encodeURIComponent` does not escape `-`, so a licensee named "SMITH-JONES"
+   * produces a 5-segment key that the old parser mistook for a hardware-locked
+   * one and rejected. The shape is decided by the segment BEFORE the trailing
+   * signature: if it is a device id we have the hardware form, otherwise every
+   * segment between the prefix and the expiry belongs to the name.
+   *
+   * Returns `{ prefix, licensee, expiryStr, devId, sig }` or null.
+   */
+  _parseKeyParts(cleanKey) {
+    const parts = cleanKey.split("-");
+    if (parts[0] !== "MKPRO" || parts.length < 4) return null;
+    const n = parts.length;
+    const sig = parts[n - 1];
+    if (this._looksLikeDeviceId(parts[n - 2])) {
+      return {
+        prefix: parts[0],
+        licensee: parts.slice(1, n - 3).join("-"),
+        expiryStr: parts[n - 3],
+        devId: parts[n - 2],
+        sig,
+      };
+    }
+    return {
+      prefix: parts[0],
+      licensee: parts.slice(1, n - 2).join("-"),
+      expiryStr: parts[n - 2],
+      devId: null,
+      sig,
+    };
+  }
+
+  /** Expiry (ms) encoded in an MKPRO key, or null for lifetime keys. */
+  _keyExpiryMs(rawKey) {
+    if (typeof rawKey !== "string") return null;
+    const parts = this._parseKeyParts(rawKey.trim().toUpperCase());
+    if (!parts || !parts.expiryStr || parts.expiryStr === "LIFETIME") return null;
+    const ts = parseInt(parts.expiryStr, 16);
+    return Number.isFinite(ts) && ts > 0 ? ts : null;
+  }
+
+  _deviceMatches(devId) {
+    const normalized = String(devId).replace(/-/g, "_").toUpperCase();
+    const current = this.deviceFingerprint.replace(/-/g, "_").toUpperCase();
+    return normalized === current;
+  }
+
   /**
    * Validates a license key format:
    * Standard: MKPRO-<NAME>-<EXPIRY>-<SIG>
@@ -489,87 +603,60 @@ export class LicenseManager {
 
     const cleanKey = key.trim().toUpperCase();
 
-    const parts = cleanKey.split("-");
-    if (parts[0] !== "MKPRO") {
+    if (cleanKey.split("-")[0] !== "MKPRO") {
       return { valid: false, reason: "License key must start with 'MKPRO-'" };
     }
 
-    if (parts.length === 4) {
-      // Standard Key: MKPRO-<NAME>-<EXPIRY>-<SIG>
-      const [prefix, licensee, expiryStr, providedSig] = parts;
+    const parsed = this._parseKeyParts(cleanKey);
+    if (!parsed) {
+      return { valid: false, reason: "Key must follow format: MKPRO-NAME-EXPIRY-SIGNATURE" };
+    }
+    const { prefix, licensee, expiryStr, devId, sig: providedSig } = parsed;
 
-      let expiryDate = "Lifetime";
-      if (expiryStr !== "LIFETIME") {
-        const timestamp = parseInt(expiryStr, 16);
-        if (isNaN(timestamp)) {
-          return { valid: false, reason: "Corrupt expiration timestamp in license key." };
-        }
-        if (Date.now() > timestamp) {
-          return { valid: false, reason: `License expired on ${new Date(timestamp).toLocaleDateString()}` };
-        }
-        expiryDate = new Date(timestamp).toLocaleDateString();
-      }
-
-      const payload = `${prefix}:${licensee}:${expiryStr}`;
-      const isValid = await this.verifyEcdsaSignature(payload, providedSig);
-
-      if (!isValid) {
-        // Let activate() handle the format fallback — return false here
-        // so verifyKey() stays pure (crypto-only), and activate() retries
-        // with verifyKeyFormat() when ECDSA fails.
-        return { valid: false, reason: "Cryptographic signature mismatch. Unauthorized or forged license key." };
-      }
-
+    if (devId && !this._deviceMatches(devId)) {
       return {
-        valid: true,
-        licensee: this.decodeLicensee(licensee),
-        type: expiryStr === "LIFETIME" ? "Lifetime Pro License" : "Time-Limited Pro License",
-        expires: expiryDate,
-        rawKey: cleanKey,
-      };
-    } else if (parts.length === 5) {
-      // Hardware-Locked Key: MKPRO-<NAME>-<EXPIRY>-<DEVICEID>-<SIG>
-      const [prefix, licensee, expiryStr, targetDevId, providedSig] = parts;
-
-      const normalizedDevId = targetDevId.replace(/-/g, "_");
-      const normalizedCurrentDev = this.deviceFingerprint.replace(/-/g, "_");
-
-      if (normalizedDevId !== normalizedCurrentDev) {
-        return {
-          valid: false,
-          reason: `License is hardware-locked to machine [${targetDevId}]. Current machine is [${this.deviceFingerprint}].`,
-        };
-      }
-
-      let expiryDate = "Lifetime";
-      if (expiryStr !== "LIFETIME") {
-        const timestamp = parseInt(expiryStr, 16);
-        if (isNaN(timestamp)) {
-          return { valid: false, reason: "Corrupt expiration timestamp." };
-        }
-        if (Date.now() > timestamp) {
-          return { valid: false, reason: `License expired on ${new Date(timestamp).toLocaleDateString()}` };
-        }
-        expiryDate = new Date(timestamp).toLocaleDateString();
-      }
-
-      const payload = `${prefix}:${licensee}:${expiryStr}:${targetDevId}`;
-      const isValid = await this.verifyEcdsaSignature(payload, providedSig);
-
-      if (!isValid) {
-        return { valid: false, reason: "Cryptographic signature mismatch on hardware key. Unauthorized or forged key." };
-      }
-
-      return {
-        valid: true,
-        licensee: this.decodeLicensee(licensee),
-        type: `Hardware-Locked Pro License (${targetDevId})`,
-        expires: expiryDate,
-        rawKey: cleanKey,
+        valid: false,
+        reason: `License is hardware-locked to machine [${devId}]. Current machine is [${this.deviceFingerprint}].`,
       };
     }
 
-    return { valid: false, reason: "Key must follow format: MKPRO-NAME-EXPIRY-SIGNATURE" };
+    let expiryDate = "Lifetime";
+    if (expiryStr !== "LIFETIME") {
+      const timestamp = parseInt(expiryStr, 16);
+      if (isNaN(timestamp)) {
+        return { valid: false, reason: "Corrupt expiration timestamp in license key." };
+      }
+      if (Date.now() > timestamp) {
+        return { valid: false, reason: `License expired on ${new Date(timestamp).toLocaleDateString()}` };
+      }
+      expiryDate = new Date(timestamp).toLocaleDateString();
+    }
+
+    const payload = devId
+      ? `${prefix}:${licensee}:${expiryStr}:${devId}`
+      : `${prefix}:${licensee}:${expiryStr}`;
+    const isValid = await this.verifyEcdsaSignature(payload, providedSig);
+
+    if (!isValid) {
+      // Stay crypto-only here. activate() owns the only other route in: an
+      // admin-issued activation code bound to this exact device. The bundle
+      // salts are never enough to make a forged *key* verify — they are only
+      // consulted by revalidateLicense() when WebCrypto is unavailable.
+      return { valid: false, reason: "Cryptographic signature mismatch. Unauthorized or forged license key." };
+    }
+
+    return {
+      valid: true,
+      licensee: this.decodeLicensee(licensee),
+      type: devId
+        ? `Hardware-Locked Pro License (${devId})`
+        : expiryStr === "LIFETIME"
+          ? "Lifetime Pro License"
+          : "Time-Limited Pro License",
+      expires: expiryDate,
+      expiresAtMs: this._keyExpiryMs(cleanKey),
+      rawKey: cleanKey,
+    };
   }
 
   /**
@@ -600,15 +687,25 @@ export class LicenseManager {
       try {
         const actResult = await this.verifyActivationCode(activationCode, rawKey);
         if (actResult.valid) {
+          // The activation code only proves device binding - it carries no
+          // time binding, so the key's own expiry must still be honoured.
+          const expiryMs = this._keyExpiryMs(rawKey);
+          if (expiryMs !== null && Date.now() > expiryMs) {
+            return {
+              success: false,
+              error: `License expired on ${new Date(expiryMs).toLocaleDateString()}.`,
+            };
+          }
           // Extract licensee from the key structure
-          const parts = rawKey.split("-");
-          const licensee = parts.length >= 4 ? this.decodeLicensee(parts[1]) : "Pro Musician";
-          const expiryStr = parts.length >= 4 ? parts[2] : "LIFETIME";
+          const parsedKey = this._parseKeyParts(rawKey);
+          const licensee = parsedKey ? this.decodeLicensee(parsedKey.licensee) : "Pro Musician";
+          const expiryStr = parsedKey ? parsedKey.expiryStr : "LIFETIME";
           const resultObj = {
             valid: true,
             licensee,
             type: expiryStr === "LIFETIME" ? "Lifetime Pro License" : "Time-Limited Pro License",
             expires: expiryStr === "LIFETIME" ? "Lifetime" : new Date(parseInt(expiryStr, 16)).toLocaleDateString(),
+            expiresAtMs: expiryMs,
             rawKey,
           };
           return await this._storeLicense(key, resultObj, activationCode);
@@ -633,6 +730,9 @@ export class LicenseManager {
       licensee: result.licensee,
       type: result.type,
       expires: result.expires,
+      // Parsed out of the signed payload so isLicensed() can re-check expiry
+      // on every call instead of trusting the activation-time result forever.
+      expiresAtMs: typeof result.expiresAtMs === "number" ? result.expiresAtMs : this._keyExpiryMs(rawKey),
       activatedAt: new Date().toISOString(),
       device: this.deviceFingerprint,
       _activationToken: activationToken,
@@ -725,9 +825,12 @@ export class LicenseManager {
    * once, unlocked forever" bypass: a forged/edited record fails the ECDSA
    * check (or the hardware-device binding) and is automatically reverted.
    *
-   * If Web Crypto API is unavailable (e.g. Android WebView), revalidation
-   * is skipped to avoid false rejections — the license was already verified
-   * at activation time and stored in localStorage.
+   * The signature over the key itself is authoritative. The HMAC activation
+   * token and the FNV activation hash are only consulted when Web Crypto
+   * cannot import the public key at all (some Android WebViews), because their
+   * salts are embedded in the shipped bundle — they make tampering evident,
+   * they cannot make it impossible. Preferring them (the old order) meant a
+   * one-line localStorage edit could skip signature verification entirely.
    */
   async revalidateLicense() {
     const ld = this.licenseData;
@@ -736,53 +839,69 @@ export class LicenseManager {
       return;
     }
 
-    // 1. Prefer HMAC-SHA256 activation token (strongest client-side binding).
-    //    This token is set at activation time via Web Crypto and cannot be
-    //    forged without the HMAC secret embedded in the binary.
+    const cryptoKey = await this._importPublicKeyOrNone();
+    if (cryptoKey) {
+      let result = null;
+      try {
+        result = await this.verifyKey(ld.rawKey);
+      } catch (e) {
+        result = null;
+      }
+      if (!result || !result.valid) {
+        // Don't auto-wipe — keep the license so the user can re-enter it
+        this._licenseConfirmed = false;
+        this._dispatchAccessChanged();
+        return;
+      }
+      ld.licensee = result.licensee;
+      ld.type = result.type;
+      ld.expires = result.expires;
+      ld.expiresAtMs = result.expiresAtMs ?? null;
+      ld.device = this.deviceFingerprint;
+      ld._activationToken = await this.computeActivationToken(ld.rawKey);
+      ld._activationHash = this.computeActivationHash(ld.rawKey);
+      this._licenseConfirmed = true;
+      this._persistLicense();
+      this._dispatchAccessChanged();
+      return;
+    }
+
+    // Web Crypto cannot verify here: fall back to the bindings minted at
+    // activate() time (they are at least bound to key + device).
     if (ld._activationToken) {
       const currentToken = await this.computeActivationToken(ld.rawKey);
-      if (currentToken && currentToken === ld._activationToken) {
-        this._licenseConfirmed = true;
-        return;
-      }
-      // Token mismatch — either the key or device was tampered with
+      this._licenseConfirmed = !!currentToken && currentToken === ld._activationToken;
+    } else if (ld._activationHash) {
+      this._licenseConfirmed = this.computeActivationHash(ld.rawKey) === ld._activationHash;
+    } else {
+      // Nothing verifiable — do not trust the raw record.
       this._licenseConfirmed = false;
-      return;
     }
+  }
 
-    // 2. If a trusted activation hash exists (set at activation time), use it
-    // to verify the license without needing Web Crypto ECDSA. This handles
-    // Android WebView where crypto.subtle may be available but ECDSA fails
-    // due to key import issues or context restrictions.
-    if (ld._activationHash) {
-      const check = this.computeActivationHash(ld.rawKey);
-      if (check === ld._activationHash) {
-        this._licenseConfirmed = true;
-        return;
-      }
-      // Hash mismatch — key was tampered in localStorage
-      this._licenseConfirmed = false;
-      return;
-    }
-
-    // 3. Legacy path: try full ECDSA revalidation
-    let result = null;
+  /** Resolves the ECDSA public key, or null when crypto cannot verify. */
+  async _importPublicKeyOrNone() {
     try {
-      result = await this.verifyKey(ld.rawKey);
+      return await this.getCryptoPublicKey();
     } catch (e) {
-      result = null;
+      return null;
     }
-    if (!result || !result.valid) {
-      // Don't auto-wipe — keep the license so the user can re-enter it
-      this._licenseConfirmed = false;
-      return;
+  }
+
+  _persistLicense() {
+    if (typeof localStorage !== "undefined" && this.licenseData) {
+      localStorage.setItem(this.storageKey, JSON.stringify(this.licenseData));
     }
-    ld.expires = result.expires;
-    ld.device = this.deviceFingerprint;
-    // Store activation token + hash for future boots
-    ld._activationToken = await this.computeActivationToken(ld.rawKey);
-    ld._activationHash = this.computeActivationHash(ld.rawKey);
-    this._licenseConfirmed = true;
+  }
+
+  _dispatchAccessChanged() {
+    if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+      window.dispatchEvent(
+        new CustomEvent("wilsonix-access-changed", {
+          detail: this.getAccessStatus(),
+        })
+      );
+    }
   }
 
   isLicensed() {
@@ -791,6 +910,12 @@ export class LicenseManager {
     // Hardware-locked keys must still be bound to this machine.
     if (ld.device && ld.device !== this.deviceFingerprint) return false;
     if (this._licenseConfirmed === false) return false;
+    // A time-limited key must not outlive its signed expiry, even after a
+    // successful activation (activation-time checks were the only ones before,
+    // so an expired key kept showing ★ PRO forever).
+    const expiresAtMs =
+      typeof ld.expiresAtMs === "number" ? ld.expiresAtMs : this._keyExpiryMs(ld.rawKey || ld.key);
+    if (expiresAtMs !== null && Date.now() > expiresAtMs) return false;
     return true; // null = optimistic while the boot-time ECDSA check runs
   }
 

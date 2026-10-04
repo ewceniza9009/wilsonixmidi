@@ -102,7 +102,7 @@ test("trimLeadingSilence strips MP3 priming delay (~26ms) and ensures instantane
     this.isReady = true;
     return Promise.resolve();
   };
-  const engine = new NativePcmEngine(mockCtx);
+  const engine = new NativePcmEngine(mockCtx, undefined, { deferAssetLoading: true });
   NativePcmEngine.prototype.initBuffers = origInit;
 
   const sr = 44100;
@@ -171,7 +171,7 @@ test("createCrossfadedLoopBuffer automatically trims leading delay for X5D prese
     this.isReady = true;
     return Promise.resolve();
   };
-  const engine = new NativePcmEngine(mockCtx);
+  const engine = new NativePcmEngine(mockCtx, undefined, { deferAssetLoading: true });
   NativePcmEngine.prototype.initBuffers = origInit;
 
   const sr = 44100;

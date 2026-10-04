@@ -1,6 +1,6 @@
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { generateLicense, generateActivationCode } from "../tools/license-generator.js";
+import { generateLicense, generateActivationCode, TEST_PUBLIC_KEY_SPKI } from "./helpers/license-signer.js";
 
 let localStorageStore;
 const mockLocalStorage = {
@@ -40,11 +40,17 @@ function teardownEnv() {
 let LicenseManager;
 let licenseManager;
 
+// All instances verify against the throwaway test keypair so the suite runs
+// on a clean clone without the production private key.
+function createManager() {
+  return new LicenseManager({ publicKeySpki: TEST_PUBLIC_KEY_SPKI });
+}
+
 beforeEach(async () => {
   setupEnv();
   const mod = await import("../src/security/license-manager.js");
   LicenseManager = mod.LicenseManager;
-  licenseManager = new LicenseManager();
+  licenseManager = createManager();
 });
 
 afterEach(() => {
@@ -273,20 +279,20 @@ test("hasProAccess returns false when unlicensed and trial expired", () => {
 });
 
 test("loadLicense returns null for empty/invalid localStorage", () => {
-  const lm = new LicenseManager();
+  const lm = createManager();
   assert.equal(lm.licenseData, null);
 });
 
 test("loadLicense migrates legacy key-only format", () => {
   const legacyKey = "MKPRO-LEGACYUSER-LIFETIME-AAAA";
   localStorageStore["midikey_elite_license"] = JSON.stringify({ key: legacyKey });
-  const lm = new LicenseManager();
+  const lm = createManager();
   assert.equal(lm.licenseData.rawKey, legacyKey);
 });
 
 test("loadLicense rejects tampered non-key data", () => {
   localStorageStore["midikey_elite_license"] = JSON.stringify({ foo: "bar" });
-  const lm = new LicenseManager();
+  const lm = createManager();
   assert.equal(lm.licenseData, null);
 });
 
@@ -326,7 +332,7 @@ test("initOrLoadTrial() does NOT reset an expired trial back to 30 days", () => 
     trialDaysTotal: 30,
   });
 
-  const lm = new LicenseManager();
+  const lm = createManager();
   assert.equal(lm.trialData.expiresAt, expiredTime);
   assert.equal(lm.trialData.isExpired, true);
   const status = lm.getAccessStatus();
@@ -344,7 +350,7 @@ test("initOrLoadTrial() marks tampered trial as TAMPERED and does NOT give 30 da
     trialDaysTotal: 30,
   });
 
-  const lm = new LicenseManager();
+  const lm = createManager();
   assert.equal(lm.trialData.signature, "TAMPERED");
   assert.equal(lm.trialData.isExpired, true);
   const status = lm.getAccessStatus();
@@ -380,7 +386,7 @@ test("syncPersistentTrial() restores earlier trial start date across reinstall /
   };
 
   delete localStorageStore["midikey_elite_trial_state"];
-  const lm = new LicenseManager();
+  const lm = createManager();
   assert.ok(lm.trialData.startedAt > originalStartedAt);
 
   await lm.syncPersistentTrial();
@@ -421,7 +427,7 @@ test("syncPersistentTrial() preserves expired trial across reinstall / wiped loc
   };
 
   delete localStorageStore["midikey_elite_trial_state"];
-  const lm = new LicenseManager();
+  const lm = createManager();
   await lm.syncPersistentTrial();
 
   assert.equal(lm.trialData.startedAt, originalStartedAt);

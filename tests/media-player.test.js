@@ -62,7 +62,7 @@ test("MediaPlayerEngine: addFiles rebinds existing tracks instead of creating du
     arrayBuffer: async () => new ArrayBuffer(2048),
   };
 
-  const added = await engine.addFiles([fakeFile]);
+  await engine.addFiles([fakeFile]);
 
   // Playlist length must remain 1 (rebound in-place)
   assert.equal(engine.playlist.length, 1, "Should rebind existing track instead of adding duplicate row");

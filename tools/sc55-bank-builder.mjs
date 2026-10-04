@@ -55,7 +55,7 @@ function findLists(buf) {
  * SF2 generator records are 4 bytes: WORD destOper, SHORT genAmount.
  * (Modulator wiring lives in pmod/imod, not here.)
  */
-const GEN = {
+const _GEN = {
   keyRange: 43, velRange: 44, startAddrsOffset: 45, endAddrsOffset: 46,
   startloopAddrsOffset: 47, endloopAddrsOffset: 48,
   sampleID: 53, rootKey: 58, fineTune: 52, coarseTune: 51,
@@ -302,7 +302,7 @@ const hzToMidi = (hz) => 69 + 12 * Math.log2(hz / 440);
 const midiToHz = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
 /** Pick the analysis window: skip the attack transient, use the sustain body. */
-function analysisWindow(pcm, rate) {
+function analysisWindow(pcm, _rate) {
   const n = pcm.length;
   if (n < 512) return pcm;
   const win = Math.min(16384, n);

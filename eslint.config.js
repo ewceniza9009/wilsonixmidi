@@ -30,14 +30,25 @@ export default [
       "no-import-assign": "error",
       "no-duplicate-imports": "error",
       "no-unreachable": "error",
-      "no-undef": "warn",
+      "no-undef": "error",
       // Graceful-degradation catch blocks (`try { ... } catch (e) {}`) are used
       // intentionally throughout the audio engine when optional browser APIs
       // are unavailable. Allow them, but keep flagging empty blocks elsewhere.
-      "no-empty": ["warn", { allowEmptyCatch: true }],
-      "no-case-declarations": "warn",
-      "no-unused-vars": ["warn", { caughtErrors: "none", argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
-      "no-self-assign": "warn",
+      "no-empty": ["error", { allowEmptyCatch: true }],
+      "no-case-declarations": "error",
+      "no-unused-vars": ["error", { caughtErrors: "none", argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+      "no-self-assign": "error",
+      // Our own CSP (script-src 'self') strips inline event handlers, so
+      // `onclick="..."` in a template is dead code that also breaks keyboard
+      // and screen-reader access. Bind a real listener instead.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "Literal[value=/\\son[a-z]+\\s*=/]",
+          message:
+            "Inline HTML event handlers are blocked by CSP and unreachable by keyboard. Use addEventListener instead.",
+        },
+      ],
     },
   },
   {
@@ -49,6 +60,27 @@ export default [
         AudioWorkletProcessor: "readonly",
         registerProcessor: "readonly",
       },
+    },
+  },
+  {
+    // Node-side code: unit tests, build/asset tooling.
+    files: ["tests/**/*.js", "tools/**/*.js", "tools/**/*.mjs", "*.config.js"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+      globals: {
+        ...globals.node,
+        ...globals.es2021,
+      },
+    },
+    rules: {
+      ...js.configs.recommended.rules,
+      "no-undef": "error",
+      "no-empty": ["error", { allowEmptyCatch: true }],
+      "no-case-declarations": "error",
+      "no-unused-vars": ["error", { caughtErrors: "none", argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+      "no-self-assign": "error",
+      "no-console": "off",
     },
   },
 ];

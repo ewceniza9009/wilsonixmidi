@@ -186,9 +186,36 @@ export class QwertyKeyboard {
     return [rootMidi];
   }
 
+  /** True when the event target is a text-entry surface the app must not hijack. */
+  _isTypingTarget(el) {
+    if (!el || typeof el !== "object") return false;
+    const tag = el.tagName;
+    return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable === true;
+  }
+
+  /**
+   * True when Space/Enter natively activates the focused control (WCAG 2.1.1).
+   * When this is true we must let the browser's own click handling run instead
+   * of swallowing Space for the sustain pedal.
+   */
+  _isInteractiveTarget(el) {
+    if (!el || typeof el.closest !== "function") return false;
+    return !!el.closest(
+      "button, select, summary, label, a[href], input, " +
+      "[role=button], [role=checkbox], [role=switch], [role=menuitem], " +
+      "[role=tab], [role=option], [role=radio], [role=slider]"
+    );
+  }
+
+  /** True when a modal/overlay currently owns the keyboard (Escape belongs to it). */
+  _modalIsOpen() {
+    if (typeof document === "undefined" || !document.querySelector) return false;
+    return !!document.querySelector(".custom-modal-overlay, [role=dialog], [aria-modal=true]");
+  }
+
   handleKeyDown(e) {
     if (!this.enabled) return;
-    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.isContentEditable) return;
+    if (this._isTypingTarget(e.target)) return;
 
     // F1-F12 are strictly dedicated to Rig Snapshots & Setlist Banks
     if (/^F(?:[1-9]|1[0-2])$/.test(e.code)) {
@@ -205,8 +232,10 @@ export class QwertyKeyboard {
     // Don't re-trigger notes on OS key repeat, but preventDefault was already called above
     if (e.repeat) return;
 
-    // Spacebar = Damper / Sustain Pedal
+    // Spacebar = Damper / Sustain Pedal — but never when Space would activate
+    // the focused control (buttons/selects/links must stay keyboard-operable).
     if (e.code === "Space") {
+      if (this._isInteractiveTarget(e.target)) return;
       e.preventDefault();
       this.setSustainPedal(true);
       return;
@@ -238,8 +267,10 @@ export class QwertyKeyboard {
       return;
     }
 
-    // Panic Kill Switch: Escape
+    // Panic Kill Switch: Escape — but never while a dialog/modal owns focus,
+    // otherwise Escape can't dismiss the UI and audio is killed instead.
     if (e.code === "Escape") {
+      if (this._modalIsOpen()) return;
       e.preventDefault();
       arpeggiator.stop();
       synthEngine.panic();
@@ -279,8 +310,10 @@ export class QwertyKeyboard {
 
   handleKeyUp(e) {
     if (!this.enabled) return;
+    if (this._isTypingTarget(e.target)) return;
 
     if (e.code === "Space") {
+      if (this._isInteractiveTarget(e.target)) return;
       e.preventDefault();
       if (!this.sustainLatched) {
         this.setSustainPedal(false);

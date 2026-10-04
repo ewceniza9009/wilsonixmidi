@@ -312,7 +312,11 @@ class MidiKeyEliteApp {
       console.warn("VirtualKeyboardUI init:", e);
     }
 
-    // Other views - lazy init on first activation with dynamic imports
+    // Other views - lazy init on first activation with dynamic imports.
+    // `_lazyViewPromises` memoizes each factory so a rapid double-click on a
+    // tab cannot construct the same component twice (the `_viewsRendered` guard
+    // is only set AFTER the awaited import, so it cannot prevent that race).
+    this._lazyViewPromises = {};
     this._lazyViews = {
       combi: async () => {
         if (this._viewsRendered.has("combi")) return;
@@ -400,9 +404,9 @@ class MidiKeyEliteApp {
         wsSelect.value = view;
       }
 
-      // Lazy-render the view on first activation
+      // Lazy-render the view on first activation (memoized — see above)
       if (this._lazyViews && this._lazyViews[view]) {
-        this._lazyViews[view]();
+        this._lazyViewPromises[view] ||= this._lazyViews[view]();
       }
 
       if (appRoot) {
@@ -477,13 +481,10 @@ class MidiKeyEliteApp {
       }
     });
 
-    // Restore last tab if enabled
+    // Restore last tab if enabled (switchView() triggers the memoized lazy init)
     if (multiLayerEngine.settings.tabRestore) {
       let lastTab = multiLayerEngine.settings.lastTab;
       if (!lastTab || lastTab === "keys") lastTab = "triton";
-      if (this._lazyViews && this._lazyViews[lastTab]) {
-        this._lazyViews[lastTab]();
-      }
       switchView(lastTab);
     }
 

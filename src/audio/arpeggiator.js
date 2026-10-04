@@ -106,6 +106,11 @@ export class Arpeggiator {
    * Called by keyboard/MIDI engine when a key is pressed
    */
   handleNoteOn(midiNote, velocity = 95) {
+    // heldNotes stores objects, so `add` never dedupes: a re-strike (or two
+    // physical keys snapped to the same pitch by scale lock) stacked entries
+    // that one note-off could never drain, leaving size > 0 forever and the
+    // arp running after every key was released.
+    this._dropHeldNote(midiNote);
     this.heldNotes.add({ midi: midiNote, vel: velocity });
     this.rebuildSequence();
 
@@ -118,17 +123,18 @@ export class Arpeggiator {
    * Called by keyboard/MIDI engine when a key is released
    */
   handleNoteOff(midiNote) {
-    for (const item of this.heldNotes) {
-      if (item.midi === midiNote) {
-        this.heldNotes.delete(item);
-        break;
-      }
-    }
+    this._dropHeldNote(midiNote);
 
     if (this.heldNotes.size === 0) {
       this.stop();
     } else {
       this.rebuildSequence();
+    }
+  }
+
+  _dropHeldNote(midiNote) {
+    for (const item of this.heldNotes) {
+      if (item.midi === midiNote) this.heldNotes.delete(item);
     }
   }
 
@@ -282,9 +288,9 @@ export class Arpeggiator {
 
 export const arpeggiator = new Arpeggiator();
 
+// Exactly one registration — panic() runs hooks AND the window event.
 if (typeof multiLayerEngine?.registerPanicHook === "function") {
   multiLayerEngine.registerPanicHook(() => arpeggiator.stop());
-}
-if (typeof window !== "undefined") {
+} else if (typeof window !== "undefined") {
   window.addEventListener("wilsonix:panic", () => arpeggiator.stop());
 }

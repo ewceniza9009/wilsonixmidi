@@ -3,6 +3,13 @@ node_modules/
 .pnp
 .pnp.js
 
+# Signing keystores — never commit (android/app/release-key.jks etc.)
+*.jks
+*.keystore
+
+# Machine-specific Rust linker config (MSVC/SDK paths differ per machine)
+src-tauri/.cargo/config.toml
+
 # Production build output & APKs
 dist/
 dist-ssr/

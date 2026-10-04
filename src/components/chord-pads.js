@@ -209,10 +209,11 @@ export class ChordPadsUI {
     this.render();
     this.bindEvents();
 
+    // Exactly one registration: panic() invokes hooks AND dispatches the
+    // window event, so registering both runs this cleanup twice.
     if (typeof multiLayerEngine?.registerPanicHook === "function") {
       multiLayerEngine.registerPanicHook(() => this.releaseAllChords(true));
-    }
-    if (typeof window !== "undefined") {
+    } else if (typeof window !== "undefined") {
       window.addEventListener("wilsonix:panic", () => this.releaseAllChords(true));
     }
   }

@@ -45,7 +45,7 @@ class ShimmerFxProcessor extends AudioWorkletProcessor {
     };
   }
 
-  process(inputs, outputs, parameters) {
+  process(inputs, outputs, _parameters) {
     const input = inputs[0];
     const output = outputs[0];
     if (!input || !input[0] || !output || !output[0]) return true;
