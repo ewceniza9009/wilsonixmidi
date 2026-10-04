@@ -1,25 +1,58 @@
 # WILSONIX MIDIKEY 🎹✨
 
-> **Professional Zero-Latency Live Performance Digital Audio Workstation, Hybrid Rompler & Synthesizer**  
-> _Engineered for high-pressure live stage gigs, church worship, recording studios, and mobile performance across Windows Desktop, Web and Android.
+> **Professional Zero-Latency Live Performance Digital Audio Workstation, Hybrid Rompler & Synthesizer**
+> _Engineered for high-pressure live stage gigs, church worship, recording studios, and mobile performance. Built Android-first, with Windows desktop and web/PWA builds from the same codebase._
 
-[![Platform: Windows](<https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011%20(x64)-0078D6?style=for-the-badge&logo=windows>)](https://github.com/ewceniza9009/wilsonixmidi/releases)
-[![Platform: Android](https://img.shields.io/badge/Platform-Android%208.0%2B%20%7C%20ARM64-3DDC84?style=for-the-badge&logo=android)](https://github.com/ewceniza9009/wilsonixmidi/releases)
+[![Platform: Android](https://img.shields.io/badge/Platform-Android%207.0%2B%20%7C%20ARM64-3DDC84?style=for-the-badge&logo=android)](https://github.com/ewceniza9009/wilsonixmidi/releases)
+[![Platform: Windows](https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011%20(x64)-0078D6?style=for-the-badge&logo=windows)](https://github.com/ewceniza9009/wilsonixmidi/releases)
 [![Audio: Web Audio API](https://img.shields.io/badge/Audio-Direct%20PCM%20%2B%20VA%20Engine-FF6F00?style=for-the-badge&logo=audio)](https://github.com/ewceniza9009/wilsonixmidi)
 [![Framework: Tauri v2 + Vite](https://img.shields.io/badge/Framework-Tauri%20v2%20%7C%20Rust-673AB7?style=for-the-badge)](https://tauri.app/)
 [![License: Proprietary](https://img.shields.io/badge/License-WILSONIX%20Commercial-red?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi)
-[![Version: v2.1.0](https://img.shields.io/badge/Version-v2.1.0%20Build%2023%20Production-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
+[![Version: v2.2.5](https://img.shields.io/badge/Version-v2.2.5%20(Build%2029)-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
 
 ---
 
-## 🚀 Official Production Downloads (v2.1.0 Build 23 Latest Release)
+## 🚀 Official Production Downloads (v2.2.5 Latest Release)
 
-| Package / Distribution        | Target Operating System           |  Architecture  |                                                             Direct Download Link                                                              |
-| :---------------------------- | :-------------------------------- | :------------: | :-------------------------------------------------------------------------------------------------------------------------------------------: |
-| **Windows Desktop Installer** | Windows 10 / 11                   |      x64       | [⬇️ Download NSIS Setup (`.exe`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/WILSONIX.MIDIKEY_2.1.0_x64-setup.exe) |
-| **Android Package (APK)**     | Android 8.0+ (Oreo to Android 15) | ARM64 / x86_64 |        [⬇️ Download Android APK (`.apk`)](https://github.com/ewceniza9009/wilsonixmidi/releases/latest/download/wilsonix-midikey.apk)         |
+| Package / Distribution        | Target Operating System           |  Architecture  | Download |
+| :---------------------------- | :-------------------------------- | :------------: | :------: |
+| **Android Package (APK)**      | Android 7.0+ (Nougat and later)  | ARM64 / x86_64 | [⬇️ Releases page](https://github.com/ewceniza9009/wilsonixmidi/releases) |
+| **Windows Desktop Installer** | Windows 10 / 11                   |      x64       | [⬇️ Releases page](https://github.com/ewceniza9009/wilsonixmidi/releases) |
 
-_Official binaries and checksums are verified and hosted on the [GitHub Releases page](https://github.com/ewceniza9009/wilsonixmidi/releases)._
+_Official binaries and checksums are hosted on the [GitHub Releases page](https://github.com/ewceniza9009/wilsonixmidi/releases). Grab the latest `wilsonix-midikey.apk` or the NSIS `.exe` setup from there._
+
+---
+
+## 🆕 What's New in v2.2.5
+
+A full stability, audio, and security hardening pass across the entire engine:
+
+### 🔒 License & Security Hardening
+- **ECDSA-first boot revalidation** — stored licenses are cryptographically re-verified against the embedded P-256 public key on every launch; forged or tampered records revert to the correct state automatically.
+- **Expiry is enforced forever**, not just at activation — time-limited keys stop granting access the moment their signed expiry passes.
+- **Trial tamper protection** — trial records with impossible durations or forged signatures are detected and rejected (30-day window, hard-capped).
+- **Capability-level Pro gates** — master WAV recording, setlist & custom patch storage, and rig export/import are enforced at the engine/storage layer, not just in the UI.
+- **XSS hardening** — all modal dialogs and log panes entity-escape user/file-derived strings.
+
+### 🎚️ Audio Engine Fixes
+- Voice pool recycling can no longer create duplicate node pairs during panic/all-notes-off.
+- Note-off release semantics fixed for held pitches, layered combi voices, and looper bus routing (no more stuck or prematurely cut notes).
+- Insert FX `flush` now restores dry/wet gains after the choke window instead of leaving the chain muted.
+- Sustain-pedal release on insert FX now ramps to silence (no clicks), and parked `pendingReuse` voices are cleared on note-off.
+- Arpeggiator held-note bookkeeping drains correctly on re-strikes (scale-lock snapped pitches no longer leave the arp running).
+
+### 🎹 UI & Input Fixes
+- QWERTY keyboard ignores text-entry surfaces, keeps Space operable on focused buttons (WCAG 2.1.1), and defers Escape to open dialogs instead of triggering panic.
+- Fixed duplicate DOM ids that made Split Console controls drive the Combi console.
+- Eliminated listener/`requestAnimationFrame` leaks on view re-render and dispose.
+- Panic cleanup hooks now register exactly once (no double stop cascades).
+- Scale-lock octave snapping corrected (worst-case distance: 2 semitones).
+
+### 🧪 Developer Infrastructure
+- **207 unit tests** passing (`node --test`, zero dependencies on real audio hardware), up from 167.
+- **Strict ESLint**: warnings are errors, including a custom rule banning CSP-breaking inline event handlers.
+- **CI on every push**: unit tests + lint + production web build, plus a dedicated **Android job that assembles the APK** (`cap sync` + `gradlew assembleDebug`) so Android — the primary target — is continuously verified.
+- Removed leaked signing material from the repository tree and untracked `node_modules`.
 
 ---
 
@@ -36,83 +69,7 @@ _Official binaries and checksums are verified and hosted on the [GitHub Releases
 - 🎹 **12-Pad MPC Chord Matrix & Scale Engine** — One-touch Jazz, Gospel, Neo-Soul and Pop voicings with quantizing scale/key lock.
 - 🔁 **Clock-Anchored Arpeggiator & Multi-Track Looper** — Web Audio look-ahead scheduling keeps tempo rock-solid under heavy stage load.
 - 🎙️ **Lossless WAV Master Recorder + Media Player** — Pre-DAC waveform capture with a zero-gain monitor sink; MP3/WAV/FLAC/OGG/M4A/AAC backing-track deck.
-- 🔒 **Crypto-Hardened Security & Licensing** — ECDSA P-256 signature verification with hardware machine binding, strict CSP, and boot-time license validation.
-
----
-
-## 📑 Granular Changelog & Release Notes (v2.1.0 • Build 23)
-
-### 1. 🎛️ Elite TouchView Tablet UI & Stage Tools Shelf Redesign
-- **Balanced 3-Column Cockpit**: Restructured the top HUD bar into a balanced 3-column layout:
-  - **Left**: Brand logo (`WILSONIX PRO`) and Master Sound Cockpit with cyan border glow, category icon, and interactive patch selector.
-  - **Center**: Complete Workspace Navigation Engine (`MAIN`, `COMBI`, `SPLIT`, `FX`, `CHORDS`, `GROOVES`, `DEMO`, `PLAYER`) anchored in center stage. Fully visible across tablet viewports with **zero central void**.
-  - **Right**: Master Output Console + Quick Action toggles (`🎹 KEYS`, `▲ TOOLS`, `⛶ Fullscreen`).
-- **Master Studio Volume Console**: Replaced the compact volume slider with a full-sized studio fader (75–80px) and permanent, high-contrast amber readout (`50%` / dB level).
-- **Full-Width Balanced Stage Shelf**: Configured `.tools-drawer-inner` with `justify-content: space-between`, distributing Rig Snapshots, Dual-Layer & Ducker, Recorder & Arp, and Live Telemetry across the entire width with zero dead space on the right.
-- **Android Touch Optimization**:
-  - Enlarged Rig Bank buttons (`A`, `B`, `C`, `D`) to `min-width: 34–36px; height: 30–32px; font-weight: 900;`.
-  - Enlarged Rig Slot buttons (`1` to `8`) to `width: 30–32px; height: 30–32px; font-weight: 800;`.
-  - Removed overlapping coarse-pointer `::after` pseudo-elements that blocked touches between adjacent keys.
-  - Added debounced `pointerdown` listeners and `touch-action: manipulation` for 0ms tap latency on Android tablets.
-
-### 2. 🔌 Web MIDI OUT & Master Clock Synchronization
-- **External Hardware Control**: Forward live note-ons, note-offs, pitch bend, and control change (CC) events to connected USB/Bluetooth MIDI synthesizers, sound modules, and hardware workstations.
-- **Multi-Port Routing**: Supports transmitting to multiple MIDI output ports simultaneously or single designated ports with configurable MIDI channel routing (Ch 1–16).
-- **Master MIDI Clock Generator**: Transmits standard 24 PPQ MIDI Clock pulses, Start, and Stop messages locked to the live tap tempo BPM engine.
-- **Integrated Hardware Popover**: Dedicated "MIDI OUT & SYNC" section inside the Latency & Buffer Control popover with live port selection, channel selector, clock toggle, and port status display.
-
-### 3. 🔒 Core Engine Safety, Hardening & Memory Architecture (Fix Plan Implementation)
-- **Voice-Stealing Timer Fix (P0.1)**: Replaced undefined `fadeSec` variable timer with `(rel * 1000) + 40ms`, eliminating voice-stealing tail snaps and release clicks during heavy polyphonic playing.
-- **Stored XSS Sanitization (P0.2 & P0.3)**: Sanitized and escaped all imported MIDI song titles, subtitles, and Rig slot names against attribute-injection and stored XSS vectors.
-- **Production Content Security Policy (P0.4 & P0.5)**: Hardened CSP across Tauri, Android WebView, and web bundles: removed `unsafe-eval` while preserving `blob:` worklet execution.
-- **IPC & Audio Thread Cleanup (P0.6)**: Gated dead worklet visual IPC messages, eliminating redundant main-thread garbage collection and cross-thread traffic.
-- **Space-Key Conflict Fix (P0.7)**: Scoped spacebar play/pause strictly to the active media player view, preventing backing tracks from toggling when holding piano sustain.
-- **State Synchronization & Error Surfacing (P0.8 & P0.9)**: Synchronized fullscreen state on Esc/F11 via `fullscreenchange`; wired unhandled rejection and error toasts for visible diagnostics.
-- **Mobile Hardware Integration (P0.12, P0.13, P0.14)**:
-  - Android hardware Back button closes active modals/drawers first before exiting.
-  - Screen Wake Lock API prevents display sleep and audio suspension during live performances.
-  - Capacitor Filesystem downloads enable lossless WAV recording, diagnostic dumps, and setlist exports on Android.
-- **Offline Self-Hosted Fonts (P0.15)**: Bundled Inter and JetBrains Mono fonts locally, removing external Google Fonts dependencies for true offline stage reliability.
-- **Sidechain Pump Ceiling (P0.16)**: Clamped pump swing to `0.5 ± 0.5`, preventing master limiter clipping and distortion.
-- **Memory Architecture & Code-Splitting (P1.1, P1.3, P1.4, P1.7)**:
-  - Code-split embedded PCM data with dynamic imports and idle chunking.
-  - Deduplicated loop buffers per instrument ID, slashing RAM usage on loopable sounds by ~50%.
-  - Added LRU caching with memory budgeting for decoded AudioBuffers.
-- **Preset Sound-Design & Re-Voicing (Phase S)**:
-  - Routed A013 ("Piano Pad 2"), A018 ("Icy Piano Pad"), and A036 ("Acoustic Piano") through distinct Virtual Analog oscillator paths.
-  - Re-voiced A023 Old VOX Legend organ chain with authentic tube drive, chorus, and tight reverb.
-  - Automatic stereo centering for imbalanced panned-mono samples (e.g., Korg alto sax).
-  - Re-voiced A030 Trombone Hard to punchy VA saw brass.
-- **PWA Service Worker v2 (P3.5)**:
-  - Resolved `Response body is already used` clone error by cloning synchronously prior to body streaming.
-  - Added 200 OK status validation and quota error handlers.
-  - Upgraded cache namespace to `wilsonix-midikey-v2`.
-
----
-
-## 📑 Prior Release Notes (v2.0.3 • Build 22)
-
-### 1. 🎚️ Universal Equal Volume & Loudness Normalization Across ALL Presets
-- **Hardware-Accurate Trim Gain Matrix**: Calibrated empirical trim gains across all soundbank categories in `native-pcm-engine.js`: Stickz Bloom EDM (`0.50–0.55`), Stickz Animal EDM (`0.50–0.65`), Abletunes Modern EDM (`0.60–0.68`), Synthesizer You leads (`0.65–0.78`), and SoundFonts (`0.85–1.0`).
-- **Dynamic Category Fallback**: `getInstrumentTrimGain(instId)` automatically applies safe category trims (leads/saws capped at `0.58`, pads at `0.65`, acoustic at `0.90`), guaranteeing newly registered or unlisted soundbanks never blast at raw 1.0 gain.
-- **Psychoacoustic Combi Layer Scaling**: Replaced linear $1/\sum\text{gain}$ with equal-power scaling $\min\left(1.0, \frac{1.35}{\sqrt{\sum\text{gain}}}\right)$ in `multi-layer-engine.js`. Multi-layer Combi stacks now match single-timbre presets within $\pm1.2\text{ dB}$ RMS without squashing.
-- **Transparent Studio AGC & Compressor Rebalancing**: Wired a non-linear studio loudness leveler directly preceding the master EQ in `fx-rack-manager.js` for artifact-free dynamic leveling.
-- **Subtractive Synth Oscillator RMS Matching**: Calibrated square wave oscillators by $0.65$ in `synth-processor.js` and `triton-va-engine.js` to match sawtooth/triangle power density.
-
-### 2. 🔁 Studio-Grade Pitch-Synchronous Loop Sustain Engine
-- **Seamless Infinite Sustain on EDM Leads & Pads**: High-energy EDM samples loop smoothly without audible seams, clicks, or abrupt cutoffs while keys or sustain are held.
-- **Autocorrelation & Zero-Crossing Phase Locking**: `sample-loop-helper.js` detects the fundamental frequency period ($\tau$) in the sustain region and locks loop points to rising zero crossings aligned to whole period cycles.
-- **Equal-Power Crossfading**: $\cos/\sin$ crossfade envelope preserves constant RMS power through the turnaround.$ crossfade envelope preserves constant RMS power through the turnaround, preventing volume dips or phase cancellation pops.
-
-### 3. ⏱️ Latency Popover Modal Sustain Controls Integration
-
-- **Live Duration Controls**: The Latency Popover modal sliders (`sustainHoldSec`, `sustainDecayTau`, `heldNoteSec`) are now dynamically piped through `pcm-worklet-node.js`, `pcm-processor.js`, and `native-pcm-engine.js`.
-- **Custom Sustain Tail Sculpting**: Performers can configure loop sustain hold time, exponential decay time constant, and maximum held note safety ceiling in real time.
-
-### 4. 🎹 Chord Pads & Rapid Glissando Voice Stability
-
-- **Glissando & Rapid Strum Protection**: Fixed rapid chord pad voice choking and fast keyboard sweeps so note-offs never unlatch `qwertyKeyboard.sustainLatched` or corrupt active sustain states.
-- **Limiter Pumping Prevention**: Eliminated ducking and pumping artifacts on dense 16-voice polyphonic chords.
+- 🔒 **Crypto-Hardened Security & Licensing** — ECDSA P-256 signature verification with optional hardware machine binding, strict CSP, boot-time license re-validation, and a tamper-evident trial vault.
 
 ---
 
@@ -121,7 +78,7 @@ _Official binaries and checksums are verified and hosted on the [GitHub Releases
 ### 🎹 1. Dual-Core DSP Sound Engines
 
 - **Direct Multi-Layer PCM Rompler**: 16-bit 44.1kHz sample streaming engine with multi-velocity soundboard modeling, sympathetic string resonance, and round-robin voice allocation.
-- **Dual-Oscillator Virtual Analog (VA) Subtractive Synthesizer**: Features Time-Variant Filters (TVF) and Time-Variant Amplifiers (TVA), hard-sync oscillators (Brian's Sync Lead), multi-waveform generation (Saw, Square, Triangle, Sine, Pulse Width Modulation), and rich analog unison detune.
+- **Dual-Oscillator Virtual Analog (VA) Subtractive Synthesizer**: Time-Variant Filters (TVF) and Time-Variant Amplifiers (TVA), hard-sync oscillators (Brian's Sync Lead), multi-waveform generation (Saw, Square, Triangle, Sine, Pulse Width Modulation), and rich analog unison detune.
 - **Physical Modeling Synthesizers**: Real-time physical acoustics for alto saxophone, breathy tenor sax, talkbox vocal tract formants, acoustic drums, cascara timbales, and Latin percussion.
 
 ### 🎚️ 2. 4-Timbre Multi-Layer Combinations (Combi)
@@ -138,10 +95,10 @@ _Official binaries and checksums are verified and hosted on the [GitHub Releases
 
 ### 🎛️ 4. 23-Device Hardware Master FX Rack
 
-- **Chain & Per-Layer Insert FX (80+ Algorithm Choices)**: A dynamically rebuilt serial FX chain with zero-latency fast-path bypass, plus 22 Triton IFX/MFX algorithms and 35 per-layer insert FX for a total of 80+ named DSP algorithms.
+- **Chain & Per-Layer Insert FX (80+ Algorithm Choices)**: Dynamically rebuilt serial FX chain with zero-latency fast-path bypass, plus 22 Triton IFX/MFX algorithms and 35 per-layer insert FX.
 - **IFX Opto-Compressor (Studio Dynamics)**: Optical-style peak leveling, threshold, ratio, attack, release, and makeup gain for drum punch and piano sustain.
 - **IFX Rhodes Auto-Pan**: Dynamic stereo ping-pong panning with speed and depth modulation.
-- **IFX Dimension D Stereo Chorus**: Multi-voice Roland/Dimension-D style analog chorus widening.
+- **IFX Dimension D Stereo Chorus**: Multi-voice Dimension-D style analog chorus widening.
 - **IFX Valve Force Tube Drive**: Hyperbolic tangent soft-clipping tube saturation with tone control.
 - **IFX 6-Stage Vintage Phaser**: Sweeping phase notch filters with feedback resonance for funk and clavinet.
 - **IFX Leslie 122 Rotary Speaker Cabinet**: Authentic dual-rotor Doppler acceleration with Chorale (slow) and Tremolo (fast) brake switching.
@@ -149,7 +106,7 @@ _Official binaries and checksums are verified and hosted on the [GitHub Releases
 - **IFX Vintage Optical Tremolo**: Photocell amplitude pulsing for surf guitars and vintage keys.
 - **IFX Retro Bitcrusher / Decimator**: 2-bit to 16-bit word length reduction and downsampling (1kHz to 20kHz) for vintage sampler grit.
 - **IFX Heil Formant Talk Box**: Triple formant vocal cavity filter (F1 650Hz, F2 1550Hz, F3 2850Hz) with dynamic vowel morphing (Roger Troutman style).
-- **IFX Haas Stereo Spatial Widener**: Psychoacoustic psycho-stereo delay widening without mono phase cancellation.
+- **IFX Haas Stereo Spatial Widener**: Psychoacoustic stereo delay widening without mono phase cancellation.
 - **MFX Ping-Pong Tape Delay**: Tempo-synchronized cross-feedback stereo delay lines.
 - **MFX Concert Hall & Plate Reverb**: Lush diffusion reverberation with customizable decay, pre-delay, and high-frequency damping.
 - **Spring, Shimmer & Gated Reverbs**: Retro spring tank, celestial octave shimmer, and 80s gated-snare cannon algorithms.
@@ -172,7 +129,7 @@ _Official binaries and checksums are verified and hosted on the [GitHub Releases
 - **32 Live Rig Snapshots**: 4 Banks (A, B, C, D) × 8 Slots (1–8) for instant 1-touch sound switching during live gigs.
 - **Full State Snapshot**: Stores and recalls Combi 4-timbre stacks, Rompler instruments, Triton VA programs, split points, FX parameters, master octave, and velocity curves.
 - **Hardware Keyboard Hotkeys**: Direct slot recalls via `F1`–`F8` keys, bank cycling, and `Ctrl+F4` piano collapse.
-- **JSON Setlist Import & Export**: Export entire performance setlists to JSON files and import on any stage device with pure schema verification.
+- **JSON Setlist Import & Export**: Export entire performance setlists to `.mkgig` files and import on any stage device with pure schema verification.
 
 ### 🎛️ 7. 12-Pad MPC Chord Trigger Matrix & Scale Engine
 
@@ -188,7 +145,7 @@ _Official binaries and checksums are verified and hosted on the [GitHub Releases
 
 ### 🎙️ 9. Lossless Master WAV Recorder & Media Player
 
-- **Pre-DAC True Waveform Tap**: Direct capture of the master audio stream into uncompressed 16-bit stereo WAV at the live engine sample rate.
+- **Pre-DAC True Waveform Tap**: Direct capture of the master audio stream into uncompressed 16-bit stereo WAV at the live engine sample rate (AudioWorklet ring-buffer tap with ScriptProcessor fallback for legacy WebViews).
 - **Zero-Gain Monitor Sink**: Audio recorder runs completely silently without double-monitoring or altering stage mix levels.
 - **Backing Track Media Player**: Built-in audio deck supporting MP3, WAV, FLAC, OGG, M4A, and AAC with playlist queues, pitch/speed shifts, and background playback.
 
@@ -197,7 +154,7 @@ _Official binaries and checksums are verified and hosted on the [GitHub Releases
 - **60 FPS VU Meter**: Dual-channel stereo peak and RMS level indicators.
 - **Latency & CPU Engine Profiler**: Live monitoring of Web Audio base latency, output latency, and buffer stability with 3 switchable latency profiles (Stage Ultra-Low ~2.9ms, Balanced Studio ~5.8ms, Safe Stage ~11.6ms).
 - **Master Kaoss X/Y Pad**: Multi-touch and mouse gesture control for real-time filter sweeps and effects modulation.
-- **Panic Engine Reset**: Instant one-click kill switch for stuck MIDI notes and DSP node recovery.
+- **Panic Engine Reset**: Instant one-click kill switch for stuck MIDI notes and DSP node recovery — runs every registered cleanup exactly once and always clears all layers, loops, and scheduled notes.
 - **8-Second WAV Waveform Diagnostic Tap**: Instant capture and download of real-time audio output for signal diagnosis.
 
 ### 🔌 11. MIDI Hardware Connectivity & MIDI Learn
@@ -216,17 +173,24 @@ _Official binaries and checksums are verified and hosted on the [GitHub Releases
   - **Stadium** — Massive arena with 3.5s decay and long pre-delay slapback.
   - **Intimate** — Small jazz club with warm 0.4s decay and close mic feel.
   - **Cathedral** — Infinite 5.0s reverb with shimmering high-frequency diffusion.
-- **Dry/Wet Mix Control**: Blends spatialized wet signal with dry source based on room size — smaller rooms = more dry, larger rooms = more wet.
-- **Real-Time Source Positioning**: `positionSource(x, y, z)` API for per-voice spatialization — pan sounds across the stereo field with HRTF precision.
-- **Zero-Latency Processing**: Entirely in-line on the Web Audio graph — no additional latency added to the signal chain.
-- **Headphone-Optimized**: Designed specifically for in-ear monitors and closed-back headphones. Not for speaker playback (HRTF requires binaural rendering).
+- **Dry/Wet Mix Control**: Blends spatialized wet signal with dry source based on room size.
+- **Headphone-Optimized**: Designed specifically for in-ear monitors and closed-back headphones (HRTF requires binaural rendering).
 
-### 🔒 13. Enterprise-Grade Security & Licensing Architecture
+---
 
-- **ECDSA P-256 SPKI Cryptographic Verification**: Offline cryptographic license signature verification using public key cryptography.
-- **Boot-Time License Re-Validation**: Stored licenses are cryptographically re-verified against the embedded public key on every launch, auto-reverting forged or tampered records.
-- **Hardware Machine Fingerprinting**: Secure, non-invasive device ID generation for authorized workstation deployments.
-- **Tauri Security Boundary**: Strict Content Security Policy (CSP), directory traversal protection, and file path verification.
+## 🔐 Licensing & Pro Edition
+
+WILSONIX MIDIKEY ships with all sound engine features enabled for evaluation:
+
+- **30-Day Full-Access Trial** — every Pro capability is unlocked from first launch. The trial clock is device-anchored and tamper-evident: reinstalling, wiping browser storage, or forging the trial record does not restart or extend it.
+- **Pro License Keys** — `MKPRO-<NAME>-<EXPIRY>-<SIGNATURE>` keys are ECDSA P-256 signed (IEEE-P1363, SHA-256) and verified offline against the public key embedded in the app. Two forms:
+  - **Portable** — works on any device.
+  - **Hardware-locked** — bound to one machine fingerprint (`MKPRO-...-DEV_XXXXXXXX-...`).
+- **Activation Codes** — on platforms where direct WebCrypto verification is unavailable (some Android WebViews), an admin-issued `MKACT-<DEVID>-<SIG>` code binds a key to a specific device. The key's signed expiry still applies.
+- **Boot-Time Revalidation** — the stored license is cryptographically re-verified on every launch. A tampered or forged record is detected and access is corrected automatically, with the UI updated in place.
+- **Pro-Gated Capabilities** — Master WAV recording, custom patch & setlist storage, stage rig saving/export/import, and 4-timbre combi selection from the Gig HUD require Pro access (trial or license). Enforcement lives at the capability layer, not just in buttons.
+
+The signing private key never ships with the app — only the public verification key is embedded, so licenses can be verified anywhere but only minted by the issuer.
 
 ---
 
@@ -264,7 +228,7 @@ _Official binaries and checksums are verified and hosted on the [GitHub Releases
 - **Sensual 80s Breathy Sax**: Warm sub-tone saxophone for smooth jazz and ballad melodies.
 - **Dirty Blues Growl**: High-velocity guttural saxophone growl for blues and rock solos.
 
-### 4. 🎚️ 4-Timbre Multi-Layer Combinations (Combi)
+### 4. 🎚️ Signature 4-Timbre Combi Presets (Selection)
 
 1. **★ Kingston Bubble & Reggae Skank**: B3 Tonewheel Organ + Concert Grand + Muted Reggae Guitar Skank.
 2. **★ Celestial Shimmer & Grand**: Concert Grand Piano + Octave Shimmer Reverb + Ambient String Pad.
@@ -295,13 +259,13 @@ _Official binaries and checksums are verified and hosted on the [GitHub Releases
 |  +------------------+  +------------------+  +------------------+  +----------------+ |
 |  | KORG TouchView   |  | 4-Timbre Combi   |  | Split Keyboard   |  | Ableton Device | |
 |  | Workstation Main |  | Layer Mixer Rack |  | Console (Upper/L)|  | Master FX Rack | |
-|  +------------------+  +------------------+  +------------------+  +----------------+ |
 +---------------------------------------------------------------------------------------+
 |                                     DSP AUDIO ENGINE                                  |
 |  +-------------------------------------+  +-----------------------------------------+ |
 |  | Direct Multi-Layer PCM Rompler      |  | Dual-Oscillator Virtual Analog (VA)     | |
 |  | (16-bit 44.1kHz High-Density Banks) |  | Subtractive Synthesizer with TVA & TVF  | |
 |  +-------------------------------------+  +-----------------------------------------+ |
+|                        (AudioWorklet render-thread DSP + ring-buffer taps)            |
 +---------------------------------------------------------------------------------------+
 |                                  MASTER OUTPUT CHAIN                                  |
 |  +-----------------------------------+  +-------------------------------------------+ |
@@ -312,6 +276,7 @@ _Official binaries and checksums are verified and hosted on the [GitHub Releases
 +---------------------------------------------------------------------------------------+
 |                                  HARDWARE PLATFORMS                                   |
 |       Windows Desktop (Tauri v2 / Rust)       |        Android Mobile & Tablet        |
+|                    Web / PWA (Vite static bundle, offline service worker)             |
 +---------------------------------------------------------------------------------------+
 ```
 
@@ -331,11 +296,13 @@ Xiaomi tablets (MIUI / HyperOS) have a system-wide gesture enabled by default th
 
 ## 🛠️ Technology Stack & Dependencies
 
+- **Mobile Host**: [Capacitor 8.x](https://capacitorjs.com/) (Android SDK 36, minSdk 24 / Android 7.0, Gradle 8.x)
 - **Desktop Host**: [Tauri v2](https://v2.tauri.app/) (Rust 1.70+, Windows MSVC 64-bit, NSIS installer builder)
-- **Mobile Host**: [Capacitor 8.x](https://capacitorjs.com/) (Android SDK 34, Java 17, Gradle)
-- **Audio DSP Architecture**: Direct HTML5 Web Audio API Graph, Custom PCM Buffer Streaming & Virtual Analog Oscillators
-- **Security Engine**: Web Crypto API (`crypto.subtle`) with ECDSA P-256 / SHA-256 SPKI Public Key Verification
-- **Frontend Architecture**: Vanilla ES6+ Modular Architecture, Zero UI Framework Bloat, Hardware-Accelerated CSS3
+- **Web**: Static Vite bundle + PWA service worker (offline-capable, self-hosted fonts)
+- **Audio DSP Architecture**: Direct HTML5 Web Audio API Graph, AudioWorklet render-thread processors, custom PCM buffer streaming & Virtual Analog oscillators
+- **Security Engine**: Web Crypto API (`crypto.subtle`) with ECDSA P-256 / SHA-256 SPKI public key verification
+- **Frontend Architecture**: Vanilla ES6+ modular architecture, zero UI framework bloat, hardware-accelerated CSS3
+- **Quality Infrastructure**: 207 unit tests (`node --test`), strict ESLint (warnings are errors), GitHub Actions CI with a dedicated Android APK assembly job
 
 ---
 
@@ -344,10 +311,9 @@ Xiaomi tablets (MIUI / HyperOS) have a system-wide gesture enabled by default th
 ### Prerequisites
 
 - **Node.js**: `v20.x` or `v22.x`
-- **Rust Toolchain**: `1.70+` with `x86_64-pc-windows-msvc`
-- **Visual Studio 2022**: C++ Build Tools & Windows 10/11 SDK
-- **NSIS**: `3.x` (managed automatically by Tauri)
-- **Android Studio & SDK**: (Required only when compiling the `.apk`)
+- **Android Studio & SDK**: (required for the `.apk`)
+- **Rust Toolchain**: `1.70+` with `x86_64-pc-windows-msvc` (desktop only)
+- **Visual Studio 2022**: C++ Build Tools & Windows 10/11 SDK (desktop only)
 
 ### Build Commands
 
@@ -355,30 +321,39 @@ Xiaomi tablets (MIUI / HyperOS) have a system-wide gesture enabled by default th
 # 1. Clone repository
 git clone https://github.com/ewceniza9009/wilsonixmidi.git
 cd wilsonixmidi
-npm install
+npm ci
 
-# 2. Start Live Development Server
+# 2. Start Live Development Server (http://localhost:3000)
 npm run dev
 
-# 3. Run Automated Unit Test Suite & Linter
+# 3. Quality gate — 207 unit tests + strict lint (0 warnings allowed)
 npm test
 npm run lint
 
-# 4. Build Windows Desktop NSIS Setup Installer (.exe)
-npm run build:desktop
-# Output: src-tauri/target/release/bundle/nsis/WILSONIX MIDIKEY_2.1.0_x64-setup.exe
+# 4. Production web bundle (also what the APK/desktop app ships)
+npm run build
 
-# 5. Build Android APK (.apk)
+# 5. Build Android APK (asset pipeline + web build + cap sync + gradle)
 npm run build:apk
 # Output: dist-apk/wilsonix-midikey.apk
 
-# 6. Build All Platforms Simultaneously
+# 6. Build Windows Desktop NSIS Setup Installer
+npm run build:desktop
+# Output: src-tauri/target/release/bundle/nsis/
+
+# 7. Build All Platforms Simultaneously
 npm run build:all
 ```
+
+### Continuous Integration
+
+Every push and pull request runs (`.github/workflows/ci.yml`):
+- **verify** job — `npm test` (207 tests) → `npm run lint` (warnings are errors) → `npm run build` (catches import cycles and bundling regressions).
+- **android** job — builds the web bundle, syncs it into the Capacitor project, and assembles the debug APK with Gradle, so the primary target platform is verified on every change.
 
 ---
 
 ## 📜 License & Intellectual Property
 
-Copyright © 2026 **Erwin Wilson Ceniza / WILSONIX**. All rights reserved.  
+Copyright © 2026 **Erwin Wilson Ceniza / WILSONIX**. All rights reserved.
 All custom DSP algorithms, soundbank binaries, and interface designs are proprietary. Unauthorized reverse engineering, distribution of cracked binaries, or extraction of cryptographic keys is strictly prohibited.
