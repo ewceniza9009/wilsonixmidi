@@ -497,6 +497,7 @@ export class CustomPatchBrowserUI {
         });
       }
       mle.isCombiMode = true;
+      mle.isDualLayerActive = false;
       mle.activeCombi = {
         id: patch.id || "custom",
         name: patch.name || "Custom Mix",

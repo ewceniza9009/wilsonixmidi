@@ -616,6 +616,11 @@ export class GigHudUI {
     ) {
       return `va:${multiLayerEngine.activeTritonVaProg.id}`;
     }
+    if (multiLayerEngine.isDualLayerActive && multiLayerEngine.layers[1]?.enabled) {
+      const id0 = multiLayerEngine.activeSingleInst || multiLayerEngine.layers[0]?.inst || "acoustic_grand_piano";
+      const id1 = multiLayerEngine.layers[1]?.inst || "string_ensemble_1";
+      return `dual:${id0}+${id1}`;
+    }
     if (multiLayerEngine.isCombiMode && multiLayerEngine.activeCombi) {
       return `combi:${multiLayerEngine.activeCombi.id}`;
     }
@@ -638,6 +643,13 @@ export class GigHudUI {
     ) {
       return multiLayerEngine.activeTritonVaProg.name;
     }
+    if (multiLayerEngine.isDualLayerActive && multiLayerEngine.layers[1]?.enabled) {
+      const id0 = multiLayerEngine.activeSingleInst || multiLayerEngine.layers[0]?.inst || "acoustic_grand_piano";
+      const id1 = multiLayerEngine.layers[1]?.inst || "string_ensemble_1";
+      const name0 = HD_SOUNDBANKS[id0]?.name || multiLayerEngine.layers[0]?.name || id0;
+      const name1 = HD_SOUNDBANKS[id1]?.name || multiLayerEngine.layers[1]?.name || id1;
+      return `${name0} + ${name1}`;
+    }
     if (multiLayerEngine.isCombiMode && multiLayerEngine.activeCombi) {
       return multiLayerEngine.activeCombi.name;
     }
@@ -650,6 +662,9 @@ export class GigHudUI {
 
   getSoundIcon() {
     if (multiLayerEngine.isSplitMode) return "✂️";
+    if (multiLayerEngine.isDualLayerActive && multiLayerEngine.layers[1]?.enabled) {
+      return "🎹+🎻";
+    }
     if (
       multiLayerEngine.activeTritonVaProg?.id === "A045" ||
       multiLayerEngine.activeCombi?.id === "talkbox_funk_master"
@@ -718,8 +733,8 @@ export class GigHudUI {
     const soundIcon = this.getSoundIcon();
 
     const isLayerActive =
-      multiLayerEngine.isCombiMode &&
-      (multiLayerEngine.layers[1]?.enabled ?? true);
+      multiLayerEngine.isDualLayerActive &&
+      (multiLayerEngine.layers[1]?.enabled ?? false);
     const activeLayerBank =
       multiLayerEngine.layers[1]?.inst || "string_ensemble_1";
 
@@ -1080,7 +1095,7 @@ export class GigHudUI {
         this.syncToolsIndicator();
       });
 
-    registrationManager.onRecallCallback = ({ bank, slot, preset }) => {
+    registrationManager.onRecallCallback = ({ bank, slot }) => {
       bankBtns.forEach((b) =>
         b.classList.toggle("active", b.getAttribute("data-bank") === bank),
       );
@@ -1102,9 +1117,8 @@ export class GigHudUI {
       const layerBtn = document.getElementById("btn-toggle-layer");
       const layerSelect = document.getElementById("hud-layer-select");
       const isLayerOn =
-        preset?.isCombiMode ||
-        (multiLayerEngine.isCombiMode &&
-          (multiLayerEngine.layers[1]?.enabled ?? false));
+        multiLayerEngine.isDualLayerActive &&
+        (multiLayerEngine.layers[1]?.enabled ?? false);
       if (layerBtn) {
         layerBtn.classList.toggle("active", !!isLayerOn);
         layerBtn.innerText = isLayerOn ? "LAYER ON" : "LAYER";
@@ -1264,7 +1278,24 @@ export class GigHudUI {
       }
     }
 
-    // 3. Refresh rig slot pill titles and tooltips for current bank
+    // 3. Sync Layer 2 Toggle button & dropdown
+    const layerBtn = document.getElementById("btn-toggle-layer");
+    const layerSelect = document.getElementById("hud-layer-select");
+    const isLayerActive =
+      multiLayerEngine.isDualLayerActive &&
+      (multiLayerEngine.layers[1]?.enabled ?? false);
+    if (layerBtn) {
+      layerBtn.classList.toggle("active", isLayerActive);
+      layerBtn.innerText = isLayerActive ? "LAYER ON" : "LAYER";
+    }
+    if (layerSelect) {
+      layerSelect.classList.toggle("active", isLayerActive);
+      const activeLayerBank =
+        multiLayerEngine.layers[1]?.inst || "string_ensemble_1";
+      layerSelect.value = activeLayerBank;
+    }
+
+    // 4. Refresh rig slot pill titles and tooltips for current bank
     const curBank = registrationManager.currentBank || "A";
     const bankSlots = registrationManager.banks[curBank] || [];
     const slotBtns = this.container.querySelectorAll(".rig-slot-pill");
@@ -1367,68 +1398,16 @@ export class GigHudUI {
     const layerSelect = document.getElementById("hud-layer-select");
 
     layerBtn?.addEventListener("click", () => {
-      const nextActive = !multiLayerEngine.isCombiMode;
-      // Turning on combi mode enables all four layers, which is the same
-      // Pro capability as picking a combi from the sound list.
-      if (nextActive && !licenseManager.hasProAccess()) {
-        licenseManager.requirePro("4-Timbre Layered Combi Presets");
-        return;
-      }
-
-      multiLayerEngine.isCombiMode = nextActive;
-      multiLayerEngine.isSplitMode = false;
-      multiLayerEngine.isSynthMode = false;
-      multiLayerEngine.isTritonVaMode = false;
-      multiLayerEngine.activeTritonVaProg = null;
-      multiLayerEngine.activeSingleInst = nextActive
-        ? null
-        : "acoustic_grand_piano";
-
-      if (nextActive) {
-        // Switch to combi mode - enable all 4 layers
-        if (multiLayerEngine.layers) {
-          multiLayerEngine.layers.forEach((layer) => (layer.enabled = true));
-        }
-      } else {
-        // Switch to single instrument mode - only enable layer 0
-        if (multiLayerEngine.layers && multiLayerEngine.layers[0]) {
-          multiLayerEngine.layers[0].enabled = true;
-          if (multiLayerEngine.layers[1]) multiLayerEngine.layers[1].enabled = false;
-          if (multiLayerEngine.layers[2]) multiLayerEngine.layers[2].enabled = false;
-          if (multiLayerEngine.layers[3]) multiLayerEngine.layers[3].enabled = false;
-        }
-      }
-
-      multiLayerEngine.init();
-      multiLayerEngine.notifyLayerChange();
-      multiLayerEngine.notifySplitChange();
-
-      layerBtn.classList.toggle("active", nextActive);
-      layerBtn.innerText = nextActive ? "LAYER ON" : "LAYER";
-      if (layerSelect) {
-        layerSelect.classList.toggle("active", nextActive);
-      }
+      const nextActive = !multiLayerEngine.isDualLayerActive;
+      multiLayerEngine.setDualLayerEnabled(nextActive);
+      this.syncSoundDisplay();
       this.syncToolsIndicator();
     });
 
     layerSelect?.addEventListener("change", (e) => {
       const bankId = e.target.value;
-      if (!licenseManager.hasProAccess()) {
-        licenseManager.requirePro("4-Timbre Layered Combi Presets");
-        // Revert the dropdown to whatever layer is actually sounding.
-        e.target.value = multiLayerEngine.layers[1]?.inst ?? "";
-        return;
-      }
-      if (multiLayerEngine.layers[1]) {
-        multiLayerEngine.layers[1].inst = bankId;
-        multiLayerEngine.layers[1].enabled = true;
-      }
-      multiLayerEngine.toggleCombiMode(true);
-      if (layerBtn) {
-        layerBtn.classList.add("active");
-        layerBtn.innerText = "LAYER ON";
-      }
-      layerSelect.classList.add("active");
+      multiLayerEngine.setDualLayerInstrument(bankId);
+      this.syncSoundDisplay();
       this.syncToolsIndicator();
     });
 
@@ -1613,7 +1592,7 @@ export class GigHudUI {
     const btn = document.getElementById("btn-hud-toggle-tools");
     if (!btn) return;
     const isLayerActive =
-      multiLayerEngine.isCombiMode &&
+      multiLayerEngine.isDualLayerActive &&
       (multiLayerEngine.layers[1]?.enabled ?? false);
     const isArpActive = arpeggiator.enabled;
     const isDuckActive = multiLayerEngine.isPadDuckingEnabled;

@@ -4557,11 +4557,13 @@ export class MultiLayerEngine {
     this.isSynthMode = false;
 
     if (this.isDualLayerActive) {
+      this.activeCombi = null;
       // Ensure Layer 0 is enabled and matches current single instrument
+      const primaryInst = this.resolveBankKey(
+        this.activeSingleInst || this.layers[0]?.inst || "acoustic_grand_piano",
+      );
+      this.activeSingleInst = primaryInst;
       if (this.layers[0]) {
-        const primaryInst = this.resolveBankKey(
-          this.activeSingleInst || "acoustic_grand_piano",
-        );
         this.layers[0].inst = primaryInst;
         this.layers[0].name = HD_SOUNDBANKS[primaryInst]?.name || primaryInst;
         this.layers[0].enabled = true;
@@ -4570,7 +4572,8 @@ export class MultiLayerEngine {
       if (this.layers[1]) {
         this.layers[1].enabled = true;
         if (!this.layers[1].inst) {
-          this.layers[1].inst = "choir_aahs";
+          this.layers[1].inst = "string_ensemble_1";
+          this.layers[1].name = HD_SOUNDBANKS["string_ensemble_1"]?.name || "String Ensemble 1";
         }
       }
       // Disable layers 2 & 3 so dual layer is clean 2-instrument layer
@@ -4583,6 +4586,7 @@ export class MultiLayerEngine {
         this.layers[1].enabled = false;
       }
       this.isCombiMode = false;
+      this.activeCombi = null;
     }
 
     this.syncPinnedInstruments();
