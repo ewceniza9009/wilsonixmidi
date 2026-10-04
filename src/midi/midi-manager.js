@@ -8,6 +8,7 @@
 import { Capacitor } from "@capacitor/core";
 import { synthEngine } from "../audio/synth-engine.js";
 import { multiLayerEngine } from "../audio/multi-layer-engine.js";
+import { latencyMeter } from "../audio/latency-meter.js";
 import { shapeVelocity } from "./velocity-curve.js";
 import { audioCore } from "../audio/audio-core.js";
 import { midiLearnManager } from "./midi-learn.js";
@@ -129,6 +130,9 @@ export class MidiManager {
     const statusByte = data[0];
     const command = statusByte >> 4;
     const channel = statusByte & 0xf;
+    // Real input-path measurement: event.timeStamp is stamped at USB/driver
+    // delivery, so the delta to NOW is the true MIDI-in latency.
+    const __latT0 = latencyMeter.inputArrived("midi", event.timeStamp);
     const note = data[1];
     const velocity = data.length > 2 ? data[2] : 0;
 
@@ -155,6 +159,7 @@ export class MidiManager {
             }
           }
         }
+        latencyMeter.dispatchDone("midi", __latT0);
         break;
 
       case 0x8: { // Note Off
@@ -166,6 +171,7 @@ export class MidiManager {
             multiLayerEngine.noteOff(snappedOff);
           }
         }
+        latencyMeter.dispatchDone("midi", __latT0);
         break;
       }
 

@@ -25,6 +25,7 @@ import {
 import { scaleLock, ROOT_NAMES, SCALES } from "../midi/scale-lock.js";
 import { arpeggiator } from "../audio/arpeggiator.js";
 import { XyPadUI } from "./xy-pad-ui.js";
+import { latencyMeter } from "../audio/latency-meter.js";
 
 const NOTE_NAMES = [
   "C",
@@ -501,6 +502,7 @@ export class VirtualKeyboardUI {
       // for the same finger tap. Suppress the mouse event to prevent double-trigger.
       if (performance.now() - lastTouchTime < 800) return;
       e.preventDefault();
+      const __latT0 = latencyMeter.inputArrived("touch", e.timeStamp);
       isMouseDown = true;
       const key = getKeyFromPoint(e.clientX, e.clientY);
       if (key) {
@@ -523,6 +525,7 @@ export class VirtualKeyboardUI {
             multiLayerEngine.noteOn(n, vel);
           }
         });
+        latencyMeter.dispatchDone("touch", __latT0);
       }
     });
 
@@ -648,6 +651,7 @@ export class VirtualKeyboardUI {
         if (e.cancelable) e.preventDefault();
         e.stopPropagation();
         lastTouchTime = performance.now(); // Block synthetic mouse events
+        const __latT0 = latencyMeter.inputArrived("touch", e.timeStamp);
 
         for (let i = 0; i < e.changedTouches.length; i++) {
           const t = e.changedTouches[i];
@@ -678,6 +682,7 @@ export class VirtualKeyboardUI {
                 multiLayerEngine.noteOn(n, vel);
               }
             });
+            latencyMeter.dispatchDone("touch", __latT0);
           }
         }
       },

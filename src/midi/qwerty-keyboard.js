@@ -11,6 +11,7 @@ import { synthEngine } from "../audio/synth-engine.js";
 import { multiLayerEngine } from "../audio/multi-layer-engine.js";
 import { scaleLock } from "./scale-lock.js";
 import { arpeggiator } from "../audio/arpeggiator.js";
+import { latencyMeter } from "../audio/latency-meter.js";
 
 // Layout 1: Continuous Two-Tier Melody Layout (Natural scale along letter rows - easy song playback!)
 const MELODY_KEYMAP = {
@@ -216,6 +217,9 @@ export class QwertyKeyboard {
   handleKeyDown(e) {
     if (!this.enabled) return;
     if (this._isTypingTarget(e.target)) return;
+    // Real input-path measurement: keydown.timeStamp is stamped at OS key
+    // delivery on Chromium, so the delta to NOW is the true key-in latency.
+    const __latT0 = latencyMeter.inputArrived("qwerty", e.timeStamp);
 
     // F1-F12 are strictly dedicated to Rig Snapshots & Setlist Banks
     if (/^F(?:[1-9]|1[0-2])$/.test(e.code)) {
@@ -300,6 +304,7 @@ export class QwertyKeyboard {
           multiLayerEngine.noteOn(note, v);
         }
       });
+      latencyMeter.dispatchDone("qwerty", __latT0);
 
       // Visual key feedback
       if (this.onChordVisualCallback) {

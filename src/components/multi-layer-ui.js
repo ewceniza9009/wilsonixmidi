@@ -602,6 +602,7 @@ export class MultiLayerUI {
     multiLayerEngine.activeSnapshotIndex = idx;
     this.updateSnapshotButtons();
     multiLayerEngine.saveSessionSoon?.();
+    multiLayerEngine._notifyScenesChanged?.();
   }
 
   /**
@@ -614,6 +615,7 @@ export class MultiLayerUI {
     if (!Number.isInteger(idx) || !multiLayerEngine.snapshots?.[idx]) return;
     multiLayerEngine.snapshots[idx] = this._captureScene(idx);
     multiLayerEngine.saveSessionSoon?.();
+    multiLayerEngine._notifyScenesChanged?.();
   }
 
   recallSnapshot(idx) {
@@ -647,6 +649,7 @@ export class MultiLayerUI {
     this.updateLayerFaders();
     this.updateSnapshotButtons();
     multiLayerEngine.saveSessionSoon?.();
+    multiLayerEngine._notifyScenesChanged?.();
   }
 
   refreshScenesFromEngine() {

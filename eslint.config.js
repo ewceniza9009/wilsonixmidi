@@ -59,6 +59,9 @@ export default [
       globals: {
         AudioWorkletProcessor: "readonly",
         registerProcessor: "readonly",
+        currentTime: "readonly",
+        currentFrame: "readonly",
+        sampleRate: "readonly",
       },
     },
   },

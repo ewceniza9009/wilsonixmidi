@@ -27,6 +27,7 @@ import {
 } from "../version.js";
 import { getComponent } from "./component-registry.js";
 import { escapeHtml, escapeAttr } from "../utils/escape-html.js";
+import { latencyMeter, runLoopbackBench } from "../audio/latency-meter.js";
 import { LoggerUI } from "./logger-ui.js";
 
 export class GigHudUI {
@@ -901,7 +902,7 @@ export class GigHudUI {
                 </button>
 
                 <!-- Floating Anchored Latency Pill (Click for analysis popover) -->
-                <div class="latency-hud-pill interactive" id="hud-latency-pill" title="Click for round-trip latency analysis">
+                <div class="latency-hud-pill interactive" id="hud-latency-pill" title="Audio output latency (browser-reported) — tap for analysis">
                   <span class="latency-dot"></span>
                   <span id="hud-latency-val">--</span>
                 </div>
@@ -1512,7 +1513,13 @@ export class GigHudUI {
         this._latencySmoothed === null
           ? shown
           : this._latencySmoothed * 0.6 + shown * 0.4;
-      latencyVal.innerText = `${this._latencySmoothed.toFixed(1)}ms`;
+      latencyVal.innerText = `${l.estimated ? "~" : ""}${this._latencySmoothed.toFixed(1)}ms`;
+      if (latencyPill && this._latencyPillTitleEst !== l.estimated) {
+        this._latencyPillTitleEst = l.estimated;
+        latencyPill.title = l.estimated
+          ? "Browser estimate — device did not report output latency. Tap for analysis."
+          : "Audio output latency (browser-reported). Tap for analysis.";
+      }
       latencyPill?.classList.toggle("latency-warm", this._latencySmoothed > 20);
       latencyPill?.classList.toggle("latency-hot", this._latencySmoothed > 50);
     };
@@ -1656,7 +1663,7 @@ export class GigHudUI {
               ? shown
               : this._latencySmoothed * 0.6 + shown * 0.4;
           if (latencyVal) {
-            latencyVal.innerText = `${this._latencySmoothed.toFixed(1)}ms`;
+            latencyVal.innerText = `${l.estimated ? "~" : ""}${this._latencySmoothed.toFixed(1)}ms`;
             latencyPill?.classList.toggle(
               "latency-warm",
               this._latencySmoothed > 20,
@@ -1707,9 +1714,28 @@ export class GigHudUI {
     const currentProf = l.profile || "balanced";
     const recom = l.recommendedProfile;
 
+    // Measured key-to-sound: input delivery + JS dispatch + output path.
+    const outputTotalMs = l.measuredMs ?? l.reportedMs ?? 0;
+    const keyRow = (label, source) => {
+      const st = latencyMeter.getStats(source);
+      if (!st) {
+        return `<div class="latency-pop-row"><span class="latency-pop-key">${label}</span><span class="latency-pop-val">— play a note first</span></div>`;
+      }
+      if (st.deliveryMs === null) {
+        return `<div class="latency-pop-row"><span class="latency-pop-key">${label}</span><span class="latency-pop-val">input not timestamped on this platform</span></div>`;
+      }
+      const estTag = l.estimated ? " (out est.)" : "";
+      const parts = `${st.deliveryMs.toFixed(1)} in + ${st.dispatchMs.toFixed(1)} js + ${outputTotalMs.toFixed(1)} out${estTag}`;
+      const total = (st.deliveryMs + st.dispatchMs + outputTotalMs).toFixed(1);
+      return `<div class="latency-pop-row"><span class="latency-pop-key">${label}</span><span class="latency-pop-val">${total} ms — ${parts}</span></div>`;
+    };
+
     const rows = [
       ["BUFFER PROFILE", l.profileLabel || "Balanced Studio"],
-      ["ROUND-TRIP (Buffer+Output)", `${(l.measuredMs ?? 7.6).toFixed(1)} ms`],
+      [
+        "OUTPUT PATH (buffer + output)",
+        `${(l.measuredMs ?? 7.6).toFixed(1)} ms${l.estimated ? " (browser est.)" : ""}`,
+      ],
       ["SMOOTHED (10Hz avg)", primary],
       [
         "Base buffer (input side)",
@@ -1736,7 +1762,7 @@ export class GigHudUI {
 
     pop.innerHTML = `
       <div class="latency-pop-head">
-        <span>ROUND-TRIP LATENCY & BUFFER CONTROL</span>
+        <span>LATENCY & BUFFER CONTROL</span>
         <button class="latency-pop-close" id="hud-latency-close" title="Close">✕</button>
       </div>
       <div class="latency-pop-columns">
@@ -1779,6 +1805,33 @@ export class GigHudUI {
                   ? "🔄 Saved — buffer profile applies on next launch (no audio restart needed)."
                   : "🔹 Real latency = base buffer + OS output buffer."
             }</span>
+          </div>
+
+          <!-- MEASURED KEY-TO-SOUND -->
+          <div class="latency-device-section" id="latency-inputs-section">
+            <div class="latency-profile-title">🎹 KEY-TO-SOUND (MEASURED)</div>
+            <div class="latency-pop-body">
+              ${keyRow("MIDI key → sound", "midi")}
+              ${keyRow("On-screen key → sound", "touch")}
+              ${keyRow("QWERTY key → sound", "qwerty")}
+            </div>
+            <div class="latency-pop-reco">
+              🎚 input delivery + JS dispatch + audio output path. Play the input you want measured.
+            </div>
+          </div>
+
+          <!-- ACOUSTIC LOOPBACK BENCH -->
+          <div class="latency-device-section" id="latency-loopback-section">
+            <div class="latency-profile-title">🔊 ACOUSTIC LOOPBACK TEST</div>
+            <div class="cache-maint-row">
+              <button class="midi-clock-btn cache-clear-btn" id="latency-btn-loopback" title="Plays clicks on the speaker and times when the microphone hears them. Speaker ON (~70% volume), headphones unplugged, quiet room.">
+                <span>⚡ RUN SPEAKER→MIC TEST (~5s)</span>
+              </button>
+            </div>
+            <div class="cache-usage-row" id="latency-loopback-status">Measures the REAL output path end to end.</div>
+            <div class="latency-pop-reco">
+              🔊 Result includes ~5–20 ms mic input depth on top of speaker latency.
+            </div>
           </div>
 
           <!-- Audio Output Device -->
@@ -1946,6 +1999,27 @@ export class GigHudUI {
     pop.querySelector("#hud-latency-close")?.addEventListener("click", (e) => {
       e.stopPropagation();
       this._closeLatencyPopover();
+    });
+
+    // Acoustic loopback bench: real speaker→mic measurement of the output path.
+    const loopBtn = pop.querySelector("#latency-btn-loopback");
+    loopBtn?.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const statusRow = pop.querySelector("#latency-loopback-status");
+      if (statusRow) statusRow.innerText = "Starting… speaker ON, headphones unplugged.";
+      loopBtn.disabled = true;
+      const result = await runLoopbackBench({
+        ctx: audioCore.ctx,
+        onStatus: (m) => {
+          if (statusRow) statusRow.innerText = m;
+        },
+      });
+      loopBtn.disabled = false;
+      if (statusRow) {
+        statusRow.innerText = result.ok
+          ? `✔ Loopback ${result.loopbackMs} ms median (spread ${result.spreadMs} ms, heard ${result.matched}/${result.clicks}). Speaker path ≈ ${Math.max(1, result.loopbackMs - 20)}–${Math.max(1, result.loopbackMs - 5)} ms.`
+          : `✖ ${result.error}`;
+      }
     });
 
     // Sample cache maintenance: live usage readout + full IndexedDB wipe.

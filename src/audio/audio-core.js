@@ -525,14 +525,25 @@ export class AudioCore {
       profileFrames: currentProfile.frames || 0,
       measuredFrames: 0,
       recommendedProfile: null,
+      // Honesty flags: Android WebViews frequently report outputLatency as
+      // 0/undefined. When that happens the sum falls back to typical values
+      // and must be labelled an estimate, never a measurement.
+      baseReported: false,
+      outputReported: false,
+      estimated: true,
       // True when a profile is saved but not yet bound into the running context.
       pendingRestart: !!(this.ctx && this.appliedLatencyProfile && this.appliedLatencyProfile !== this.currentLatencyProfile),
     };
     if (!this.ctx) return out;
 
     try {
-      const base = (this.ctx.baseLatency || 0.0026) * 1000;
-      const output = (this.ctx.outputLatency || 0.005) * 1000;
+      const rawBase = this.ctx.baseLatency;
+      const rawOutput = this.ctx.outputLatency;
+      out.baseReported = typeof rawBase === "number" && rawBase > 0;
+      out.outputReported = typeof rawOutput === "number" && rawOutput > 0;
+      out.estimated = !(out.baseReported && out.outputReported);
+      const base = (rawBase || 0.0026) * 1000;
+      const output = (rawOutput || 0.005) * 1000;
       out.baseMs = Math.round(base * 10) / 10;
       out.outputMs = Math.round(output * 10) / 10;
       out.measuredMs = Math.round((base + output) * 10) / 10;

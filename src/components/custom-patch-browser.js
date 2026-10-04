@@ -12,8 +12,24 @@ export class CustomPatchBrowserUI {
     this.container = document.getElementById(containerId);
     this.appCore = appCore || { multiLayerEngine, get fxRack() { return audioCore.fxRack; } };
     this.patches = [];
-    this.activePatchId = null;
+    this.activePatchId = localStorage.getItem("wilsonix_active_patch_id") || null;
     this.keySync = localStorage.getItem("wilsonix_drone_key_sync") !== "false";
+
+    this._onScenesChanged = () => this._syncScenesToActivePatch();
+    window.addEventListener("wilsonix-scenes-changed", this._onScenesChanged);
+
+    this._layerChangeListener = () => {
+      const mle = this.appCore?.multiLayerEngine || multiLayerEngine;
+      if (this.activePatchId && mle.activeCombi && mle.activeCombi.id !== this.activePatchId) {
+        this.activePatchId = null;
+        try {
+          localStorage.removeItem("wilsonix_active_patch_id");
+        } catch (e) {}
+        this.renderPatchList();
+      }
+    };
+    (this.appCore?.multiLayerEngine || multiLayerEngine).addLayerChangeListener?.(this._layerChangeListener);
+
     this.render();
     this.loadPatches();
   }
@@ -177,6 +193,15 @@ export class CustomPatchBrowserUI {
     try {
       this.patches = await patchStorage.getAllPatches();
       this.renderPatchList();
+      if (this.activePatchId) {
+        const activePatch = this.patches.find((p) => p.id === this.activePatchId);
+        if (activePatch) {
+          const mle = this.appCore?.multiLayerEngine || multiLayerEngine;
+          if (!mle.activeCombi || mle.activeCombi.id !== activePatch.id) {
+            this.handleLoadPatch(activePatch);
+          }
+        }
+      }
     } catch (e) {
       console.error("[CustomPatchBrowser] Failed to load patches", e);
     }
@@ -193,6 +218,7 @@ export class CustomPatchBrowserUI {
   }
 
   renderPatchList(filter = "") {
+    if (!this.container) return;
     const listContainer = this.container.querySelector("#patch-list-container");
     if (!listContainer) return;
 
@@ -305,6 +331,7 @@ export class CustomPatchBrowserUI {
       color: DEFAULT_PATCH_COLORS[Math.floor(Math.random() * DEFAULT_PATCH_COLORS.length)],
       macros: mle.macros ? { ...mle.macros } : { swell: 0.3, shimmer: 0.2, tone: 0.5, pad: tonicDroneEngine.volume },
       snapshots: mle.snapshots ? JSON.parse(JSON.stringify(mle.snapshots)) : null,
+      activeSnapshotIndex: mle.activeSnapshotIndex ?? null,
       padProfile: tonicDroneEngine.currentProfile,
       timestamp: Date.now()
     };
@@ -399,11 +426,37 @@ export class CustomPatchBrowserUI {
     }
   }
 
+  _syncScenesToActivePatch() {
+    if (!this.activePatchId) return;
+    const patch = this.patches.find((p) => p.id === this.activePatchId);
+    if (!patch) return;
+    clearTimeout(this._sceneSaveDebounce);
+    this._sceneSaveDebounce = setTimeout(async () => {
+      const mle = this.appCore?.multiLayerEngine || multiLayerEngine;
+      if (!patch.data) patch.data = {};
+      patch.data.snapshots = mle.snapshots ? JSON.parse(JSON.stringify(mle.snapshots)) : null;
+      patch.data.activeSnapshotIndex = mle.activeSnapshotIndex ?? null;
+      if (mle.macros) {
+        patch.data.macros = { ...mle.macros };
+      }
+      try {
+        await patchStorage.updatePatch(patch.id, patch.name, patch.data);
+      } catch (e) {
+        console.warn("[CustomPatchBrowser] Failed auto-saving scenes to patch:", e);
+      }
+    }, 250);
+  }
+
   async handleDeletePatch(id) {
     const confirmed = await CustomModal.confirm("Delete Patch", "Are you sure you want to delete this patch?");
     if (!confirmed) return;
     try {
-      if (this.activePatchId === id) this.activePatchId = null;
+      if (this.activePatchId === id) {
+        this.activePatchId = null;
+        try {
+          localStorage.removeItem("wilsonix_active_patch_id");
+        } catch (e) {}
+      }
       await patchStorage.deletePatch(id);
       await this.loadPatches();
     } catch (e) {
@@ -414,6 +467,9 @@ export class CustomPatchBrowserUI {
   handleLoadPatch(patch) {
     if (!patch || !patch.data) return;
     this.activePatchId = patch.id;
+    try {
+      localStorage.setItem("wilsonix_active_patch_id", patch.id);
+    } catch (e) {}
     this.renderPatchList();
     
     const mle = this.appCore?.multiLayerEngine || multiLayerEngine;
@@ -485,8 +541,9 @@ export class CustomPatchBrowserUI {
     if (patch.data.macros && mle.setMacros) {
       mle.setMacros(patch.data.macros);
     }
-    if (patch.data.snapshots && mle.setSnapshots) {
-      mle.setSnapshots(patch.data.snapshots);
+    if (mle.setSnapshots) {
+      const snaps = patch.data.snapshots || [null, null, null, null, null, null, null, null];
+      mle.setSnapshots(snaps, patch.data.activeSnapshotIndex ?? null);
     }
 
     // Auto-sync Tonic Drone key if enabled
@@ -504,6 +561,14 @@ export class CustomPatchBrowserUI {
   }
 
   destroy() {
+    if (this._onScenesChanged) {
+      window.removeEventListener("wilsonix-scenes-changed", this._onScenesChanged);
+    }
+    if (this._layerChangeListener) {
+      const mle = this.appCore?.multiLayerEngine || multiLayerEngine;
+      mle.removeLayerChangeListener?.(this._layerChangeListener);
+    }
+    clearTimeout(this._sceneSaveDebounce);
     if (this.container) {
       this.container.innerHTML = "";
     }
