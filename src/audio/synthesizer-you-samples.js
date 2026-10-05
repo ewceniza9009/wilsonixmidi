@@ -1,6 +1,6 @@
 /**
  * MidiKey Elite - Synthesizer You Sample & FX Engine
- * Manages zero-latency playback of all authentic sound effects, stems, and loops
+ * Manages low-latency playback of all authentic sound effects, stems, and loops
  * ripped directly from "Synthesizer You".
  */
 
@@ -23,7 +23,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     category: "synthesizer_you",
     desc: "Lush 1980s Roland Juno-style widened stereo synth pad",
     file: "/samples/synthesizer_you/synth_chorus_pad_swell.flac",
-    gain: 1.10,
+    gain: 1.1,
   },
   {
     id: "sy_gated_snare_1",
@@ -50,7 +50,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     category: "synthesizer_you",
     desc: "95ms tape echo with zero feedback and high-end roll-off",
     file: "/samples/synthesizer_you/slapback_vox_chop_1.flac",
-    gain: 1.20,
+    gain: 1.2,
   },
   {
     id: "sy_vox_slap_2",
@@ -59,7 +59,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     category: "synthesizer_you",
     desc: "In-your-face rockabilly vocal punch with vintage tape slap",
     file: "/samples/synthesizer_you/slapback_vox_chop_2.flac",
-    gain: 1.20,
+    gain: 1.2,
   },
   {
     id: "sy_vox_slap_3",
@@ -68,7 +68,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     category: "synthesizer_you",
     desc: "Tape-saturated lead vocal phrase at front of mix",
     file: "/samples/synthesizer_you/slapback_vox_chop_3.flac",
-    gain: 1.20,
+    gain: 1.2,
   },
   {
     id: "sy_vox_slap_4",
@@ -77,7 +77,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     category: "synthesizer_you",
     desc: "Altered vocal cut from the Synthesizer You track",
     file: "/samples/synthesizer_you/slapback_vox_chop_4.flac",
-    gain: 1.20,
+    gain: 1.2,
   },
   {
     id: "sy_vox_slap_5",
@@ -86,7 +86,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     category: "synthesizer_you",
     desc: "Vocal phrase sliced at 0:23 from the Synthesizer You track",
     file: "/samples/synthesizer_you/slapback_vox_chop_5.flac",
-    gain: 1.20,
+    gain: 1.2,
   },
   {
     id: "sy_vox_slap_6",
@@ -95,7 +95,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     category: "synthesizer_you",
     desc: "Vocal phrase sliced at 1:05 from the Synthesizer You track",
     file: "/samples/synthesizer_you/slapback_vox_chop_6.flac",
-    gain: 1.20,
+    gain: 1.2,
   },
   {
     id: "sy_vox_slap_7",
@@ -104,7 +104,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     category: "synthesizer_you",
     desc: "Vocal phrase sliced at 1:51 from the Synthesizer You track",
     file: "/samples/synthesizer_you/slapback_vox_chop_7.flac",
-    gain: 1.20,
+    gain: 1.2,
   },
   {
     id: "sy_vox_slap_8",
@@ -113,7 +113,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     category: "synthesizer_you",
     desc: "Vocal phrase sliced at 2:29 from the Synthesizer You track",
     file: "/samples/synthesizer_you/slapback_vox_chop_8.flac",
-    gain: 1.20,
+    gain: 1.2,
   },
   {
     id: "sy_vox_slap_9",
@@ -122,7 +122,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     category: "synthesizer_you",
     desc: "Vocal phrase sliced at 3:04 from the Synthesizer You track",
     file: "/samples/synthesizer_you/slapback_vox_chop_9.flac",
-    gain: 1.20,
+    gain: 1.2,
   },
   {
     id: "sy_vox_slap_10",
@@ -131,7 +131,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     category: "synthesizer_you",
     desc: "Vocal phrase sliced at 3:16 from the Synthesizer You track",
     file: "/samples/synthesizer_you/slapback_vox_chop_10.flac",
-    gain: 1.20,
+    gain: 1.2,
   },
   {
     id: "sy_bass_riff",
@@ -149,7 +149,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     category: "synthesizer_you",
     desc: "Cinematic synth frequency sweep and transition build",
     file: "/samples/synthesizer_you/synth_riser_sweep_fx.flac",
-    gain: 1.10,
+    gain: 1.1,
   },
   {
     id: "sy_tape_drop",
@@ -167,7 +167,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     category: "synthesizer_you",
     desc: "Punchy transient kick drum with tape head bump",
     file: "/samples/synthesizer_you/punchy_80s_kick_hit.flac",
-    gain: 1.20,
+    gain: 1.2,
   },
   {
     id: "sy_surf_pluck_c4",
@@ -177,7 +177,7 @@ export const SYNTHESIZER_YOU_EFFECTS = [
     desc: "Single clean surf pluck with spring drip impulse",
     file: "/samples/synthesizer_you/surf_pluck_c4_sample.flac",
     gain: 1.15,
-  }
+  },
 ];
 
 class SynthesizerYouSampleEngine {
@@ -191,7 +191,7 @@ class SynthesizerYouSampleEngine {
     if (this.buffers.has(id)) return this.buffers.get(id);
     if (this.loadingPromises.has(id)) return this.loadingPromises.get(id);
 
-    const def = SYNTHESIZER_YOU_EFFECTS.find(x => x.id === id);
+    const def = SYNTHESIZER_YOU_EFFECTS.find((x) => x.id === id);
     if (!def) return null;
 
     const promise = (async () => {
@@ -220,14 +220,20 @@ class SynthesizerYouSampleEngine {
     // Non-blocking idle preload in background after page is fully responsive
     if (typeof requestIdleCallback !== "undefined") {
       requestIdleCallback(() => {
-        SYNTHESIZER_YOU_EFFECTS.forEach(item => {
+        SYNTHESIZER_YOU_EFFECTS.forEach((item) => {
           setTimeout(() => this.loadSample(item.id), 200);
         });
       });
     }
   }
 
-  async trigger(id, velocity = 100, customGain = 1.0, destNode = null, pitchMidi = 60) {
+  async trigger(
+    id,
+    velocity = 100,
+    customGain = 1.0,
+    destNode = null,
+    pitchMidi = 60,
+  ) {
     const ctx = audioCore.ctx;
     if (!ctx) return;
     audioCore.ensureRunning();
@@ -250,7 +256,7 @@ class SynthesizerYouSampleEngine {
 
       const gainNode = ctx.createGain();
       const velRatio = Math.max(0.1, Math.min(1.0, velocity / 127));
-      const itemDef = SYNTHESIZER_YOU_EFFECTS.find(x => x.id === id);
+      const itemDef = SYNTHESIZER_YOU_EFFECTS.find((x) => x.id === id);
       const baseGain = itemDef ? itemDef.gain : 1.0;
       const targetVol = baseGain * velRatio * customGain;
 
@@ -268,7 +274,10 @@ class SynthesizerYouSampleEngine {
 
       src.onended = () => {
         this.activeSources.delete(voiceObj);
-        try { src.disconnect(); gainNode.disconnect(); } catch (e) {}
+        try {
+          src.disconnect();
+          gainNode.disconnect();
+        } catch (e) {}
       };
 
       return voiceObj;
@@ -280,12 +289,16 @@ class SynthesizerYouSampleEngine {
   stopAll() {
     const ctx = audioCore.ctx;
     const now = ctx ? ctx.currentTime : 0;
-    this.activeSources.forEach(voice => {
+    this.activeSources.forEach((voice) => {
       try {
         if (voice.gainNode && ctx) {
           voice.gainNode.gain.setTargetAtTime(0.001, now, 0.04);
           setTimeout(() => {
-            try { voice.src.stop(); voice.src.disconnect(); voice.gainNode.disconnect(); } catch (e) {}
+            try {
+              voice.src.stop();
+              voice.src.disconnect();
+              voice.gainNode.disconnect();
+            } catch (e) {}
           }, 60);
         } else {
           voice.src.stop();
@@ -298,5 +311,3 @@ class SynthesizerYouSampleEngine {
 }
 
 export const synthesizerYouEngine = new SynthesizerYouSampleEngine();
-
-

@@ -5,6 +5,7 @@
 
 import { FxRackManager } from "./fx-rack-manager.js";
 import { SpatialEngine } from "./spatial-engine.js";
+import { OutputBridge } from "./output-bridge.js";
 import { downloadBlob } from "../utils/download-blob.js";
 
 export const LATENCY_PROFILES = {
@@ -64,6 +65,14 @@ export class AudioCore {
     this.captureTap = null;
     this.captureRecorder = null;
     this.captureChunks = [];
+
+    // Native Oboe output bridge (?bridge=1 / popover ENABLE button / persisted
+    // success, Android only): swaps the final destination connection for a tap
+    // that feeds the native low-latency stream. OFF unless explicitly
+    // requested; any failure falls back to the untouched web path (see
+    // output-bridge.js safety contract).
+    this.outputStage = null;
+    this.outputBridge = new OutputBridge(this);
   }
 
   init() {
@@ -131,6 +140,13 @@ export class AudioCore {
     // Binaural spatial engine: inserted between limiter and destination.
     // OFF by default — when disabled, dry signal passes through unchanged.
     this.spatialEngine = null; // Lazy init — created on first use to avoid blocking init()
+
+    // Single choke point for ALL final audio: everything that reaches the
+    // speakers passes through outputStage (SpatialEngine's destination node).
+    // Unity-gain passthrough when the native bridge is off - zero behavior
+    // change. The Oboe bridge swaps exactly this one connection when enabled.
+    this.outputStage = this.ctx.createGain();
+    this.outputStage.connect(this.ctx.destination);
     this._connectSpatial();
 
     // Diagnostic tap: identical signal to the DAC (analyser is pass-through).
@@ -243,6 +259,12 @@ export class AudioCore {
       await this.ctx.resume().catch(() => {});
       this._suspendedByApp = false;
     }
+    // First gesture after boot: attempt the native Oboe bridge once if the
+    // query flag or a persisted success asks for it. Never throws - enable()
+    // fails soft to the web path.
+    if (this.outputBridge && !this.outputBridge._attempted) {
+      this.outputBridge.maybeEnable().catch(() => {});
+    }
   }
 
   hardSilence() {
@@ -272,6 +294,15 @@ export class AudioCore {
 
   updateLatencyMetrics() {
     if (!this.ctx) return;
+    // Native bridge active: Chromium's outputLatency no longer describes the
+    // audible path - report the ring fill + Oboe stream latency instead.
+    const b = this.outputBridge;
+    if (b && b.active && b.stats) {
+      const oboeMs = b.stats.latencyMs > 0 ? b.stats.latencyMs : 0;
+      const fillMs = b.stats.fillMs || 0;
+      this.reportedLatencyMs = Math.round((fillMs + oboeMs) * 10) / 10;
+      return;
+    }
     const base = (this.ctx.baseLatency || 0.0026) * 1000;
     const output = (this.ctx.outputLatency || 0.005) * 1000;
     this.reportedLatencyMs = Math.round((base + output) * 10) / 10;
@@ -335,7 +366,7 @@ export class AudioCore {
 
     // Lazy-init spatial engine on first call
     if (!this.spatialEngine) {
-      this.spatialEngine = new SpatialEngine(this.ctx, this.hardwareLimiter, this.ctx.destination);
+      this.spatialEngine = new SpatialEngine(this.ctx, this.hardwareLimiter, this.outputStage || this.ctx.destination);
       this.spatialEngine.connect();
     }
   }
@@ -531,10 +562,36 @@ export class AudioCore {
       baseReported: false,
       outputReported: false,
       estimated: true,
+      // Native Oboe bridge (?bridge=1): when active, the Chromium buffer
+      // numbers below are replaced by the real audible path (ring fill +
+      // stream latency) and nativeBridge flips true.
+      nativeBridge: false,
+      nativeLatencyMs: null,
+      nativeFillMs: null,
       // True when a profile is saved but not yet bound into the running context.
       pendingRestart: !!(this.ctx && this.appliedLatencyProfile && this.appliedLatencyProfile !== this.currentLatencyProfile),
     };
     if (!this.ctx) return out;
+
+    // Native bridge active: Chromium's base/output latency describes a path
+    // that is currently playing digital silence. Report the path the ears
+    // actually hear: ring fill (transport queue) + Oboe stream latency.
+    const bridge = this.outputBridge;
+    if (bridge && bridge.active && bridge.stats) {
+      const bs = bridge.stats;
+      const oboeReported = bs.latencyMs > 0;
+      out.nativeBridge = true;
+      out.baseReported = false;
+      out.baseMs = 0;
+      out.nativeLatencyMs = Math.round((bs.latencyMs || 0) * 10) / 10;
+      out.nativeFillMs = Math.round((bs.fillMs || 0) * 10) / 10;
+      out.outputReported = oboeReported;
+      out.outputMs = Math.round(((bs.fillMs || 0) + (bs.latencyMs || 0)) * 10) / 10;
+      out.measuredMs = out.outputMs;
+      out.estimated = !oboeReported;
+      if (bs.burst > 0) out.measuredFrames = bs.burst;
+      return out;
+    }
 
     try {
       const rawBase = this.ctx.baseLatency;

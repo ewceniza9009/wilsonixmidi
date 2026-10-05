@@ -1693,6 +1693,57 @@ export class GigHudUI {
     const currentProf = l.profile || "balanced";
     const recom = l.recommendedProfile;
 
+    // Native Oboe output bridge status (Phase A POC, ?bridge=1).
+    const bridge = audioCore.outputBridge;
+    const bSum = bridge ? bridge.getSummary() : null;
+    let nativeSection = "";
+    if (bridge && bSum && bSum.active && l.nativeBridge) {
+      const bs = bSum.stats || {};
+      nativeSection = `
+          <div class="latency-device-section" id="latency-native-section">
+            <div class="latency-profile-title">⚡ NATIVE OUTPUT (OBOE) — ACTIVE · POC v6</div>
+            <div class="latency-pop-body">
+              <div class="latency-pop-row"><span class="latency-pop-key">Stream latency (Oboe)</span><span class="latency-pop-val">${l.nativeLatencyMs ?? 0} ms${l.estimated ? " (est.)" : ""}</span></div>
+              <div class="latency-pop-row"><span class="latency-pop-key">Ring fill (queue)</span><span class="latency-pop-val">${l.nativeFillMs ?? 0} ms${bs.prefilling ? " (building…)" : ""}</span></div>
+              <div class="latency-pop-row"><span class="latency-pop-key">Buffer burst</span><span class="latency-pop-val">${bs.burst ? `${bs.burst} frames` : "—"}</span></div>
+              <div class="latency-pop-row"><span class="latency-pop-key">Bridge round-trip</span><span class="latency-pop-val">${bSum.rttMs != null ? `${bSum.rttMs} ms` : "—"}</span></div>
+              <div class="latency-pop-row"><span class="latency-pop-key">Xruns (underruns)</span><span class="latency-pop-val">${bs.xruns ?? 0}${bs.droppedFrames ? ` (+${bs.droppedFrames} drift frames)` : ""}</span></div>
+            </div>
+            <div class="latency-pop-reco">⚡ Audible path bypasses Chromium's ~45ms buffer — ${bSum.chunksSent} chunks shipped${bSum.droppedChunks ? `, ${bSum.droppedChunks} dropped during stalls` : ""}.</div>
+            <div class="cache-maint-row">
+              <button class="midi-clock-btn cache-clear-btn" id="latency-btn-native-disable" title="Switch back to the WebView's own audio output path.">
+                <span>■ SWITCH BACK TO WEB OUTPUT</span>
+              </button>
+            </div>
+          </div>`;
+    } else if (bridge && bSum && bSum.attempted && bSum.fallbackReason) {
+      const diag =
+        bSum.rttMs != null
+          ? ` — bridge RTT ${bSum.rttMs} ms, ${bSum.droppedChunks} drops, ${bSum.chunksSent} sent`
+          : "";
+      nativeSection = `
+          <div class="latency-device-section" id="latency-native-section">
+            <div class="latency-profile-title">⚡ NATIVE OUTPUT (OBOE) · POC v6</div>
+            <div class="latency-pop-reco">⚠️ Fell back to web path — ${escapeHtml(bSum.fallbackReason)}${diag}</div>
+            <div class="cache-maint-row">
+              <button class="midi-clock-btn cache-clear-btn" id="latency-btn-native-enable" title="Try the native low-latency output again.">
+                <span>⟳ RETRY NATIVE OUTPUT</span>
+              </button>
+            </div>
+          </div>`;
+    } else {
+      nativeSection = `
+          <div class="latency-device-section" id="latency-native-section">
+            <div class="latency-profile-title">⚡ NATIVE OUTPUT (OBOE) · POC v6</div>
+            <div class="cache-maint-row">
+              <button class="midi-clock-btn cache-clear-btn" id="latency-btn-native-enable" title="Streams the final mix to the native Oboe/AAudio engine, bypassing Chromium's ~45ms output buffer. Auto-restores the web path on any failure. Choice persists across launches.">
+                <span>⚡ ENABLE NATIVE OUTPUT (POC)</span>
+              </button>
+            </div>
+            <div class="latency-pop-reco">Bypasses Chromium's ~45ms buffer. Any failure falls back to the web path automatically.</div>
+          </div>`;
+    }
+
     // Measured key-to-sound: input delivery + JS dispatch + output path.
     const outputTotalMs = l.measuredMs ?? l.reportedMs ?? 0;
     const keyRow = (label, source) => {
@@ -1798,6 +1849,8 @@ export class GigHudUI {
               🎚 input delivery + JS dispatch + audio output path. Play the input you want measured.
             </div>
           </div>
+
+          ${nativeSection}
 
           <!-- ACOUSTIC LOOPBACK BENCH -->
           <div class="latency-device-section" id="latency-loopback-section">
@@ -1999,6 +2052,24 @@ export class GigHudUI {
           ? `✔ Loopback ${result.loopbackMs} ms median (spread ${result.spreadMs} ms, heard ${result.matched}/${result.clicks}). Speaker path ≈ ${Math.max(1, result.loopbackMs - 20)}–${Math.max(1, result.loopbackMs - 5)} ms.`
           : `✖ ${result.error}`;
       }
+    });
+
+    // Native Oboe bridge toggle. Lives here because APK launches carry no
+    // query string - ?bridge=1 only works for dev/browser launches.
+    pop.querySelector("#latency-btn-native-enable")?.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      await audioCore.outputBridge.retryEnable();
+      if (!pop.isConnected) return;
+      const newL = audioCore.measureLatency();
+      this._renderLatencyPopover(newL, this._latencySmoothed);
+    });
+    pop.querySelector("#latency-btn-native-disable")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      audioCore.outputBridge.disable();
+      const newL = audioCore.measureLatency();
+      this._renderLatencyPopover(newL, this._latencySmoothed);
     });
 
     // Sample cache maintenance: live usage readout + full IndexedDB wipe.

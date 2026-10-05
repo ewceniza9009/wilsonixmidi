@@ -51,19 +51,24 @@ export class HdSampleEngine {
       return this.loadingPromises.get(sfName);
     }
 
-    // Load from local zero-latency bundled soundbank assets
+    // Load from local low-latency bundled soundbank assets
     const promise = Soundfont.instrument(this.ctx, sfName, {
       nameToUrl: (name) => `/soundfonts/${name}-mp3.js`,
       destination: this.destination,
       gain: 1.0,
     })
-      .then(inst => {
+      .then((inst) => {
         this.loadedInstruments.set(sfName, inst);
-        console.log(`[HD Sample Engine] Loaded local 24-bit PCM multi-sample: ${sfName}`);
+        console.log(
+          `[HD Sample Engine] Loaded local 24-bit PCM multi-sample: ${sfName}`,
+        );
         return inst;
       })
-      .catch(err => {
-        console.warn(`[HD Sample Engine] Local SoundFont fetch fallback for ${sfName}:`, err);
+      .catch((err) => {
+        console.warn(
+          `[HD Sample Engine] Local SoundFont fetch fallback for ${sfName}:`,
+          err,
+        );
         return null;
       });
 
@@ -104,7 +109,7 @@ export class HdSampleEngine {
     const audios = this.activeAudios.get(midiNote);
     if (audios && audios.length > 0) {
       const now = this.ctx.currentTime;
-      audios.forEach(a => {
+      audios.forEach((a) => {
         try {
           if (a && a.stop) a.stop(now + 0.15);
         } catch (e) {}
@@ -114,8 +119,8 @@ export class HdSampleEngine {
   }
 
   allNotesOff() {
-    this.activeAudios.forEach(audios => {
-      audios.forEach(a => {
+    this.activeAudios.forEach((audios) => {
+      audios.forEach((a) => {
         try {
           if (a && a.stop) a.stop();
         } catch (e) {}

@@ -15,12 +15,25 @@ import java.util.List;
 public class MainActivity extends BridgeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
+        // Plugin registration MUST happen BEFORE super.onCreate().
+        // BridgeActivity.onCreate() -> load() -> Bridge constructor registers
+        // the collected plugin list and injects window.Capacitor.PluginHeaders
+        // all inside super. Anything registered after super only reaches the
+        // builder's already-consumed list and is SILENTLY dropped, making the
+        // JS side throw '"<name>" plugin is not implemented on android'.
+        //
         // Native MIDI bridge: Android WebView lacks the Web MIDI API, so this
         // plugin (android.media.midi) streams USB/Bluetooth MIDI into the web
         // pipeline — same behavior as desktop WebView/Tauri.
         registerPlugin(MidiBridgePlugin.class);
+
+        // Native low-latency output bridge (latency popover toggle / ?bridge=1):
+        // streams the web mix to an Oboe/AAudio stream, bypassing Chromium's
+        // ~45ms output buffer. Soft-fails to the untouched web path on any
+        // device that can't open it.
+        registerPlugin(AudioBridgePlugin.class);
+
+        super.onCreate(savedInstanceState);
 
         // FLAG_SECURE: blocks MIUI 3-finger screenshot & screen capture
         if (getWindow() != null) {

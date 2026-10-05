@@ -1,7 +1,7 @@
 /**
  * Wilsonix MIDIKey - Stickz "Bloom" Future Bass & Melodic EDM Sample Loader
  * Loads and decodes authentic 24-bit WAV synth one-shots
- * with IndexedDB sample caching and zero-latency RAM playback.
+ * with IndexedDB sample caching and low-latency RAM playback.
  */
 
 import { BLOOM_EDM_BANKS } from "./bloom-edm-manifest.js";
@@ -16,7 +16,11 @@ class BloomEdmSampleLoader {
   }
 
   isBloomInstrument(instId) {
-    return typeof instId === "string" && instId.startsWith("bloom_") && !!BLOOM_EDM_BANKS[instId];
+    return (
+      typeof instId === "string" &&
+      instId.startsWith("bloom_") &&
+      !!BLOOM_EDM_BANKS[instId]
+    );
   }
 
   getDef(instId) {
@@ -45,7 +49,10 @@ class BloomEdmSampleLoader {
       const fetchFresh = async () => {
         const resp = await fetch(url);
         if (!resp.ok) {
-          logger.warn("PCM", `Failed to fetch Bloom EDM sample: ${url} (${resp.status})`);
+          logger.warn(
+            "PCM",
+            `Failed to fetch Bloom EDM sample: ${url} (${resp.status})`,
+          );
           return null;
         }
         return resp.arrayBuffer();
@@ -96,7 +103,11 @@ class BloomEdmSampleLoader {
 
         return noteMap;
       } catch (err) {
-        logger.warn("PCM", `Bloom EDM sample decode failed for ${instId}:`, err);
+        logger.warn(
+          "PCM",
+          `Bloom EDM sample decode failed for ${instId}:`,
+          err,
+        );
         return null;
       } finally {
         this.loadingPromises.delete(instId);

@@ -21,9 +21,12 @@ export class SfxSoundGenerator {
   _initBus() {
     if (!this.ctx) return;
     this.sfxBus = this.ctx.createGain();
-    const dest = this.destination || (audioCore.masterGain || this.ctx.destination);
+    const dest =
+      this.destination || audioCore.masterGain || this.ctx.destination;
     if (dest) {
-      try { this.sfxBus.connect(dest); } catch (e) {}
+      try {
+        this.sfxBus.connect(dest);
+      } catch (e) {}
     }
   }
 
@@ -45,19 +48,27 @@ export class SfxSoundGenerator {
       } catch (e) {}
       const oldBus = this.sfxBus;
       setTimeout(() => {
-        try { oldBus.disconnect(); } catch (e) {}
+        try {
+          oldBus.disconnect();
+        } catch (e) {}
       }, 60);
       this._initBus();
     }
 
     // 2. Stop and silence any tracked individual nodes
-    this._longFx.forEach(unit => {
-      unit.nodes.forEach(node => {
+    this._longFx.forEach((unit) => {
+      unit.nodes.forEach((node) => {
         try {
           if (node && typeof node.stop === "function") {
-            try { node.stop(now + 0.02); } catch (e) {}
+            try {
+              node.stop(now + 0.02);
+            } catch (e) {}
           }
-          if (node && node.gain && typeof node.gain.cancelScheduledValues === "function") {
+          if (
+            node &&
+            node.gain &&
+            typeof node.gain.cancelScheduledValues === "function"
+          ) {
             try {
               node.gain.cancelScheduledValues(now);
               node.gain.setTargetAtTime(0, now, 0.02);
@@ -78,7 +89,12 @@ export class SfxSoundGenerator {
       return this.triggerRealDrumKit(midiNote, vel, gain);
     }
 
-    const vel = typeof velocity === "number" ? velocity : (typeof noteOrVelocity === "number" ? noteOrVelocity : 100);
+    const vel =
+      typeof velocity === "number"
+        ? velocity
+        : typeof noteOrVelocity === "number"
+          ? noteOrVelocity
+          : 100;
     const gain = typeof customGain === "number" ? customGain : 1.0;
 
     switch (sfxId) {
@@ -177,14 +193,24 @@ export class SfxSoundGenerator {
         return this.triggerCowbell(velocity, customGain);
       case 60: // Bongo Hi
       case 61: // Bongo Low
-        return this.triggerBongos(note === 60, velocity, customGain, null, note);
+        return this.triggerBongos(
+          note === 60,
+          velocity,
+          customGain,
+          null,
+          note,
+        );
       case 62: // Conga Mute
       case 63: // Conga Open Hi
       case 64: // Conga Low
         return this.triggerConga(note <= 63, velocity, customGain, null, note);
       case 65: // Timbale Hi
       case 66: // Timbale Low
-        return this.triggerAcousticTom(note === 65 ? "high" : "low", velocity, customGain);
+        return this.triggerAcousticTom(
+          note === 65 ? "high" : "low",
+          velocity,
+          customGain,
+        );
       case 67: // Agogo Hi
       case 68: // Agogo Low
         return this.triggerCowbell(velocity, customGain);
@@ -208,10 +234,16 @@ export class SfxSoundGenerator {
     if (destNode && typeof destNode.connect === "function") return destNode;
     if (!this.sfxBus) this._initBus();
     if (this.sfxBus) return this.sfxBus;
-    if (this.destination && typeof this.destination.connect === "function") return this.destination;
-    if (audioCore.masterGain && typeof audioCore.masterGain.connect === "function") return audioCore.masterGain;
+    if (this.destination && typeof this.destination.connect === "function")
+      return this.destination;
+    if (
+      audioCore.masterGain &&
+      typeof audioCore.masterGain.connect === "function"
+    )
+      return audioCore.masterGain;
     if (this.ctx && this.ctx.destination) return this.ctx.destination;
-    if (audioCore.ctx && audioCore.ctx.destination) return audioCore.ctx.destination;
+    if (audioCore.ctx && audioCore.ctx.destination)
+      return audioCore.ctx.destination;
     return null;
   }
 
@@ -287,7 +319,12 @@ export class SfxSoundGenerator {
     return { osc, noise };
   }
 
-  triggerRain(duration = 4.0, velocity = 90, customGain = 1.0, destNode = null) {
+  triggerRain(
+    duration = 4.0,
+    velocity = 90,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
@@ -301,8 +338,11 @@ export class SfxSoundGenerator {
 
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(0.40 * vel * customGain, now + 0.3);
-    gain.gain.linearRampToValueAtTime(0.40 * vel * customGain, now + duration - 0.5);
+    gain.gain.linearRampToValueAtTime(0.4 * vel * customGain, now + 0.3);
+    gain.gain.linearRampToValueAtTime(
+      0.4 * vel * customGain,
+      now + duration - 0.5,
+    );
     gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
     noise.connect(bp);
@@ -315,7 +355,12 @@ export class SfxSoundGenerator {
     return noise;
   }
 
-  triggerOceanWave(duration = 5.0, velocity = 95, customGain = 1.0, destNode = null) {
+  triggerOceanWave(
+    duration = 5.0,
+    velocity = 95,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
@@ -330,7 +375,10 @@ export class SfxSoundGenerator {
 
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(0.55 * vel * customGain, now + duration * 0.45);
+    gain.gain.linearRampToValueAtTime(
+      0.55 * vel * customGain,
+      now + duration * 0.45,
+    );
     gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
     noise.connect(lp);
@@ -343,7 +391,12 @@ export class SfxSoundGenerator {
     return noise;
   }
 
-  triggerBirdChirp(pitchMidi = 72, velocity = 95, customGain = 1.0, destNode = null) {
+  triggerBirdChirp(
+    pitchMidi = 72,
+    velocity = 95,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
@@ -371,7 +424,12 @@ export class SfxSoundGenerator {
     return osc;
   }
 
-  triggerWind(duration = 4.0, velocity = 90, customGain = 1.0, destNode = null) {
+  triggerWind(
+    duration = 4.0,
+    velocity = 90,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
@@ -404,16 +462,25 @@ export class SfxSoundGenerator {
   // 2. HUMAN VOICES & BEATBOX
   // =========================================================================
 
-  triggerVocalChant(chantType = "yeah", pitchMidi = 60, velocity = 95, customGain = 1.0, destNode = null) {
+  triggerVocalChant(
+    chantType = "yeah",
+    pitchMidi = 60,
+    velocity = 95,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
     const dest = this.getDest(destNode);
     const baseFreq = 440 * Math.pow(2, (pitchMidi - 69) / 12);
 
-    const formants = chantType === "whoa" 
-      ? [460, 880, 2400] 
-      : (chantType === "hey" ? [540, 1820, 2500] : [640, 1950, 2650]);
+    const formants =
+      chantType === "whoa"
+        ? [460, 880, 2400]
+        : chantType === "hey"
+          ? [540, 1820, 2500]
+          : [640, 1950, 2650];
 
     const cord1 = ctx.createOscillator();
     const cord2 = ctx.createOscillator();
@@ -425,19 +492,19 @@ export class SfxSoundGenerator {
     if (chantType === "yeah") {
       cord1.frequency.setValueAtTime(baseFreq * 0.92, now);
       cord1.frequency.linearRampToValueAtTime(baseFreq * 1.06, now + 0.08);
-      cord1.frequency.exponentialRampToValueAtTime(baseFreq * 0.95, now + 0.40);
+      cord1.frequency.exponentialRampToValueAtTime(baseFreq * 0.95, now + 0.4);
 
       cord2.frequency.setValueAtTime(baseFreq * 0.92, now);
       cord2.frequency.linearRampToValueAtTime(baseFreq * 1.06, now + 0.08);
-      cord2.frequency.exponentialRampToValueAtTime(baseFreq * 0.95, now + 0.40);
+      cord2.frequency.exponentialRampToValueAtTime(baseFreq * 0.95, now + 0.4);
     } else if (chantType === "whoa") {
       cord1.frequency.setValueAtTime(baseFreq * 0.94, now);
       cord1.frequency.linearRampToValueAtTime(baseFreq * 1.12, now + 0.14);
-      cord1.frequency.exponentialRampToValueAtTime(baseFreq * 0.88, now + 0.50);
+      cord1.frequency.exponentialRampToValueAtTime(baseFreq * 0.88, now + 0.5);
 
       cord2.frequency.setValueAtTime(baseFreq * 0.94, now);
       cord2.frequency.linearRampToValueAtTime(baseFreq * 1.12, now + 0.14);
-      cord2.frequency.exponentialRampToValueAtTime(baseFreq * 0.88, now + 0.50);
+      cord2.frequency.exponentialRampToValueAtTime(baseFreq * 0.88, now + 0.5);
     } else {
       cord1.frequency.setValueAtTime(baseFreq * 0.96, now);
       cord1.frequency.linearRampToValueAtTime(baseFreq * 1.08, now + 0.05);
@@ -455,7 +522,10 @@ export class SfxSoundGenerator {
     breathFilt.Q.value = 1.2;
     const breathGain = ctx.createGain();
     breathGain.gain.setValueAtTime(0.001, now);
-    breathGain.gain.linearRampToValueAtTime(0.08 * vel * customGain, now + 0.03);
+    breathGain.gain.linearRampToValueAtTime(
+      0.08 * vel * customGain,
+      now + 0.03,
+    );
     breathGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
 
     breath.connect(breathFilt);
@@ -487,7 +557,10 @@ export class SfxSoundGenerator {
 
     const masterGain = ctx.createGain();
     masterGain.gain.setValueAtTime(0.001, now);
-    masterGain.gain.linearRampToValueAtTime(0.65 * vel * customGain, now + 0.04);
+    masterGain.gain.linearRampToValueAtTime(
+      0.65 * vel * customGain,
+      now + 0.04,
+    );
     masterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
 
     f1.connect(masterGain);
@@ -506,7 +579,12 @@ export class SfxSoundGenerator {
     return cord1;
   }
 
-  triggerBeatbox(type = "kick", velocity = 100, customGain = 1.0, destNode = null) {
+  triggerBeatbox(
+    type = "kick",
+    velocity = 100,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
@@ -525,7 +603,7 @@ export class SfxSoundGenerator {
       osc.connect(gain);
       if (dest) gain.connect(dest);
       osc.start(now);
-      osc.stop(now + 0.30);
+      osc.stop(now + 0.3);
       return osc;
     } else if (type === "snare") {
       const noise = this.createNoiseSource(false);
@@ -535,7 +613,7 @@ export class SfxSoundGenerator {
       bp.Q.value = 1.8;
 
       const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.70 * vel * customGain, now);
+      gain.gain.setValueAtTime(0.7 * vel * customGain, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
 
       noise.connect(bp);
@@ -551,14 +629,14 @@ export class SfxSoundGenerator {
       hp.frequency.value = 6500;
 
       const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.50 * vel * customGain, now);
+      gain.gain.setValueAtTime(0.5 * vel * customGain, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
 
       noise.connect(hp);
       hp.connect(gain);
       if (dest) gain.connect(dest);
       noise.start(now);
-      noise.stop(now + 0.10);
+      noise.stop(now + 0.1);
       return noise;
     }
   }
@@ -567,7 +645,12 @@ export class SfxSoundGenerator {
   // 3. WEIRD & SCI-FI FX
   // =========================================================================
 
-  triggerAlienDrone(pitchMidi = 48, velocity = 95, customGain = 1.0, destNode = null) {
+  triggerAlienDrone(
+    pitchMidi = 48,
+    velocity = 95,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
@@ -595,7 +678,7 @@ export class SfxSoundGenerator {
 
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(0.50 * vel * customGain, now + 0.2);
+    gain.gain.linearRampToValueAtTime(0.5 * vel * customGain, now + 0.2);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 3.0);
 
     osc1.connect(filter);
@@ -691,7 +774,7 @@ export class SfxSoundGenerator {
     filter.frequency.exponentialRampToValueAtTime(80, now + 0.65);
 
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.60 * vel * customGain, now);
+    gain.gain.setValueAtTime(0.6 * vel * customGain, now);
     gain.gain.linearRampToValueAtTime(0.001, now + 0.68);
 
     osc.connect(filter);
@@ -699,7 +782,7 @@ export class SfxSoundGenerator {
     if (dest) gain.connect(dest);
 
     osc.start(now);
-    osc.stop(now + 0.70);
+    osc.stop(now + 0.7);
     return osc;
   }
 
@@ -732,10 +815,10 @@ export class SfxSoundGenerator {
     const vel = velocity / 127;
     const dest = this.getDest(destNode);
 
-    const beeps = [0, 0.12, 0.24, 0.40];
+    const beeps = [0, 0.12, 0.24, 0.4];
     const oscs = [];
 
-    beeps.forEach(delay => {
+    beeps.forEach((delay) => {
       const o1 = ctx.createOscillator();
       const o2 = ctx.createOscillator();
       o1.type = "square";
@@ -745,7 +828,10 @@ export class SfxSoundGenerator {
 
       const g = ctx.createGain();
       g.gain.setValueAtTime(0.001, now + delay);
-      g.gain.linearRampToValueAtTime(0.50 * vel * customGain, now + delay + 0.01);
+      g.gain.linearRampToValueAtTime(
+        0.5 * vel * customGain,
+        now + delay + 0.01,
+      );
       g.gain.linearRampToValueAtTime(0.001, now + delay + 0.08);
 
       o1.connect(g);
@@ -811,7 +897,7 @@ export class SfxSoundGenerator {
     hp.frequency.value = 1400;
 
     const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.70 * vel * customGain, now);
+    noiseGain.gain.setValueAtTime(0.7 * vel * customGain, now);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
 
     osc.connect(oscGain);
@@ -828,12 +914,17 @@ export class SfxSoundGenerator {
     return { osc, noise };
   }
 
-  trigger808Hat(closed = true, velocity = 90, customGain = 1.0, destNode = null) {
+  trigger808Hat(
+    closed = true,
+    velocity = 90,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
     const dest = this.getDest(destNode);
-    const dur = closed ? 0.06 : 0.40;
+    const dur = closed ? 0.06 : 0.4;
 
     const noise = this.createNoiseSource(false);
     const bp = ctx.createBiquadFilter();
@@ -854,7 +945,13 @@ export class SfxSoundGenerator {
     return noise;
   }
 
-  triggerConga(high = true, velocity = 105, customGain = 1.0, destNode = null, midiNote = 60) {
+  triggerConga(
+    high = true,
+    velocity = 105,
+    customGain = 1.0,
+    destNode = null,
+    midiNote = 60,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
@@ -878,7 +975,10 @@ export class SfxSoundGenerator {
     const slap = ctx.createOscillator();
     slap.type = "triangle";
     slap.frequency.setValueAtTime(Math.min(3500, 1200 * pitchFactor), now);
-    slap.frequency.exponentialRampToValueAtTime(Math.min(1000, 250 * pitchFactor), now + 0.015);
+    slap.frequency.exponentialRampToValueAtTime(
+      Math.min(1000, 250 * pitchFactor),
+      now + 0.015,
+    );
     const slapGain = ctx.createGain();
     slapGain.gain.setValueAtTime(0.65 * vel * customGain, now);
     slapGain.gain.exponentialRampToValueAtTime(0.001, now + 0.022);
@@ -898,7 +998,13 @@ export class SfxSoundGenerator {
     return { osc, slap };
   }
 
-  triggerBongos(high = true, velocity = 100, customGain = 1.0, destNode = null, midiNote = 60) {
+  triggerBongos(
+    high = true,
+    velocity = 100,
+    customGain = 1.0,
+    destNode = null,
+    midiNote = 60,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
@@ -914,15 +1020,18 @@ export class SfxSoundGenerator {
     osc.frequency.exponentialRampToValueAtTime(freq, now + 0.02);
 
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(1.10 * vel * customGain, now);
+    gain.gain.setValueAtTime(1.1 * vel * customGain, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
 
     const slap = ctx.createOscillator();
     slap.type = "triangle";
     slap.frequency.setValueAtTime(Math.min(4000, 1500 * pitchFactor), now);
-    slap.frequency.exponentialRampToValueAtTime(Math.min(1200, 300 * pitchFactor), now + 0.012);
+    slap.frequency.exponentialRampToValueAtTime(
+      Math.min(1200, 300 * pitchFactor),
+      now + 0.012,
+    );
     const slapGain = ctx.createGain();
-    slapGain.gain.setValueAtTime(0.60 * vel * customGain, now);
+    slapGain.gain.setValueAtTime(0.6 * vel * customGain, now);
     slapGain.gain.exponentialRampToValueAtTime(0.001, now + 0.018);
 
     osc.connect(gain);
@@ -940,7 +1049,12 @@ export class SfxSoundGenerator {
     return { osc, slap };
   }
 
-  triggerAnalogSynthDrum(velocity = 115, customGain = 1.0, destNode = null, midiNote = 60) {
+  triggerAnalogSynthDrum(
+    velocity = 115,
+    customGain = 1.0,
+    destNode = null,
+    midiNote = 60,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
@@ -948,7 +1062,7 @@ export class SfxSoundGenerator {
     const dur = 0.45;
 
     // Pitch tracked from MIDI note
-    const semitones = (midiNote - 60);
+    const semitones = midiNote - 60;
     const pitchFactor = Math.pow(2, semitones / 12);
     const startFreq = Math.max(180, Math.min(3500, 1100 * pitchFactor));
     const endFreq = Math.max(40, Math.min(500, 65 * pitchFactor));
@@ -957,10 +1071,10 @@ export class SfxSoundGenerator {
     const osc = ctx.createOscillator();
     osc.type = "triangle";
     osc.frequency.setValueAtTime(startFreq, now);
-    osc.frequency.exponentialRampToValueAtTime(endFreq, now + 0.20);
+    osc.frequency.exponentialRampToValueAtTime(endFreq, now + 0.2);
 
     const oscGain = ctx.createGain();
-    oscGain.gain.setValueAtTime(1.30 * vel * customGain, now);
+    oscGain.gain.setValueAtTime(1.3 * vel * customGain, now);
     oscGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
 
     // Click attack transient
@@ -969,7 +1083,7 @@ export class SfxSoundGenerator {
     click.frequency.setValueAtTime(Math.min(4500, 1600 * pitchFactor), now);
     click.frequency.exponentialRampToValueAtTime(250, now + 0.015);
     const clickGain = ctx.createGain();
-    clickGain.gain.setValueAtTime(0.60 * vel * customGain, now);
+    clickGain.gain.setValueAtTime(0.6 * vel * customGain, now);
     clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
 
     // Resonant lowpass
@@ -1009,7 +1123,7 @@ export class SfxSoundGenerator {
 
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(0.40 * vel * customGain, now + 0.015);
+    gain.gain.linearRampToValueAtTime(0.4 * vel * customGain, now + 0.015);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
 
     noise.connect(hp);
@@ -1017,12 +1131,12 @@ export class SfxSoundGenerator {
     if (dest) gain.connect(dest);
 
     noise.start(now);
-    noise.stop(now + 0.10);
+    noise.stop(now + 0.1);
     return noise;
   }
 
   // =========================================================================
-  // 5b. REAL ACOUSTIC DRUM SET, CHIMES & COWBELL (Pure Zero-Latency DSP)
+  // 5b. REAL ACOUSTIC DRUM SET, CHIMES & COWBELL (Pure Low-Latency DSP)
   // =========================================================================
 
   triggerAcousticKick(velocity = 118, customGain = 1.0, destNode = null) {
@@ -1052,12 +1166,12 @@ export class SfxSoundGenerator {
     body.frequency.exponentialRampToValueAtTime(36, now + 0.45);
 
     const bodyGain = ctx.createGain();
-    bodyGain.gain.setValueAtTime(1.40 * vel * customGain, now);
+    bodyGain.gain.setValueAtTime(1.4 * vel * customGain, now);
     bodyGain.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
     body.connect(bodyGain);
     if (dest) bodyGain.connect(dest);
     body.start(now);
-    body.stop(now + 0.50);
+    body.stop(now + 0.5);
 
     // 3. 120Hz Punch Body (for small speakers & headphones)
     const punch = ctx.createOscillator();
@@ -1070,7 +1184,7 @@ export class SfxSoundGenerator {
     punch.connect(punchGain);
     if (dest) punchGain.connect(dest);
     punch.start(now);
-    punch.stop(now + 0.10);
+    punch.stop(now + 0.1);
 
     return { body, click, punch };
   }
@@ -1101,12 +1215,12 @@ export class SfxSoundGenerator {
     tone.frequency.exponentialRampToValueAtTime(155, now + 0.05);
 
     const toneGain = ctx.createGain();
-    toneGain.gain.setValueAtTime(1.10 * vel * customGain, now);
+    toneGain.gain.setValueAtTime(1.1 * vel * customGain, now);
     toneGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
     tone.connect(toneGain);
     if (dest) toneGain.connect(dest);
     tone.start(now);
-    tone.stop(now + 0.20);
+    tone.stop(now + 0.2);
 
     // 3. Crisp Snare Wires (Filtered Pink/White Noise with Dual Bands)
     const noise = this.createNoiseSource(false);
@@ -1133,19 +1247,30 @@ export class SfxSoundGenerator {
     return { tone, noise, stick };
   }
 
-  triggerAcousticHiHat(closed = true, velocity = 108, customGain = 1.0, destNode = null) {
+  triggerAcousticHiHat(
+    closed = true,
+    velocity = 108,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
     const dest = this.getDest(destNode);
-    const dur = closed ? 0.038 : 0.60;
+    const dur = closed ? 0.038 : 0.6;
 
     // Choke previous open hat if closed is struck
     if (closed && this._activeOpenHatGain) {
       try {
         this._activeOpenHatGain.gain.cancelScheduledValues(now);
-        this._activeOpenHatGain.gain.setValueAtTime(this._activeOpenHatGain.gain.value, now);
-        this._activeOpenHatGain.gain.linearRampToValueAtTime(0.0001, now + 0.01);
+        this._activeOpenHatGain.gain.setValueAtTime(
+          this._activeOpenHatGain.gain.value,
+          now,
+        );
+        this._activeOpenHatGain.gain.linearRampToValueAtTime(
+          0.0001,
+          now + 0.01,
+        );
       } catch (e) {}
       this._activeOpenHatGain = null;
     }
@@ -1162,11 +1287,14 @@ export class SfxSoundGenerator {
     bp.Q.value = 2.0;
 
     const gainNode = ctx.createGain();
-    gainNode.gain.setValueAtTime(1.20 * vel * customGain, now);
+    gainNode.gain.setValueAtTime(1.2 * vel * customGain, now);
     if (closed) {
       gainNode.gain.exponentialRampToValueAtTime(0.001, now + dur);
     } else {
-      gainNode.gain.exponentialRampToValueAtTime(0.40 * vel * customGain, now + 0.12);
+      gainNode.gain.exponentialRampToValueAtTime(
+        0.4 * vel * customGain,
+        now + 0.12,
+      );
       gainNode.gain.exponentialRampToValueAtTime(0.001, now + dur);
       this._activeOpenHatGain = gainNode;
     }
@@ -1180,7 +1308,7 @@ export class SfxSoundGenerator {
     const bronzeMaster = ctx.createGain();
     bronzeMaster.gain.value = 0.15;
 
-    freqs.forEach(f => {
+    freqs.forEach((f) => {
       const osc = ctx.createOscillator();
       osc.type = "square";
       osc.frequency.setValueAtTime(f, now);
@@ -1201,7 +1329,12 @@ export class SfxSoundGenerator {
     return gainNode;
   }
 
-  triggerAcousticTom(pitch = "high", velocity = 105, customGain = 1.0, destNode = null) {
+  triggerAcousticTom(
+    pitch = "high",
+    velocity = 105,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
@@ -1217,7 +1350,7 @@ export class SfxSoundGenerator {
     osc.frequency.exponentialRampToValueAtTime(endFreq, now + 0.12);
 
     const oscGain = ctx.createGain();
-    oscGain.gain.setValueAtTime(1.20 * vel * customGain, now);
+    oscGain.gain.setValueAtTime(1.2 * vel * customGain, now);
     oscGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
 
     // Stick attack click
@@ -1255,7 +1388,7 @@ export class SfxSoundGenerator {
     const freqs = [380, 520, 710, 890, 1150, 1420];
     const crashMaster = ctx.createGain();
 
-    freqs.forEach(f => {
+    freqs.forEach((f) => {
       const osc = ctx.createOscillator();
       osc.type = "square";
       osc.frequency.setValueAtTime(f * 3.6, now);
@@ -1284,7 +1417,10 @@ export class SfxSoundGenerator {
 
     const gainNode = ctx.createGain();
     gainNode.gain.setValueAtTime(1.15 * vel * customGain, now);
-    gainNode.gain.exponentialRampToValueAtTime(0.35 * vel * customGain, now + 0.35);
+    gainNode.gain.exponentialRampToValueAtTime(
+      0.35 * vel * customGain,
+      now + 0.35,
+    );
     gainNode.gain.exponentialRampToValueAtTime(0.001, now + dur);
 
     crashMaster.connect(gainNode);
@@ -1293,7 +1429,12 @@ export class SfxSoundGenerator {
     return gainNode;
   }
 
-  triggerAcousticRide(velocity = 108, customGain = 1.0, destNode = null, bellOnly = false) {
+  triggerAcousticRide(
+    velocity = 108,
+    customGain = 1.0,
+    destNode = null,
+    bellOnly = false,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
@@ -1310,8 +1451,14 @@ export class SfxSoundGenerator {
     bell2.frequency.setValueAtTime(5100, now);
 
     const bellGain = ctx.createGain();
-    bellGain.gain.setValueAtTime((bellOnly ? 1.2 : 0.85) * vel * customGain, now);
-    bellGain.gain.exponentialRampToValueAtTime(0.001, now + (bellOnly ? 1.2 : 0.9));
+    bellGain.gain.setValueAtTime(
+      (bellOnly ? 1.2 : 0.85) * vel * customGain,
+      now,
+    );
+    bellGain.gain.exponentialRampToValueAtTime(
+      0.001,
+      now + (bellOnly ? 1.2 : 0.9),
+    );
 
     bell1.connect(bellGain);
     bell2.connect(bellGain);
@@ -1332,7 +1479,7 @@ export class SfxSoundGenerator {
     hp.type = "highpass";
     hp.frequency.value = 7500;
     const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.70 * vel * customGain, now);
+    noiseGain.gain.setValueAtTime(0.7 * vel * customGain, now);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
 
     noise.connect(hp);
@@ -1363,7 +1510,9 @@ export class SfxSoundGenerator {
     const dest = this.getDest(destNode);
 
     // 12 Cascading Orchestral Bar Chime Frequencies (Pentatonic crystal sweep)
-    const chimeFreqs = [2093, 2349, 2637, 2793, 3136, 3520, 3951, 4186, 4698, 5274, 5587, 6272];
+    const chimeFreqs = [
+      2093, 2349, 2637, 2793, 3136, 3520, 3951, 4186, 4698, 5274, 5587, 6272,
+    ];
     const chimesMaster = ctx.createGain();
 
     chimeFreqs.forEach((freq, idx) => {
@@ -1378,7 +1527,10 @@ export class SfxSoundGenerator {
 
       const g = ctx.createGain();
       g.gain.setValueAtTime(0.001, chimeTime);
-      g.gain.linearRampToValueAtTime(0.28 * vel * customGain, chimeTime + 0.005);
+      g.gain.linearRampToValueAtTime(
+        0.28 * vel * customGain,
+        chimeTime + 0.005,
+      );
       g.gain.exponentialRampToValueAtTime(0.001, chimeTime + 1.8);
 
       osc.connect(g);
@@ -1409,7 +1561,7 @@ export class SfxSoundGenerator {
 
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(0.70 * vel * customGain, now + 0.008);
+    gain.gain.linearRampToValueAtTime(0.7 * vel * customGain, now + 0.008);
     gain.gain.exponentialRampToValueAtTime(0.15 * vel * customGain, now + 0.04);
     gain.gain.linearRampToValueAtTime(0.45 * vel * customGain, now + 0.055);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
@@ -1423,12 +1575,20 @@ export class SfxSoundGenerator {
     return noise;
   }
 
-  triggerCowbell(velocity = 95, customGain = 1.0, destNode = null, midiNote = null) {
+  triggerCowbell(
+    velocity = 95,
+    customGain = 1.0,
+    destNode = null,
+    midiNote = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
     const dest = this.getDest(destNode);
-    const pitchMul = midiNote != null ? Math.max(0.5, Math.min(2.0, Math.pow(2, (midiNote - 56) / 12))) : 1.0;
+    const pitchMul =
+      midiNote != null
+        ? Math.max(0.5, Math.min(2.0, Math.pow(2, (midiNote - 56) / 12)))
+        : 1.0;
 
     const o1 = ctx.createOscillator();
     const o2 = ctx.createOscillator();
@@ -1453,8 +1613,8 @@ export class SfxSoundGenerator {
 
     o1.start(now);
     o2.start(now);
-    o1.stop(now + 0.30);
-    o2.stop(now + 0.30);
+    o1.stop(now + 0.3);
+    o2.stop(now + 0.3);
     return { o1, o2 };
   }
 
@@ -1465,7 +1625,12 @@ export class SfxSoundGenerator {
   // and authentic inharmonic cantilever tine overtones (2.756x and 5.404x f0).
   // =========================================================================
 
-  triggerKalimba(midiNote = 60, velocity = 95, customGain = 1.0, destNode = null) {
+  triggerKalimba(
+    midiNote = 60,
+    velocity = 95,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = Math.max(0.1, Math.min(1.0, velocity / 127));
@@ -1487,7 +1652,7 @@ export class SfxSoundGenerator {
     osc2.frequency.setValueAtTime(f0 * 2.756, now);
 
     const gain2 = ctx.createGain();
-    const decay2 = 0.40 + vel * 0.25;
+    const decay2 = 0.4 + vel * 0.25;
     gain2.gain.setValueAtTime(0.0001, now);
     gain2.gain.linearRampToValueAtTime(0.35 * vel * customGain, now + 0.002);
     gain2.gain.exponentialRampToValueAtTime(0.0001, now + decay2);
@@ -1519,7 +1684,10 @@ export class SfxSoundGenerator {
 
     const clickGain = ctx.createGain();
     clickGain.gain.setValueAtTime(0.0001, now);
-    clickGain.gain.linearRampToValueAtTime(0.24 * vel * customGain, now + 0.001);
+    clickGain.gain.linearRampToValueAtTime(
+      0.24 * vel * customGain,
+      now + 0.001,
+    );
     clickGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.018);
 
     const bodyFilter = ctx.createBiquadFilter();
@@ -1566,7 +1734,7 @@ export class SfxSoundGenerator {
           gain1.gain.setTargetAtTime(0, relTime, 0.08); // natural finger mute
           osc1.stop(relTime + 0.15);
         } catch (e) {}
-      }
+      },
     };
   }
 
@@ -1574,7 +1742,12 @@ export class SfxSoundGenerator {
   // EXPANDED 1. NATURE SOUNDS
   // =========================================================================
 
-  triggerCampfire(duration = 4.5, velocity = 95, customGain = 1.0, destNode = null) {
+  triggerCampfire(
+    duration = 4.5,
+    velocity = 95,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
@@ -1607,7 +1780,10 @@ export class SfxSoundGenerator {
       popOsc.frequency.exponentialRampToValueAtTime(120, popTime + 0.015);
       const popGain = ctx.createGain();
       popGain.gain.setValueAtTime(0.001, popTime);
-      popGain.gain.linearRampToValueAtTime((0.15 + Math.random() * 0.2) * vel * customGain, popTime + 0.002);
+      popGain.gain.linearRampToValueAtTime(
+        (0.15 + Math.random() * 0.2) * vel * customGain,
+        popTime + 0.002,
+      );
       popGain.gain.exponentialRampToValueAtTime(0.001, popTime + 0.02);
       popOsc.connect(popGain);
       popGain.connect(dest);
@@ -1617,7 +1793,12 @@ export class SfxSoundGenerator {
     return noise;
   }
 
-  triggerStream(duration = 4.5, velocity = 90, customGain = 1.0, destNode = null) {
+  triggerStream(
+    duration = 4.5,
+    velocity = 90,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
@@ -1640,7 +1821,7 @@ export class SfxSoundGenerator {
 
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.001, now);
-    g.gain.linearRampToValueAtTime(0.40 * vel * customGain, now + 0.4);
+    g.gain.linearRampToValueAtTime(0.4 * vel * customGain, now + 0.4);
     g.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
     noise.connect(bp);
@@ -1654,7 +1835,12 @@ export class SfxSoundGenerator {
     return noise;
   }
 
-  triggerCrickets(duration = 4.0, velocity = 90, customGain = 1.0, destNode = null) {
+  triggerCrickets(
+    duration = 4.0,
+    velocity = 90,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
@@ -1675,7 +1861,7 @@ export class SfxSoundGenerator {
 
     const mainGain = ctx.createGain();
     mainGain.gain.setValueAtTime(0.001, now);
-    mainGain.gain.linearRampToValueAtTime(0.30 * vel * customGain, now + 0.2);
+    mainGain.gain.linearRampToValueAtTime(0.3 * vel * customGain, now + 0.2);
     mainGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
     osc.connect(mainGain);
@@ -1688,7 +1874,12 @@ export class SfxSoundGenerator {
     return osc;
   }
 
-  triggerWaterfall(duration = 5.0, velocity = 95, customGain = 1.0, destNode = null) {
+  triggerWaterfall(
+    duration = 5.0,
+    velocity = 95,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
@@ -1706,7 +1897,7 @@ export class SfxSoundGenerator {
 
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.001, now);
-    g.gain.linearRampToValueAtTime(0.50 * vel * customGain, now + 0.5);
+    g.gain.linearRampToValueAtTime(0.5 * vel * customGain, now + 0.5);
     g.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
     noise.connect(hp);
@@ -1723,7 +1914,12 @@ export class SfxSoundGenerator {
   // EXPANDED 2. HUMAN VOX & CHOIR
   // =========================================================================
 
-  triggerOhYeah(pitchMidi = 60, velocity = 100, customGain = 1.0, destNode = null) {
+  triggerOhYeah(
+    pitchMidi = 60,
+    velocity = 100,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
@@ -1735,11 +1931,11 @@ export class SfxSoundGenerator {
     const osc2 = ctx.createOscillator();
     osc1.type = "triangle";
     osc2.type = "sine";
-    osc1.frequency.setValueAtTime(baseFreq * 0.90, now);
+    osc1.frequency.setValueAtTime(baseFreq * 0.9, now);
     osc1.frequency.linearRampToValueAtTime(baseFreq * 1.15, now + 0.18);
     osc1.frequency.exponentialRampToValueAtTime(baseFreq * 0.88, now + 0.65);
 
-    osc2.frequency.setValueAtTime(baseFreq * 0.90, now);
+    osc2.frequency.setValueAtTime(baseFreq * 0.9, now);
     osc2.frequency.linearRampToValueAtTime(baseFreq * 1.15, now + 0.18);
     osc2.frequency.exponentialRampToValueAtTime(baseFreq * 0.88, now + 0.65);
 
@@ -1755,8 +1951,8 @@ export class SfxSoundGenerator {
 
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.001, now);
-    g.gain.linearRampToValueAtTime(0.80 * vel * customGain, now + 0.06);
-    g.gain.exponentialRampToValueAtTime(0.001, now + 0.70);
+    g.gain.linearRampToValueAtTime(0.8 * vel * customGain, now + 0.06);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
 
     osc1.connect(f1);
     osc2.connect(f2);
@@ -1771,7 +1967,12 @@ export class SfxSoundGenerator {
     return osc1;
   }
 
-  triggerCrowdCheer(duration = 4.0, velocity = 100, customGain = 1.0, destNode = null) {
+  triggerCrowdCheer(
+    duration = 4.0,
+    velocity = 100,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
@@ -1788,7 +1989,7 @@ export class SfxSoundGenerator {
 
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.001, now);
-    g.gain.linearRampToValueAtTime(0.60 * vel * customGain, now + 0.8);
+    g.gain.linearRampToValueAtTime(0.6 * vel * customGain, now + 0.8);
     g.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
     noise.connect(bp);
@@ -1800,7 +2001,12 @@ export class SfxSoundGenerator {
     return noise;
   }
 
-  triggerApplause(duration = 3.8, velocity = 95, customGain = 1.0, destNode = null) {
+  triggerApplause(
+    duration = 3.8,
+    velocity = 95,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
@@ -1831,7 +2037,12 @@ export class SfxSoundGenerator {
     return noise;
   }
 
-  triggerWhisper(duration = 3.5, velocity = 90, customGain = 1.0, destNode = null) {
+  triggerWhisper(
+    duration = 3.5,
+    velocity = 90,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
@@ -1846,7 +2057,7 @@ export class SfxSoundGenerator {
 
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.001, now);
-    g.gain.linearRampToValueAtTime(0.40 * vel * customGain, now + 0.3);
+    g.gain.linearRampToValueAtTime(0.4 * vel * customGain, now + 0.3);
     g.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
     noise.connect(bp);
@@ -1858,7 +2069,12 @@ export class SfxSoundGenerator {
     return noise;
   }
 
-  triggerVocalHum(pitchMidi = 48, velocity = 95, customGain = 1.0, destNode = null) {
+  triggerVocalHum(
+    pitchMidi = 48,
+    velocity = 95,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
@@ -1877,7 +2093,7 @@ export class SfxSoundGenerator {
 
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.001, now);
-    g.gain.linearRampToValueAtTime(0.70 * vel * customGain, now + 0.08);
+    g.gain.linearRampToValueAtTime(0.7 * vel * customGain, now + 0.08);
     g.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
 
     osc.connect(lp);
@@ -1936,7 +2152,7 @@ export class SfxSoundGenerator {
     osc.type = "square";
     const freqs = [1200, 1800, 950, 2400, 1400, 3100, 1100];
     let t = now;
-    freqs.forEach(f => {
+    freqs.forEach((f) => {
       osc.frequency.setValueAtTime(f, t);
       t += 0.055;
     });
@@ -1975,7 +2191,7 @@ export class SfxSoundGenerator {
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.001, now);
     g.gain.linearRampToValueAtTime(0.85 * vel * customGain, now + 0.005);
-    g.gain.exponentialRampToValueAtTime(0.001, now + 0.40);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
 
     osc.connect(filter);
     filter.connect(g);
@@ -2006,7 +2222,7 @@ export class SfxSoundGenerator {
 
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.001, now);
-    g.gain.linearRampToValueAtTime(0.70 * vel * customGain, now + 0.2);
+    g.gain.linearRampToValueAtTime(0.7 * vel * customGain, now + 0.2);
     g.gain.exponentialRampToValueAtTime(0.001, now + 4.2);
 
     osc.connect(flt);
@@ -2018,7 +2234,12 @@ export class SfxSoundGenerator {
     return osc;
   }
 
-  triggerSubResonator(pitchMidi = 48, velocity = 100, customGain = 1.0, destNode = null) {
+  triggerSubResonator(
+    pitchMidi = 48,
+    velocity = 100,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = Math.max(0.12, Math.min(1.0, velocity / 127));
@@ -2028,7 +2249,10 @@ export class SfxSoundGenerator {
     // Musical pitch tracking based on keyboard MIDI note
     const rawFreq = 440 * Math.pow(2, (pitchMidi - 69) / 12);
     // Keep fundamental in rich resonant sub-bass to low-mid range (48Hz to 360Hz)
-    const baseFreq = Math.max(48, Math.min(360, rawFreq > 280 ? rawFreq * 0.5 : rawFreq));
+    const baseFreq = Math.max(
+      48,
+      Math.min(360, rawFreq > 280 ? rawFreq * 0.5 : rawFreq),
+    );
 
     // 1. Deep Sub Sine Fundamental (for subwoofer power)
     const subOsc = ctx.createOscillator();
@@ -2067,8 +2291,8 @@ export class SfxSoundGenerator {
     const saturator = ctx.createWaveShaper();
     const curve = new Float32Array(256);
     for (let i = 0; i < 256; i++) {
-      const x = (i / 128) - 1;
-      curve[i] = (Math.PI + 2.5) * x / (Math.PI + 2.5 * Math.abs(x));
+      const x = i / 128 - 1;
+      curve[i] = ((Math.PI + 2.5) * x) / (Math.PI + 2.5 * Math.abs(x));
     }
     saturator.curve = curve;
     saturator.oversample = "2x";
@@ -2114,7 +2338,12 @@ export class SfxSoundGenerator {
   // EXPANDED 4. DJ & CINEMATIC FX
   // =========================================================================
 
-  triggerCinemaBraam(pitchMidi = 48, velocity = 100, customGain = 1.0, destNode = null) {
+  triggerCinemaBraam(
+    pitchMidi = 48,
+    velocity = 100,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = Math.max(0.2, Math.min(1.0, velocity / 127));
@@ -2122,7 +2351,10 @@ export class SfxSoundGenerator {
     if (!dest) return null;
 
     const rawFreq = 440 * Math.pow(2, (pitchMidi - 69) / 12);
-    const baseFreq = Math.max(38, Math.min(140, rawFreq > 130 ? rawFreq * 0.25 : rawFreq));
+    const baseFreq = Math.max(
+      38,
+      Math.min(140, rawFreq > 130 ? rawFreq * 0.25 : rawFreq),
+    );
 
     // Hans Zimmer Inception Braam: Triple detuned brass saws + sub-bass
     const osc1 = ctx.createOscillator();
@@ -2155,7 +2387,7 @@ export class SfxSoundGenerator {
 
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.001, now);
-    g.gain.linearRampToValueAtTime(1.10 * vel * customGain, now + 0.03);
+    g.gain.linearRampToValueAtTime(1.1 * vel * customGain, now + 0.03);
     g.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
 
     osc1.connect(dist);
@@ -2180,7 +2412,12 @@ export class SfxSoundGenerator {
   // 6. BELLS & CHIMES (Tubular Bells, Wind Chimes & Crystal Chimes)
   // =========================================================================
 
-  triggerTubularBells(pitchMidi = 72, velocity = 100, customGain = 1.0, destNode = null) {
+  triggerTubularBells(
+    pitchMidi = 72,
+    velocity = 100,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = Math.max(0.15, Math.min(1.0, velocity / 127));
@@ -2190,15 +2427,15 @@ export class SfxSoundGenerator {
     const baseFreq = 440 * Math.pow(2, (pitchMidi - 69) / 12);
     // Acoustic Euler-Bernoulli flexural partial ratios for struck metal tube
     const partials = [
-      { ratio: 1.000, gain: 0.85, decay: 4.2 },
+      { ratio: 1.0, gain: 0.85, decay: 4.2 },
       { ratio: 2.756, gain: 0.55, decay: 2.8 },
       { ratio: 5.404, gain: 0.35, decay: 1.9 },
-      { ratio: 8.932, gain: 0.20, decay: 1.1 }
+      { ratio: 8.932, gain: 0.2, decay: 1.1 },
     ];
 
     const oscs = [];
     const masterGain = ctx.createGain();
-    masterGain.gain.setValueAtTime(0.90 * vel * customGain, now);
+    masterGain.gain.setValueAtTime(0.9 * vel * customGain, now);
 
     // Initial strike transient: metallic mallet impact burst
     const noise = this.createNoiseSource(false);
@@ -2206,7 +2443,7 @@ export class SfxSoundGenerator {
     strikeFlt.type = "highpass";
     strikeFlt.frequency.setValueAtTime(2800, now);
     const strikeGain = ctx.createGain();
-    strikeGain.gain.setValueAtTime(0.50 * vel, now);
+    strikeGain.gain.setValueAtTime(0.5 * vel, now);
     strikeGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.025);
     noise.connect(strikeFlt);
     strikeFlt.connect(strikeGain);
@@ -2215,7 +2452,7 @@ export class SfxSoundGenerator {
     noise.stop(now + 0.03);
 
     // Resonating tubular partials
-    partials.forEach(p => {
+    partials.forEach((p) => {
       const osc = ctx.createOscillator();
       osc.type = "sine";
       osc.frequency.setValueAtTime(baseFreq * p.ratio, now);
@@ -2237,7 +2474,12 @@ export class SfxSoundGenerator {
     return oscs[0];
   }
 
-  triggerCrystalChimes(pitchMidi = 72, velocity = 100, customGain = 1.0, destNode = null) {
+  triggerCrystalChimes(
+    pitchMidi = 72,
+    velocity = 100,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = Math.max(0.15, Math.min(1.0, velocity / 127));
@@ -2271,7 +2513,7 @@ export class SfxSoundGenerator {
 
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.001, now);
-    g.gain.linearRampToValueAtTime(0.80 * vel * customGain, now + 0.004);
+    g.gain.linearRampToValueAtTime(0.8 * vel * customGain, now + 0.004);
     g.gain.exponentialRampToValueAtTime(0.0001, now + 3.0);
 
     carrier.connect(g);
@@ -2288,7 +2530,12 @@ export class SfxSoundGenerator {
     return carrier;
   }
 
-  triggerAngelicChoir(pitchMidi = 69, velocity = 95, customGain = 1.0, destNode = null) {
+  triggerAngelicChoir(
+    pitchMidi = 69,
+    velocity = 95,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = Math.max(0.15, Math.min(1.0, velocity / 127));
@@ -2348,7 +2595,12 @@ export class SfxSoundGenerator {
     return o1;
   }
 
-  triggerClubDownlifter(duration = 3.5, velocity = 95, customGain = 1.0, destNode = null) {
+  triggerClubDownlifter(
+    duration = 3.5,
+    velocity = 95,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
@@ -2376,7 +2628,12 @@ export class SfxSoundGenerator {
     return noise;
   }
 
-  triggerReverseCymbal(duration = 2.2, velocity = 95, customGain = 1.0, destNode = null) {
+  triggerReverseCymbal(
+    duration = 2.2,
+    velocity = 95,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
@@ -2390,7 +2647,7 @@ export class SfxSoundGenerator {
 
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.001, now);
-    g.gain.exponentialRampToValueAtTime(0.70 * vel * customGain, now + duration);
+    g.gain.exponentialRampToValueAtTime(0.7 * vel * customGain, now + duration);
     g.gain.linearRampToValueAtTime(0.001, now + duration + 0.05);
 
     noise.connect(hp);
@@ -2402,7 +2659,12 @@ export class SfxSoundGenerator {
     return noise;
   }
 
-  trigger808SubDrop(velocity = 100, customGain = 1.0, destNode = null, midiNote = 36) {
+  trigger808SubDrop(
+    velocity = 100,
+    customGain = 1.0,
+    destNode = null,
+    midiNote = 36,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = Math.max(0.1, Math.min(1.0, velocity / 127));
@@ -2410,7 +2672,8 @@ export class SfxSoundGenerator {
     if (!dest) return null;
 
     // Musically map midiNote into optimal playable sub-bass octave (32 Hz to 115 Hz)
-    let note = typeof midiNote === "number" && Number.isFinite(midiNote) ? midiNote : 36;
+    let note =
+      typeof midiNote === "number" && Number.isFinite(midiNote) ? midiNote : 36;
     while (note > 46) note -= 12; // Octave fold downwards to punchy sub bass register
     while (note < 22) note += 12;
     const fundFreq = 440 * Math.pow(2, (note - 69) / 12);
@@ -2450,7 +2713,12 @@ export class SfxSoundGenerator {
     return osc;
   }
 
-  triggerVinylCrackle(duration = 4.0, velocity = 90, customGain = 1.0, destNode = null) {
+  triggerVinylCrackle(
+    duration = 4.0,
+    velocity = 90,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
@@ -2514,7 +2782,7 @@ export class SfxSoundGenerator {
     if (!dest) return null;
 
     const bursts = [0, 0.012, 0.024];
-    bursts.forEach(offset => {
+    bursts.forEach((offset) => {
       const noise = this.createNoiseSource(false);
       const bp = ctx.createBiquadFilter();
       bp.type = "bandpass";
@@ -2522,7 +2790,10 @@ export class SfxSoundGenerator {
       bp.Q.setValueAtTime(1.5, now + offset);
       const g = ctx.createGain();
       g.gain.setValueAtTime(0.001, now + offset);
-      g.gain.linearRampToValueAtTime(0.65 * vel * customGain, now + offset + 0.002);
+      g.gain.linearRampToValueAtTime(
+        0.65 * vel * customGain,
+        now + offset + 0.002,
+      );
       g.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.02);
       noise.connect(bp);
       bp.connect(g);
@@ -2537,17 +2808,22 @@ export class SfxSoundGenerator {
     tailBp.frequency.setValueAtTime(1200, now + 0.036);
     const tailG = ctx.createGain();
     tailG.gain.setValueAtTime(0.001, now + 0.036);
-    tailG.gain.linearRampToValueAtTime(0.70 * vel * customGain, now + 0.04);
+    tailG.gain.linearRampToValueAtTime(0.7 * vel * customGain, now + 0.04);
     tailG.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
     tailNoise.connect(tailBp);
     tailBp.connect(tailG);
     tailG.connect(dest);
     tailNoise.start(now + 0.036);
-    tailNoise.stop(now + 0.30);
+    tailNoise.stop(now + 0.3);
     return tailNoise;
   }
 
-  triggerTimbales(midiNote = 64, velocity = 95, customGain = 1.0, destNode = null) {
+  triggerTimbales(
+    midiNote = 64,
+    velocity = 95,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
@@ -2594,7 +2870,7 @@ export class SfxSoundGenerator {
 
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.001, now);
-    g.gain.linearRampToValueAtTime(0.70 * vel * customGain, now + 0.008);
+    g.gain.linearRampToValueAtTime(0.7 * vel * customGain, now + 0.008);
     g.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
 
     noise.connect(hp);
@@ -2606,7 +2882,12 @@ export class SfxSoundGenerator {
     return noise;
   }
 
-  triggerTaiko(velocity = 100, customGain = 1.0, destNode = null, midiNote = 48) {
+  triggerTaiko(
+    velocity = 100,
+    customGain = 1.0,
+    destNode = null,
+    midiNote = 48,
+  ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     const vel = velocity / 127;
@@ -2662,7 +2943,7 @@ export class SfxSoundGenerator {
     velocity = 100,
     customGain = 1.0,
     destNode = null,
-    style = "solo"
+    style = "solo",
   ) {
     const ctx = this.ctx;
     const now = ctx.currentTime;
@@ -2713,7 +2994,7 @@ export class SfxSoundGenerator {
       decayTime = 1.6;
       sustainLevel = 0.8;
       releaseTime = 0.25;
-      breathGainVal = 0.30;
+      breathGainVal = 0.3;
     } else if (isFall) {
       duration = 0.85;
       attackTime = 0.015;
@@ -2735,15 +3016,27 @@ export class SfxSoundGenerator {
     osc1.frequency.setValueAtTime(startFreq, now);
     osc2.frequency.setValueAtTime(startFreq * 1.002, now); // subtle detune for reed thickness
 
-    osc1.frequency.exponentialRampToValueAtTime(targetFreq, now + scoopDuration);
-    osc2.frequency.exponentialRampToValueAtTime(targetFreq * 1.002, now + scoopDuration);
+    osc1.frequency.exponentialRampToValueAtTime(
+      targetFreq,
+      now + scoopDuration,
+    );
+    osc2.frequency.exponentialRampToValueAtTime(
+      targetFreq * 1.002,
+      now + scoopDuration,
+    );
 
     if (isFall) {
       // Big band brass/sax fall
       osc1.frequency.setValueAtTime(targetFreq, now + 0.12);
       osc2.frequency.setValueAtTime(targetFreq * 1.002, now + 0.12);
-      osc1.frequency.exponentialRampToValueAtTime(Math.max(40, targetFreq * 0.35), now + 0.65);
-      osc2.frequency.exponentialRampToValueAtTime(Math.max(40, targetFreq * 0.35), now + 0.65);
+      osc1.frequency.exponentialRampToValueAtTime(
+        Math.max(40, targetFreq * 0.35),
+        now + 0.65,
+      );
+      osc2.frequency.exponentialRampToValueAtTime(
+        Math.max(40, targetFreq * 0.35),
+        now + 0.65,
+      );
     }
 
     // 2. Expressive Vibrato LFO
@@ -2755,7 +3048,10 @@ export class SfxSoundGenerator {
     vibratoGain.gain.setValueAtTime(0.0001, now);
     // Vibrato swells in naturally after the initial breath attack
     vibratoGain.gain.setValueAtTime(0.0001, now + vibratoDelay);
-    vibratoGain.gain.linearRampToValueAtTime(targetFreq * vibratoDepth, now + vibratoDelay + 0.35);
+    vibratoGain.gain.linearRampToValueAtTime(
+      targetFreq * vibratoDepth,
+      now + vibratoDelay + 0.35,
+    );
 
     vibratoLfo.connect(vibratoGain);
     vibratoGain.connect(osc1.frequency);
@@ -2796,8 +3092,14 @@ export class SfxSoundGenerator {
 
     const breathGain = ctx.createGain();
     breathGain.gain.setValueAtTime(0.0001, now);
-    breathGain.gain.linearRampToValueAtTime(breathGainVal * vel * customGain, now + 0.025);
-    breathGain.gain.exponentialRampToValueAtTime(Math.max(0.0001, breathGainVal * 0.35 * vel * customGain), now + 0.12);
+    breathGain.gain.linearRampToValueAtTime(
+      breathGainVal * vel * customGain,
+      now + 0.025,
+    );
+    breathGain.gain.exponentialRampToValueAtTime(
+      Math.max(0.0001, breathGainVal * 0.35 * vel * customGain),
+      now + 0.12,
+    );
     breathGain.gain.setTargetAtTime(0.0001, now + duration * 0.85, releaseTime);
 
     breathSource.connect(breathFilter);
@@ -2828,7 +3130,10 @@ export class SfxSoundGenerator {
     // Lowpass cutoff dynamically tracks velocity & note
     const mainLpf = ctx.createBiquadFilter();
     mainLpf.type = "lowpass";
-    const baseCutoff = Math.min(16000, targetFreq * (isSensual ? 4.8 : 6.2) + vel * 3500);
+    const baseCutoff = Math.min(
+      16000,
+      targetFreq * (isSensual ? 4.8 : 6.2) + vel * 3500,
+    );
     mainLpf.frequency.setValueAtTime(baseCutoff * 0.75, now);
     mainLpf.frequency.linearRampToValueAtTime(baseCutoff, now + attackTime);
     mainLpf.Q.setValueAtTime(1.4, now);
@@ -2838,7 +3143,10 @@ export class SfxSoundGenerator {
     const peakGain = 0.55 * vel * customGain;
     ampGain.gain.setValueAtTime(0.0001, now);
     ampGain.gain.linearRampToValueAtTime(peakGain, now + attackTime);
-    ampGain.gain.linearRampToValueAtTime(peakGain * sustainLevel, now + attackTime + decayTime);
+    ampGain.gain.linearRampToValueAtTime(
+      peakGain * sustainLevel,
+      now + attackTime + decayTime,
+    );
     ampGain.gain.setTargetAtTime(0.0001, now + duration, releaseTime);
 
     // Connect audio paths
@@ -2883,35 +3191,108 @@ export class SfxSoundGenerator {
     };
   }
 
-  triggerSaxSolo(midiNote = 65, velocity = 100, customGain = 1.0, destNode = null) {
-    return this.triggerGenuineSax(midiNote, velocity, customGain, destNode, "solo");
+  triggerSaxSolo(
+    midiNote = 65,
+    velocity = 100,
+    customGain = 1.0,
+    destNode = null,
+  ) {
+    return this.triggerGenuineSax(
+      midiNote,
+      velocity,
+      customGain,
+      destNode,
+      "solo",
+    );
   }
 
-  triggerSaxSensual(midiNote = 65, velocity = 100, customGain = 1.0, destNode = null) {
-    return this.triggerGenuineSax(midiNote, velocity, customGain, destNode, "sensual");
+  triggerSaxSensual(
+    midiNote = 65,
+    velocity = 100,
+    customGain = 1.0,
+    destNode = null,
+  ) {
+    return this.triggerGenuineSax(
+      midiNote,
+      velocity,
+      customGain,
+      destNode,
+      "sensual",
+    );
   }
 
-  triggerSaxBluesGrowl(midiNote = 65, velocity = 100, customGain = 1.0, destNode = null) {
-    return this.triggerGenuineSax(midiNote, velocity, customGain, destNode, "growl");
+  triggerSaxBluesGrowl(
+    midiNote = 65,
+    velocity = 100,
+    customGain = 1.0,
+    destNode = null,
+  ) {
+    return this.triggerGenuineSax(
+      midiNote,
+      velocity,
+      customGain,
+      destNode,
+      "growl",
+    );
   }
 
-  triggerSaxFunkStab(midiNote = 65, velocity = 100, customGain = 1.0, destNode = null) {
-    return this.triggerGenuineSax(midiNote, velocity, customGain, destNode, "stab");
+  triggerSaxFunkStab(
+    midiNote = 65,
+    velocity = 100,
+    customGain = 1.0,
+    destNode = null,
+  ) {
+    return this.triggerGenuineSax(
+      midiNote,
+      velocity,
+      customGain,
+      destNode,
+      "stab",
+    );
   }
 
-  triggerSaxFall(midiNote = 65, velocity = 100, customGain = 1.0, destNode = null) {
-    return this.triggerGenuineSax(midiNote, velocity, customGain, destNode, "fall");
+  triggerSaxFall(
+    midiNote = 65,
+    velocity = 100,
+    customGain = 1.0,
+    destNode = null,
+  ) {
+    return this.triggerGenuineSax(
+      midiNote,
+      velocity,
+      customGain,
+      destNode,
+      "fall",
+    );
   }
 
-  triggerSaxScoop(midiNote = 65, velocity = 100, customGain = 1.0, destNode = null) {
-    return this.triggerGenuineSax(midiNote, velocity, customGain, destNode, "scoop");
+  triggerSaxScoop(
+    midiNote = 65,
+    velocity = 100,
+    customGain = 1.0,
+    destNode = null,
+  ) {
+    return this.triggerGenuineSax(
+      midiNote,
+      velocity,
+      customGain,
+      destNode,
+      "scoop",
+    );
   }
 
   isSfxInstrument(instId) {
     return isSfxInstrumentId(instId);
   }
 
-  playSfxNote(instId, midiNote = 60, velocity = 95, customGain = 1.0, destNode = null, when = 0) {
+  playSfxNote(
+    instId,
+    midiNote = 60,
+    velocity = 95,
+    customGain = 1.0,
+    destNode = null,
+    when = 0,
+  ) {
     // SFX voices are procedural oscillator patches that schedule on
     // ctx.currentTime at 60+ sites, so they can't be cleanly placed far in the
     // future. For lookahead dispatches, align the synthesis to the wall clock
@@ -2920,13 +3301,30 @@ export class SfxSoundGenerator {
       const ctx = audioCore.ctx;
       const aheadMs = ctx ? (when - ctx.currentTime) * 1000 : 0;
       if (aheadMs > 6) {
-        setTimeout(() => this.playSfxNote(instId, midiNote, velocity, customGain, destNode, 0), aheadMs);
+        setTimeout(
+          () =>
+            this.playSfxNote(
+              instId,
+              midiNote,
+              velocity,
+              customGain,
+              destNode,
+              0,
+            ),
+          aheadMs,
+        );
         return null;
       }
     }
 
     if (instId && instId.startsWith("sy_")) {
-      return synthesizerYouEngine.trigger(instId, velocity, customGain, destNode, midiNote);
+      return synthesizerYouEngine.trigger(
+        instId,
+        velocity,
+        customGain,
+        destNode,
+        midiNote,
+      );
     }
 
     switch (instId) {
@@ -2957,11 +3355,29 @@ export class SfxSoundGenerator {
 
       // 2. Human Vox
       case "vox_yeah":
-        return this.triggerVocalChant("yeah", midiNote, velocity, customGain, destNode);
+        return this.triggerVocalChant(
+          "yeah",
+          midiNote,
+          velocity,
+          customGain,
+          destNode,
+        );
       case "vox_whoa":
-        return this.triggerVocalChant("whoa", midiNote, velocity, customGain, destNode);
+        return this.triggerVocalChant(
+          "whoa",
+          midiNote,
+          velocity,
+          customGain,
+          destNode,
+        );
       case "vox_hey":
-        return this.triggerVocalChant("hey", midiNote, velocity, customGain, destNode);
+        return this.triggerVocalChant(
+          "hey",
+          midiNote,
+          velocity,
+          customGain,
+          destNode,
+        );
       case "vox_ohyeah":
         return this.triggerOhYeah(midiNote, velocity, customGain, destNode);
       case "vox_crowd_cheer":
@@ -2973,22 +3389,39 @@ export class SfxSoundGenerator {
       case "vox_hum":
         return this.triggerVocalHum(midiNote, velocity, customGain, destNode);
       case "angelic_choir":
-        return this.triggerAngelicChoir(midiNote, velocity, customGain, destNode);
+        return this.triggerAngelicChoir(
+          midiNote,
+          velocity,
+          customGain,
+          destNode,
+        );
       case "vox_beatbox": {
         const mod = midiNote % 3;
-        if (mod === 0) return this.triggerBeatbox("kick", velocity, customGain, destNode);
-        if (mod === 1) return this.triggerBeatbox("snare", velocity, customGain, destNode);
+        if (mod === 0)
+          return this.triggerBeatbox("kick", velocity, customGain, destNode);
+        if (mod === 1)
+          return this.triggerBeatbox("snare", velocity, customGain, destNode);
         return this.triggerBeatbox("hat", velocity, customGain, destNode);
       }
 
       // Bells & Chimes
       case "tubular_bells":
-        return this.triggerTubularBells(midiNote, velocity, customGain, destNode);
+        return this.triggerTubularBells(
+          midiNote,
+          velocity,
+          customGain,
+          destNode,
+        );
       case "wind_chimes":
       case "drum_chimes":
         return this.triggerWindChimes(velocity, customGain, destNode);
       case "crystal_chimes":
-        return this.triggerCrystalChimes(midiNote, velocity, customGain, destNode);
+        return this.triggerCrystalChimes(
+          midiNote,
+          velocity,
+          customGain,
+          destNode,
+        );
 
       // 3. Weird Sci-Fi FX
       case "fx_laser":
@@ -3006,7 +3439,12 @@ export class SfxSoundGenerator {
       case "fx_cyber_sweep":
         return this.triggerCyberSweep(velocity, customGain, destNode);
       case "fx_sub_resonator":
-        return this.triggerSubResonator(midiNote, velocity, customGain, destNode);
+        return this.triggerSubResonator(
+          midiNote,
+          velocity,
+          customGain,
+          destNode,
+        );
 
       // 4. DJ & Cinematic FX
       case "fx_scratch":
@@ -3018,7 +3456,12 @@ export class SfxSoundGenerator {
       case "fx_airhorn":
         return this.triggerReggaeAirhorn(velocity, customGain, destNode);
       case "fx_cinema_braam":
-        return this.triggerCinemaBraam(midiNote, velocity, customGain, destNode);
+        return this.triggerCinemaBraam(
+          midiNote,
+          velocity,
+          customGain,
+          destNode,
+        );
       case "fx_downlifter":
         return this.triggerClubDownlifter(3.5, velocity, customGain, destNode);
       case "fx_rev_cymbal":
@@ -3031,54 +3474,208 @@ export class SfxSoundGenerator {
       // 5. Pure Acoustic Drum Kit (Full GM Keyboard Map with unique sound per key)
       case "real_drum_kit": {
         switch (midiNote) {
-          case 35: return this.triggerAcousticKick(velocity, customGain, destNode); // Deep Sub Kick
-          case 36: return this.triggerAcousticKick(velocity * 1.1, customGain, destNode); // Maple Kick Punch
-          case 37: return this.triggerAcousticSnare(velocity * 0.8, customGain, destNode); // Side Stick
-          case 38: return this.triggerAcousticSnare(velocity, customGain, destNode); // Snare Center Hit
-          case 39: return this.triggerStereoClap(velocity, customGain, destNode); // Handclap
-          case 40: return this.triggerAcousticSnare(velocity * 1.2, customGain, destNode); // Snare Rimshot Crack
-          case 41: return this.triggerAcousticTom("low", velocity, customGain, destNode); // Low Floor Tom
-          case 42: return this.triggerAcousticHiHat(true, velocity, customGain, destNode); // Closed Hi-Hat (Tight)
-          case 43: return this.triggerAcousticTom("low", velocity * 1.05, customGain, destNode); // High Floor Tom
-          case 44: return this.triggerAcousticHiHat(true, velocity * 0.85, customGain, destNode); // Pedal Hi-Hat Chick
-          case 45: return this.triggerAcousticTom("high", velocity * 0.9, customGain, destNode); // Low Rack Tom
-          case 46: return this.triggerAcousticHiHat(false, velocity, customGain, destNode); // Open Hi-Hat Wash
-          case 47: return this.triggerAcousticTom("high", velocity, customGain, destNode); // Mid Rack Tom
-          case 48: return this.triggerAcousticTom("high", velocity * 1.1, customGain, destNode); // High Rack Tom
-          case 49: return this.triggerAcousticCrash(velocity, customGain, destNode); // Crash Cymbal 1 (18in)
-          case 50: return this.triggerAcousticTom("high", velocity * 1.25, customGain, destNode); // Very High Tom
-          case 51: return this.triggerAcousticRide(velocity, customGain, destNode, false); // Ride Tip Ping
-          case 52: return this.triggerAcousticCrash(velocity * 0.9, customGain, destNode); // China Cymbal
-          case 53: return this.triggerAcousticRide(velocity, customGain, destNode, true); // Ride Bell Ping
-          case 54: return this.triggerTambourine(velocity, customGain, destNode); // Tambourine
-          case 55: return this.triggerAcousticCrash(velocity * 0.8, customGain, destNode); // Splash Cymbal
-          case 56: return this.triggerCowbell(velocity, customGain, destNode, 56); // Latin Cowbell
-          case 57: return this.triggerAcousticCrash(velocity * 1.15, customGain, destNode); // Crash Cymbal 2 (16in)
-          case 58: return this.triggerVocalChant("yeah", midiNote, velocity, customGain, destNode);
-          case 59: return this.triggerAcousticRide(velocity * 1.05, customGain, destNode, false); // Ride Edge Wash
-          case 60: return this.triggerBongos(true, velocity, customGain, destNode, 60); // High Bongo Slap
-          case 61: return this.triggerBongos(false, velocity, customGain, destNode, 61); // Low Bongo Open
-          case 62: return this.triggerConga(true, velocity, customGain, destNode, 62); // High Conga Palm Mute
-          case 63: return this.triggerConga(true, velocity, customGain, destNode, 63); // High Conga Open Tone
-          case 64: return this.triggerConga(false, velocity, customGain, destNode, 64); // Low Tumba Conga Open
-          case 65: return this.triggerTimbales(65, velocity, customGain, destNode); // High Timbale Rim
-          case 66: return this.triggerTimbales(66, velocity, customGain, destNode); // Low Timbale Shell
-          case 67: return this.triggerCowbell(velocity, customGain, destNode, 67); // High Agogo Bell
-          case 68: return this.triggerCowbell(velocity, customGain, destNode, 68); // Low Agogo Bell
-          case 69: return this.triggerShaker(velocity, customGain, destNode); // Latin Cabasa
-          case 70: return this.triggerShaker(velocity * 1.15, customGain, destNode); // Maracas
-          case 71: return this.triggerWindChimes(velocity, customGain, destNode); // Studio Wind Chimes
+          case 35:
+            return this.triggerAcousticKick(velocity, customGain, destNode); // Deep Sub Kick
+          case 36:
+            return this.triggerAcousticKick(
+              velocity * 1.1,
+              customGain,
+              destNode,
+            ); // Maple Kick Punch
+          case 37:
+            return this.triggerAcousticSnare(
+              velocity * 0.8,
+              customGain,
+              destNode,
+            ); // Side Stick
+          case 38:
+            return this.triggerAcousticSnare(velocity, customGain, destNode); // Snare Center Hit
+          case 39:
+            return this.triggerStereoClap(velocity, customGain, destNode); // Handclap
+          case 40:
+            return this.triggerAcousticSnare(
+              velocity * 1.2,
+              customGain,
+              destNode,
+            ); // Snare Rimshot Crack
+          case 41:
+            return this.triggerAcousticTom(
+              "low",
+              velocity,
+              customGain,
+              destNode,
+            ); // Low Floor Tom
+          case 42:
+            return this.triggerAcousticHiHat(
+              true,
+              velocity,
+              customGain,
+              destNode,
+            ); // Closed Hi-Hat (Tight)
+          case 43:
+            return this.triggerAcousticTom(
+              "low",
+              velocity * 1.05,
+              customGain,
+              destNode,
+            ); // High Floor Tom
+          case 44:
+            return this.triggerAcousticHiHat(
+              true,
+              velocity * 0.85,
+              customGain,
+              destNode,
+            ); // Pedal Hi-Hat Chick
+          case 45:
+            return this.triggerAcousticTom(
+              "high",
+              velocity * 0.9,
+              customGain,
+              destNode,
+            ); // Low Rack Tom
+          case 46:
+            return this.triggerAcousticHiHat(
+              false,
+              velocity,
+              customGain,
+              destNode,
+            ); // Open Hi-Hat Wash
+          case 47:
+            return this.triggerAcousticTom(
+              "high",
+              velocity,
+              customGain,
+              destNode,
+            ); // Mid Rack Tom
+          case 48:
+            return this.triggerAcousticTom(
+              "high",
+              velocity * 1.1,
+              customGain,
+              destNode,
+            ); // High Rack Tom
+          case 49:
+            return this.triggerAcousticCrash(velocity, customGain, destNode); // Crash Cymbal 1 (18in)
+          case 50:
+            return this.triggerAcousticTom(
+              "high",
+              velocity * 1.25,
+              customGain,
+              destNode,
+            ); // Very High Tom
+          case 51:
+            return this.triggerAcousticRide(
+              velocity,
+              customGain,
+              destNode,
+              false,
+            ); // Ride Tip Ping
+          case 52:
+            return this.triggerAcousticCrash(
+              velocity * 0.9,
+              customGain,
+              destNode,
+            ); // China Cymbal
+          case 53:
+            return this.triggerAcousticRide(
+              velocity,
+              customGain,
+              destNode,
+              true,
+            ); // Ride Bell Ping
+          case 54:
+            return this.triggerTambourine(velocity, customGain, destNode); // Tambourine
+          case 55:
+            return this.triggerAcousticCrash(
+              velocity * 0.8,
+              customGain,
+              destNode,
+            ); // Splash Cymbal
+          case 56:
+            return this.triggerCowbell(velocity, customGain, destNode, 56); // Latin Cowbell
+          case 57:
+            return this.triggerAcousticCrash(
+              velocity * 1.15,
+              customGain,
+              destNode,
+            ); // Crash Cymbal 2 (16in)
+          case 58:
+            return this.triggerVocalChant(
+              "yeah",
+              midiNote,
+              velocity,
+              customGain,
+              destNode,
+            );
+          case 59:
+            return this.triggerAcousticRide(
+              velocity * 1.05,
+              customGain,
+              destNode,
+              false,
+            ); // Ride Edge Wash
+          case 60:
+            return this.triggerBongos(true, velocity, customGain, destNode, 60); // High Bongo Slap
+          case 61:
+            return this.triggerBongos(
+              false,
+              velocity,
+              customGain,
+              destNode,
+              61,
+            ); // Low Bongo Open
+          case 62:
+            return this.triggerConga(true, velocity, customGain, destNode, 62); // High Conga Palm Mute
+          case 63:
+            return this.triggerConga(true, velocity, customGain, destNode, 63); // High Conga Open Tone
+          case 64:
+            return this.triggerConga(false, velocity, customGain, destNode, 64); // Low Tumba Conga Open
+          case 65:
+            return this.triggerTimbales(65, velocity, customGain, destNode); // High Timbale Rim
+          case 66:
+            return this.triggerTimbales(66, velocity, customGain, destNode); // Low Timbale Shell
+          case 67:
+            return this.triggerCowbell(velocity, customGain, destNode, 67); // High Agogo Bell
+          case 68:
+            return this.triggerCowbell(velocity, customGain, destNode, 68); // Low Agogo Bell
+          case 69:
+            return this.triggerShaker(velocity, customGain, destNode); // Latin Cabasa
+          case 70:
+            return this.triggerShaker(velocity * 1.15, customGain, destNode); // Maracas
+          case 71:
+            return this.triggerWindChimes(velocity, customGain, destNode); // Studio Wind Chimes
           default: {
             if (midiNote < 35) {
               return this.triggerAcousticKick(velocity, customGain, destNode);
             } else if (midiNote <= 48) {
-              return this.triggerAcousticTom("high", velocity, customGain, destNode);
+              return this.triggerAcousticTom(
+                "high",
+                velocity,
+                customGain,
+                destNode,
+              );
             } else if (midiNote <= 60) {
-              return this.triggerAcousticRide(velocity, customGain, destNode, midiNote % 2 === 1);
+              return this.triggerAcousticRide(
+                velocity,
+                customGain,
+                destNode,
+                midiNote % 2 === 1,
+              );
             } else if (midiNote <= 72) {
-              return this.triggerConga(midiNote % 2 === 1, velocity, customGain, destNode, midiNote);
+              return this.triggerConga(
+                midiNote % 2 === 1,
+                velocity,
+                customGain,
+                destNode,
+                midiNote,
+              );
             } else {
-              return this.triggerAnalogSynthDrum(velocity, customGain, destNode, midiNote);
+              return this.triggerAnalogSynthDrum(
+                velocity,
+                customGain,
+                destNode,
+                midiNote,
+              );
             }
           }
         }
@@ -3111,13 +3708,31 @@ export class SfxSoundGenerator {
       case "percussion_conga":
       case "congas":
       case "drum_conga_hi":
-        return this.triggerConga(true, velocity, customGain, destNode, midiNote);
+        return this.triggerConga(
+          true,
+          velocity,
+          customGain,
+          destNode,
+          midiNote,
+        );
       case "drum_conga_low":
-        return this.triggerConga(false, velocity, customGain, destNode, midiNote);
+        return this.triggerConga(
+          false,
+          velocity,
+          customGain,
+          destNode,
+          midiNote,
+        );
 
       // Bongos (Chromatic)
       case "percussion_bongo":
-        return this.triggerBongos(midiNote >= 60, velocity, customGain, destNode, midiNote);
+        return this.triggerBongos(
+          midiNote >= 60,
+          velocity,
+          customGain,
+          destNode,
+          midiNote,
+        );
 
       // Timbales (Chromatic)
       case "percussion_timbales":
@@ -3128,7 +3743,12 @@ export class SfxSoundGenerator {
       case "analog_synth_drum":
       case "percussion_synthdrum":
       case "drum_synth_analog":
-        return this.triggerAnalogSynthDrum(velocity, customGain, destNode, midiNote);
+        return this.triggerAnalogSynthDrum(
+          velocity,
+          customGain,
+          destNode,
+          midiNote,
+        );
 
       // 6. Vintage TR-808 & TR-909 Drum Kits (with per-key pitch differentiation)
       case "tr808_kit":
@@ -3147,7 +3767,13 @@ export class SfxSoundGenerator {
         } else if (midiNote === 39) {
           return this.triggerShaker(velocity, customGain, destNode);
         } else {
-          return this.triggerConga(midiNote >= 60, velocity, customGain, destNode, midiNote);
+          return this.triggerConga(
+            midiNote >= 60,
+            velocity,
+            customGain,
+            destNode,
+            midiNote,
+          );
         }
       }
       case "tr909_kit":
@@ -3165,7 +3791,12 @@ export class SfxSoundGenerator {
       // 7. Reggae, Dub & Stage Sound FX
       case "dub_siren":
       case "reggae_siren":
-        return this.triggerDubSiren(midiNote || 60, velocity, customGain, destNode);
+        return this.triggerDubSiren(
+          midiNote || 60,
+          velocity,
+          customGain,
+          destNode,
+        );
       case "spring_splash":
       case "dub_splash":
         return this.triggerSpringSplash(velocity, customGain, destNode);
@@ -3217,7 +3848,7 @@ export class SfxSoundGenerator {
     osc.connect(gain);
     gain.connect(dest);
     osc.start(now);
-    osc.stop(now + 0.60);
+    osc.stop(now + 0.6);
     this.trackSfx([osc, gain], 0.65);
     return osc;
   }
@@ -3268,7 +3899,12 @@ export class SfxSoundGenerator {
   }
 
   // eslint-disable-next-line no-dupe-class-members
-  trigger808Hat(closed = true, velocity = 100, customGain = 1.0, destNode = null) {
+  trigger808Hat(
+    closed = true,
+    velocity = 100,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const dest = this.getDest(destNode);
     if (!dest) return null;
@@ -3299,7 +3935,12 @@ export class SfxSoundGenerator {
   /**
    * Authentic Jamaican Sound System Dub Siren with LFO Pitch Modulation & Space Echo
    */
-  triggerDubSiren(midiNote = 60, velocity = 100, customGain = 1.0, destNode = null) {
+  triggerDubSiren(
+    midiNote = 60,
+    velocity = 100,
+    customGain = 1.0,
+    destNode = null,
+  ) {
     const ctx = this.ctx;
     const dest = this.getDest(destNode);
     if (!dest) return null;
@@ -3357,7 +3998,13 @@ export class SfxSoundGenerator {
     lfo.stop(now + 3.0);
 
     this.trackSfx([osc, lfo, gainNode, delay], 3.2);
-    return { stop: () => { try { gainNode.gain.setTargetAtTime(0, ctx.currentTime, 0.05); } catch(e){} } };
+    return {
+      stop: () => {
+        try {
+          gainNode.gain.setTargetAtTime(0, ctx.currentTime, 0.05);
+        } catch (e) {}
+      },
+    };
   }
 
   /**
@@ -3454,7 +4101,7 @@ export class SfxSoundGenerator {
     const f1 = 349.23; // F4
     const f2 = 466.16; // Bb4
 
-    [f1, f2].forEach(freq => {
+    [f1, f2].forEach((freq) => {
       const osc = ctx.createOscillator();
       osc.type = "square";
       osc.frequency.setValueAtTime(freq * 0.92, now);
@@ -3546,5 +4193,3 @@ export class SfxSoundGenerator {
     return true;
   }
 }
-
-

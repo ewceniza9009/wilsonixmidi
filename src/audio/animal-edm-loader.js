@@ -1,7 +1,7 @@
 /**
  * Wilsonix MIDIKey - Stickz "Animal" Festival EDM Sample Loader
  * Loads and decodes authentic 24-bit WAV synth one-shots and FX
- * with IndexedDB sample caching and zero-latency RAM playback.
+ * with IndexedDB sample caching and low-latency RAM playback.
  */
 
 import { ANIMAL_EDM_BANKS } from "./animal-edm-manifest.js";
@@ -16,7 +16,11 @@ class AnimalEdmSampleLoader {
   }
 
   isAnimalInstrument(instId) {
-    return typeof instId === "string" && instId.startsWith("animal_") && !!ANIMAL_EDM_BANKS[instId];
+    return (
+      typeof instId === "string" &&
+      instId.startsWith("animal_") &&
+      !!ANIMAL_EDM_BANKS[instId]
+    );
   }
 
   getDef(instId) {
@@ -45,7 +49,10 @@ class AnimalEdmSampleLoader {
       const fetchFresh = async () => {
         const resp = await fetch(url);
         if (!resp.ok) {
-          logger.warn("PCM", `Failed to fetch Animal EDM sample: ${url} (${resp.status})`);
+          logger.warn(
+            "PCM",
+            `Failed to fetch Animal EDM sample: ${url} (${resp.status})`,
+          );
           return null;
         }
         return resp.arrayBuffer();
@@ -96,7 +103,11 @@ class AnimalEdmSampleLoader {
 
         return noteMap;
       } catch (err) {
-        logger.warn("PCM", `Animal EDM sample decode failed for ${instId}:`, err);
+        logger.warn(
+          "PCM",
+          `Animal EDM sample decode failed for ${instId}:`,
+          err,
+        );
         return null;
       } finally {
         this.loadingPromises.delete(instId);

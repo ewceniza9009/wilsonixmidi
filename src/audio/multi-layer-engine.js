@@ -5,7 +5,11 @@
  * with independent volume faders, octave transpositions, and Korg IFX/MFX effects.
  */
 
-import { NativePcmEngine, getInstrumentTrimGain, INST_ALIASES } from "./native-pcm-engine.js";
+import {
+  NativePcmEngine,
+  getInstrumentTrimGain,
+  INST_ALIASES,
+} from "./native-pcm-engine.js";
 import { audioCore } from "./audio-core.js";
 import { synthEngine, INSTRUMENT_PATCHES } from "./synth-engine.js";
 import {
@@ -86,10 +90,23 @@ export const COMBI_TIMBRES = (() => {
   // HD_SOUNDBANKS) swarmed it with EDM entries and buried the sax/vibes-style
   // singles past the cap (measured complaint).
   const CATEGORY_ORDER = [
-    "Acoustic Piano", "Electric Piano", "Organ", "Organ & Bass", "Organ & Pad",
-    "Strings", "Strings & Choir", "Brass", "Woodwind", "Guitar",
-    "Bells & Mallet", "Bells & Pad", "Bass & Sub", "Synth Pad", "Synth",
-    "Human Voices", "VA Synth",
+    "Acoustic Piano",
+    "Electric Piano",
+    "Organ",
+    "Organ & Bass",
+    "Organ & Pad",
+    "Strings",
+    "Strings & Choir",
+    "Brass",
+    "Woodwind",
+    "Guitar",
+    "Bells & Mallet",
+    "Bells & Pad",
+    "Bass & Sub",
+    "Synth Pad",
+    "Synth",
+    "Human Voices",
+    "VA Synth",
   ];
   const rank = (cat) => {
     const i = CATEGORY_ORDER.indexOf(cat);
@@ -221,7 +238,7 @@ export const COMBI_PRESETS = {
         name: "Sub Bass Foundation",
         inst: "synth_bass_1",
         fx: "clean",
-        gain: 0.50,
+        gain: 0.5,
         pan: 0,
         oct: -1,
         minVel: 1,
@@ -252,7 +269,7 @@ export const COMBI_PRESETS = {
         name: "Warm Pad Swell",
         inst: "roland_sc55_warm_pad",
         fx: "clean",
-        gain: 0.70,
+        gain: 0.7,
         pan: 0,
         oct: 0,
         minVel: 1,
@@ -264,7 +281,7 @@ export const COMBI_PRESETS = {
         name: "Angelic Choir",
         inst: "roland_u20_choir",
         fx: "clean",
-        gain: 0.40,
+        gain: 0.4,
         pan: 0,
         oct: 0,
         minVel: 20,
@@ -276,7 +293,7 @@ export const COMBI_PRESETS = {
         name: "Analog Worship Sub Bass",
         inst: "synth_bass_1",
         fx: "clean",
-        gain: 0.70,
+        gain: 0.7,
         pan: 0,
         oct: -1,
         minVel: 1,
@@ -307,7 +324,7 @@ export const COMBI_PRESETS = {
         name: "Analog Strings",
         inst: "string_ensemble_1",
         fx: "clean",
-        gain: 0.60,
+        gain: 0.6,
         pan: 0.2,
         oct: 0,
         minVel: 1,
@@ -331,7 +348,7 @@ export const COMBI_PRESETS = {
         name: "Sub Bass Foundation",
         inst: "synth_bass_1",
         fx: "clean",
-        gain: 0.70,
+        gain: 0.7,
         pan: 0,
         oct: -1,
         minVel: 1,
@@ -350,7 +367,7 @@ export const COMBI_PRESETS = {
         name: "Bright DX EP",
         inst: "roland_bright_ep",
         fx: "delay_pingpong",
-        gain: 0.90,
+        gain: 0.9,
         pan: 0,
         oct: 0,
         minVel: 1,
@@ -374,7 +391,7 @@ export const COMBI_PRESETS = {
         name: "Huge Reverb Strings",
         inst: "string_ensemble_1",
         fx: "worship_shimmer",
-        gain: 0.50,
+        gain: 0.5,
         pan: 0,
         oct: 0,
         minVel: 1,
@@ -386,7 +403,7 @@ export const COMBI_PRESETS = {
         name: "Analog Sub Bass",
         inst: "synth_bass_1",
         fx: "clean",
-        gain: 0.70,
+        gain: 0.7,
         pan: 0,
         oct: -1,
         minVel: 1,
@@ -417,7 +434,7 @@ export const COMBI_PRESETS = {
         name: "SC-55 Warm Pad Swell",
         inst: "roland_sc55_warm_pad",
         fx: "analog_juno_chorus",
-        gain: 0.70,
+        gain: 0.7,
         pan: 0.1,
         oct: 0,
         minVel: 1,
@@ -429,7 +446,7 @@ export const COMBI_PRESETS = {
         name: "SC-55 Space Voice Ambience",
         inst: "roland_space_voice",
         fx: "slapback_vocal",
-        gain: 0.60,
+        gain: 0.6,
         pan: 0,
         oct: 0,
         minVel: 20,
@@ -441,7 +458,7 @@ export const COMBI_PRESETS = {
         name: "SC-55 Punchy Finger Bass",
         inst: "roland_sc55_finger_bass",
         fx: "tape_sat_master",
-        gain: 0.90,
+        gain: 0.9,
         pan: 0,
         oct: -1,
         minVel: 1,
@@ -496,7 +513,7 @@ export const COMBI_PRESETS = {
         name: "Triton Stereo Strings",
         inst: "string_ensemble_1",
         fx: "clean",
-        gain: 0.50,
+        gain: 0.5,
         pan: 0,
         oct: 0,
         minVel: 30,
@@ -515,7 +532,7 @@ export const COMBI_PRESETS = {
         name: "MV-30 Shimmer Metal Pad",
         inst: "roland_metal_pad",
         fx: "chorus_lush",
-        gain: 0.90,
+        gain: 0.9,
         pan: -0.1,
         oct: 0,
         minVel: 1,
@@ -570,7 +587,7 @@ export const COMBI_PRESETS = {
         name: "U-20 Breathy Shakuhachi",
         inst: "roland_u20_shakuhachi",
         fx: "slapback_vocal",
-        gain: 0.90,
+        gain: 0.9,
         pan: 0,
         oct: 0,
         minVel: 1,
@@ -582,7 +599,7 @@ export const COMBI_PRESETS = {
         name: "D-50 Celestial Bell Shimmer",
         inst: "roland_d50_fantasia",
         fx: "chorus_lush",
-        gain: 0.70,
+        gain: 0.7,
         pan: 0.2,
         oct: 1,
         minVel: 40,
@@ -594,7 +611,7 @@ export const COMBI_PRESETS = {
         name: "SC-55 Warm Pad Background",
         inst: "roland_sc55_warm_pad",
         fx: "analog_juno_chorus",
-        gain: 0.60,
+        gain: 0.6,
         pan: -0.2,
         oct: 0,
         minVel: 1,
@@ -3461,7 +3478,7 @@ export const COMBI_PRESETS = {
         name: "Final Countdown Pad",
         inst: "m1_universe",
         fx: "reverb_hall",
-        gain: 0.70,
+        gain: 0.7,
         pan: 0.1,
         oct: 0,
         minVel: 1,
@@ -3485,7 +3502,7 @@ export const COMBI_PRESETS = {
         name: "Sub Bass Foundation",
         inst: "synth_bass_1",
         fx: "clean",
-        gain: 0.70,
+        gain: 0.7,
         pan: 0,
         oct: -1,
         minVel: 1,
@@ -3505,7 +3522,7 @@ export const COMBI_PRESETS = {
         name: "Universe Shimmer Pad",
         inst: "m1_universe",
         fx: "reverb_hall",
-        gain: 0.90,
+        gain: 0.9,
         pan: -0.1,
         oct: 0,
         minVel: 1,
@@ -3541,7 +3558,7 @@ export const COMBI_PRESETS = {
         name: "Sub Foundation",
         inst: "synth_bass_1",
         fx: "clean",
-        gain: 0.70,
+        gain: 0.7,
         pan: 0,
         oct: -1,
         minVel: 1,
@@ -3665,7 +3682,7 @@ export const COMBI_PRESETS = {
 
   studio_acoustic_kit: {
     id: "studio_acoustic_kit",
-    name: "🥁 Real Studio Acoustic Drum Kit (Zero-Latency)",
+    name: "🥁 Real Studio Acoustic Drum Kit (Low-Latency)",
     category: "Percussion & Drums",
     layers: [
       {
@@ -3838,7 +3855,11 @@ export class MultiLayerEngine {
             s.theme = raw.theme;
           if (typeof raw.tabRestore === "boolean")
             s.tabRestore = raw.tabRestore;
-          if (typeof raw.lastTab === "string" && raw.lastTab && raw.lastTab !== "keys") {
+          if (
+            typeof raw.lastTab === "string" &&
+            raw.lastTab &&
+            raw.lastTab !== "keys"
+          ) {
             s.lastTab = raw.lastTab;
           } else {
             s.lastTab = "triton";
@@ -3879,7 +3900,7 @@ export class MultiLayerEngine {
         s.tabRestore = !!value;
         break;
       case "lastTab":
-        s.lastTab = (value && value !== "keys") ? String(value) : "triton";
+        s.lastTab = value && value !== "keys" ? String(value) : "triton";
         break;
     }
     try {
@@ -3899,7 +3920,10 @@ export class MultiLayerEngine {
       } else {
         this.pcmEngine.MAX_VOICES = s.polyphonyCap;
       }
-      if (this._pcmWorkletNode && typeof this._pcmWorkletNode.setPolyphonyCap === "function") {
+      if (
+        this._pcmWorkletNode &&
+        typeof this._pcmWorkletNode.setPolyphonyCap === "function"
+      ) {
         this._pcmWorkletNode.setPolyphonyCap(s.polyphonyCap);
       }
     }
@@ -4080,7 +4104,8 @@ export class MultiLayerEngine {
   _sanitizeSnapshots(snaps) {
     return Array.from({ length: 8 }, (_, i) => {
       const s = Array.isArray(snaps) ? snaps[i] : null;
-      if (!s || !Array.isArray(s.gains) || !Array.isArray(s.enabled)) return null;
+      if (!s || !Array.isArray(s.gains) || !Array.isArray(s.enabled))
+        return null;
       return JSON.parse(JSON.stringify(s));
     });
   }
@@ -4088,7 +4113,9 @@ export class MultiLayerEngine {
   setSnapshots(snaps, activeIdx = null) {
     this.snapshots = this._sanitizeSnapshots(snaps);
     this.activeSnapshotIndex =
-      Number.isInteger(activeIdx) && this.snapshots[activeIdx] ? activeIdx : null;
+      Number.isInteger(activeIdx) && this.snapshots[activeIdx]
+        ? activeIdx
+        : null;
     this._notifyScenesChanged();
     this.saveSessionSoon();
   }
@@ -4177,12 +4204,19 @@ export class MultiLayerEngine {
       if (Array.isArray(s.snapshots)) {
         this.snapshots = this._sanitizeSnapshots(s.snapshots);
         this.activeSnapshotIndex =
-          Number.isInteger(s.activeSnapshotIndex) && this.snapshots[s.activeSnapshotIndex]
+          Number.isInteger(s.activeSnapshotIndex) &&
+          this.snapshots[s.activeSnapshotIndex]
             ? s.activeSnapshotIndex
             : null;
       }
       if (s.macros && typeof s.macros === "object") {
-        this.macros = { swell: 0.35, shimmer: 0.2, tone: 0.5, pad: 0.5, ...s.macros };
+        this.macros = {
+          swell: 0.35,
+          shimmer: 0.2,
+          tone: 0.5,
+          pad: 0.5,
+          ...s.macros,
+        };
       }
       this.init();
       this.syncLayerFx();
@@ -4358,7 +4392,8 @@ export class MultiLayerEngine {
       if (!decodedBuffers) return;
       const w = this._pcmWorkletNode;
       decodedBuffers.forEach((instMap, instId) => {
-        const baseId = (instId && INST_ALIASES && INST_ALIASES[instId]) || instId;
+        const baseId =
+          (instId && INST_ALIASES && INST_ALIASES[instId]) || instId;
         instMap.forEach((buf, anchorKey) => {
           if (!buf) return;
           w.ensureBuffer(baseId, anchorKey, buf);
@@ -4573,7 +4608,8 @@ export class MultiLayerEngine {
         this.layers[1].enabled = true;
         if (!this.layers[1].inst) {
           this.layers[1].inst = "string_ensemble_1";
-          this.layers[1].name = HD_SOUNDBANKS["string_ensemble_1"]?.name || "String Ensemble 1";
+          this.layers[1].name =
+            HD_SOUNDBANKS["string_ensemble_1"]?.name || "String Ensemble 1";
         }
       }
       // Disable layers 2 & 3 so dual layer is clean 2-instrument layer
@@ -4748,11 +4784,15 @@ export class MultiLayerEngine {
     );
     if (pending.length === 0) return;
     if (typeof this.onSoundLoadingCallback === "function") {
-      try { this.onSoundLoadingCallback(true, presetName); } catch (e) {}
+      try {
+        this.onSoundLoadingCallback(true, presetName);
+      } catch (e) {}
     }
     Promise.all(pending).finally(() => {
       if (typeof this.onSoundLoadingCallback === "function") {
-        try { this.onSoundLoadingCallback(false, presetName); } catch (e) {}
+        try {
+          this.onSoundLoadingCallback(false, presetName);
+        } catch (e) {}
       }
     });
   }
@@ -4865,7 +4905,10 @@ export class MultiLayerEngine {
         preloadEnabled = false;
     }
     // Fire-and-forget preloads - don't block UI thread
-    const preloadPromises = this._collectPreloadPromises(this.layers, preloadEnabled);
+    const preloadPromises = this._collectPreloadPromises(
+      this.layers,
+      preloadEnabled,
+    );
     // Surface "sound loading" on the HUD until every layer is playback-ready —
     // a still-decoding preset shows progress instead of silent lag.
     this._trackSoundLoading(preloadPromises, this.activeCombi.name);
@@ -4876,7 +4919,10 @@ export class MultiLayerEngine {
 
     // Always apply FX preset when switching combi presets
     if (audioCore.fxRack) {
-      const fxPreset = this.activeCombi.fxPreset || DEFAULT_COMBI_FX_PRESETS[this.activeCombi.id] || null;
+      const fxPreset =
+        this.activeCombi.fxPreset ||
+        DEFAULT_COMBI_FX_PRESETS[this.activeCombi.id] ||
+        null;
       audioCore.fxRack.applyPreset(fxPreset);
     }
 
@@ -5290,7 +5336,9 @@ export class MultiLayerEngine {
     if (this._noteHooks && this._noteHooks.size > 0) {
       if (when === 0) {
         for (const hook of this._noteHooks) {
-          try { hook(midiNote, true, velocity, when); } catch (e) {}
+          try {
+            hook(midiNote, true, velocity, when);
+          } catch (e) {}
         }
       } else {
         const delayMs = Math.max(
@@ -5300,7 +5348,9 @@ export class MultiLayerEngine {
         setTimeout(() => {
           if (this._noteHooks) {
             for (const hook of this._noteHooks) {
-              try { hook(midiNote, true, velocity, when); } catch (e) {}
+              try {
+                hook(midiNote, true, velocity, when);
+              } catch (e) {}
             }
           }
         }, delayMs);
@@ -5397,19 +5447,21 @@ export class MultiLayerEngine {
       // Equal-Loudness RMS Preset Normalizer: compute per-layer RMS power using
       // calibrated trim gains. Boosts quiet presets and normalizes dense stacks
       // so all presets across the app maintain a consistent, solid volume level.
-      const TARGET_RMS = 1.10;
+      const TARGET_RMS = 1.1;
       let sumPower = 0;
       for (let i = 0; i < this.layers.length; i++) {
         const layer = this.layers[i];
         if (!layer.enabled) continue;
-        if (velocity < (layer.minVel || 1) || velocity > (layer.maxVel || 127)) continue;
+        if (velocity < (layer.minVel || 1) || velocity > (layer.maxVel || 127))
+          continue;
         const g = layer.gain ?? 1.0;
         const t = layer.vaProg ? 0.82 : getInstrumentTrimGain(layer.inst);
-        sumPower += (g * t) * (g * t);
+        sumPower += g * t * (g * t);
       }
       const rms = Math.sqrt(sumPower);
       // Directly scale combis to target RMS reference without dampening quiet presets
-      const combiScale = rms > 0.05 ? Math.max(0.60, Math.min(1.65, TARGET_RMS / rms)) : 1.0;
+      const combiScale =
+        rms > 0.05 ? Math.max(0.6, Math.min(1.65, TARGET_RMS / rms)) : 1.0;
 
       // Chord headroom: only attenuate dense 5+ note clusters; 1–4 note chords
       // retain full volume and power without choking.
@@ -5424,16 +5476,20 @@ export class MultiLayerEngine {
         const layer = this.layers[i];
         if (!layer.enabled) continue;
         if (hasSolo && !layer.solo) continue;
-        if (velocity < (layer.minVel || 1) || velocity > (layer.maxVel || 127)) continue;
+        if (velocity < (layer.minVel || 1) || velocity > (layer.maxVel || 127))
+          continue;
         if (layer.minNote != null && midiNote < layer.minNote) continue;
         if (layer.maxNote != null && midiNote > layer.maxNote) continue;
         const isLeadLayer = i === 0;
-        const isBassLayer = !isLeadLayer && /(bass|sub)/i.test((layer.name || "") + " " + (layer.inst || ""));
+        const isBassLayer =
+          !isLeadLayer &&
+          /(bass|sub)/i.test((layer.name || "") + " " + (layer.inst || ""));
         if (isBassLayer && midiNote > (layer.maxNote || 60)) continue;
 
         // Trust user/preset layer gain: do not artificially halve secondary layers with 0.52 penalty!
         const layerRoleTrim = 1.0;
-        const effectiveGain = (layer.gain ?? 1.0) * combiScale * polyHeadroom * layerRoleTrim;
+        const effectiveGain =
+          (layer.gain ?? 1.0) * combiScale * polyHeadroom * layerRoleTrim;
         const transposedMidi = Math.max(
           21,
           Math.min(108, midiNote + layer.oct * 12),
@@ -5472,7 +5528,8 @@ export class MultiLayerEngine {
     } else {
       // SINGLE PROGRAM MODE: Normalized to match combi loudness reference
       const singleTrim = getInstrumentTrimGain(this.activeSingleInst);
-      const singleGain = singleTrim > 0.05 ? Math.min(1.40, 1.10 / singleTrim) : 1.0;
+      const singleGain =
+        singleTrim > 0.05 ? Math.min(1.4, 1.1 / singleTrim) : 1.0;
       if (this.pcmEngine) {
         this.pcmEngine.playNote(
           this.activeSingleInst,
@@ -5537,7 +5594,9 @@ export class MultiLayerEngine {
     if (this._noteHooks && this._noteHooks.size > 0) {
       if (when === 0) {
         for (const hook of this._noteHooks) {
-          try { hook(midiNote, false, 0, when); } catch (e) {}
+          try {
+            hook(midiNote, false, 0, when);
+          } catch (e) {}
         }
       } else {
         const delayMs = Math.max(
@@ -5547,7 +5606,9 @@ export class MultiLayerEngine {
         setTimeout(() => {
           if (this._noteHooks) {
             for (const hook of this._noteHooks) {
-              try { hook(midiNote, false, 0, when); } catch (e) {}
+              try {
+                hook(midiNote, false, 0, when);
+              } catch (e) {}
             }
           }
         }, delayMs);
@@ -5633,7 +5694,9 @@ export class MultiLayerEngine {
           const layer = this.layers[i];
           if (layer.minNote != null && midiNote < layer.minNote) continue;
           if (layer.maxNote != null && midiNote > layer.maxNote) continue;
-          const isBassLayer = i > 0 && /(bass|sub)/i.test((layer.name || "") + " " + (layer.inst || ""));
+          const isBassLayer =
+            i > 0 &&
+            /(bass|sub)/i.test((layer.name || "") + " " + (layer.inst || ""));
           if (isBassLayer && midiNote > (layer.maxNote || 60)) continue;
           const transposedMidi = Math.max(
             21,
@@ -5751,7 +5814,9 @@ export class MultiLayerEngine {
           const layer = this.layers[i];
           if (layer.minNote != null && midiNote < layer.minNote) continue;
           if (layer.maxNote != null && midiNote > layer.maxNote) continue;
-          const isBassLayer = i > 0 && /(bass|sub)/i.test((layer.name || "") + " " + (layer.inst || ""));
+          const isBassLayer =
+            i > 0 &&
+            /(bass|sub)/i.test((layer.name || "") + " " + (layer.inst || ""));
           if (isBassLayer && midiNote > (layer.maxNote || 60)) continue;
           const transposedMidi = Math.max(
             21,
@@ -5772,7 +5837,12 @@ export class MultiLayerEngine {
         }
       } else {
         if (typeof this.pcmEngine.fastStopNote === "function") {
-          this.pcmEngine.fastStopNote(this.activeSingleInst, midiNote, when, null);
+          this.pcmEngine.fastStopNote(
+            this.activeSingleInst,
+            midiNote,
+            when,
+            null,
+          );
         } else {
           this.pcmEngine.stopNote(this.activeSingleInst, midiNote, when);
         }
@@ -6237,10 +6307,18 @@ export class MultiLayerEngine {
       typeof activeId === "string" &&
       activeId.startsWith("user_");
     if (isUser) {
-      return { kind: "user", id: activeId, name: this.activeCombi?.name || "User Mix" };
+      return {
+        kind: "user",
+        id: activeId,
+        name: this.activeCombi?.name || "User Mix",
+      };
     }
     if (this.isCombiMode) {
-      return { kind: "combi", id: activeId, name: this.activeCombi?.name || "Layer Mix" };
+      return {
+        kind: "combi",
+        id: activeId,
+        name: this.activeCombi?.name || "Layer Mix",
+      };
     }
     return {
       kind: "single",
