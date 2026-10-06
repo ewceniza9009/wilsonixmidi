@@ -1,8 +1,21 @@
 /**
  * 6-Stage Feedforward Vintage Analog Stereo Phaser
  * 100% Feedforward Architecture (Zero Feedback Loops = 0% Risk of Ringing or Feedback Accumulation).
- * Uses 6 staggered allpass poles with quadrature phase-inverted stereo LFO sweep for deep, clean analog funk swirl.
+ * 4 staggered allpass poles per channel with quadrature phase-inverted stereo LFO sweep.
+ *
+ * Performance notes (Android/tablet):
+ * - The source is split by a ChannelSplitter so each channel gets its own mono
+ *   allpass chain: a stereo source keeps its image, and only 4 biquads (not 8
+ *   stereo ones) run per side.
+ * - The LFO is control-rate JS (~60Hz) writing `frequency.value` directly.
+ *   Connecting an audio node to an AudioParam forces a-rate evaluation, which
+ *   makes Chromium recompute every biquad's coefficients per sample (tan/sin x8
+ *   x128 frames per render quantum) — that overruns the audio thread on
+ *   mid-range mobile and shows up as xruns, crackles and delayed onset.
  */
+
+const POLE_FREQUENCIES = [400, 800, 1600, 3200];
+const LFO_TICK_MS = 16; // ~60Hz control rate
 
 export class StereoPhaser {
   constructor(ctx) {
@@ -16,6 +29,11 @@ export class StereoPhaser {
     this.depth = 1400; // Hz sweep
     this.enabled = false;
 
+    this._lfoRunning = false;
+    this._lfoPhase = 0;
+    this._lfoLastTs = 0;
+    this._lfoTimer = null;
+
     this.buildNetwork();
   }
 
@@ -27,135 +45,128 @@ export class StereoPhaser {
     this.dryGain.connect(this.output);
     this.dryGain.gain.value = 1.0;
 
-    // 4 Staggered Allpass Filters for Left Channel (100% feedforward, NO feedback loop)
-    const poleFrequencies = [400, 800, 1600, 3200];
+    // Per-channel split: mono chains, true stereo wet path. Splitter
+    // channelCount is fixed at 2 (explicit), so a mono source is up-mixed
+    // to L=R and both chains still receive it.
+    this.splitter = ctx.createChannelSplitter(2);
+    this.input.connect(this.splitter);
+
     this.leftFilters = [];
-    let prevL = this.input;
-
-    for (let i = 0; i < 4; i++) {
-      const ap = ctx.createBiquadFilter();
-      ap.type = "allpass";
-      ap.frequency.value = poleFrequencies[i];
-      ap.Q.value = 1.6;
-      prevL.connect(ap);
-      prevL = ap;
-      this.leftFilters.push(ap);
-    }
-
-    // 4 Staggered Allpass Filters for Right Channel
     this.rightFilters = [];
-    let prevR = this.input;
+    let prevL = this.splitter;
+    let prevR = this.splitter;
 
-    for (let i = 0; i < 4; i++) {
-      const ap = ctx.createBiquadFilter();
-      ap.type = "allpass";
-      ap.frequency.value = poleFrequencies[i];
-      ap.Q.value = 1.6;
-      prevR.connect(ap);
-      prevR = ap;
-      this.rightFilters.push(ap);
+    for (let i = 0; i < POLE_FREQUENCIES.length; i++) {
+      const baseF = POLE_FREQUENCIES[i];
+
+      const apL = ctx.createBiquadFilter();
+      apL.type = "allpass";
+      apL.frequency.value = baseF;
+      apL.Q.value = 1.6;
+      prevL.connect(apL);
+      prevL = apL;
+      this.leftFilters.push(apL);
+
+      const apR = ctx.createBiquadFilter();
+      apR.type = "allpass";
+      apR.frequency.value = baseF;
+      apR.Q.value = 1.6;
+      prevR.connect(apR);
+      prevR = apR;
+      this.rightFilters.push(apR);
     }
 
-    // Master LFO
-    this.lfo = ctx.createOscillator();
-    this.lfo.type = "sine";
-    this.lfo.frequency.value = this.rate;
+    // Stereo Merger: chain L -> output 0, chain R -> output 1
+    this.merger = ctx.createChannelMerger(2);
+    prevL.connect(this.merger, 0, 0);
+    prevR.connect(this.merger, 0, 1);
 
-    // Proportional LFO Modulation Gains (wide, deep sweeps without approaching 0Hz)
-    this.lfoGainsL = [];
-    this.lfoGainsR = [];
-
-    for (let i = 0; i < 4; i++) {
-      const baseF = poleFrequencies[i];
-      const gL = ctx.createGain();
-      gL.gain.value = baseF * 0.35; // Gentle phase sweep - no warble
-      this.lfo.connect(gL);
-      gL.connect(this.leftFilters[i].frequency);
-      this.lfoGainsL.push(gL);
-
-      const gR = ctx.createGain();
-      gR.gain.value = -baseF * 0.35;
-      this.lfo.connect(gR);
-      gR.connect(this.rightFilters[i].frequency);
-      this.lfoGainsR.push(gR);
-    }
-
-    // Stereo Merger
-    const merger = ctx.createChannelMerger(2);
-    prevL.connect(merger, 0, 0);
-    prevR.connect(merger, 0, 1);
-
-    merger.connect(this.wetGain);
+    this.merger.connect(this.wetGain);
     this.wetGain.gain.value = 0.0; // Bypassed by default
     this.wetGain.connect(this.output);
-
-    this.lfo = null;
-    this._lfoRunning = false;
   }
 
   _startLfo() {
     if (this._lfoRunning) return;
     this._lfoRunning = true;
-    const ctx = this.ctx;
-    this.lfo = ctx.createOscillator();
-    this.lfo.type = "sine";
-    this.lfo.frequency.value = this.rate;
+    this._lfoLastTs = 0;
+    const tick = () => {
+      if (!this._lfoRunning) return;
+      const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+      if (!this._lfoLastTs) this._lfoLastTs = now;
+      const dt = Math.min(0.25, (now - this._lfoLastTs) / 1000);
+      this._lfoLastTs = now;
+      this._lfoPhase = (this._lfoPhase + 2 * Math.PI * this.rate * dt) % (2 * Math.PI);
+      this._applyLfo();
+      this._scheduleTick(tick);
+    };
+    this._applyLfo();
+    this._scheduleTick(tick);
+  }
 
-    for (let i = 0; i < this.lfoGainsL.length; i++) {
-      this.lfo.connect(this.lfoGainsL[i]);
-      this.lfo.connect(this.lfoGainsR[i]);
+  _scheduleTick(tick) {
+    this._lfoTimer = setTimeout(tick, LFO_TICK_MS);
+    // Node (tests): don't hold the process open. Browsers return a number.
+    if (this._lfoTimer && typeof this._lfoTimer.unref === "function") {
+      this._lfoTimer.unref();
     }
-    this.lfo.start();
   }
 
   _stopLfo() {
     if (!this._lfoRunning) return;
     this._lfoRunning = false;
-    if (this.lfo) {
-      try {
-        this.lfo.stop();
-        this.lfo.disconnect();
-      } catch (e) {}
-      this.lfo = null;
+    if (this._lfoTimer) {
+      clearTimeout(this._lfoTimer);
+      this._lfoTimer = null;
+    }
+  }
+
+  _applyLfo() {
+    const s = Math.sin(this._lfoPhase);
+    for (let i = 0; i < POLE_FREQUENCIES.length; i++) {
+      const baseF = POLE_FREQUENCIES[i];
+      this.leftFilters[i].frequency.value = baseF * (1 + 0.35 * s);
+      this.rightFilters[i].frequency.value = baseF * (1 - 0.35 * s);
     }
   }
 
   setRate(hz) {
     this.rate = Math.max(0.05, Math.min(8.0, hz));
-    if (this.lfo && this.ctx) {
-      this.lfo.frequency.setTargetAtTime(this.rate, this.ctx.currentTime, 0.02);
-    }
   }
 
   setFeedback(_val) {}
 
   setMix(val) {
     this.mix = Math.max(0, Math.min(1.0, val));
-    const now = this.ctx.currentTime;
     if (this.enabled) {
-      const makeup = 1.0 + this.mix * 0.10;
-      const dryFrac = Math.cos(this.mix * Math.PI * 0.5);
-      const wetFrac = Math.sin(this.mix * Math.PI * 0.5) * 0.70 * makeup;
-      this.wetGain.gain.setTargetAtTime(wetFrac, now, 0.02);
-      this.dryGain.gain.setTargetAtTime(dryFrac, now, 0.02);
+      this._applyMixGains(0.02);
     }
   }
 
   setBypass(bypassed) {
     this.enabled = !bypassed;
-    const now = this.ctx ? this.ctx.currentTime : 0;
     if (bypassed) {
       this._stopLfo();
-      this.wetGain.gain.setValueAtTime(0.0, now);
-      this.dryGain.gain.setValueAtTime(1.0, now);
+      this._applyMixGains(0.015, true);
     } else {
       this._startLfo();
+      this._applyMixGains(0.015, false);
+    }
+  }
+
+  _applyMixGains(timeConstant, forceDryOnly = false) {
+    const now = this.ctx ? this.ctx.currentTime : 0;
+    let dryFrac = 1.0;
+    let wetFrac = 0.0;
+    if (!forceDryOnly) {
       const m = this.mix > 0 ? this.mix : 0.5;
       const makeup = 1.0 + m * 0.10;
-      const dryFrac = Math.cos(m * Math.PI * 0.5);
-      const wetFrac = Math.sin(m * Math.PI * 0.5) * 0.70 * makeup;
-      this.wetGain.gain.setValueAtTime(wetFrac, now);
-      this.dryGain.gain.setValueAtTime(dryFrac, now);
+      dryFrac = Math.cos(m * Math.PI * 0.5);
+      wetFrac = Math.sin(m * Math.PI * 0.5) * 0.70 * makeup;
     }
+    // Smoothed (setTargetAtTime) instead of instant setValueAtTime jumps:
+    // hard gain changes click, which reads as crackle right at the toggle.
+    this.wetGain.gain.setTargetAtTime(wetFrac, now, timeConstant);
+    this.dryGain.gain.setTargetAtTime(dryFrac, now, timeConstant);
   }
 }

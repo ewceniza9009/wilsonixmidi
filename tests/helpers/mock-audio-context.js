@@ -13,7 +13,9 @@ function createParam(value = 0) {
       if (prop === "setValueAtTime" || prop === "setTargetAtTime") {
         return (v) => { obj.value = v; obj._calls.push([prop, v]); };
       }
-      if (prop === "connect") return () => {};
+      // Record audio-node -> AudioParam connections (forces a-rate evaluation
+      // in real engines) so tests can assert none are made.
+      if (prop === "connect") return (v) => { obj._calls.push(["connect", v]); return v; };
       if (prop === "disconnect") return () => {};
       return obj[prop];
     },
@@ -25,8 +27,12 @@ function createParam(value = 0) {
 }
 
 function createNode() {
-  return {
-    connect: () => {},
+  const node = {
+    _connects: [],
+    connect(target, outputIndex = 0, inputIndex = 0) {
+      node._connects.push({ target, outputIndex, inputIndex });
+      return target;
+    },
     disconnect: () => {},
     gain: createParam(1),
     frequency: createParam(0),
@@ -43,6 +49,7 @@ function createNode() {
     start: () => {},
     stop: () => {},
   };
+  return node;
 }
 
 export function createMockAudioContext() {

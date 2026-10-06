@@ -6,6 +6,7 @@
 import { FxRackManager } from "./fx-rack-manager.js";
 import { SpatialEngine } from "./spatial-engine.js";
 import { OutputBridge } from "./output-bridge.js";
+import { buildSoftClipCurve } from "./effects/soft-clip.js";
 import { downloadBlob } from "../utils/download-blob.js";
 
 export const LATENCY_PROFILES = {
@@ -110,6 +111,15 @@ export class AudioCore {
     this.hardwareLimiter.attack.value = 0.003;    // 3ms - fast transparent peak catching without pumping
     this.hardwareLimiter.release.value = 0.100;   // 100ms - recovers too slowly to pump per-beat
 
+    // Final safety net AFTER the limiter: sub-3ms transients (piano attacks,
+    // FX makeup-gain overshoot) still escape a DynamicsCompressorNode's attack
+    // window and hard-clip in the DAC = crackles. Identity below 0.9, tanh
+    // rolloff above, hard ceiling ~-2.1dBFS — zero modulation of normal signal.
+    this.safetyClip = this.ctx.createWaveShaper();
+    this.safetyClip.curve = buildSoftClipCurve();
+    this.safetyClip.oversample = "2x";
+    this.hardwareLimiter.connect(this.safetyClip);
+
     // Initialize FX Rack
     this.fxRack = new FxRackManager(this.ctx);
 
@@ -130,14 +140,14 @@ export class AudioCore {
     this.masterFilter.frequency.value = 18000;
     this.masterFilter.Q.value = 1.0;
 
-    // Master bus pipeline: FX Rack -> Master Filter -> Master Gain -> BusPad(trim) -> DC Blocker -> Analyser -> HardwareLimiter -> Destination
+    // Master bus pipeline: FX Rack -> Master Filter -> Master Gain -> BusPad(trim) -> DC Blocker -> Analyser -> HardwareLimiter -> SafetyClip -> Destination
     this.fxRack.output.connect(this.masterFilter);
     this.masterFilter.connect(this.masterGain);
     this.masterGain.connect(this.busPad);
     this.busPad.connect(this.dcBlocker);
     this.dcBlocker.connect(this.analyser);
     this.analyser.connect(this.hardwareLimiter);
-    // Binaural spatial engine: inserted between limiter and destination.
+    // Binaural spatial engine: inserted between safety clip and destination.
     // OFF by default — when disabled, dry signal passes through unchanged.
     this.spatialEngine = null; // Lazy init — created on first use to avoid blocking init()
 
@@ -149,10 +159,10 @@ export class AudioCore {
     this.outputStage.connect(this.ctx.destination);
     this._connectSpatial();
 
-    // Diagnostic tap: identical signal to the DAC (analyser is pass-through).
+    // Diagnostic tap: identical signal to the DAC (post-clip, analyser is pass-through).
     try {
       this.captureTap = this.ctx.createMediaStreamDestination();
-      this.hardwareLimiter.connect(this.captureTap);
+      this.safetyClip.connect(this.captureTap);
     } catch (e) {
       this.captureTap = null;
     }
@@ -366,7 +376,7 @@ export class AudioCore {
 
     // Lazy-init spatial engine on first call
     if (!this.spatialEngine) {
-      this.spatialEngine = new SpatialEngine(this.ctx, this.hardwareLimiter, this.outputStage || this.ctx.destination);
+      this.spatialEngine = new SpatialEngine(this.ctx, this.safetyClip, this.outputStage || this.ctx.destination);
       this.spatialEngine.connect();
     }
   }
@@ -672,13 +682,13 @@ export class AudioCore {
     this.masterGain.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02);
   }
 
-  // DIAG recorder: taps post-limiter master output so crackle reports can be
-  // analyzed as real waveforms instead of guessed at
+  // DIAG recorder: taps post-limiter/post-clip master output so crackle reports
+  // can be analyzed as real waveforms instead of guessed at
   startDiagRecord() {
     try {
       if (!this.ctx || this.diagRecorder) return false;
       this.diagDest = this.ctx.createMediaStreamDestination();
-      this.hardwareLimiter.connect(this.diagDest);
+      this.safetyClip.connect(this.diagDest);
       this.diagChunks = [];
       this.diagRecorder = new MediaRecorder(this.diagDest.stream);
       this.diagRecorder.ondataavailable = e => {
@@ -710,7 +720,7 @@ export class AudioCore {
           }, 2000);
         } catch (e) {}
         try {
-          this.hardwareLimiter.disconnect(this.diagDest);
+          this.safetyClip.disconnect(this.diagDest);
         } catch (e) {}
         this.diagRecorder = null;
         this.diagDest = null;

@@ -8,6 +8,8 @@ import { AlgorithmicReverb } from "../src/audio/effects/reverb.js";
 import { HaasStereoWidener } from "../src/audio/effects/stereo-widener.js";
 import { TubeDrive } from "../src/audio/effects/tube-drive.js";
 import { KorgStereoChorus } from "../src/audio/effects/chorus.js";
+import { StereoPhaser } from "../src/audio/effects/phaser.js";
+import { buildSoftClipCurve } from "../src/audio/effects/soft-clip.js";
 
 function approx(actual, expected, eps = 1e-6) {
   assert.ok(Math.abs(actual - expected) < eps, `expected ${actual} to be within ${eps} of ${expected}`);
@@ -185,4 +187,121 @@ test("Effects export matching class names", () => {
   assert.equal(typeof TubeDrive, "function");
   assert.equal(typeof KorgStereoChorus, "function");
   assert.equal(typeof StudioEqLimiter, "function");
+  assert.equal(typeof StereoPhaser, "function");
+});
+
+test("StereoPhaser: starts bypassed with unity dry / silent wet, LFO stopped", () => {
+  const ctx = createMockAudioContext();
+  const p = new StereoPhaser(ctx);
+  assert.equal(p.enabled, false);
+  assert.equal(p.dryGain.gain.value, 1);
+  assert.equal(p.wetGain.gain.value, 0);
+  assert.equal(p._lfoRunning, false);
+});
+
+test("StereoPhaser: setBypass engages mix gains and starts/stops LFO", () => {
+  const ctx = createMockAudioContext();
+  const p = new StereoPhaser(ctx);
+  p.setMix(0.5);
+  p.setBypass(false);
+  assert.equal(p.enabled, true);
+  assert.equal(p._lfoRunning, true);
+  const m = 0.5;
+  const wet = Math.sin(m * Math.PI * 0.5) * 0.70 * (1 + m * 0.10);
+  const dry = Math.cos(m * Math.PI * 0.5);
+  approx(p.wetGain.gain.value, wet, 1e-9);
+  approx(p.dryGain.gain.value, dry, 1e-9);
+  p.setBypass(true);
+  assert.equal(p.enabled, false);
+  assert.equal(p._lfoRunning, false);
+  assert.equal(p.wetGain.gain.value, 0);
+  assert.equal(p.dryGain.gain.value, 1);
+});
+
+test("StereoPhaser: setMix clamps to [0,1] and updates engaged gains", () => {
+  const ctx = createMockAudioContext();
+  const p = new StereoPhaser(ctx);
+  p.setMix(2.5);
+  assert.equal(p.mix, 1);
+  p.setMix(-1);
+  assert.equal(p.mix, 0);
+  p.setMix(0.4);
+  assert.equal(p.mix, 0.4);
+  p.setBypass(false);
+  p.setMix(1.0);
+  approx(p.wetGain.gain.value, 1 * 0.70 * (1 + 0.10), 1e-9);
+  approx(p.dryGain.gain.value, 0, 1e-9);
+  p.setBypass(true);
+});
+
+test("StereoPhaser: setRate clamps to [0.05, 8]", () => {
+  const p = new StereoPhaser(createMockAudioContext());
+  p.setRate(0.01);
+  assert.equal(p.rate, 0.05);
+  p.setRate(100);
+  assert.equal(p.rate, 8);
+  p.setRate(1.2);
+  assert.equal(p.rate, 1.2);
+});
+
+test("StereoPhaser: control-rate LFO — no audio-node → AudioParam connections", () => {
+  const p = new StereoPhaser(createMockAudioContext());
+  p.setBypass(false);
+  for (const f of [...p.leftFilters, ...p.rightFilters]) {
+    assert.ok(
+      !f.frequency._calls.some(c => c[0] === "connect"),
+      "biquad frequency must not receive audio-rate input (forces per-sample coefficient recompute)",
+    );
+    assert.ok(!f.Q._calls.some(c => c[0] === "connect"));
+  }
+  assert.equal(p.lfo, undefined);
+  p.setBypass(true);
+});
+
+test("StereoPhaser: LFO sweep is quadrature across the two channels", () => {
+  const p = new StereoPhaser(createMockAudioContext());
+  p._lfoPhase = Math.PI / 2;
+  p._applyLfo();
+  approx(p.leftFilters[0].frequency.value, 400 * 1.35, 1e-9);
+  approx(p.rightFilters[0].frequency.value, 400 * 0.65, 1e-9);
+  approx(p.leftFilters[3].frequency.value, 3200 * 1.35, 1e-9);
+  approx(p.rightFilters[3].frequency.value, 3200 * 0.65, 1e-9);
+  p._lfoPhase = -Math.PI / 2;
+  p._applyLfo();
+  approx(p.leftFilters[0].frequency.value, 400 * 0.65, 1e-9);
+  approx(p.rightFilters[0].frequency.value, 400 * 1.35, 1e-9);
+});
+
+test("StereoPhaser: splitter feeds independent chains that merge to stereo", () => {
+  const ctx = createMockAudioContext();
+  const p = new StereoPhaser(ctx);
+  const inputTargets = p.input._connects.map(c => c.target);
+  assert.ok(inputTargets.includes(p.splitter), "input must feed the channel splitter");
+  const splitTargets = p.splitter._connects.map(c => c.target);
+  assert.ok(splitTargets.includes(p.leftFilters[0]), "splitter channel 0 → left chain");
+  assert.ok(splitTargets.includes(p.rightFilters[0]), "splitter channel 1 → right chain");
+  const lastL = p.leftFilters[3]._connects[0];
+  const lastR = p.rightFilters[3]._connects[0];
+  assert.equal(lastL.target, p.merger);
+  assert.equal(lastL.inputIndex, 0);
+  assert.equal(lastR.target, p.merger);
+  assert.equal(lastR.inputIndex, 1);
+  assert.ok(p.merger._connects.some(c => c.target === p.wetGain));
+});
+
+test("buildSoftClipCurve: identity below knee, bounded, symmetric, monotonic", () => {
+  const curve = buildSoftClipCurve(8192, 0.9);
+  assert.equal(curve.length, 8192);
+  let maxAbs = 0;
+  for (let i = 0; i < curve.length; i++) {
+    const x = (i / (curve.length - 1)) * 2 - 1;
+    // curve is a Float32Array (Web Audio spec): compare at float32 precision.
+    if (Math.abs(x) <= 0.89) approx(curve[i], x, 1e-6);
+    assert.ok(curve[i] <= 1 && curve[i] >= -1, "curve must stay inside [-1,1]");
+    assert.ok(curve[i] >= curve[Math.max(0, i - 1)] - 1e-9, "curve must be monotonic");
+    maxAbs = Math.max(maxAbs, Math.abs(curve[i]));
+    approx(curve[i], -curve[curve.length - 1 - i], 1e-6);
+  }
+  assert.ok(maxAbs < 1, "ceiling must stay below full scale");
+  assert.ok(maxAbs > 0.95, "ceiling must stay close to full scale");
 });
