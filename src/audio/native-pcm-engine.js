@@ -3921,6 +3921,37 @@ export class NativePcmEngine {
         (minCutoff + Math.pow(velNorm, 1.35) * (maxCutoff - minCutoff)) / 20000,
       );
 
+      const isPadVoice =
+        layerIndex !== null &&
+        layerIndex > 0 &&
+        (isString ||
+          isChoir ||
+          instId?.includes("pad") ||
+          instId?.includes("ambient") ||
+          instId?.includes("swell") ||
+          instId?.includes("air") ||
+          instId?.includes("shimmer") ||
+          instId?.includes("universe") ||
+          instId?.includes("fantasia"));
+
+      const voiceAttackTime = isPadVoice
+        ? 0.35
+        : isRockPiano
+          ? 0.001
+          : isChoir
+            ? 0.04
+            : 0.003;
+      const voiceReleaseTime = isPadVoice ? 1.85 : releaseTime;
+      const voiceSustainLevel = isPadVoice
+        ? 0.88
+        : isRockPiano
+          ? 0.88
+          : isHit
+            ? 0.95
+            : isPiano
+              ? 0.75
+              : 0.65;
+
       this.pcmWorkletNode.noteOn({
         instId: baseId,
         midiNote,
@@ -3932,10 +3963,10 @@ export class NativePcmEngine {
         isLoopable: !!buf._isLoopable,
         loopStart: buf._loopStartSec || 0,
         loopEnd: buf._loopEndSec || 0,
-        attackTime: isRockPiano ? 0.001 : isChoir ? 0.04 : 0.003,
+        attackTime: voiceAttackTime,
         decayTime: isRockPiano ? 0.60 : isPiano ? 0.4 : 0.25,
-        sustainLevel: isRockPiano ? 0.88 : isHit ? 0.95 : isPiano ? 0.75 : 0.65,
-        releaseTime,
+        sustainLevel: voiceSustainLevel,
+        releaseTime: voiceReleaseTime,
         filterCutoff: isRockPiano ? 1.0 : filterNorm,
         maxLife: buf._isLoopable
           ? 60.0
@@ -4197,8 +4228,20 @@ export class NativePcmEngine {
     const dynamicAmp = isRockPiano ? Math.pow(velNorm, 0.78) : Math.pow(velNorm, 1.10);
     const peakGain = (isRockPiano ? 0.28 + dynamicAmp * 0.72 : 0.16 + dynamicAmp * 0.84) * customGain * trim;
 
+    const isFallbackPad =
+      layerIndex !== null &&
+      layerIndex > 0 &&
+      (instId?.includes("pad") ||
+        instId?.includes("ambient") ||
+        instId?.includes("swell") ||
+        instId?.includes("string") ||
+        instId?.includes("air") ||
+        instId?.includes("shimmer") ||
+        instId?.includes("choir"));
+
     voiceGain.gain.setValueAtTime(0.0, now);
-    if (isChoir) voiceGain.gain.setTargetAtTime(peakGain, now, 0.04);
+    if (isFallbackPad) voiceGain.gain.setTargetAtTime(peakGain, now, 0.35);
+    else if (isChoir) voiceGain.gain.setTargetAtTime(peakGain, now, 0.04);
     else if (isRockPiano) voiceGain.gain.setTargetAtTime(peakGain, now, 0.001);
     else voiceGain.gain.setTargetAtTime(peakGain, now, 0.008);
 

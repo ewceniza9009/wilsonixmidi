@@ -4075,6 +4075,22 @@ export class MultiLayerEngine {
     this._clearHeldNoteState();
   }
 
+  isPadSound(instKey) {
+    if (!instKey) return false;
+    const text = String(instKey).toLowerCase();
+    return (
+      text.includes("pad") ||
+      text.includes("ambient") ||
+      text.includes("swell") ||
+      text.includes("shimmer") ||
+      text.includes("universe") ||
+      text.includes("fantasia") ||
+      text.includes("choir") ||
+      text.includes("string") ||
+      text.includes("air")
+    );
+  }
+
   addLayerChangeListener(cb) {
     if (typeof cb === "function") this.layerChangeListeners.add(cb);
   }
@@ -4689,6 +4705,9 @@ export class MultiLayerEngine {
       if (this.pcmEngine) {
         this.pcmEngine.preloadInstrument(resolved);
       }
+    }
+    if (this.isPadSound(instKey)) {
+      this.isPadDuckingEnabled = true;
     }
     this.setDualLayerEnabled(true);
   }
@@ -5459,23 +5478,21 @@ export class MultiLayerEngine {
 
     // ALL MODES use PCM samples — never raw oscillator voices
     if (this.isCombiMode) {
-      // Pad sidechain ducking: when Layer 0 strikes, duck Layers 1-3 down so lead melody is clean
-      if (this.isPadDuckingEnabled && this.layers[0]?.enabled) {
-        this.activeLeadNotes++;
-        if (
-          this.activeLeadNotes === 1 &&
-          this.pcmEngine &&
-          this.pcmEngine.layerInserts
-        ) {
+      // Ambient Pad dynamic ducking: when lead strikes, dip background pad layers (1-3) smoothly
+      // so lead melody is clean and pronounced, independent of sustain pedal or held keys
+      if (this.isPadDuckingEnabled && this.layers[0]?.enabled && velocity > 20) {
+        if (this.pcmEngine && this.pcmEngine.layerInserts) {
           const ctx = audioCore.ctx;
           if (ctx) {
-            for (let i = 1; i < 4; i++) {
-              if (this.pcmEngine.layerInserts[i]) {
-                this.pcmEngine.layerInserts[i].input.gain.setTargetAtTime(
-                  0.15,
-                  now,
-                  0.025,
-                );
+            const duckTime = now > 0 ? now : ctx.currentTime;
+            for (let j = 1; j < 4; j++) {
+              if (this.pcmEngine.layerInserts[j]) {
+                const param = this.pcmEngine.layerInserts[j].input.gain;
+                param.cancelScheduledValues(duckTime);
+                param.setValueAtTime(param.value, duckTime);
+                // Fast 15ms dip down to 0.48 (-6.4 dB), then smooth 200ms recovery back to 1.0
+                param.setTargetAtTime(0.48, duckTime, 0.015);
+                param.setTargetAtTime(1.0, duckTime + 0.075, 0.20);
               }
             }
           }
@@ -5524,6 +5541,13 @@ export class MultiLayerEngine {
           /(bass|sub)/i.test((layer.name || "") + " " + (layer.inst || ""));
         if (isBassLayer && midiNote > (layer.maxNote || 60)) continue;
 
+        // Velocity decoupling: ambient pad layers are capped and compressed so emotional
+        // fortissimo strikes on piano never cause harsh, overpowering pad blasts
+        const isPadVoice = i > 0 && this.isPadSound(layer.inst || layer.name);
+        const effectiveVelocity = isPadVoice
+          ? Math.round(25 + Math.min(60, velocity * 0.58))
+          : velocity;
+
         // Trust user/preset layer gain: do not artificially halve secondary layers with 0.52 penalty!
         const layerRoleTrim = 1.0;
         const effectiveGain =
@@ -5535,7 +5559,7 @@ export class MultiLayerEngine {
         if (layer.vaProg) {
           this.getVaEngineFor(layer.vaProg, effectiveGain, i).noteOn(
             transposedMidi,
-            velocity,
+            effectiveVelocity,
             when,
           );
         } else if (layer.inst && layer.inst.startsWith("va:")) {
@@ -5546,7 +5570,7 @@ export class MultiLayerEngine {
           if (prog) {
             this.getVaEngineFor(prog, effectiveGain, i).noteOn(
               transposedMidi,
-              velocity,
+              effectiveVelocity,
               when,
             );
           }
@@ -5554,14 +5578,14 @@ export class MultiLayerEngine {
           this.pcmEngine.playNote(
             layer.inst,
             transposedMidi,
-            velocity,
+            effectiveVelocity,
             effectiveGain,
             i,
             null,
             when,
           );
         }
-        this._notifyLayerActivity(i, velocity, effectiveGain);
+        this._notifyLayerActivity(i, effectiveVelocity, effectiveGain);
       }
     } else {
       // SINGLE PROGRAM MODE: Normalized to match combi loudness reference

@@ -1201,15 +1201,26 @@ export class GigHudUI {
 
       const layerBtn = document.getElementById("btn-toggle-layer");
       const layerSelect = document.getElementById("hud-layer-select");
+      const duckBtn = document.getElementById("btn-toggle-duck");
       const isLayerOn =
         multiLayerEngine.isDualLayerActive &&
         (multiLayerEngine.layers[1]?.enabled ?? false);
+      const activeLayerBank =
+        multiLayerEngine.layers[1]?.inst || "string_ensemble_1";
+      const isLayerPad = this.isPadSound(activeLayerBank);
+
       if (layerBtn) {
         layerBtn.classList.toggle("active", !!isLayerOn);
-        layerBtn.innerText = isLayerOn ? "LAYER ON" : "LAYER";
+        layerBtn.classList.toggle("is-pad", !!isLayerOn && isLayerPad);
+        layerBtn.innerText = isLayerOn
+          ? (isLayerPad ? "🌌 PAD ON" : "LAYER ON")
+          : (isLayerPad ? "🌌 PAD" : "LAYER");
       }
       if (layerSelect) {
         layerSelect.classList.toggle("active", !!isLayerOn);
+      }
+      if (duckBtn) {
+        duckBtn.classList.toggle("active", multiLayerEngine.isPadDuckingEnabled);
       }
     };
   }
@@ -1514,6 +1525,10 @@ export class GigHudUI {
     layerSelect?.addEventListener("change", (e) => {
       const bankId = e.target.value;
       multiLayerEngine.setDualLayerInstrument(bankId);
+      const isPad = this.isPadSound(bankId);
+      if (isPad) {
+        multiLayerEngine.togglePadDucking(true);
+      }
       this.syncSoundDisplay();
       this.syncToolsIndicator();
     });
