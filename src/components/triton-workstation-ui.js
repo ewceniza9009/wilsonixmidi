@@ -746,6 +746,12 @@ export class TritonWorkstationUI {
           }, 600);
         }
       };
+      btn.addEventListener("touchstart", (e) => {
+        e.stopPropagation();
+      }, { passive: true });
+      btn.addEventListener("touchend", (e) => {
+        e.stopPropagation();
+      }, { passive: true });
       btn.addEventListener("pointerdown", (e) => {
         e.stopPropagation();
       });
