@@ -5,7 +5,7 @@
  */
 
 export const APP_VERSION = "2.2.6";
-export const BUILD_NUMBER = 30;
+export const BUILD_NUMBER = 31;
 export const BUILD_DATE = "2026-10-07";
 export const APP_TITLE = "WILSONIX MIDIKEY";
 export const APP_ID = "com.wilsonix.midikey";

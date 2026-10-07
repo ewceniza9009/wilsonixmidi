@@ -266,18 +266,23 @@ export class ChordPadsUI {
   bindBankButtons() {
     this.container.querySelectorAll(".bank-btn").forEach(btn => {
       let lastTap = 0;
-      const handleBank = () => {
+      const handleBank = (e) => {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
         const now = performance.now();
         if (now - lastTap < 120) return;
         lastTap = now;
-        this.activeBank = btn.getAttribute("data-bank");
+        const newBank = btn.getAttribute("data-bank");
+        if (this.activeBank === newBank) return;
+        this.activeBank = newBank;
         try {
           localStorage.setItem("wilsonix_chord_active_bank", this.activeBank);
         } catch (e) {}
         this.render();
         this.bindEvents();
       };
-      btn.addEventListener("pointerdown", handleBank);
       btn.addEventListener("click", handleBank);
     });
   }

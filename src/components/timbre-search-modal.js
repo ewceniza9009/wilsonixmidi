@@ -13,6 +13,7 @@ import { escapeHtml as esc } from "../utils/escape-html.js";
 
 const CATEGORY_TABS = [
   { id: "ALL", label: "ALL" },
+  { id: "Pads & Background", label: "🌌 Pads & Background" },
   { id: "Acoustic Piano", label: "🎹 Acoustic Piano" },
   { id: "Electric Piano", label: "⚡ Electric Piano" },
   { id: "Organ", label: "🎶 Organ" },
@@ -20,7 +21,6 @@ const CATEGORY_TABS = [
   { id: "Brass", label: "🎺 Brass" },
   { id: "Woodwind", label: "🎷 Woodwind / Sax" },
   { id: "Guitar", label: "🎸 Guitar & Bass" },
-  { id: "Synth Pad", label: "🌌 Synth Pad" },
   { id: "VA Synth", label: "⚙ VA Synth" },
   { id: "Bells & Mallet", label: "🔔 Bells & Mallets" },
   { id: "Percussion", label: "🥁 Drums & Percussion" },
@@ -205,11 +205,11 @@ export class TimbreSearchModal {
     });
   }
 
-  open({ layerIndex, zoneKey, currentInst, currentName, onSelect }) {
+  open({ layerIndex, zoneKey, currentInst, currentName, onSelect, initialCategory = "ALL" } = {}) {
     this.isOpen = true;
     this.currentTarget = { layerIndex, zoneKey, currentInst, currentName, onSelect };
     this.searchQuery = "";
-    this.activeCategory = "ALL";
+    this.activeCategory = initialCategory || "ALL";
 
     if (this.inputEl) {
       this.inputEl.value = "";
@@ -220,7 +220,15 @@ export class TimbreSearchModal {
     if (this.clearBtn) this.clearBtn.style.display = "none";
 
     // Set title
-    if (layerIndex !== undefined && layerIndex !== null) {
+    const isPadMode = this.activeCategory === "Pads & Background" || this.activeCategory === "Synth Pad";
+    if (isPadMode) {
+      this.titleEl.textContent =
+        layerIndex !== undefined && layerIndex !== null
+          ? `SELECT BACKGROUND PAD — LAYER ${layerIndex + 1}`
+          : "SELECT BACKGROUND PAD";
+      this.subEl.textContent =
+        "Browse warm worship pads, ambient swells, shimmer sweeps & atmospheric sounds";
+    } else if (layerIndex !== undefined && layerIndex !== null) {
       this.titleEl.textContent = `SELECT TIMBRE — LAYER ${layerIndex + 1}`;
       this.subEl.textContent = "Select from 180+ studio PCM samples & Triton VA synth voices";
     } else if (zoneKey) {
@@ -232,9 +240,14 @@ export class TimbreSearchModal {
       this.badgeEl.textContent = currentName ? `Current: ${currentName}` : "";
     }
 
-    // Reset active category chip
+    // Set active category chip
     this.pillsContainer?.querySelectorAll(".timbre-cat-chip").forEach((c) => {
-      c.classList.toggle("active", c.getAttribute("data-category") === "ALL");
+      const chipCat = c.getAttribute("data-category");
+      c.classList.toggle(
+        "active",
+        chipCat === this.activeCategory ||
+          (isPadMode && (chipCat === "Pads & Background" || chipCat === "Synth Pad")),
+      );
     });
 
     this.renderResults();
@@ -266,12 +279,34 @@ export class TimbreSearchModal {
       if (cat !== "ALL") {
         const itemCat = (t.category || "").toLowerCase();
         const tabLower = cat.toLowerCase();
-        if (cat === "Guitar" && !(itemCat.includes("guitar") || itemCat.includes("bass"))) return false;
-        if (cat === "Percussion" && !(itemCat.includes("percussion") || itemCat.includes("drum") || itemCat.includes("sfx"))) return false;
-        if (cat === "Woodwind" && !(itemCat.includes("woodwind") || itemCat.includes("sax") || itemCat.includes("flute"))) return false;
-        if (cat === "Strings" && !(itemCat.includes("string") || itemCat.includes("choir") || itemCat.includes("vocal"))) return false;
-        if (cat === "VA Synth" && t.kind !== "va") return false;
-        if (!["Guitar", "Percussion", "Woodwind", "Strings", "VA Synth"].includes(cat)) {
+        if (cat === "Pads & Background" || cat === "Synth Pad" || tabLower.includes("pad")) {
+          const nameLower = (t.name || "").toLowerCase();
+          const isPad =
+            itemCat.includes("pad") ||
+            nameLower.includes("pad") ||
+            itemCat.includes("ambient") ||
+            nameLower.includes("ambient") ||
+            itemCat.includes("swell") ||
+            nameLower.includes("swell") ||
+            itemCat.includes("shimmer") ||
+            nameLower.includes("shimmer") ||
+            nameLower.includes("universe") ||
+            nameLower.includes("fantasia") ||
+            itemCat.includes("choir") ||
+            nameLower.includes("choir") ||
+            itemCat.includes("strings");
+          if (!isPad) return false;
+        } else if (cat === "Guitar" && !(itemCat.includes("guitar") || itemCat.includes("bass"))) {
+          return false;
+        } else if (cat === "Percussion" && !(itemCat.includes("percussion") || itemCat.includes("drum") || itemCat.includes("sfx"))) {
+          return false;
+        } else if (cat === "Woodwind" && !(itemCat.includes("woodwind") || itemCat.includes("sax") || itemCat.includes("flute"))) {
+          return false;
+        } else if (cat === "Strings" && !(itemCat.includes("string") || itemCat.includes("choir") || itemCat.includes("vocal"))) {
+          return false;
+        } else if (cat === "VA Synth" && t.kind !== "va") {
+          return false;
+        } else if (!["Guitar", "Percussion", "Woodwind", "Strings", "VA Synth", "Pads & Background", "Synth Pad"].includes(cat)) {
           if (!itemCat.includes(tabLower)) return false;
         }
       }

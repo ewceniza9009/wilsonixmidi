@@ -72,6 +72,47 @@ const fxOptionsHTML = (selectedIx) => {
     .join("");
 };
 
+export const isPadTimbre = (instKey, name = "") => {
+  if (!instKey && !name) return false;
+  const text = `${instKey || ""} ${name || ""}`.toLowerCase();
+  return (
+    text.includes("pad") ||
+    text.includes("ambient") ||
+    text.includes("swell") ||
+    text.includes("shimmer") ||
+    text.includes("universe") ||
+    text.includes("fantasia") ||
+    text.includes("choir") ||
+    text.includes("strings") ||
+    text.includes("air")
+  );
+};
+
+const padQuickOptionsHTML = (selectedInst) => {
+  return `
+    <option value="" disabled ${!selectedInst ? "selected" : ""}>⚡ Quick Pad Presets...</option>
+    <optgroup label="WARM WORSHIP & AMBIENT PADS">
+      <option value="roland_sc55_warm_pad" ${selectedInst === "roland_sc55_warm_pad" ? "selected" : ""}>Roland SC-55 Warm Pad</option>
+      <option value="m1_universe" ${selectedInst === "m1_universe" ? "selected" : ""}>Korg M1 Universe (Celestial)</option>
+      <option value="x5d_solar_flare" ${selectedInst === "x5d_solar_flare" ? "selected" : ""}>X5D Solar Flare (Warm Swell)</option>
+      <option value="x5d_ancient_sun" ${selectedInst === "x5d_ancient_sun" ? "selected" : ""}>X5D Ancient Sun (Ambient Pad)</option>
+      <option value="va:A051" ${selectedInst === "va:A051" ? "selected" : ""}>Deep Ambient Sine (VA Synth)</option>
+      <option value="va:A016" ${selectedInst === "va:A016" ? "selected" : ""}>Pop Synth Pad (VA Synth)</option>
+      <option value="sy_chorus_swell" ${selectedInst === "sy_chorus_swell" ? "selected" : ""}>Juno Chorus Pad Swell</option>
+    </optgroup>
+    <optgroup label="SHIMMER, AIR & CHORAL TEXTURES">
+      <option value="x5d_moonstone" ${selectedInst === "x5d_moonstone" ? "selected" : ""}>X5D Moonstone (Shimmer)</option>
+      <option value="x5d_ariana" ${selectedInst === "x5d_ariana" ? "selected" : ""}>X5D Ariana (Vocal Air Pad)</option>
+      <option value="roland_d50_fantasia" ${selectedInst === "roland_d50_fantasia" ? "selected" : ""}>Roland D-50 Fantasia</option>
+      <option value="va:A018" ${selectedInst === "va:A018" ? "selected" : ""}>Icy Piano Pad (VA Synth)</option>
+      <option value="string_ensemble_1" ${selectedInst === "string_ensemble_1" ? "selected" : ""}>Triton Stereo Strings Swell</option>
+      <option value="choir_aahs" ${selectedInst === "choir_aahs" ? "selected" : ""}>Cathedral Choir Aahs</option>
+      <option value="angelic_choir" ${selectedInst === "angelic_choir" ? "selected" : ""}>Angelic Worship Choir</option>
+    </optgroup>
+    <option value="__browse_all__">🔍 Browse All 30+ Pads in Modal...</option>
+  `;
+};
+
 export class MultiLayerUI {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
@@ -306,8 +347,13 @@ export class MultiLayerUI {
                 <input type="range" class="macro-slider" data-macro="tone" min="0" max="1" step="0.01" value="${macros.tone}" />
                 <span class="macro-val" id="macro-val-tone">${Math.round(macros.tone * 100)}%</span>
               </div>
-              <div class="macro-cell" title="Pad: Tonic Ambient Drone Volume">
-                <span class="macro-label">PAD</span>
+              <div class="macro-cell" title="Pad: Tonic Ambient Drone Background Sound & Volume">
+                <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
+                  <span class="macro-label">PAD</span>
+                  <button type="button" class="drone-quick-toggle-btn ${tonicDroneEngine.activeKey ? 'active' : ''}" id="combi-drone-toggle" title="Toggle Infinite Background Drone Pad">
+                    ${tonicDroneEngine.activeKey ? `● ${tonicDroneEngine.activeKey}` : 'DRONE'}
+                  </button>
+                </div>
                 <input type="range" class="macro-slider" data-macro="pad" min="0" max="1" step="0.01" value="${macros.pad}" />
                 <span class="macro-val" id="macro-val-pad">${Math.round(macros.pad * 100)}%</span>
               </div>
@@ -330,6 +376,7 @@ export class MultiLayerUI {
                 ${multiLayerEngine.layers.map((layer, idx) => {
                   const hasSolo = multiLayerEngine.layers.some((l) => l.solo);
                   const isDimmed = hasSolo && !layer.solo;
+                  const isPad = isPadTimbre(layer.inst, layer.name);
                   return `
                     <div class="perform-layer-row ${layer.enabled ? "active" : "muted"} ${layer.solo ? "is-soloed" : ""} ${isDimmed ? "solo-dimmed" : ""}" id="perform-layer-${idx}">
                       <span class="perform-layer-badge">L${idx + 1}</span>
@@ -347,6 +394,23 @@ export class MultiLayerUI {
                           <span class="timbre-trigger-name">${esc(getTimbreDisplayName(layer.inst, layer.name))}</span>
                           <span class="timbre-trigger-icon">🔍</span>
                         </button>
+                      </div>
+
+                      <div class="perform-pad-bay">
+                        <button type="button" class="perform-pad-btn ${isPad ? "active" : ""}" data-layer="${idx}" title="Open Background Pad Browser for Layer ${idx + 1}">
+                          🌌 PAD
+                        </button>
+                        <select class="perform-pad-select" data-layer="${idx}" title="Quick Background Pad Presets for Layer ${idx + 1}">
+                          <option value="" disabled ${!isPad ? "selected" : ""}>Pad...</option>
+                          <option value="roland_sc55_warm_pad" ${layer.inst === "roland_sc55_warm_pad" ? "selected" : ""}>Warm Pad</option>
+                          <option value="m1_universe" ${layer.inst === "m1_universe" ? "selected" : ""}>M1 Universe</option>
+                          <option value="x5d_solar_flare" ${layer.inst === "x5d_solar_flare" ? "selected" : ""}>Solar Swell</option>
+                          <option value="x5d_ancient_sun" ${layer.inst === "x5d_ancient_sun" ? "selected" : ""}>Ancient Sun</option>
+                          <option value="va:A051" ${layer.inst === "va:A051" ? "selected" : ""}>Sine Ambient</option>
+                          <option value="string_ensemble_1" ${layer.inst === "string_ensemble_1" ? "selected" : ""}>Strings Swell</option>
+                          <option value="choir_aahs" ${layer.inst === "choir_aahs" ? "selected" : ""}>Choir Aahs</option>
+                          <option value="__browse_all__">🔍 All Pads...</option>
+                        </select>
                       </div>
 
                       <div class="perform-fader-bay">
@@ -378,6 +442,7 @@ export class MultiLayerUI {
                   (layer, idx) => {
                     const hasSolo = multiLayerEngine.layers.some((l) => l.solo);
                     const isDimmed = hasSolo && !layer.solo;
+                    const isPad = isPadTimbre(layer.inst, layer.name);
                     return `
               <div class="layer-channel-strip ${layer.enabled ? "active" : "muted"} ${layer.solo ? "is-soloed" : ""} ${isDimmed ? "solo-dimmed" : ""}" id="layer-strip-${idx}">
                 <div class="strip-header">
@@ -408,6 +473,21 @@ export class MultiLayerUI {
                     </div>
                     <span class="timbre-trigger-icon">🔍</span>
                   </button>
+                </div>
+
+                <!-- Dedicated Background Pad Bar on the Card -->
+                <div class="strip-pad-bay">
+                  <div class="strip-pad-header">
+                    <span class="strip-pad-label ${isPad ? "active-pad" : ""}">
+                      <span class="pad-icon">🌌</span> ${isPad ? "BACKGROUND PAD ACTIVE" : "PAD / BG SOUND"}
+                    </span>
+                    <button type="button" class="strip-pad-browse-btn" data-layer="${idx}" title="Open all background pads in modal">
+                      ALL PADS ▾
+                    </button>
+                  </div>
+                  <select class="strip-pad-quick-select" data-layer="${idx}" title="Quick Background Pad Presets for Layer ${idx + 1}">
+                    ${padQuickOptionsHTML(layer.inst)}
+                  </select>
                 </div>
 
                 <!-- Dedicated Layer Effects Combo Box -->
@@ -443,7 +523,7 @@ export class MultiLayerUI {
                     <span class="oct-mini-val" id="oct-val-${idx}">${layer.oct >= 0 ? "+" : ""}${layer.oct}</span>
                     <button class="oct-mini-btn" data-layer="${idx}" data-oct="1">+12</button>
                   </div>
-                  <span class="strip-role-tag">${idx === 0 ? "PRIMARY" : idx === 1 ? "ENSEMBLE" : idx === 2 ? "ACCENT" : "SUB/BASS"}</span>
+                  <span class="strip-role-tag ${isPad ? "pad-tag-active" : ""}">${isPad ? "🌌 PAD / BG" : (idx === 0 ? "PRIMARY" : idx === 1 ? "ENSEMBLE" : idx === 2 ? "ACCENT" : "SUB/BASS")}</span>
                 </div>
               </div>
             `;
@@ -816,6 +896,7 @@ export class MultiLayerUI {
 
     // Instrument Pickers (modal popup trigger)
     this.bindTimbreTriggers();
+    this.bindPadTriggers();
 
     // Effects Combo Box Pickers per Rack
     this.container.querySelectorAll(".layer-fx-select").forEach((sel) => {
@@ -943,6 +1024,75 @@ export class MultiLayerUI {
     });
   }
 
+  assignPadToLayer(layerIdx, instKey) {
+    if (!instKey || instKey === "__browse_all__") return;
+    multiLayerEngine.setLayerInstrument(layerIdx, instKey);
+    // Ensure the layer is unmuted and active so the pad immediately sounds
+    if (multiLayerEngine.layers[layerIdx]) {
+      multiLayerEngine.layers[layerIdx].enabled = true;
+      if (multiLayerEngine.layers[layerIdx].gain === 0) {
+        multiLayerEngine.setLayerGain(layerIdx, 0.65);
+      }
+    }
+    this.syncActiveScene();
+    this.render();
+    this.bindEvents();
+  }
+
+  bindPadTriggers() {
+    // Pad / Background Browse Buttons (opens modal with Pads & Background pre-selected)
+    this.container.querySelectorAll(".strip-pad-browse-btn, .perform-pad-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const layerIdx = parseInt(btn.getAttribute("data-layer") || "0", 10);
+        const layer = multiLayerEngine.layers[layerIdx];
+        timbreSearchModal.open({
+          layerIndex: layerIdx,
+          initialCategory: "Pads & Background",
+          currentInst: layer?.inst,
+          currentName: layer?.name,
+          onSelect: (val) => {
+            this.assignPadToLayer(layerIdx, val);
+          },
+        });
+      });
+    });
+
+    // Quick Background Pad Select dropdowns
+    this.container.querySelectorAll(".strip-pad-quick-select, .perform-pad-select").forEach((sel) => {
+      sel.addEventListener("change", (e) => {
+        const layerIdx = parseInt(sel.getAttribute("data-layer") || "0", 10);
+        const val = e.target.value;
+        if (val === "__browse_all__") {
+          const layer = multiLayerEngine.layers[layerIdx];
+          timbreSearchModal.open({
+            layerIndex: layerIdx,
+            initialCategory: "Pads & Background",
+            currentInst: layer?.inst,
+            currentName: layer?.name,
+            onSelect: (selectedVal) => {
+              this.assignPadToLayer(layerIdx, selectedVal);
+            },
+          });
+        } else if (val) {
+          this.assignPadToLayer(layerIdx, val);
+        }
+      });
+    });
+
+    // Combi Drone Pad Quick Toggle
+    const droneToggleBtn = this.container.querySelector("#combi-drone-toggle");
+    droneToggleBtn?.addEventListener("click", () => {
+      if (tonicDroneEngine.activeKey) {
+        tonicDroneEngine.stopDrone({ fadeSec: 1.5 });
+      } else {
+        const key = multiLayerEngine.activeCombi?.key || "C";
+        tonicDroneEngine.playDrone(key, { crossfadeSec: 1.2 });
+      }
+      this.render();
+      this.bindEvents();
+    });
+  }
+
   updateLayerFaders() {
     const presetSelect = this.container.querySelector("#combi-preset-select");
     if (presetSelect && multiLayerEngine.activeCombi?.id) {
@@ -979,6 +1129,32 @@ export class MultiLayerUI {
           badgeSpan.className = `timbre-trigger-badge ${isVa ? "badge-va" : "badge-pcm"}`;
           badgeSpan.textContent = isVa ? "VA" : "PCM";
         }
+      }
+
+      const isPad = isPadTimbre(l.inst, l.name);
+      const padSelect = this.container.querySelector(`.strip-pad-quick-select[data-layer="${i}"]`);
+      if (padSelect && l.inst) {
+        if ([...padSelect.options].some((o) => o.value === l.inst)) {
+          padSelect.value = l.inst;
+        }
+      }
+      const perfPadSelect = this.container.querySelector(`.perform-pad-select[data-layer="${i}"]`);
+      if (perfPadSelect && l.inst) {
+        if ([...perfPadSelect.options].some((o) => o.value === l.inst)) {
+          perfPadSelect.value = l.inst;
+        }
+      }
+      const perfPadBtn = this.container.querySelector(`.perform-pad-btn[data-layer="${i}"]`);
+      if (perfPadBtn) perfPadBtn.classList.toggle("active", isPad);
+      const padLabel = this.container.querySelector(`#layer-strip-${i} .strip-pad-label`);
+      if (padLabel) {
+        padLabel.classList.toggle("active-pad", isPad);
+        padLabel.innerHTML = `<span class="pad-icon">🌌</span> ${isPad ? "BACKGROUND PAD ACTIVE" : "PAD / BG SOUND"}`;
+      }
+      const roleTag = this.container.querySelector(`#layer-strip-${i} .strip-role-tag`);
+      if (roleTag) {
+        roleTag.classList.toggle("pad-tag-active", isPad);
+        roleTag.innerText = isPad ? "🌌 PAD / BG" : (i === 0 ? "PRIMARY" : i === 1 ? "ENSEMBLE" : i === 2 ? "ACCENT" : "SUB/BASS");
       }
 
       const nameEl = this.container.querySelector(
@@ -1022,6 +1198,12 @@ export class MultiLayerUI {
       if (octVal) octVal.innerText = octText;
       if (perfOctVal) perfOctVal.innerText = octText;
     });
+
+    const droneToggleBtn = this.container.querySelector("#combi-drone-toggle");
+    if (droneToggleBtn) {
+      droneToggleBtn.classList.toggle("active", !!tonicDroneEngine.activeKey);
+      droneToggleBtn.innerText = tonicDroneEngine.activeKey ? `● ${tonicDroneEngine.activeKey}` : "DRONE";
+    }
   }
 
   triggerLayerActivity(layerIdx, vel, gain) {

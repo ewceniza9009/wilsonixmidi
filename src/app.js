@@ -312,6 +312,7 @@ class MidiKeyEliteApp {
     // Virtual Keyboard - render immediately (always visible at bottom)
     try {
       this.virtualKeyboard = new VirtualKeyboardUI("virtual-keyboard-mount");
+      registerComponent("virtualKeyboard", this.virtualKeyboard);
       this._viewsRendered.add("keys");
     } catch (e) {
       console.warn("VirtualKeyboardUI init:", e);

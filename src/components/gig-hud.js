@@ -723,11 +723,76 @@ export class GigHudUI {
     );
   }
 
+  isPadSound(instKey) {
+    if (!instKey) return false;
+    const text = String(instKey).toLowerCase();
+    return (
+      text.includes("pad") ||
+      text.includes("ambient") ||
+      text.includes("swell") ||
+      text.includes("shimmer") ||
+      text.includes("universe") ||
+      text.includes("fantasia") ||
+      text.includes("choir") ||
+      text.includes("string") ||
+      text.includes("air")
+    );
+  }
+
+  getLayerSoundbankGroups() {
+    const warmPads = [
+      { id: "roland_sc55_warm_pad", name: "Roland SC-55 Warm Pad" },
+      { id: "m1_universe", name: "Korg M1 Universe (Celestial Pad)" },
+      { id: "x5d_solar_flare", name: "X5D Solar Flare (Warm Swell)" },
+      { id: "x5d_ancient_sun", name: "X5D Ancient Sun (Ambient Pad)" },
+      { id: "va:A051", name: "Deep Ambient Sine (VA Synth)" },
+      { id: "va:A016", name: "Pop Synth Pad (VA Synth)" },
+      { id: "sy_chorus_swell", name: "Juno Chorus Pad Swell" },
+      { id: "bloom_paris_pad", name: "Bloom PAD - Paris" },
+    ];
+
+    const shimmerAirPads = [
+      { id: "x5d_moonstone", name: "X5D Moonstone (Celestial Shimmer)" },
+      { id: "x5d_ariana", name: "X5D Ariana (Vocal Air Pad)" },
+      { id: "roland_d50_fantasia", name: "Roland D-50 Fantasia" },
+      { id: "roland_metal_pad", name: "Roland Shimmer Metal Pad" },
+      { id: "va:A018", name: "Icy Piano Pad (VA Synth)" },
+    ];
+
+    const stringsChoir = [
+      { id: "string_ensemble_1", name: "Triton Stereo Strings Swell" },
+      { id: "choir_aahs", name: "Cathedral Choir Aahs" },
+      { id: "angelic_choir", name: "Angelic Worship Choir" },
+      { id: "x5d_full_strings", name: "X5D Full Symphonic Strings" },
+      { id: "m1_symphonic", name: "Korg M1 Symphonic Strings" },
+      { id: "m1_ooh_ahh", name: "Korg M1 03 Ooh-Ahh" },
+      { id: "violin", name: "Solo Violin" },
+      { id: "cello", name: "Warm Cello" },
+    ];
+
+    const padIds = new Set([
+      ...warmPads.map((p) => p.id),
+      ...shimmerAirPads.map((p) => p.id),
+      ...stringsChoir.map((p) => p.id),
+    ]);
+
+    const otherInstruments = Object.values(HD_SOUNDBANKS)
+      .filter((b) => !padIds.has(b.id))
+      .map((b) => ({ id: b.id, name: b.name }));
+
+    return [
+      { label: "🌌 WARM & WORSHIP PADS (BACKGROUND)", items: warmPads },
+      { label: "✨ SHIMMER & VOCAL AIR PADS", items: shimmerAirPads },
+      { label: "🎻 STRINGS & CHOIR SWELLS", items: stringsChoir },
+      { label: "🎹 KEYS, ORGANS & OTHER LAYERS", items: otherInstruments },
+    ];
+  }
+
   render() {
     if (!this.container) return;
 
     const presetGroups = this.getPerformancePresetGroups();
-    const soundbanksList = this.getLayerSoundbanks();
+    const layerGroups = this.getLayerSoundbankGroups();
     const activeSoundId = this.getActiveSoundId();
     const activeSoundName = this.getActiveSoundName();
     const soundIcon = this.getSoundIcon();
@@ -737,6 +802,10 @@ export class GigHudUI {
       (multiLayerEngine.layers[1]?.enabled ?? false);
     const activeLayerBank =
       multiLayerEngine.layers[1]?.inst || "string_ensemble_1";
+    const isLayerPad = this.isPadSound(activeLayerBank);
+    const layerBtnLabel = isLayerActive
+      ? (isLayerPad ? "🌌 PAD ON" : "LAYER ON")
+      : (isLayerPad ? "🌌 PAD" : "LAYER");
 
     const curBank = registrationManager.currentBank || "A";
     const curSlot = registrationManager.currentSlot || 1;
@@ -870,16 +939,24 @@ export class GigHudUI {
             <!-- Bay 2: Sound Layer 2 & Pad Ducking -->
             <div class="hud-drawer-bay layer-bay">
               <div class="hud-layer-box">
-                <button class="layer-toggle-btn ${isLayerActive ? "active" : ""}" id="btn-toggle-layer" title="Toggle 2nd Sound Layer">
-                  ${isLayerActive ? "LAYER ON" : "LAYER"}
+                <button class="layer-toggle-btn ${isLayerActive ? "active" : ""} ${isLayerPad ? "is-pad" : ""}" id="btn-toggle-layer" title="${isLayerPad ? "Toggle Background Ambient Pad Layer" : "Toggle 2nd Sound Layer"}">
+                  ${layerBtnLabel}
                 </button>
                 <select class="hud-layer-select ${isLayerActive ? "active" : ""}" id="hud-layer-select" title="Choose 2nd Layer Instrument">
-                  ${soundbanksList
+                  ${layerGroups
                     .map(
-                      (b) => `
-                    <option value="${b.id}" ${activeLayerBank === b.id ? "selected" : ""}>
-                      + ${escapeHtml(b.name)}
-                    </option>
+                      (grp) => `
+                    <optgroup label="${grp.label}">
+                      ${grp.items
+                        .map(
+                          (b) => `
+                        <option value="${b.id}" ${activeLayerBank === b.id ? "selected" : ""}>
+                          + ${escapeHtml(b.name)}
+                        </option>
+                      `,
+                        )
+                        .join("")}
+                    </optgroup>
                   `,
                     )
                     .join("")}
@@ -993,8 +1070,9 @@ export class GigHudUI {
     bankBtns.forEach((btn) => {
       let lastTap = 0;
       const handleBank = (e) => {
-        if (e && e.type === "pointerdown") {
+        if (e) {
           e.preventDefault();
+          e.stopPropagation();
         }
         const now = performance.now();
         if (now - lastTap < 80) return;
@@ -1291,14 +1369,22 @@ export class GigHudUI {
     const isLayerActive =
       multiLayerEngine.isDualLayerActive &&
       (multiLayerEngine.layers[1]?.enabled ?? false);
+    const activeLayerBank =
+      multiLayerEngine.layers[1]?.inst || "string_ensemble_1";
+    const isLayerPad = this.isPadSound(activeLayerBank);
+
     if (layerBtn) {
       layerBtn.classList.toggle("active", isLayerActive);
-      layerBtn.innerText = isLayerActive ? "LAYER ON" : "LAYER";
+      layerBtn.classList.toggle("is-pad", isLayerPad);
+      layerBtn.innerText = isLayerActive
+        ? (isLayerPad ? "🌌 PAD ON" : "LAYER ON")
+        : (isLayerPad ? "🌌 PAD" : "LAYER");
+      layerBtn.title = isLayerPad
+        ? "Toggle Background Ambient Pad Layer"
+        : "Toggle 2nd Sound Layer";
     }
     if (layerSelect) {
       layerSelect.classList.toggle("active", isLayerActive);
-      const activeLayerBank =
-        multiLayerEngine.layers[1]?.inst || "string_ensemble_1";
       layerSelect.value = activeLayerBank;
     }
 

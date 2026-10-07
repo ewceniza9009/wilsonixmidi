@@ -998,6 +998,29 @@ export class VirtualKeyboardUI {
       synthEngine.setModWheel(amount);
     };
 
+    this.syncPitchBend = (semitones) => {
+      const clamped = Math.max(-2, Math.min(2, semitones));
+      const norm = 0.5 - (clamped / 4);
+      const pct = `${norm * 100}%`;
+      if (pitchThumb) pitchThumb.style.top = pct;
+      if (sidePitchRoller) sidePitchRoller.style.top = pct;
+      if (sidePitchBadge) {
+        sidePitchBadge.textContent =
+          (clamped > 0.05 ? "+" : "") + clamped.toFixed(1) + " ST";
+      }
+    };
+
+    this.syncModWheel = (amount) => {
+      const clamped = Math.max(0, Math.min(1, amount));
+      const norm = 1.0 - clamped;
+      const pct = `${norm * 100}%`;
+      if (modThumb) modThumb.style.top = pct;
+      if (sideModRoller) sideModRoller.style.top = pct;
+      if (sideModBadge) {
+        sideModBadge.textContent = `${Math.round(clamped * 100)}%`;
+      }
+    };
+
     // Bind Pitch Tracks (top mini-wheel & magnified side-wheel) with Pointer Events + Pointer Capture
     const bindPitchElement = (trackEl) => {
       if (!trackEl) return;

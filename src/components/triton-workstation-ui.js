@@ -717,6 +717,7 @@ export class TritonWorkstationUI {
           // Selecting a bank tab only displays that bank's programs in the TouchView grid.
           // It does NOT recall or load the first preset, and plays NO sound.
           // The currently playing sound continues playing undisturbed until the user explicitly taps a program in the grid!
+          this._suppressProgramSelection = true;
           try {
             localStorage.setItem("wilsonix_triton_active_bank", this.activeBankId);
           } catch (e) {}
@@ -738,6 +739,9 @@ export class TritonWorkstationUI {
               .join("");
             this.bindProgramGrid();
           }
+          setTimeout(() => {
+            this._suppressProgramSelection = false;
+          }, 150);
         }
       };
       btn.addEventListener("click", handleBank);
@@ -752,6 +756,7 @@ export class TritonWorkstationUI {
           e.preventDefault();
           e.stopPropagation();
         }
+        if (this._suppressProgramSelection) return;
         const now = performance.now();
         if (now - lastTap < 80) return;
         lastTap = now;

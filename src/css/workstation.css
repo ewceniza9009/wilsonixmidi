@@ -559,6 +559,17 @@ body.mobile-stage-keys .studio-keyboard-deck {
   box-shadow: 0 0 6px rgba(0, 210, 255, 0.4);
 }
 
+.layer-toggle-btn.is-pad {
+  color: #c084fc;
+}
+
+.layer-toggle-btn.is-pad.active {
+  background: rgba(168, 85, 247, 0.28);
+  color: #e9d5ff;
+  border-color: #c084fc;
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.45);
+}
+
 .hud-layer-select {
   background: transparent;
   color: #64748b;

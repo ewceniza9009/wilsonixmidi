@@ -17,6 +17,7 @@ import { scaleLock } from "./scale-lock.js";
 import { arpeggiator } from "../audio/arpeggiator.js";
 import { midiOutManager } from "./midi-out.js";
 import { nativeMidiBridge } from "./native-midi-bridge.js";
+import { getComponent } from "../components/component-registry.js";
 
 export class MidiManager {
   constructor() {
@@ -194,6 +195,7 @@ export class MidiManager {
           const modNorm = ccValue / 127;
           synthEngine.setModWheel(modNorm);
           multiLayerEngine.setModWheel(modNorm);
+          getComponent("virtualKeyboard")?.syncModWheel?.(modNorm);
         } else if (ccNumber === 7) {
           // Volume CC: Control master audio core volume
           audioCore.setMasterVolume(ccValue / 127);
@@ -222,6 +224,8 @@ export class MidiManager {
         const bendValue = (msb << 7) | lsb; // 0 to 16383, 8192 is center
         const semitones = ((bendValue - 8192) / 8192) * 2; // +/- 2 semitones standard
         synthEngine.setPitchBend(semitones);
+        multiLayerEngine.setPitchBend(semitones);
+        getComponent("virtualKeyboard")?.syncPitchBend?.(semitones);
         break;
       }
     }
