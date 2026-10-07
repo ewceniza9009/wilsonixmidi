@@ -8,7 +8,7 @@
 [![Audio: Web Audio API](https://img.shields.io/badge/Audio-Direct%20PCM%20%2B%20VA%20Engine-FF6F00?style=for-the-badge&logo=audio)](https://github.com/ewceniza9009/wilsonixmidi)
 [![Framework: Tauri v2 + Vite](https://img.shields.io/badge/Framework-Tauri%20v2%20%7C%20Rust-673AB7?style=for-the-badge)](https://tauri.app/)
 [![License: Proprietary](https://img.shields.io/badge/License-WILSONIX%20Commercial-red?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi)
-[![Version: v2.2.5](https://img.shields.io/badge/Version-v2.2.5%20(Build%2029)-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
+[![Version: v2.2.6](https://img.shields.io/badge/Version-v2.2.6%20(Build%2030)-blue?style=for-the-badge)](https://github.com/ewceniza9009/wilsonixmidi/releases)
 
 ---
 
@@ -32,18 +32,51 @@ Traditional live keyboard rigs are heavy, fragile, and absurdly expensive:
 
 ---
 
-## 🚀 Official Production Downloads (v2.2.5 Latest Release)
+## 🚀 Official Production Downloads (v2.2.6 Latest Release)
 
 | Package / Distribution        | Target Operating System           |  Architecture  | Download |
 | :---------------------------- | :-------------------------------- | :------------: | :------: |
 | **Android Package (APK)**      | Android 7.0+ (Nougat and later)  | ARM64 / x86_64 | [⬇️ Releases page](https://github.com/ewceniza9009/wilsonixmidi/releases) |
 | **Windows Desktop Installer** | Windows 10 / 11                   |      x64       | [⬇️ Releases page](https://github.com/ewceniza9009/wilsonixmidi/releases) |
 
-_Official binaries and checksums are hosted on the [GitHub Releases page](https://github.com/ewceniza9009/wilsonixmidi/releases). Grab the latest `wilsonix-midikey.apk` or the NSIS `.exe` setup from there._
+_Official binaries and checksums are hosted on the [GitHub Releases page](https://github.com/ewceniza9009/wilsonixmidi/releases). Grab the latest `wilsonix-midikey-v2.2.6.apk` or the NSIS `wilsonix-midikey-v2.2.6-setup.exe` setup from there._
 
 ---
 
-## 🆕 What's New in v2.2.5
+## 🆕 What's New in v2.2.6
+
+A massive stage-performance and latency optimization release across the audio core and touch interface:
+
+### ⚡ Ultra-Low Latency Audio Engine (Phase 1)
+- **Adaptive Audio Cushion & 5ms Slices** — Dynamic C++ ring cushion with consumer-side rebuffering keeps audio ring fill tightly bound around 12ms for responsive ≤28ms round-trip stage audio without underruns.
+- **Native Oboe/AAudio Bridge Streamlining** — High-priority audio callback pipeline with instant fallback and persistent profile binding.
+
+### 🎹 High-Performance Touch Hot Path (Phase 2)
+- **Direct Pointer Dispatch** — Touch interactions bypass heavyweight DOM `TouchEvent` construction for direct low-latency `triggerPointerDown/Move/Release` handling.
+- **Glissando & Multi-Touch Fixes** — Restored slide-in note triggers when fingers enter the keybed from controls, and fixed `POINTER_UP` remaining-touch retention to eliminate accidental held-note cutoffs.
+- **Bridge Event Isolation** — Synthetic touch events dispatched for hardware controls are isolated so they never interfere with on-screen keyboard note tracking.
+
+### 💎 Pristine Resampling & Audio Quality (Phase 3)
+- **4-Point Catmull-Rom Cubic Hermite Interpolation** — High-fidelity cubic interpolation for all pitch-shifted and loopable PCM soundfont playback with strict pre-loop attack boundary safety.
+- **Ultra-Fast Real-Time Budget** — Hermite evaluation loop benchmarked strictly under 15ms per 100k samples.
+
+### 🎛️ Seamless Stage Preset Transitions (Phase 4)
+- **Click-Free Preset Switching** — Scheduled 25ms audio hold dip completely flushes previous reverb/delay tails before bringing in the new patch, preventing clicks and sound bleed.
+
+### 🎨 Elite GIG-HUD & Workstation UI
+- **Vector Capsule Theme Switch** — Replaced legacy controls with a sleek SVG vector pill toggle supporting smooth Dark and Light/Sunlight mode transitions.
+- **Bulletproof Latency Telemetry** — Null-safe type-guarded numeric formatting preventing any `toFixed()` runtime exceptions under edge-case inputs.
+- **GPU Containment & CSS Performance** — Strict CSS layout containment and backdrop-filter optimizations eliminating rendering stalls on mobile and tablet GPUs.
+
+### 🧪 Quality Assurance & Testing
+- **236 Unit Tests Passing** (`npm test`) covering audio math, DSP knots, and latency popover edge cases.
+- **0 ESLint Warnings** (`npm run lint`).
+
+---
+
+## 📜 Previous Releases
+
+### What's New in v2.2.5
 
 A full stability, audio, and security hardening pass across the entire engine:
 
