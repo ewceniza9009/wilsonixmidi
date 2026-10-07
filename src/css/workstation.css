@@ -129,10 +129,15 @@ body.mobile-stage-keys .studio-keyboard-deck {
   flex: 1 1 auto;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: safe center;
   min-width: 0;
-  overflow: hidden;
+  overflow-x: auto;
+  scrollbar-width: none;
   padding: 0 6px;
+}
+
+.hud-center-group::-webkit-scrollbar {
+  display: none;
 }
 
 .hud-right-group {
@@ -3659,6 +3664,7 @@ select.midi-out-select[multiple] option:disabled {
 #app-root.view-triton #fx-rack-mount,
 #app-root.view-triton #middle-grid-section,
 #app-root.view-triton #groove-station-mount,
+#app-root.view-triton #demo-station-mount,
 #app-root.view-triton #media-player-mount {
   display: none !important;
 }

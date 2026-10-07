@@ -17,6 +17,8 @@ export class RegistrationManager {
     this.storageKey = "wilsonix_midikey_registrations";
     this.currentBank = localStorage.getItem("wilsonix_current_reg_bank") || "A"; // A, B, C, D
     this.currentSlot = parseInt(localStorage.getItem("wilsonix_current_reg_slot") || "1", 10); // 1-8
+    this.activeBank = this.currentBank;
+    this.activeSlot = this.currentSlot;
     this.banks = this.loadBanks();
     this.onRecallCallback = null;
 
@@ -196,6 +198,8 @@ export class RegistrationManager {
 
     this.currentBank = bank;
     this.currentSlot = slotNumber;
+    this.activeBank = bank;
+    this.activeSlot = slotNumber;
     try {
       localStorage.setItem("wilsonix_current_reg_bank", bank);
       localStorage.setItem("wilsonix_current_reg_slot", String(slotNumber));
@@ -271,9 +275,52 @@ export class RegistrationManager {
       if (this.onRecallCallback) {
         this.onRecallCallback({ bank, slot: slotNumber, preset: item });
       }
+      this.syncUi();
     } catch (e) {
       console.warn("Error recalling registration slot:", e);
     }
+  }
+
+  selectBank(bank) {
+    if (!bank || !["A", "B", "C", "D"].includes(bank)) return;
+    this.currentBank = bank;
+    try {
+      localStorage.setItem("wilsonix_current_reg_bank", bank);
+    } catch (e) {}
+
+    this.syncUi();
+
+    if (audioCore && typeof audioCore._diagToast === "function") {
+      audioCore._diagToast(`Bank ${bank} Selected`);
+    }
+  }
+
+  syncUi() {
+    try {
+      const gigHud = getComponent("gigHud");
+      if (gigHud && typeof gigHud.syncRegistrationUi === "function") {
+        gigHud.syncRegistrationUi();
+        return;
+      }
+      const bankBtns = document.querySelectorAll(".rig-bank-pill");
+      bankBtns.forEach((b) => {
+        b.classList.toggle("active", b.getAttribute("data-bank") === this.currentBank);
+      });
+      const currentBankSlots = this.banks[this.currentBank] || [];
+      const slotBtns = document.querySelectorAll(".rig-slot-pill");
+      slotBtns.forEach((sBtn) => {
+        const num = parseInt(sBtn.getAttribute("data-slot"), 10);
+        const slotData = currentBankSlots[num - 1];
+        const slotTitle = slotData?.name || `Rig ${this.currentBank}-${num}`;
+        sBtn.title = `Rig ${this.currentBank}-${num}: ${slotTitle} (Press F${num}, Shift+F${num} to Store)`;
+        const isSlotActive = this.activeBank === this.currentBank && this.activeSlot === num;
+        sBtn.classList.toggle("active", isSlotActive);
+      });
+      const saveBtn = document.getElementById("hud-rig-save-btn");
+      if (saveBtn) {
+        saveBtn.title = `Store Current Sound & FX to Active Slot (Shift+F${this.currentSlot || 1})`;
+      }
+    } catch (e) {}
   }
 
   bindKeyboardShortcuts() {
@@ -286,8 +333,7 @@ export class RegistrationManager {
       const matchedBank = fBankMap[e.code] || fBankMap[e.key?.toUpperCase()];
       if (matchedBank) {
         e.preventDefault();
-        this.currentBank = matchedBank;
-        this.recallSlot(matchedBank, this.currentSlot);
+        this.selectBank(matchedBank);
         return;
       }
 

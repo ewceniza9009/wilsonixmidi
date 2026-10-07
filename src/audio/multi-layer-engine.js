@@ -3823,7 +3823,7 @@ export class MultiLayerEngine {
         /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)
           ? 48
           : 96, // max simultaneous voices (16–128)
-      masterVolumePct: 72, // default master volume on load (0–100)
+      masterVolumePct: 80, // default master volume on load (0–100)
       // Keyboard
       defaultOctave: 4, // starting octave (1–7)
       defaultVelocity: 95, // default note velocity (1–127)
@@ -3863,6 +3863,20 @@ export class MultiLayerEngine {
             s.lastTab = raw.lastTab;
           } else {
             s.lastTab = "triton";
+          }
+        }
+      }
+    } catch (e) {}
+
+    this._masterPct = this.settings.masterVolumePct ?? 80;
+    try {
+      if (typeof localStorage !== "undefined") {
+        const savedVol = localStorage.getItem("wilsonix_master_volume_pct");
+        if (savedVol !== null) {
+          const parsed = parseInt(savedVol, 10);
+          if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) {
+            this._masterPct = parsed;
+            this.settings.masterVolumePct = parsed;
           }
         }
       }
@@ -4068,8 +4082,15 @@ export class MultiLayerEngine {
 
   setMasterVolumePct(pct) {
     this._masterPct = Math.max(0, Math.min(100, Math.round(pct)));
+    this.settings.masterVolumePct = this._masterPct;
     try {
       audioCore.setMasterVolume(this._masterPct / 100);
+    } catch (e) {}
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem("wilsonix_master_volume_pct", String(this._masterPct));
+        localStorage.setItem("wilsonix_settings", JSON.stringify(this.settings));
+      }
     } catch (e) {}
     this.saveSessionSoon();
   }
@@ -4144,7 +4165,7 @@ export class MultiLayerEngine {
           activeCombiId: this.activeCombi?.id || null,
           activeCombiName: this.activeCombi?.name || null,
           activeSingleInst: this.activeSingleInst,
-          masterPct: this._masterPct ?? 50,
+          masterPct: this._masterPct ?? this.settings.masterVolumePct ?? 80,
           split: {
             enabled: this.isSplitMode,
             pointMidi: this.splitPointMidi,

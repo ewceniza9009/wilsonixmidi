@@ -277,15 +277,20 @@ class MidiKeyEliteApp {
       this.gigHud = new GigHudUI("gig-hud-mount", () => {
         this.licenseModal?.open();
       });
+      registerComponent("gigHud", this.gigHud);
     } catch (e) {
       console.warn("GigHudUI init:", e);
     }
 
     // 3b. Apply restored master volume to engine + slider UI
     try {
-      const pct = restoredSession && typeof restoredSession.masterPct === "number"
-        ? restoredSession.masterPct
-        : multiLayerEngine.settings.masterVolumePct;
+      const savedVolStr = localStorage.getItem("wilsonix_master_volume_pct");
+      const savedVol = savedVolStr !== null ? parseInt(savedVolStr, 10) : null;
+      const pct = (savedVol !== null && !isNaN(savedVol))
+        ? savedVol
+        : (restoredSession && typeof restoredSession.masterPct === "number"
+            ? restoredSession.masterPct
+            : (multiLayerEngine.settings?.masterVolumePct ?? 80));
       multiLayerEngine.setMasterVolumePct(pct);
       const volSlider = document.getElementById("hud-master-vol");
       const volReadout = document.getElementById("hud-master-vol-val");

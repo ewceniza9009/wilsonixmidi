@@ -851,8 +851,9 @@ export class GigHudUI {
                       const slotData = currentBankSlots[num - 1];
                       const slotTitle =
                         slotData?.name || `Rig ${curBank}-${num}`;
+                      const isSlotActive = (registrationManager.activeBank || curBank) === curBank && (registrationManager.activeSlot || curSlot) === num;
                       return `
-                          <button class="rig-slot-pill ${curSlot === num ? "active" : ""}" data-slot="${num}" title="Rig ${curBank}-${num}: ${escapeHtml(slotTitle)} (Press F${num}, Shift+F${num} to Store)">${num}</button>
+                          <button class="rig-slot-pill ${isSlotActive ? "active" : ""}" data-slot="${num}" title="Rig ${curBank}-${num}: ${escapeHtml(slotTitle)} (Press F${num}, Shift+F${num} to Store)">${num}</button>
                         `;
                     })
                     .join("")}
@@ -999,11 +1000,8 @@ export class GigHudUI {
         if (now - lastTap < 80) return;
         lastTap = now;
 
-        bankBtns.forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
         const bank = btn.getAttribute("data-bank");
-        registrationManager.currentBank = bank;
-        registrationManager.recallSlot(bank, registrationManager.currentSlot);
+        registrationManager.selectBank(bank);
       };
       btn.addEventListener("pointerdown", handleBank);
       btn.addEventListener("click", handleBank);
@@ -1304,16 +1302,30 @@ export class GigHudUI {
       layerSelect.value = activeLayerBank;
     }
 
-    // 4. Refresh rig slot pill titles and tooltips for current bank
+    // 4. Refresh rig bank & slot pill states for current bank
+    this.syncRegistrationUi();
+  }
+
+  syncRegistrationUi() {
     const curBank = registrationManager.currentBank || "A";
     const bankSlots = registrationManager.banks[curBank] || [];
+    const bankBtns = this.container.querySelectorAll(".rig-bank-pill");
+    bankBtns.forEach((b) => {
+      b.classList.toggle("active", b.getAttribute("data-bank") === curBank);
+    });
     const slotBtns = this.container.querySelectorAll(".rig-slot-pill");
     slotBtns.forEach((btn) => {
-      const slotNum = parseInt(btn.getAttribute("data-slot"));
+      const slotNum = parseInt(btn.getAttribute("data-slot"), 10);
       const slotData = bankSlots[slotNum - 1];
       const slotTitle = slotData?.name || `Rig ${curBank}-${slotNum}`;
       btn.title = `Rig ${curBank}-${slotNum}: ${slotTitle} (Press F${slotNum}, Shift+F${slotNum} to Store)`;
+      const isSlotActive = (registrationManager.activeBank === curBank) && (registrationManager.activeSlot === slotNum);
+      btn.classList.toggle("active", isSlotActive);
     });
+    const saveBtn = this.container.querySelector("#hud-rig-save-btn");
+    if (saveBtn) {
+      saveBtn.title = `Store Current Sound & FX to Active Slot (Shift+F${registrationManager.currentSlot || 1})`;
+    }
   }
 
   updateMemoryLogger() {

@@ -36,19 +36,16 @@ export class AudioCore {
     this.analyser = null;
     this.isUnlocked = false;
 
-    // Latency Profile — mobile defaults to "balanced" (256 frames) for live
-    // touch response. The "safe" profile (512 frames) adds ~23ms extra round-trip
-    // latency that kills gig playability. Voice stealing + node pooling fixes
-    // handle the buzzing that previously required larger buffers on mobile.
-    this.currentLatencyProfile = "balanced";
+    // Latency Profile — default to "ultra-low" (128 frames) for the fastest
+    // live touch response (≤39ms touch-to-sound round trip).
+    this.currentLatencyProfile = "ultra-low";
     try {
       const saved = localStorage.getItem("midikey_latency_profile");
       if (saved && LATENCY_PROFILES[saved]) {
-        // On mobile, ignore "safe" if user never explicitly chose it — it was
-        // auto-selected before and caused unplayable touch latency.  If they
-        // pick "safe" again from the profile picker it will be respected.
-        if (_isMobileDevice() && saved === "safe" && !localStorage.getItem("midikey_latency_profile_chosen")) {
-          localStorage.removeItem("midikey_latency_profile");
+        // If user never explicitly chose a profile in the UI, default to "ultra-low"
+        // so legacy saved "balanced" or "safe" doesn't degrade stage response to 47ms.
+        if (!localStorage.getItem("midikey_latency_profile_chosen")) {
+          this.currentLatencyProfile = "ultra-low";
         } else {
           this.currentLatencyProfile = saved;
         }
@@ -79,7 +76,7 @@ export class AudioCore {
   init() {
     if (this.ctx) return this.ctx;
 
-    const profile = LATENCY_PROFILES[this.currentLatencyProfile] || LATENCY_PROFILES["balanced"];
+    const profile = LATENCY_PROFILES[this.currentLatencyProfile] || LATENCY_PROFILES["ultra-low"];
     // The profile that is physically bound into the context's buffer size.
     this.appliedLatencyProfile = profile.id;
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
