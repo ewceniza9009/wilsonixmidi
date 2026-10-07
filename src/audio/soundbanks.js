@@ -909,6 +909,7 @@ export function isPadSound(inst) {
     text.includes("universe") ||
     text.includes("fantasia") ||
     text.includes("choir") ||
+    text.includes("voice") ||
     text.includes("string") ||
     text.includes("moonstone") ||
     text.includes("ariana") ||
