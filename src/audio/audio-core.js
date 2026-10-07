@@ -92,9 +92,9 @@ export class AudioCore {
 
     this.sampleRate = this.ctx.sampleRate;
 
-    // Master bus: slider 0-100% maps to 0-1.8x gain, defaults to 80% (1.44x)
+    // Master bus: perceptual audio taper maps 0-100% to 0-1.8x gain; defaults to 80% (1.53x)
     this.masterGain = this.ctx.createGain();
-    this.masterGain.gain.value = 1.44;
+    this.masterGain.gain.value = 1.53;
 
     // Fast Peak Analyser for meters & oscilloscope
     this.analyser = this.ctx.createAnalyser();
@@ -679,7 +679,13 @@ export class AudioCore {
 
   setMasterVolume(val) {
     if (!this.masterGain || !this.ctx) return;
-    const v = Math.max(0, Math.min(2.0, val * 1.8));
+    const x = Math.max(0, Math.min(1.0, Number(val) || 0));
+    // Perceptual audio taper: human hearing is logarithmic, so a flat linear
+    // mapping makes 50% slider travel sound faint (0.9x * 0.58 busPad = 0.52).
+    // Adding a smooth cubic bump (+2.8 * x * (1 - x)^2) lifts 50% to ~1.25x
+    // (+2.85 dB boost, full and audible) while preserving clean headroom at 80% (1.53x)
+    // and full output at 100% (1.80x) with zero bass crackle.
+    const v = Math.max(0, Math.min(2.0, 1.8 * x + 2.8 * x * Math.pow(1 - x, 2)));
     this.masterGain.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02);
   }
 
