@@ -72,6 +72,9 @@ function Upload-AssetWithClobber($filePath, $assetName, $contentType) {
 if (Test-Path "dist-apk/wilsonix-midikey.apk") {
     Upload-AssetWithClobber "dist-apk/wilsonix-midikey.apk" "wilsonix-midikey.apk" "application/vnd.android.package-archive"
 }
+if (Test-Path "dist-apk/wilsonix-midikey-v${ver}.apk") {
+    Upload-AssetWithClobber "dist-apk/wilsonix-midikey-v${ver}.apk" "wilsonix-midikey-v${ver}.apk" "application/vnd.android.package-archive"
+}
 
 # 2. Windows Installer
 $exeCandidates = @(
@@ -91,6 +94,7 @@ foreach ($c in $exeCandidates) {
 
 if ($foundExe) {
     Upload-AssetWithClobber $foundExe "WILSONIX.MIDIKEY_${ver}_x64-setup.exe" "application/octet-stream"
+    Upload-AssetWithClobber $foundExe "wilsonix-midikey-v${ver}-setup.exe" "application/octet-stream"
 } else {
     Write-Warning "No Windows setup exe matching version $ver found to upload. Keeping any existing release exe intact."
 }
