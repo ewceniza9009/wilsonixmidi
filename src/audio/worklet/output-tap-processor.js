@@ -20,7 +20,7 @@ class OutputTapProcessor extends AudioWorkletProcessor {
   constructor(options) {
     super();
     const opts = (options && options.processorOptions) || {};
-    this.chunkFrames = opts.chunkFrames > 0 ? Math.floor(opts.chunkFrames) : 240;
+    this.chunkFrames = opts.chunkFrames > 0 ? Math.floor(opts.chunkFrames) : 480;
     this.channels = 2;
     this.buffer = new Float32Array(this.chunkFrames * this.channels);
     this.fill = 0;

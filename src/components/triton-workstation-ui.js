@@ -689,6 +689,7 @@ export class TritonWorkstationUI {
         if (screen) {
           const programs = this.getGridPrograms();
           screen.innerHTML = this.renderTouchViewContent(programs);
+          this.bindBankButtons();
           this.bindProgramGrid();
           this.bindFastScroll();
           this.bindRealtimeKnobs();
@@ -718,6 +719,7 @@ export class TritonWorkstationUI {
           // It does NOT recall or load the first preset, and plays NO sound.
           // The currently playing sound continues playing undisturbed until the user explicitly taps a program in the grid!
           this._suppressProgramSelection = true;
+          this._lastBankSwitchTime = performance.now();
           try {
             localStorage.setItem("wilsonix_triton_active_bank", this.activeBankId);
           } catch (e) {}
@@ -741,9 +743,12 @@ export class TritonWorkstationUI {
           }
           setTimeout(() => {
             this._suppressProgramSelection = false;
-          }, 150);
+          }, 600);
         }
       };
+      btn.addEventListener("pointerdown", (e) => {
+        e.stopPropagation();
+      });
       btn.addEventListener("click", handleBank);
     });
   }
@@ -758,6 +763,7 @@ export class TritonWorkstationUI {
         }
         if (this._suppressProgramSelection) return;
         const now = performance.now();
+        if (now - (this._lastBankSwitchTime || 0) < 600) return;
         if (now - lastTap < 80) return;
         lastTap = now;
 

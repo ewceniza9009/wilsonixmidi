@@ -174,7 +174,7 @@ export class OutputBridge {
     }
 
     // 2. Native configure BEFORE any graph change: failure mutates nothing.
-    const chunkFrames = Math.max(128, Math.round(ctx.sampleRate * 0.005));
+    const chunkFrames = Math.max(128, Math.round(ctx.sampleRate * 0.01));
     let cfg;
     try {
       cfg = await AudioBridge.configure({ sampleRate: Math.round(ctx.sampleRate) });

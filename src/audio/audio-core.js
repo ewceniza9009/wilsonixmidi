@@ -10,7 +10,7 @@ import { buildSoftClipCurve } from "./effects/soft-clip.js";
 import { downloadBlob } from "../utils/download-blob.js";
 
 export const LATENCY_PROFILES = {
-  "ultra-low": { id: "ultra-low", latencyHint: 0, label: "Stage Ultra-Low", targetMs: 2.9, frames: 128, description: "64–128 frames / Fastest response for dedicated audio interfaces" },
+  "ultra-low": { id: "ultra-low", latencyHint: "interactive", label: "Stage Ultra-Low", targetMs: 2.9, frames: 128, description: "Fastest responsive low-latency profile" },
   "balanced": { id: "balanced", latencyHint: "balanced", label: "Balanced Studio", targetMs: 5.8, frames: 256, description: "256 frames / Stable performance for general laptop audio" },
   "safe": { id: "safe", latencyHint: "playback", label: "Safe Stage", targetMs: 11.6, frames: 512, description: "512 frames / Maximum glitch-free headroom for heavy polyphony" },
 };
@@ -116,10 +116,9 @@ export class AudioCore {
     // FX makeup-gain overshoot) still escape a DynamicsCompressorNode's attack
     // window and hard-clip in the DAC = crackles. Identity below 0.9, tanh
     // rolloff above, hard ceiling ~-2.1dBFS — zero modulation of normal signal.
-    // oversample is set to "none" to eliminate Chromium's internal 128-sample FIR filter delay (~2.7ms).
     this.safetyClip = this.ctx.createWaveShaper();
     this.safetyClip.curve = buildSoftClipCurve();
-    this.safetyClip.oversample = "none";
+    this.safetyClip.oversample = "2x";
     this.hardwareLimiter.connect(this.safetyClip);
 
     // Initialize FX Rack

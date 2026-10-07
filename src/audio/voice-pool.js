@@ -150,11 +150,12 @@ export class PolyphonicVoice {
 
     // Smooth frequency transitions
     this.osc1.frequency.setValueAtTime(freq * (instrumentConfig.osc1Ratio || 1.0), now);
-    this.osc2.frequency.setValueAtTime(freq * (instrumentConfig.osc2Ratio || 2.001), now);
+    this.osc2.frequency.setValueAtTime(freq * (instrumentConfig.osc2Ratio || 2.0), now);
     this.osc3.frequency.setValueAtTime(freq * (instrumentConfig.osc3Ratio || 0.5), now);
 
     // Hard Sync routing
-    const syncActive = !!instrumentConfig.syncSlave && (instrumentConfig.osc1Ratio || 1.0) > 0;
+    const isPureSine = (instrumentConfig.osc1Type === "sine" && (instrumentConfig.osc2Type === "sine" || (instrumentConfig.gain2 || 0) === 0)) || !!instrumentConfig.isPureSine;
+    const syncActive = !isPureSine && !!instrumentConfig.syncSlave && (instrumentConfig.osc1Ratio || 1.0) > 0;
     if (syncActive) {
       const syncRatio = Math.max(1.001, (instrumentConfig.osc2Ratio || 2.0) / (instrumentConfig.osc1Ratio || 1.0));
       this.syncShaper.curve = getSyncCurve(syncRatio, instrumentConfig.osc2Type || "sawtooth");
@@ -170,15 +171,12 @@ export class PolyphonicVoice {
     }
 
     // Dynamic Filter
-    const isPureSine = (instrumentConfig.osc1Type === "sine" && instrumentConfig.osc2Type === "sine");
     if (isPureSine) {
       // Pure sines have zero harmonics above the fundamental.
-      // Setting filter flat & wide open (20kHz, Q=0) eliminates phase jitter,
-      // Setting filter flat & wide open (Nyquist, Q=0.1) eliminates phase jitter
-      const nyquist = (this.ctx.sampleRate || 44100) / 2;
+      // Filter wide open with minimal Q eliminates phase distortion or coloration
       this.filter.type = "lowpass";
-      this.filter.frequency.setValueAtTime(Math.min(20000, nyquist * 0.95), now);
-      this.filter.Q.setValueAtTime(0.1, now);
+      this.filter.frequency.setValueAtTime(20000, now);
+      this.filter.Q.setValueAtTime(0.0001, now);
     } else {
       const baseCutoff = instrumentConfig.filterCutoff || 6000;
       const filterEnv = Math.min(11000, Math.max(baseCutoff * (0.5 + velRatio * 0.8), freq * 1.5));

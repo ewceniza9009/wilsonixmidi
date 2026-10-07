@@ -55,10 +55,9 @@ export class TritonVirtualAnalogEngine {
     // 2. Organs & E.Pianos (Dark Jazz, R&B EP, Phantom of Tine): body + harmonic drawbar/tine
     // 3. Complex Synth Leads (Saw/Square/Trance): lush 3-osc supersaw detune
     // 4. General Pads, Strings, Brass: clean 2-osc mix (no sub rumble)
-    const isSineProgram = (osc1 === "sine" && osc2 === "sine") || (prog.name || "").toLowerCase().includes("sine");
-    const isLead = /(lead|trance|saw|synth|stabb|stab|fast|hit|motion)/i.test((prog.category || "") + " " + (prog.name || ""));
-    const isPureSineLead = prog.id === "A010" || (prog.name || "").includes("Smooth Sine Lead") || (isSineProgram && isLead);
-    const isOrganOrEP = /(organ|\bep\b|piano|tine|clav|vibes|bell|wurly|rhodes)/i.test((prog.category || "") + " " + (prog.name || ""));
+    const isSineProgram = (osc1 === "sine" && osc2 === "sine") || (prog.name || "").toLowerCase().includes("sine") || (prog.name || "").toLowerCase().includes("whistler");
+    const isLead = !isSineProgram && /(lead|trance|saw|synth|stabb|stab|fast|hit|motion)/i.test((prog.category || "") + " " + (prog.name || ""));
+    const isOrganOrEP = !isSineProgram && /(organ|\bep\b|piano|tine|clav|vibes|bell|wurly|rhodes)/i.test((prog.category || "") + " " + (prog.name || ""));
 
     let osc3Type = "sine";
     let osc3Ratio = 0.5;
@@ -67,15 +66,9 @@ export class TritonVirtualAnalogEngine {
     let gain3 = 0.0; // sub disabled for non-leads
 
     if (isSineProgram) {
-      // Pure sine synth: crystal clean harmonic spectrum, no unwanted detuned osc beating
-      gain1 = 0.65;
-      gain2 = 0.35;
-      gain3 = 0.0;
-      osc3Type = "sine";
-      osc3Ratio = 1.0;
-    } else if (isPureSineLead) {
-      gain1 = 0.65;
-      gain2 = 0.25;
+      // Pure sine synth: crystal clean harmonic spectrum, zero unwanted detuned beating
+      gain1 = prog.gain1 !== undefined ? prog.gain1 : 1.0;
+      gain2 = prog.gain2 !== undefined ? prog.gain2 : 0.0;
       gain3 = 0.0;
       osc3Type = "sine";
       osc3Ratio = 1.0;
@@ -161,7 +154,7 @@ export class TritonVirtualAnalogEngine {
       release: Math.max(0.06, prog.release ?? 0.35),
       isPercussive,
       isLead,
-      isPureSineLead,
+      isPureSine: isSineProgram,
       syncSlave: isSyncProgram,
       masterGain: 0.82,
     };
@@ -175,45 +168,6 @@ export class TritonVirtualAnalogEngine {
     if (!this.pool) return;
 
     const ratio = Math.pow(2, this.pitchBendSemitones / 12);
-
-    // Monophonic legato handling for pure sine leads (Smooth Sine Lead):
-    // Pure sine waves have no harmonics. When sliding or sweeping across keys,
-    // we NEVER choke or cut off the voice to zero (which causes static clicks/cutoff gaps).
-    // Instead, smoothly glide the active oscillator pitch to the new note in 10ms.
-    if (this.config.isPureSineLead) {
-      const activeVoice = this.pool.voices.find(v => v.isBusy);
-      const now = when > 0 ? Math.max(when, audioCore.ctx.currentTime) : audioCore.ctx.currentTime;
-
-      if (activeVoice) {
-        // Continuous Legato Glide: smooth portamento to the new note
-        const baseFreq = 440 * Math.pow(2, (midiNote - 69) / 12);
-        const freq = baseFreq * ratio;
-        activeVoice._gen++; // Invalidate any scheduled release timeouts
-        activeVoice.activeMidiNote = midiNote;
-        activeVoice.isBusy = true;
-        activeVoice.isSustained = false;
-
-        const velRatio = Math.max(0.05, Math.min(1.0, velocity / 127));
-        const peakGain = (0.35 + velRatio * 0.65) * (this.config.masterGain || 0.82);
-        const sustain = peakGain * (this.config.sustainLevel || 0.65);
-
-        // Cancel any pending release decay and maintain sustain gain smoothly
-        activeVoice.voiceGain.gain.cancelScheduledValues(now);
-        activeVoice.voiceGain.gain.setValueAtTime(activeVoice.voiceGain.gain.value, now);
-        activeVoice.voiceGain.gain.setTargetAtTime(sustain, now, 0.006);
-
-        // Glide frequencies smoothly: zero DC step discontinuities, zero white noise, continuous liquid tone
-        activeVoice.osc1.frequency.cancelScheduledValues(now);
-        activeVoice.osc2.frequency.cancelScheduledValues(now);
-        activeVoice.osc1.frequency.setValueAtTime(activeVoice.osc1.frequency.value, now);
-        activeVoice.osc2.frequency.setValueAtTime(activeVoice.osc2.frequency.value, now);
-        activeVoice.osc1.frequency.setTargetAtTime(freq * (this.config.osc1Ratio || 1.0), now, 0.010);
-        activeVoice.osc2.frequency.setTargetAtTime(freq * (this.config.osc2Ratio || 2.0), now, 0.010);
-
-        this.heldNotes.add(midiNote);
-        return;
-      }
-    }
 
     // Voice polyphony ceiling: limits simultaneous voices to avoid DSP overflow under sustain
     const maxActive = this.config.isLead ? 8 : 16;
@@ -243,18 +197,7 @@ export class TritonVirtualAnalogEngine {
     if (!this.pool) return;
     this.heldNotes.delete(midiNote);
 
-    // For pure sine leads, if the user is sliding/sweeping and another note is held, keep voice singing!
-    if (this.config?.isPureSineLead && this.heldNotes.size > 0) {
-      return;
-    }
-
-    const rel = this.config?.isPureSineLead ? 0.06 : Math.max(0.02, Math.min(1.2, this.config?.release || 0.35));
-    if (this.config?.isPureSineLead) {
-      this.pool.voices.forEach(v => {
-        if (v.isBusy) v.release(this.sustainPedal, rel, when, this._sustainSettings);
-      });
-      return;
-    }
+    const rel = Math.max(0.02, Math.min(1.2, this.config?.release || 0.35));
     const voices = this.pool.getActiveVoicesByNote(midiNote);
     voices.forEach(v => v.release(this.sustainPedal, rel, when, this._sustainSettings));
   }
