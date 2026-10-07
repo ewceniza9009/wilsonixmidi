@@ -37,6 +37,9 @@ export class MidiManager {
       // WebView and Tauri.
       if (Capacitor.isNativePlatform()) {
         const ok = await nativeMidiBridge.init((devices) => {
+          if (this.connectedDevices.length > devices.length) {
+            this.clearActiveNotes();
+          }
           this.connectedDevices = devices;
           if (this.onDeviceChangeCallback) {
             this.onDeviceChangeCallback(devices);
@@ -58,7 +61,10 @@ export class MidiManager {
       this.updateDeviceList();
 
       // Listen for hotplug connect / disconnect
-      this.midiAccess.onstatechange = () => {
+      this.midiAccess.onstatechange = (event) => {
+        if (event && event.port && event.port.state === "disconnected") {
+          this.clearActiveNotes();
+        }
         this.updateDeviceList();
         if (this.onDeviceChangeCallback) {
           this.onDeviceChangeCallback(this.connectedDevices);
@@ -115,6 +121,19 @@ export class MidiManager {
 
   clearMidiOutputs() {
     midiOutManager.clearOutputs();
+  }
+
+  clearActiveNotes() {
+    for (const [, snapped] of this._activeMidiNotes.entries()) {
+      try {
+        if (arpeggiator.enabled) {
+          arpeggiator.handleNoteOff(snapped);
+        } else {
+          multiLayerEngine.noteOff(snapped);
+        }
+      } catch (err) {}
+    }
+    this._activeMidiNotes.clear();
   }
 
   bindInputs() {

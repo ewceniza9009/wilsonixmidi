@@ -4060,6 +4060,21 @@ export class MultiLayerEngine {
     });
   }
 
+  allNotesOff(preserveLooper = false) {
+    this.setSustainPedal(false);
+    if (this.pcmEngine) {
+      try { this.pcmEngine.allNotesOff(preserveLooper); } catch (e) {}
+    }
+    try { tritonVaEngine.allNotesOff(); } catch (e) {}
+    tritonVaEngine.sustainPedal = false;
+    this.vaAllNotesOff();
+    try { synthEngine.panic(); } catch (e) {}
+    if (this._workletReady && this._workletNode) {
+      try { this._workletNode.allNotesOff(); } catch (e) {}
+    }
+    this._clearHeldNoteState();
+  }
+
   addLayerChangeListener(cb) {
     if (typeof cb === "function") this.layerChangeListeners.add(cb);
   }

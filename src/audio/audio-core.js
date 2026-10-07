@@ -92,9 +92,9 @@ export class AudioCore {
 
     this.sampleRate = this.ctx.sampleRate;
 
-    // Master bus: slider 0-100% maps to 0-3x gain, defaults to 72% (~1.3x)
+    // Master bus: slider 0-100% maps to 0-1.8x gain, defaults to 80% (1.44x)
     this.masterGain = this.ctx.createGain();
-    this.masterGain.gain.value = 1.3;
+    this.masterGain.gain.value = 1.44;
 
     // Fast Peak Analyser for meters & oscilloscope
     this.analyser = this.ctx.createAnalyser();
