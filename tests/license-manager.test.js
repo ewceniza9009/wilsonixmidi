@@ -440,3 +440,61 @@ test("syncPersistentTrial() preserves expired trial across reinstall / wiped loc
   delete globalThis.window.__TAURI_INTERNALS__;
 });
 
+test("syncPersistentTrial() preserves expired trial even if device fingerprint drifted across reinstall", async () => {
+  const oldFp = "DEV_DRIFTED_HASH";
+  const originalStartedAt = Date.now() - 45 * 86400000;
+  const originalExpiresAt = originalStartedAt + 30 * 86400000;
+  const vaultSig = licenseManager.computeSignatureSync(
+    `TRIAL_VAULT:${oldFp}:${originalStartedAt}:${originalExpiresAt}`,
+    "MK_ELITE_TRIAL_PROTECT_2026"
+  );
+
+  const vaultPayload = JSON.stringify({
+    version: 1,
+    device: oldFp,
+    startedAt: originalStartedAt,
+    expiresAt: originalExpiresAt,
+    lastSeenAt: Date.now() - 5 * 86400000,
+    isExpired: true,
+    signature: vaultSig,
+  });
+
+  globalThis.window.__TAURI_INTERNALS__ = {
+    invoke: async (cmd) => {
+      if (cmd === "load_persistent_trial_vault") return vaultPayload;
+      return null;
+    },
+  };
+
+  delete localStorageStore["midikey_elite_trial_state"];
+  const lm = createManager();
+  // Initially creates fresh 30 days before sync
+  assert.equal(lm.getAccessStatus().isTrial, true);
+
+  // Sync with persistent anchor
+  await lm.syncPersistentTrial();
+
+  assert.equal(lm.trialData.isExpired, true);
+  const status = lm.getAccessStatus();
+  assert.equal(status.isExpired, true);
+  assert.equal(status.daysRemaining, 0);
+  assert.equal(lm.hasProAccess(), false);
+
+  delete globalThis.window.__TAURI_INTERNALS__;
+});
+
+test("expireTrial() immediately marks trial as expired and locks pro features", async () => {
+  delete localStorageStore["midikey_elite_trial_state"];
+  const lm = createManager();
+  assert.equal(lm.getAccessStatus().isTrial, true);
+
+  lm.expireTrial();
+
+  assert.equal(lm.trialData.isExpired, true);
+  const status = lm.getAccessStatus();
+  assert.equal(status.isExpired, true);
+  assert.equal(status.daysRemaining, 0);
+  assert.equal(lm.hasProAccess(), false);
+});
+
+

@@ -114,10 +114,20 @@ export class LicenseManager {
    */
   generateDeviceFingerprint() {
     try {
+      const screenPart =
+        typeof window !== "undefined" && window.screen
+          ? `${Math.max(window.screen.width, window.screen.height)}x${Math.min(window.screen.width, window.screen.height)}x${window.screen.colorDepth || 24}`
+          : "1920x1080x24";
+      const rawUa =
+        (typeof navigator !== "undefined" && navigator.userAgent) || "Desktop";
+      const cleanUa = rawUa
+        .replace(/Chrome\/[\d.]+/g, (m) => m.split(".")[0])
+        .replace(/Version\/[\d.]+/g, (m) => m.split(".")[0]);
+
       const parts = [
-        (typeof navigator !== "undefined" && navigator.userAgent) || "Desktop",
+        cleanUa,
         (typeof navigator !== "undefined" && navigator.language) || "en",
-        (typeof window !== "undefined" && window.screen ? `${window.screen.width}x${window.screen.height}x${window.screen.colorDepth}` : "1920x1080x24"),
+        screenPart,
         (typeof navigator !== "undefined" && navigator.hardwareConcurrency) || 4,
         (typeof Intl !== "undefined" && Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC",
       ];
@@ -332,21 +342,23 @@ export class LicenseManager {
         }
 
         if (vault && typeof vault.startedAt === "number" && typeof vault.expiresAt === "number") {
+          const targetDevice = vault.device || this.deviceFingerprint;
           const expectedVaultSig = this.computeSignatureSync(
+            `TRIAL_VAULT:${targetDevice}:${vault.startedAt}:${vault.expiresAt}`,
+            TRIAL_SALT
+          );
+          const currentDeviceVaultSig = this.computeSignatureSync(
             `TRIAL_VAULT:${this.deviceFingerprint}:${vault.startedAt}:${vault.expiresAt}`,
             TRIAL_SALT
           );
+          const isSigValid = vault.signature === expectedVaultSig || vault.signature === currentDeviceVaultSig;
 
           const vaultDuration = vault.expiresAt - vault.startedAt;
           const isVaultDurationOk =
             vaultDuration > 0 &&
             vaultDuration <= TRIAL_MAX_DURATION_MS + TRIAL_DURATION_SLACK_MS;
 
-          if (
-            vault.signature === expectedVaultSig &&
-            vault.device === this.deviceFingerprint &&
-            isVaultDurationOk
-          ) {
+          if (isSigValid && isVaultDurationOk) {
             const isVaultExpired = vault.expiresAt <= now || vault.isExpired === true;
             const currentStartedAt = this.trialData ? this.trialData.startedAt : now;
 
@@ -355,7 +367,7 @@ export class LicenseManager {
               console.log("[LicenseManager] Persistent hardware anchor found across reinstall. Restoring true trial progress.");
               const restoredTrial = {
                 startedAt: vault.startedAt,
-                expiresAt: vault.expiresAt,
+                expiresAt: isVaultExpired ? Math.min(vault.expiresAt, now - 1000) : vault.expiresAt,
                 device: this.deviceFingerprint,
                 signature: this.computeSignatureSync(
                   `TRIAL:${this.deviceFingerprint}:${vault.startedAt}:${vault.expiresAt}`,
@@ -369,6 +381,8 @@ export class LicenseManager {
               if (typeof localStorage !== "undefined") {
                 localStorage.setItem(this.trialStorageKey, JSON.stringify(restoredTrial));
               }
+              // Immediately write back the restored trial to the anchor
+              await this.savePersistentAnchor(restoredTrial);
               if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
                 window.dispatchEvent(
                   new CustomEvent("wilsonix-access-changed", {
@@ -396,13 +410,15 @@ export class LicenseManager {
   async savePersistentAnchor(trial) {
     if (!trial || typeof trial.startedAt !== "number" || typeof trial.expiresAt !== "number") return;
     try {
+      const now = Date.now();
+      const isExpired = trial.isExpired === true || trial.expiresAt <= now;
       const vaultPayload = {
         version: 1,
         device: this.deviceFingerprint,
         startedAt: trial.startedAt,
-        expiresAt: trial.expiresAt,
-        lastSeenAt: trial.lastSeenAt || Date.now(),
-        isExpired: trial.expiresAt <= Date.now() || trial.isExpired === true,
+        expiresAt: isExpired ? Math.min(trial.expiresAt, now - 1000) : trial.expiresAt,
+        lastSeenAt: trial.lastSeenAt || now,
+        isExpired,
         signature: this.computeSignatureSync(
           `TRIAL_VAULT:${this.deviceFingerprint}:${trial.startedAt}:${trial.expiresAt}`,
           TRIAL_SALT
@@ -484,7 +500,18 @@ export class LicenseManager {
       };
     }
 
-    // Trial expired
+    // Trial expired - persist expired state to storage and hardware anchor immediately
+    if (trial && !trial.isExpired) {
+      trial.isExpired = true;
+      trial.expiresAt = Math.min(trial.expiresAt, now - 1000);
+      try {
+        if (typeof localStorage !== "undefined") {
+          localStorage.setItem(this.trialStorageKey, JSON.stringify(trial));
+        }
+        this.savePersistentAnchor(trial).catch(() => {});
+      } catch (e) {}
+    }
+
     return {
       isLicensed: false,
       isTrial: false,
@@ -498,6 +525,26 @@ export class LicenseManager {
       daysRemaining: 0,
       reason: "Your 30-Day Free Trial has ended. Please enter an authorized license key to continue using Pro features.",
     };
+  }
+
+  expireTrial() {
+    if (!this.trialData) return;
+    const now = Date.now();
+    this.trialData.isExpired = true;
+    this.trialData.expiresAt = Math.min(this.trialData.expiresAt, now - 1000);
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem(this.trialStorageKey, JSON.stringify(this.trialData));
+      }
+      this.savePersistentAnchor(this.trialData).catch(() => {});
+    } catch (e) {}
+    if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+      window.dispatchEvent(
+        new CustomEvent("wilsonix-access-changed", {
+          detail: this.getAccessStatus(),
+        })
+      );
+    }
   }
 
   /**

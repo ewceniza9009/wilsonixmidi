@@ -713,14 +713,13 @@ export class TritonWorkstationUI {
         const newBank = btn.getAttribute("data-bank");
         if (this.activeBankId !== newBank) {
           this.activeBankId = newBank;
-          if (newBank === "COMBI") {
-            this.activeProg = Object.values(COMBI_PRESETS)[0];
-            multiLayerEngine.setCombiPreset(this.activeProg.id);
-          } else if (TRITON_BANKS[newBank] && TRITON_BANKS[newBank].programs?.length > 0) {
-            this.activeProg = TRITON_BANKS[newBank].programs[0];
-            this.applyTritonProgram(this.activeProg, true);
-          }
-          this._persistSelection();
+          // Decouple bank browsing from preset recall:
+          // Selecting a bank tab only displays that bank's programs in the TouchView grid.
+          // It does NOT recall or load the first preset, and plays NO sound.
+          // The currently playing sound continues playing undisturbed until the user explicitly taps a program in the grid!
+          try {
+            localStorage.setItem("wilsonix_triton_active_bank", this.activeBankId);
+          } catch (e) {}
           // Don't full render - just update bank cards and program grid
           this.container.querySelectorAll(".triton-bank-card").forEach(b => {
             b.classList.toggle("active", b.getAttribute("data-bank") === this.activeBankId);
