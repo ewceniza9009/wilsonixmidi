@@ -207,11 +207,11 @@ export class MasterRecorder {
   stopAndExport() {
     if (!this.isRecording) return null;
 
+    // Capture any trailing frames still sitting in the ring buffer before stopping
+    this._drain();
+
     this.isRecording = false;
     clearInterval(this.timerInterval);
-
-    // Capture any trailing frames still sitting in the ring buffer
-    this._drain();
 
     // ScriptProcessor fallback is per-run; tear it down on stop.
     // The AudioWorklet tap is persistent and merely discards when idle.

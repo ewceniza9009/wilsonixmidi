@@ -36,6 +36,7 @@ export class TheoryCourseDeck {
   playChordPreview(midiNotes, durationMs = 1200) {
     if (!this.engine) return;
     this._clearHighlightTimers();
+    this._activePreviewNotes = [...midiNotes];
 
     midiNotes.forEach((note) => {
       try {
@@ -54,6 +55,7 @@ export class TheoryCourseDeck {
           if (el) el.classList.remove("tutor-target-key");
         } catch (e) {}
       });
+      this._activePreviewNotes = [];
     }, durationMs);
 
     this._highlightTimers.push(timer);
@@ -80,6 +82,16 @@ export class TheoryCourseDeck {
   _clearHighlightTimers() {
     this._highlightTimers.forEach((t) => clearTimeout(t));
     this._highlightTimers = [];
+    if (this._activePreviewNotes && this._activePreviewNotes.length) {
+      this._activePreviewNotes.forEach((note) => {
+        try {
+          if (this.engine) this.engine.noteOff(note);
+          const el = document.getElementById(`key-midi-${note}`);
+          if (el) el.classList.remove("tutor-target-key");
+        } catch (e) {}
+      });
+      this._activePreviewNotes = [];
+    }
   }
 
   dispose() {

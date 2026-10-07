@@ -8,7 +8,7 @@ import processorCode from "./shimmer-fx-processor.js?raw";
 export class ShimmerWorkletNode {
   constructor(ctx, destination = null) {
     this.ctx = ctx;
-    this.destination = destination || ctx.destination;
+    this.destination = destination;
     this.node = null;
     this.isReady = false;
   }
@@ -32,7 +32,9 @@ export class ShimmerWorkletNode {
         outputChannelCount: [2],
       });
 
-      this.node.connect(this.destination);
+      if (this.destination) {
+        this.node.connect(this.destination);
+      }
       this.isReady = true;
       return true;
     } catch (err) {

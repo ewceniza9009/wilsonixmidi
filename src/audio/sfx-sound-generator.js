@@ -23,10 +23,19 @@ export class SfxSoundGenerator {
     this.sfxBus = this.ctx.createGain();
     const dest =
       this.destination || audioCore.masterGain || this.ctx.destination;
-    if (dest) {
-      try {
-        this.sfxBus.connect(dest);
-      } catch (e) {}
+    try {
+      this.sfxLimiter = this.ctx.createDynamicsCompressor();
+      this.sfxLimiter.threshold.setValueAtTime(-1.0, this.ctx.currentTime);
+      this.sfxLimiter.knee.setValueAtTime(0, this.ctx.currentTime);
+      this.sfxLimiter.ratio.setValueAtTime(20, this.ctx.currentTime);
+      this.sfxLimiter.attack.setValueAtTime(0.001, this.ctx.currentTime);
+      this.sfxLimiter.release.setValueAtTime(0.05, this.ctx.currentTime);
+      this.sfxBus.connect(this.sfxLimiter);
+      if (dest) this.sfxLimiter.connect(dest);
+    } catch (e) {
+      if (dest) {
+        try { this.sfxBus.connect(dest); } catch (e2) {}
+      }
     }
   }
 
@@ -2460,7 +2469,7 @@ export class SfxSoundGenerator {
       const pGain = ctx.createGain();
       pGain.gain.setValueAtTime(0.001, now);
       pGain.gain.linearRampToValueAtTime(p.gain, now + 0.003);
-      pGain.exponentialRampToValueAtTime(0.0001, now + p.decay);
+      pGain.gain.exponentialRampToValueAtTime(0.0001, now + p.decay);
 
       osc.connect(pGain);
       pGain.connect(masterGain);

@@ -219,6 +219,8 @@ export class Arpeggiator {
       }
     }
     this.activeArpNotes.clear();
+    this.heldNotes.clear();
+    this.currentSequence = [];
     this.seqIndex = 0;
   }
 

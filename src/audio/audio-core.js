@@ -679,7 +679,7 @@ export class AudioCore {
 
   setMasterVolume(val) {
     if (!this.masterGain || !this.ctx) return;
-    const v = Math.max(0, Math.min(3.0, val * 3.0));
+    const v = Math.max(0, Math.min(2.0, val * 1.8));
     this.masterGain.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02);
   }
 

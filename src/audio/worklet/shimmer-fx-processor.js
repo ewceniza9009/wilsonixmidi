@@ -55,14 +55,14 @@ class ShimmerFxProcessor extends AudioWorkletProcessor {
     const outL = output[0];
     const outR = output[1] || output[0];
     
-    const grainFrames = Math.floor((this.grainSizeMs / 1000) * 44100);
+    const sr = typeof sampleRate !== "undefined" ? sampleRate : 44100;
+    const grainFrames = Math.floor((this.grainSizeMs / 1000) * sr);
     const phaseInc = 1 / grainFrames;
 
     for (let i = 0; i < inL.length; i++) {
-      // 1. Write to delay buffer (with feedback)
-      // Feedback comes from the previous output frame (outL/outR are populated below)
-      this.bufferL[this.writePointer] = inL[i] + outL[i] * this.feedback;
-      this.bufferR[this.writePointer] = inR[i] + outR[i] * this.feedback;
+      // 1. Write to delay buffer (with feedback from previous output sample)
+      this.bufferL[this.writePointer] = inL[i] + (this.prevOutL || 0) * this.feedback;
+      this.bufferR[this.writePointer] = inR[i] + (this.prevOutR || 0) * this.feedback;
       
       let sumL = 0;
       let sumR = 0;
@@ -94,8 +94,12 @@ class ShimmerFxProcessor extends AudioWorkletProcessor {
       }
 
       // 3. Mix and output
-      outL[i] = (inL[i] * (1 - this.mix)) + (sumL * this.mix);
-      outR[i] = (inR[i] * (1 - this.mix)) + (sumR * this.mix);
+      const oL = (inL[i] * (1 - this.mix)) + (sumL * this.mix);
+      const oR = (inR[i] * (1 - this.mix)) + (sumR * this.mix);
+      outL[i] = oL;
+      outR[i] = oR;
+      this.prevOutL = oL;
+      this.prevOutR = oR;
       
       this.writePointer = (this.writePointer + 1) % this.bufferSize;
     }

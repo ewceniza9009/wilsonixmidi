@@ -33,13 +33,14 @@ export function constantPowerMixScaled(mix, wetScale) {
  */
 export function applyBypassGains(wetGain, dryGain, bypassed, mix, mixFn, ctx) {
   const now = ctx ? ctx.currentTime : 0;
-  if (bypassed) {
-    wetGain.gain.setValueAtTime(0.0, now);
-    dryGain.gain.setValueAtTime(1.0, now);
+  const targetWet = bypassed ? 0.0 : mixFn(mix).wet;
+  const targetDry = bypassed ? 1.0 : mixFn(mix).dry;
+  if (ctx) {
+    wetGain.gain.setTargetAtTime(targetWet, now, 0.012);
+    dryGain.gain.setTargetAtTime(targetDry, now, 0.012);
   } else {
-    const { wet, dry } = mixFn(mix);
-    wetGain.gain.setValueAtTime(wet, now);
-    dryGain.gain.setValueAtTime(dry, now);
+    wetGain.gain.setValueAtTime(targetWet, now);
+    dryGain.gain.setValueAtTime(targetDry, now);
   }
 }
 

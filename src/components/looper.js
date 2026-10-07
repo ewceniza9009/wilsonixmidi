@@ -910,7 +910,7 @@ export class ClipLooper {
             if (delaySec > 0.005) {
               setTimeout(() => {
                 const trk = this.tracks[trackId];
-                if (trk && trk.state === "playing" && this.isPlaying) {
+                if (trk && trk.state === "playing") {
                   va.noteOn(transposed, velocity, 0);
                 }
               }, delaySec * 1000);

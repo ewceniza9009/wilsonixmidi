@@ -350,7 +350,9 @@ export class ChordPadsUI {
 
     // Global window-level release to handle pointer release outside the pad or window blur
     if (!this._globalPadMouseUp) {
-      this._globalPadMouseUp = () => {
+      this._globalPadMouseUp = (e) => {
+        // If other touch fingers are still on the screen, don't release all chords
+        if (e && e.touches && e.touches.length > 0) return;
         if (this.activeNotesMap && this.activeNotesMap.size > 0) {
           this.releaseAllChords(false);
         }

@@ -26,6 +26,7 @@ export class MidiManager {
     this.selectedInputId = "all";
     this.onDeviceChangeCallback = null;
     this.isSupported = typeof navigator !== "undefined" && !!navigator.requestMIDIAccess;
+    this._activeMidiNotes = new Map();
   }
 
   async init() {
@@ -143,6 +144,7 @@ export class MidiManager {
           const shaped = shapeVelocity(velocity);
           const snapped = scaleLock.isLocked ? scaleLock.snapToScale(note) : note;
           if (snapped !== null) {
+            this._activeMidiNotes.set(note, snapped);
             if (arpeggiator.enabled) {
               arpeggiator.handleNoteOn(snapped, shaped);
             } else {
@@ -151,8 +153,9 @@ export class MidiManager {
           }
         } else {
           // Note On with velocity 0 is standard MIDI Note Off
-          const snapped = scaleLock.isLocked ? scaleLock.snapToScale(note) : note;
-          if (snapped !== null) {
+          const snapped = this._activeMidiNotes.get(note) ?? (scaleLock.isLocked ? scaleLock.snapToScale(note) : note);
+          this._activeMidiNotes.delete(note);
+          if (snapped !== null && snapped !== undefined) {
             if (arpeggiator.enabled) {
               arpeggiator.handleNoteOff(snapped);
             } else {
@@ -164,8 +167,9 @@ export class MidiManager {
         break;
 
       case 0x8: { // Note Off
-        const snappedOff = scaleLock.isLocked ? scaleLock.snapToScale(note) : note;
-        if (snappedOff !== null) {
+        const snappedOff = this._activeMidiNotes.get(note) ?? (scaleLock.isLocked ? scaleLock.snapToScale(note) : note);
+        this._activeMidiNotes.delete(note);
+        if (snappedOff !== null && snappedOff !== undefined) {
           if (arpeggiator.enabled) {
             arpeggiator.handleNoteOff(snappedOff);
           } else {

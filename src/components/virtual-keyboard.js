@@ -691,14 +691,16 @@ export class VirtualKeyboardUI {
         if (snappedMidi === null) return;
 
         // Spatial Hysteresis: prevent buzzing/machine-gun retrigger near key borders
+        const isBlackKey = key.el && key.el.classList.contains("black-key");
+        const hMargin = isBlackKey ? 1.0 : 3.0;
         if (
           prevTouch &&
           prevTouch.rect &&
           snappedMidi !== prevTouch.snappedMidi &&
-          clientX >= prevTouch.rect.left - 4 &&
-          clientX <= prevTouch.rect.right + 4 &&
-          clientY >= prevTouch.rect.top - 6 &&
-          clientY <= prevTouch.rect.bottom + 6
+          clientX >= prevTouch.rect.left - hMargin &&
+          clientX <= prevTouch.rect.right + hMargin &&
+          clientY >= prevTouch.rect.top - 4 &&
+          clientY <= prevTouch.rect.bottom + 4
         ) {
           const relativeY = Math.max(
             0,
@@ -716,7 +718,7 @@ export class VirtualKeyboardUI {
           if (
             prevTouch &&
             prevTouch.lastGlissandoTime &&
-            now - prevTouch.lastGlissandoTime < 28
+            now - prevTouch.lastGlissandoTime < 8
           ) {
             return;
           }
@@ -747,15 +749,25 @@ export class VirtualKeyboardUI {
             }
           });
 
-          // 2. Release previous note(s) that are no longer active
+          // 2. Release previous note(s) that are no longer active in this touch,
+          // only if no OTHER active touch finger is still holding note n!
           if (prevChordNotes) {
             prevChordNotes.forEach((n) => {
               if (!notes.includes(n)) {
-                this.setKeyVisualState(n, false);
-                if (arpeggiator.enabled) {
-                  arpeggiator.handleNoteOff(n);
-                } else {
-                  multiLayerEngine.noteOff(n);
+                let stillHeldByOther = false;
+                for (const [otherId, otherTouch] of this.activeTouches.entries()) {
+                  if (otherId !== id && otherTouch.chordNotes && otherTouch.chordNotes.includes(n)) {
+                    stillHeldByOther = true;
+                    break;
+                  }
+                }
+                if (!stillHeldByOther) {
+                  this.setKeyVisualState(n, false);
+                  if (arpeggiator.enabled) {
+                    arpeggiator.handleNoteOff(n);
+                  } else {
+                    multiLayerEngine.noteOff(n);
+                  }
                 }
               }
             });
@@ -777,15 +789,24 @@ export class VirtualKeyboardUI {
         this.activeTouches.delete(id);
         return;
       }
+      this.activeTouches.delete(id);
       prevTouch.chordNotes.forEach((n) => {
-        this.setKeyVisualState(n, false);
-        if (arpeggiator.enabled) {
-          arpeggiator.handleNoteOff(n);
-        } else {
-          multiLayerEngine.noteOff(n);
+        let stillHeldByOther = false;
+        for (const [, otherTouch] of this.activeTouches.entries()) {
+          if (otherTouch.chordNotes && otherTouch.chordNotes.includes(n)) {
+            stillHeldByOther = true;
+            break;
+          }
+        }
+        if (!stillHeldByOther) {
+          this.setKeyVisualState(n, false);
+          if (arpeggiator.enabled) {
+            arpeggiator.handleNoteOff(n);
+          } else {
+            multiLayerEngine.noteOff(n);
+          }
         }
       });
-      this.activeTouches.delete(id);
     };
 
     track.addEventListener(
@@ -860,94 +881,6 @@ export class VirtualKeyboardUI {
     this._onWindow(window, "touchcancel", handleTouchRelease, {
       passive: false,
     });
-
-    // Native touch bridge: MainActivity.dispatchTouchEvent forwards the raw
-    // input stream here (window.__nativeTouch)
-    window.__nativeTouch = (data) => {
-      if (!data || !Array.isArray(data.pointers)) return;
-      const pts = data.pointers;
-      const action = data.action;
-      const idx = typeof data.i === "number" ? data.i : -1;
-      const trackRect = track.getBoundingClientRect();
-
-      const isInsideTrack = (x, y) =>
-        x >= trackRect.left &&
-        x <= trackRect.right &&
-        y >= trackRect.top &&
-        y <= trackRect.bottom;
-
-      const synth = (type, changedList, touchesList, targetEl = track) => {
-        try {
-          const toTouch = (t) =>
-            new Touch({
-              identifier: t.identifier != null ? t.identifier : t.id,
-              target: targetEl,
-              clientX: t.clientX != null ? t.clientX : t.x,
-              clientY: t.clientY != null ? t.clientY : t.y,
-            });
-          const ev = new TouchEvent(type, {
-            changedTouches: changedList.map(toTouch),
-            touches: (touchesList || changedList).map(toTouch),
-            cancelable: false,
-            bubbles: true,
-          });
-          ev._isWilsonixSynth = true;
-          targetEl.dispatchEvent(ev);
-        } catch (e) {}
-      };
-
-      if (action === "DOWN" || action === "POINTER_DOWN") {
-        const p = idx >= 0 && idx < pts.length ? pts[idx] : pts[0];
-        if (p) {
-          if (this.activeTouches.has(p.id)) return;
-          if (isInsideTrack(p.x, p.y)) {
-            triggerPointerDown(p.id, p.x, p.y, performance.now());
-          } else {
-            const hitEl = document.elementFromPoint(p.x, p.y) || track;
-            synth("touchstart", [p], pts, hitEl);
-          }
-        }
-      } else if (action === "MOVE") {
-        for (const p of pts) {
-          if (this.activeTouches.has(p.id)) {
-            triggerPointerMove(p.id, p.x, p.y);
-          } else if (isInsideTrack(p.x, p.y)) {
-            // Finger slid in from outside/console into keybed: start note
-            triggerPointerDown(p.id, p.x, p.y, performance.now());
-          } else {
-            const hitEl = document.elementFromPoint(p.x, p.y) || track;
-            synth("touchmove", [p], pts, hitEl);
-          }
-        }
-      } else if (action === "UP" || action === "POINTER_UP") {
-        if (action === "UP") {
-          for (const p of pts) {
-            if (this.activeTouches.has(p.id)) {
-              triggerPointerRelease(p.id);
-            } else {
-              const hitEl = document.elementFromPoint(p.x, p.y) || track;
-              synth("touchend", [p], [], hitEl);
-            }
-          }
-        } else {
-          const p = idx >= 0 && idx < pts.length ? pts[idx] : pts[0];
-          if (p) {
-            if (this.activeTouches.has(p.id)) {
-              triggerPointerRelease(p.id);
-            } else {
-              const remaining = pts.filter((_, i2) => i2 !== idx);
-              const hitEl = document.elementFromPoint(p.x, p.y) || track;
-              synth("touchend", [p], remaining, hitEl);
-            }
-          }
-        }
-      } else if (action === "CANCEL") {
-        for (const [touchId] of this.activeTouches.entries()) {
-          triggerPointerRelease(touchId);
-        }
-        synth("touchcancel", pts, []);
-      }
-    };
   }
 
   bindWheels() {

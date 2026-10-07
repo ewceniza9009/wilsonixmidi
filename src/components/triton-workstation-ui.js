@@ -676,10 +676,15 @@ export class TritonWorkstationUI {
   bindSubTabs() {
     this.container.querySelectorAll(".triton-subtab").forEach(btn => {
       let lastTap = 0;
-      const handleTab = () => {
+      const handleTab = (e) => {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
         const now = performance.now();
         if (now - lastTap < 120) return;
         lastTap = now;
+        try { multiLayerEngine.allNotesOff(); } catch (err) {}
         this.activeSubTab = btn.getAttribute("data-tab");
         // Don't full render - just update sub-tab buttons and content area
         this.container.querySelectorAll(".triton-subtab").forEach(b => {
@@ -696,6 +701,15 @@ export class TritonWorkstationUI {
           this.bindSearch();
         }
       };
+      btn.addEventListener("touchstart", (e) => {
+        e.stopPropagation();
+      }, { passive: true });
+      btn.addEventListener("touchend", (e) => {
+        e.stopPropagation();
+      }, { passive: true });
+      btn.addEventListener("pointerdown", (e) => {
+        e.stopPropagation();
+      });
       btn.addEventListener("click", handleTab);
     });
   }
@@ -713,6 +727,7 @@ export class TritonWorkstationUI {
         lastTap = now;
         const newBank = btn.getAttribute("data-bank");
         if (this.activeBankId !== newBank) {
+          try { multiLayerEngine.allNotesOff(); } catch (err) {}
           this.activeBankId = newBank;
           // Decouple bank browsing from preset recall:
           // Selecting a bank tab only displays that bank's programs in the TouchView grid.

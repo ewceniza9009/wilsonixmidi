@@ -208,6 +208,8 @@ export class RegistrationManager {
     }
 
     try {
+      try { multiLayerEngine.allNotesOff(); } catch (err) {}
+
       // 1. Triton VA Program (e.g. Brian's Sync A017, Smooth Sine A010)
       if (item.type === "triton_va" || item.isTritonVaMode || item.tritonProgId || item.tritonProg) {
         const prog = item.tritonProg || getTritonProgramById(item.tritonProgId);

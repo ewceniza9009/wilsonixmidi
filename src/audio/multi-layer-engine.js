@@ -3983,20 +3983,22 @@ export class MultiLayerEngine {
       }
     } catch (e) {}
 
-    // If disabled while notes are sustained, restore layer 1 gain immediately
-    if (
-      !this.isPadDuckingEnabled &&
-      this.pcmEngine &&
-      this.pcmEngine.layerInserts &&
-      this.pcmEngine.layerInserts[1]
-    ) {
-      const ctx = audioCore.ctx;
-      if (ctx) {
-        this.pcmEngine.layerInserts[1].input.gain.setTargetAtTime(
-          1.0,
-          ctx.currentTime,
-          0.05,
-        );
+    // If disabled while notes are sustained, restore all secondary layers (1, 2, 3) and reset lead counter
+    if (!this.isPadDuckingEnabled) {
+      this.activeLeadNotes = 0;
+      if (this.pcmEngine && this.pcmEngine.layerInserts) {
+        const ctx = audioCore.ctx;
+        if (ctx) {
+          for (let i = 1; i < 4; i++) {
+            if (this.pcmEngine.layerInserts[i]) {
+              this.pcmEngine.layerInserts[i].input.gain.setTargetAtTime(
+                1.0,
+                ctx.currentTime,
+                0.05,
+              );
+            }
+          }
+        }
       }
     }
 
@@ -6272,8 +6274,7 @@ export class MultiLayerEngine {
         inst.includes("choir") ||
         inst.includes("organ")
       ) {
-        // Secondary pad/atmospheric layers: boost to offset roleTrim 0.52
-        layer.gain = 1.92; // 1.0 / 0.52 ≈ 1.92
+        layer.gain = 1.0;
       } else if (
         inst.startsWith("bass") ||
         inst.includes("sub") ||
@@ -6281,11 +6282,9 @@ export class MultiLayerEngine {
         inst.includes("saw") ||
         inst.includes("square")
       ) {
-        // Secondary bass/sub layers: boost to offset roleTrim 0.52
-        layer.gain = 1.92; // 1.0 / 0.52 ≈ 1.92
+        layer.gain = 1.0;
       } else {
-        // Other secondary layers: moderate boost
-        layer.gain = 1.5;
+        layer.gain = 1.0;
       }
     });
     this.init();

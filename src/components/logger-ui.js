@@ -208,10 +208,13 @@ export class LoggerUI {
     });
     this.container.querySelector("#logger-export")?.addEventListener("click", () => this.exportLogs());
     this.container.querySelector("#logger-pause")?.addEventListener("click", (e) => {
-      this._isRunning = !this._isRunning;
-      e.target.textContent = this._isRunning ? "PAUSE" : "RESUME";
-      if (this._isRunning) this.start();
-      else this.stop();
+      if (this._isRunning) {
+        this.stop();
+        e.target.textContent = "RESUME";
+      } else {
+        this.start();
+        e.target.textContent = "PAUSE";
+      }
     });
     const search = this.container.querySelector("#logger-search");
     if (search) {

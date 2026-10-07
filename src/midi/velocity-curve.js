@@ -18,6 +18,10 @@ const POWER = {
 };
 
 let currentCurve = "linear";
+try {
+  const saved = localStorage.getItem("midikey_vel_curve");
+  if (saved && POWER[saved] !== undefined) currentCurve = saved;
+} catch (e) {}
 
 export function setVelocityCurve(name) {
   currentCurve = POWER[name] !== undefined ? name : "linear";
