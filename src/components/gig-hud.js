@@ -9,6 +9,7 @@ import {
   multiLayerEngine,
   HD_SOUNDBANKS,
   COMBI_PRESETS,
+  isPadSound,
 } from "../audio/multi-layer-engine.js";
 import { audioCore } from "../audio/audio-core.js";
 import { sampleCache } from "../audio/sample-cache.js";
@@ -724,19 +725,7 @@ export class GigHudUI {
   }
 
   isPadSound(instKey) {
-    if (!instKey) return false;
-    const text = String(instKey).toLowerCase();
-    return (
-      text.includes("pad") ||
-      text.includes("ambient") ||
-      text.includes("swell") ||
-      text.includes("shimmer") ||
-      text.includes("universe") ||
-      text.includes("fantasia") ||
-      text.includes("choir") ||
-      text.includes("string") ||
-      text.includes("air")
-    );
+    return isPadSound(instKey);
   }
 
   getLayerSoundbankGroups() {

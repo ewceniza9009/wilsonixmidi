@@ -24,11 +24,11 @@ import {
 } from "../triton/combi-timbres.js";
 import { SynthWorkletNode } from "./worklet/synth-worklet-node.js";
 import { PcmWorkletNode } from "./worklet/pcm-worklet-node.js";
-import { HD_SOUNDBANKS } from "./soundbanks.js";
+import { HD_SOUNDBANKS, isPadSound } from "./soundbanks.js";
 import { midiOutManager } from "../midi/midi-out.js";
 import { registerBudgetProvider, onMemoryEvict } from "./memory-manager.js";
 
-export { HD_SOUNDBANKS };
+export { HD_SOUNDBANKS, isPadSound };
 
 // Unified combi timbre catalog: HD workstation banks + every Triton tab bank
 // (M1/PCM programs resolve to a real PCM/SFX instrument, VA programs route to
@@ -4076,19 +4076,7 @@ export class MultiLayerEngine {
   }
 
   isPadSound(instKey) {
-    if (!instKey) return false;
-    const text = String(instKey).toLowerCase();
-    return (
-      text.includes("pad") ||
-      text.includes("ambient") ||
-      text.includes("swell") ||
-      text.includes("shimmer") ||
-      text.includes("universe") ||
-      text.includes("fantasia") ||
-      text.includes("choir") ||
-      text.includes("string") ||
-      text.includes("air")
-    );
+    return isPadSound(instKey);
   }
 
   addLayerChangeListener(cb) {
@@ -5682,34 +5670,7 @@ export class MultiLayerEngine {
     this.heldNotes.delete(midiNote);
     this._clearHeldNoteTimer(midiNote);
 
-    const now = when > 0 ? when : audioCore.ctx ? audioCore.ctx.currentTime : 0;
 
-    // Pad sidechain ducking release: restore Layers 1-3 volume when all lead keys are released
-    if (
-      this.isPadDuckingEnabled &&
-      this.isCombiMode &&
-      this.layers[0]?.enabled
-    ) {
-      this.activeLeadNotes = Math.max(0, this.activeLeadNotes - 1);
-      if (
-        this.activeLeadNotes === 0 &&
-        this.pcmEngine &&
-        this.pcmEngine.layerInserts
-      ) {
-        const ctx = audioCore.ctx;
-        if (ctx) {
-          for (let i = 1; i < 4; i++) {
-            if (this.pcmEngine.layerInserts[i]) {
-              this.pcmEngine.layerInserts[i].input.gain.setTargetAtTime(
-                1.0,
-                now,
-                0.28,
-              );
-            }
-          }
-        }
-      }
-    }
 
     // Split zone release mirrors the noteOn routing (zone bus + VA/PCM)
     if (this.isSplitMode) {
@@ -5799,34 +5760,7 @@ export class MultiLayerEngine {
     this.heldNotes.delete(midiNote);
     this._clearHeldNoteTimer(midiNote);
 
-    const now = when > 0 ? when : audioCore.ctx ? audioCore.ctx.currentTime : 0;
 
-    // Pad sidechain ducking release: restore Layers 1-3 volume when all lead keys are released
-    if (
-      this.isPadDuckingEnabled &&
-      this.isCombiMode &&
-      this.layers[0]?.enabled
-    ) {
-      this.activeLeadNotes = Math.max(0, this.activeLeadNotes - 1);
-      if (
-        this.activeLeadNotes === 0 &&
-        this.pcmEngine &&
-        this.pcmEngine.layerInserts
-      ) {
-        const ctx = audioCore.ctx;
-        if (ctx) {
-          for (let i = 1; i < 4; i++) {
-            if (this.pcmEngine.layerInserts[i]) {
-              this.pcmEngine.layerInserts[i].input.gain.setTargetAtTime(
-                1.0,
-                now,
-                0.28,
-              );
-            }
-          }
-        }
-      }
-    }
 
     // Split zone release
     if (this.isSplitMode) {

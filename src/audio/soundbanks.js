@@ -875,3 +875,44 @@ export const HD_SOUNDBANKS = {
     category: "Bells & Mallet",
   },
 };
+
+/**
+ * Canonical test for whether an instrument key or name is an ambient pad sound.
+ * Excludes explicit percussive, lead, and bass categories (saw, synth-bass, lead,
+ * pluck, piano, organ) so secondary synth-basses or saw leads never inherit
+ * slow bloom attack envelopes or velocity ceilings.
+ */
+export function isPadSound(inst) {
+  if (!inst) return false;
+  const key = typeof inst === "object" ? (inst.id || inst.inst || inst.name || "") : String(inst);
+  const text = key.toLowerCase();
+  if (
+    text.includes("bass") ||
+    text.includes("lead") ||
+    text.includes("pluck") ||
+    text.includes("hit") ||
+    text.includes("drum") ||
+    text.includes("piano") ||
+    text.includes("organ") ||
+    text.includes("guitar") ||
+    text.includes("brass") ||
+    text.includes("sax") ||
+    text.includes("saw")
+  ) {
+    return false;
+  }
+  return (
+    text.includes("pad") ||
+    text.includes("ambient") ||
+    text.includes("swell") ||
+    text.includes("shimmer") ||
+    text.includes("universe") ||
+    text.includes("fantasia") ||
+    text.includes("choir") ||
+    text.includes("string") ||
+    text.includes("moonstone") ||
+    text.includes("ariana") ||
+    text.includes("ooh_ahh") ||
+    /(^|[_\s-])air($|[_\s-])/.test(text)
+  );
+}

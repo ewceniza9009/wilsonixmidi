@@ -15,6 +15,7 @@ import { isSfxInstrumentId } from "./sfx-instrument-ids.js";
 import { multisampleLoader } from "./multisample-loader.js";
 import { configureSustainLoop } from "./sample-loop-helper.js";
 import { logger } from "../utils/logger.js";
+import { isPadSound } from "./soundbanks.js";
 
 const NOTE_MAP = {
   C: 0,
@@ -3924,15 +3925,7 @@ export class NativePcmEngine {
       const isPadVoice =
         layerIndex !== null &&
         layerIndex > 0 &&
-        (isString ||
-          isChoir ||
-          instId?.includes("pad") ||
-          instId?.includes("ambient") ||
-          instId?.includes("swell") ||
-          instId?.includes("air") ||
-          instId?.includes("shimmer") ||
-          instId?.includes("universe") ||
-          instId?.includes("fantasia"));
+        isPadSound(instId);
 
       const voiceAttackTime = isPadVoice
         ? 0.35
@@ -4231,13 +4224,7 @@ export class NativePcmEngine {
     const isFallbackPad =
       layerIndex !== null &&
       layerIndex > 0 &&
-      (instId?.includes("pad") ||
-        instId?.includes("ambient") ||
-        instId?.includes("swell") ||
-        instId?.includes("string") ||
-        instId?.includes("air") ||
-        instId?.includes("shimmer") ||
-        instId?.includes("choir"));
+      isPadSound(instId);
 
     voiceGain.gain.setValueAtTime(0.0, now);
     if (isFallbackPad) voiceGain.gain.setTargetAtTime(peakGain, now, 0.35);
