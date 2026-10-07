@@ -59,6 +59,32 @@
   --led-cyan-on: 0 0 10px rgba(0, 229, 255, 0.75), 0 0 2px #00e5ff;
   --led-red-on: 0 0 10px rgba(255, 51, 75, 0.75), 0 0 2px #ff334b;
 
+  /* Elite Hardware Chassis Materials (Nord / Kronos Obsidian & Carbon) */
+  --chassis-obsidian: #0b0d13;
+  --chassis-carbon: #10131c;
+  --chassis-gunmetal: #161a25;
+  --chassis-steel: #1e2433;
+  --chassis-titanium: #283044;
+  --chassis-bevel-highlight: rgba(255, 255, 255, 0.11);
+  --chassis-bevel-shadow: rgba(0, 0, 0, 0.65);
+
+  /* Micro-Chamfers & Precision Milled Bevels */
+  --bevel-chamfer-top: inset 0 1px 0 var(--chassis-bevel-highlight), inset 0 -1px 0 var(--chassis-bevel-shadow);
+  --bevel-recessed-well: inset 0 2px 4px rgba(0, 0, 0, 0.75), inset 0 0 1px rgba(0, 0, 0, 0.9), 0 1px 0 rgba(255, 255, 255, 0.05);
+  --bevel-tactile-pad: 0 2px 5px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15), inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+  --milled-groove: inset 0 1px 2px rgba(0, 0, 0, 0.85), 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  /* OLED & Phosphor Optical Displays */
+  --oled-bg: #07090e;
+  --oled-border: 1px solid rgba(255, 255, 255, 0.08);
+  --oled-inner-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.9), inset 0 0 1px rgba(0, 0, 0, 0.95);
+  --oled-amber-text: #ff9800;
+  --oled-amber-glow: 0 0 8px rgba(255, 152, 0, 0.5), 0 0 2px rgba(255, 152, 0, 0.9);
+  --oled-cyan-text: #00e5ff;
+  --oled-cyan-glow: 0 0 8px rgba(0, 229, 255, 0.5), 0 0 2px rgba(0, 229, 255, 0.9);
+  --oled-green-text: #00f59b;
+  --oled-green-glow: 0 0 8px rgba(0, 245, 155, 0.5), 0 0 2px rgba(0, 245, 155, 0.9);
+
   /* Dimensions & Radii */
   --radius-xs: 2px;
   --radius-sm: 4px;
@@ -423,4 +449,123 @@ button:active {
   box-shadow: 0 0 5px rgba(34, 197, 94, 0.7);
   flex-shrink: 0;
 }
+
+/* ==========================================================================
+   ELITE HARDWARE PERFORMANCE & GPU ACCELERATION UTILITIES
+   Strictly zero-reflow, compositor-promoted rendering
+   ========================================================================== */
+
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+  will-change: transform, opacity;
+}
+
+.contain-paint {
+  contain: layout paint style;
+}
+
+.contain-strict {
+  contain: strict;
+}
+
+.touch-target-elite {
+  min-height: 48px;
+  min-width: 48px;
+  touch-action: manipulation;
+}
+
+/* OLED Smoked Glass Telemetry Display */
+.oled-display-screen {
+  background: var(--oled-bg);
+  border: var(--oled-border);
+  box-shadow: var(--oled-inner-shadow);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  font-family: var(--font-family-mono);
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+  letter-spacing: 0.05em;
+}
+
+.oled-value-amber {
+  color: var(--oled-amber-text);
+  text-shadow: var(--oled-amber-glow);
+}
+
+.oled-value-cyan {
+  color: var(--oled-cyan-text);
+  text-shadow: var(--oled-cyan-glow);
+}
+
+.oled-value-green {
+  color: var(--oled-green-text);
+  text-shadow: var(--oled-green-glow);
+}
+
+/* Tactile Illuminated Silicone Pads (Nord / Akai MPK / Push Style) */
+.pad-silicone {
+  background: linear-gradient(180deg, #1f2533 0%, #151922 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-top-color: rgba(255, 255, 255, 0.2);
+  box-shadow: var(--bevel-tactile-pad);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.08s ease;
+}
+
+.pad-silicone:active {
+  transform: translateY(1.5px) scale(0.98);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.pad-silicone.pad-amber.active,
+.pad-silicone.pad-amber[data-active="true"] {
+  background: linear-gradient(180deg, #ff764d 0%, #ea580c 100%);
+  border-color: #ff9d7f;
+  color: #0b0d13;
+  box-shadow: 0 0 16px rgba(255, 118, 77, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.pad-silicone.pad-cyan.active,
+.pad-silicone.pad-cyan[data-active="true"] {
+  background: linear-gradient(180deg, #00e5ff 0%, #0284c7 100%);
+  border-color: #67e8f9;
+  color: #0b0d13;
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.pad-silicone.pad-emerald.active,
+.pad-silicone.pad-emerald[data-active="true"] {
+  background: linear-gradient(180deg, #00f59b 0%, #059669 100%);
+  border-color: #6ee7b7;
+  color: #0b0d13;
+  box-shadow: 0 0 16px rgba(0, 245, 155, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.pad-silicone.pad-crimson.active,
+.pad-silicone.pad-crimson[data-active="true"] {
+  background: linear-gradient(180deg, #ff334b 0%, #dc2626 100%);
+  border-color: #fca5a5;
+  color: #ffffff;
+  box-shadow: 0 0 16px rgba(255, 51, 75, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+/* Milled Hardware Separation Seam */
+.chassis-divider {
+  height: 2px;
+  width: 100%;
+  background: #090b10;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.8);
+  margin: 2px 0;
+}
+
 

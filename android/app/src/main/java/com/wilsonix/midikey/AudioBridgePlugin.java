@@ -12,7 +12,7 @@ import org.json.JSONObject;
  * Native Audio Bridge Plugin (Oboe/AAudio output).
  *
  * Replaces only the WebView's ~45ms output pipeline: the JS synth renders as
- * always, PCM chunks arrive here as base64 float32 (10ms per chunk, ~100/s),
+ * always, PCM chunks arrive here as base64 float32 (5ms per chunk, ~200/s),
  * and a lock-free ring feeds an Oboe LowLatency stream (~3ms burst). The web
  * path stays intact and is the automatic fallback for EVERY failure - this
  * plugin must never throw past Capacitor, and a missing .so is a soft reject,

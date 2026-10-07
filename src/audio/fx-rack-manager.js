@@ -238,17 +238,21 @@ export class FxRackManager {
     }
   }
 
-  // Hard-cut output during preset switch to prevent old FX tails bleeding through
-  muteOutput() {
+  // Smooth quick dip during preset switch to prevent clicks while clearing FX tails
+  muteOutput(holdSec = 0.025) {
     const now = this.ctx.currentTime;
     try {
       if (this.output?.gain) {
         this.output.gain.cancelScheduledValues(now);
-        this.output.gain.setValueAtTime(0, now);
+        this.output.gain.setValueAtTime(this.output.gain.value, now);
+        this.output.gain.linearRampToValueAtTime(0, now + 0.005);
+        this.output.gain.setValueAtTime(0, now + holdSec);
       }
       if (this.input?.gain) {
         this.input.gain.cancelScheduledValues(now);
-        this.input.gain.setValueAtTime(0, now);
+        this.input.gain.setValueAtTime(this.input.gain.value, now);
+        this.input.gain.linearRampToValueAtTime(0, now + 0.005);
+        this.input.gain.setValueAtTime(0, now + holdSec);
       }
     } catch (e) {}
     // Defer chain rebuild to next tick
@@ -266,11 +270,13 @@ export class FxRackManager {
     try {
       if (this.output?.gain) {
         this.output.gain.cancelScheduledValues(now);
-        this.output.gain.setTargetAtTime(1.0, now, 0.015);
+        this.output.gain.setValueAtTime(0, now);
+        this.output.gain.linearRampToValueAtTime(1.0, now + 0.015);
       }
       if (this.input?.gain) {
         this.input.gain.cancelScheduledValues(now);
-        this.input.gain.setTargetAtTime(1.0, now, 0.015);
+        this.input.gain.setValueAtTime(0, now);
+        this.input.gain.linearRampToValueAtTime(1.0, now + 0.015);
       }
     } catch (e) {}
     if (!this._deferredRebuild) {
@@ -337,7 +343,7 @@ export class FxRackManager {
   }
 
   async applyPreset(presetName) {
-    // Hard-cut output to prevent old FX tails bleeding into new preset
+    // Smooth quick dip to clear old FX tails before building new preset
     this.muteOutput();
 
     this._bootstrapping = true;
@@ -686,8 +692,10 @@ export class FxRackManager {
       this._bootstrapping = false;
       this._bypassBatch = false;
       this._flushBypassBatch();
-      // Unmute after chain is rebuilt — old tails are gone, new preset is clean
-      this.unmuteOutput();
+      // Hold dip for 25ms so old FX tails clear cleanly before returning gain
+      setTimeout(() => {
+        this.unmuteOutput();
+      }, 25);
     }
 
     if (this.onPresetChangeCallback) {

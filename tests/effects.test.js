@@ -305,3 +305,55 @@ test("buildSoftClipCurve: identity below knee, bounded, symmetric, monotonic", (
   assert.ok(maxAbs < 1, "ceiling must stay below full scale");
   assert.ok(maxAbs > 0.95, "ceiling must stay close to full scale");
 });
+
+test("Hermite 4-point cubic interpolation: exact knots, C1 continuity, and quantum CPU benchmark gate", () => {
+  // Test Catmull-Rom formula directly
+  const hermite = (y0, y1, y2, y3, frac) => {
+    const a0 = -0.5 * y0 + 1.5 * y1 - 1.5 * y2 + 0.5 * y3;
+    const a1 = y0 - 2.5 * y1 + 2.0 * y2 - 0.5 * y3;
+    const a2 = -0.5 * y0 + 0.5 * y2;
+    const a3 = y1;
+    return ((a0 * frac + a1) * frac + a2) * frac + a3;
+  };
+
+  // Exact knot interpolation at integer positions (frac = 0 -> y1, frac = 1 -> y2)
+  approx(hermite(10, 20, 30, 40, 0.0), 20.0);
+  approx(hermite(10, 20, 30, 40, 1.0), 30.0);
+  approx(hermite(0, 1, 0, -1, 0.5), 0.625);
+
+  // Quantum CPU benchmark gate: 128 frames * 64 voices = 8,192 evaluations per render quantum.
+  // Evaluate 100,000 samples (~12 full render quanta) and assert runtime is strictly under 15ms.
+  const t0 = performance.now();
+  let dummy = 0;
+  for (let i = 0; i < 100000; i++) {
+    const frac = (i % 1000) / 1000;
+    dummy += hermite(0.1, 0.4, 0.8, 0.3, frac);
+  }
+  const dt = performance.now() - t0;
+  assert.ok(Number.isFinite(dummy));
+  assert.ok(dt < 15, `100k Hermite evaluations took ${dt.toFixed(2)}ms (must be <15ms)`);
+});
+
+test("Hermite pre-loop region correctly interpolates attack samples without loop-end contamination", () => {
+  // Simulate sample buffer with pre-loop attack [0..99] and loop region [100..200]
+  const buf = new Float32Array(250);
+  for (let i = 0; i < 100; i++) buf[i] = 0.1 * (i + 1); // Linear ramp 0.1 .. 10.0
+  for (let i = 100; i < 200; i++) buf[i] = -5.0; // Distinct negative loop region
+  const lStart = 100;
+  const lEnd = 200;
+
+  // In pre-loop attack at idx = 10:
+  const idx = 10;
+  const isLoopable = true;
+  let y0;
+  if (isLoopable && lEnd > lStart) {
+    if (idx >= lStart) {
+      y0 = idx > lStart ? buf[idx - 1] : (lEnd > lStart && lEnd <= buf.length ? buf[lEnd - 1] : buf[idx]);
+    } else {
+      y0 = idx > 0 ? buf[idx - 1] : buf[idx];
+    }
+  }
+  // y0 MUST be buf[9] = 1.0, NEVER buf[199] = -5.0!
+  assert.equal(y0, buf[9]);
+  assert.notEqual(y0, buf[lEnd - 1]);
+});

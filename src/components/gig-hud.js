@@ -741,6 +741,8 @@ export class GigHudUI {
     const curBank = registrationManager.currentBank || "A";
     const curSlot = registrationManager.currentSlot || 1;
     const currentBankSlots = registrationManager.banks[curBank] || [];
+    const curTheme = multiLayerEngine.settings?.theme;
+    const isLight = curTheme ? curTheme === "light" : this.sunlightMode;
 
     this.container.innerHTML = `
       <div class="gig-hud-wrapper">
@@ -928,9 +930,16 @@ export class GigHudUI {
                   <span>MIDI</span>
                 </div>
 
-                <!-- Sunlight / Dark Mode -->
-                <button class="sunlight-mode-btn ${this.sunlightMode ? "active" : ""}" id="hud-sunlight-btn" title="Toggle Stage Sunlight Contrast">
-                  ${this.sunlightMode ? "☀️" : "🌙"}
+                <!-- Hardware Theme & Stage Contrast Capsule Switch -->
+                <button class="hud-theme-toggle-btn ${isLight ? "light-active" : "dark-active"}" id="hud-sunlight-btn" title="Toggle Theme (Dark / Light)" aria-label="Toggle Theme">
+                  <span class="theme-icon-indicator" id="hud-theme-icon">
+                    ${
+                      isLight
+                        ? `<svg class="theme-svg theme-svg-sun" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`
+                        : `<svg class="theme-svg theme-svg-moon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`
+                    }
+                  </span>
+                  <span class="theme-toggle-label" id="hud-theme-label">${isLight ? "LIGHT" : "DARK"}</span>
                 </button>
 
                 <!-- Global Build & Version Badge -->
@@ -1492,15 +1501,17 @@ export class GigHudUI {
         this._latencySmoothed === null
           ? shown
           : this._latencySmoothed * 0.6 + shown * 0.4;
-      latencyVal.innerText = `${l.estimated ? "~" : ""}${this._latencySmoothed.toFixed(1)}ms`;
+      if (typeof this._latencySmoothed === "number" && !isNaN(this._latencySmoothed)) {
+        latencyVal.innerText = `${l.estimated ? "~" : ""}${this._latencySmoothed.toFixed(1)}ms`;
+        latencyPill?.classList.toggle("latency-warm", this._latencySmoothed > 20);
+        latencyPill?.classList.toggle("latency-hot", this._latencySmoothed > 50);
+      }
       if (latencyPill && this._latencyPillTitleEst !== l.estimated) {
         this._latencyPillTitleEst = l.estimated;
         latencyPill.title = l.estimated
           ? "Browser estimate — device did not report output latency. Tap for analysis."
           : "Audio output latency (browser-reported). Tap for analysis.";
       }
-      latencyPill?.classList.toggle("latency-warm", this._latencySmoothed > 20);
-      latencyPill?.classList.toggle("latency-hot", this._latencySmoothed > 50);
     };
 
     latencyPill?.addEventListener("click", (e) => {
@@ -1531,18 +1542,29 @@ export class GigHudUI {
       window.addEventListener("click", () => this._closeLatencyPopover());
     }
 
-    // 7. Sunlight Mode Toggle
+    // 7. Theme Toggle (Dark / Light Mode)
     const sunBtn = document.getElementById("hud-sunlight-btn");
     sunBtn?.addEventListener("click", () => {
-      this.sunlightMode = !this.sunlightMode;
-      document.body.classList.toggle("stage-sunlight-mode", this.sunlightMode);
-      localStorage.setItem(
-        "wilsonix_sunlight_mode",
-        this.sunlightMode ? "1" : "0",
-      );
-      if (sunBtn) {
-        sunBtn.innerText = this.sunlightMode ? "☀️" : "🌙";
-        sunBtn.classList.toggle("active", this.sunlightMode);
+      const curTheme = document.documentElement.getAttribute("data-theme") || "dark";
+      const nextTheme = curTheme === "light" ? "dark" : "light";
+      const isLight = nextTheme === "light";
+
+      multiLayerEngine.updateSetting("theme", nextTheme);
+      this.sunlightMode = isLight;
+      document.body.classList.toggle("stage-sunlight-mode", isLight);
+      localStorage.setItem("wilsonix_sunlight_mode", isLight ? "1" : "0");
+
+      sunBtn.className = `hud-theme-toggle-btn ${isLight ? "light-active" : "dark-active"}`;
+      const iconSpan = document.getElementById("hud-theme-icon");
+      const labelSpan = document.getElementById("hud-theme-label");
+
+      if (iconSpan) {
+        iconSpan.innerHTML = isLight
+          ? `<svg class="theme-svg theme-svg-sun" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`
+          : `<svg class="theme-svg theme-svg-moon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+      }
+      if (labelSpan) {
+        labelSpan.textContent = isLight ? "LIGHT" : "DARK";
       }
     });
 
@@ -1641,7 +1663,7 @@ export class GigHudUI {
             this._latencySmoothed === null
               ? shown
               : this._latencySmoothed * 0.6 + shown * 0.4;
-          if (latencyVal) {
+          if (latencyVal && typeof this._latencySmoothed === "number" && !isNaN(this._latencySmoothed)) {
             latencyVal.innerText = `${l.estimated ? "~" : ""}${this._latencySmoothed.toFixed(1)}ms`;
             latencyPill?.classList.toggle(
               "latency-warm",
@@ -1679,17 +1701,20 @@ export class GigHudUI {
     pop.className = "latency-popover";
     pop.id = "hud-latency-popover";
 
-    const shown = l.measuredMs || l.reportedMs;
+    const shown = typeof l.measuredMs === "number" ? l.measuredMs : (typeof l.reportedMs === "number" ? l.reportedMs : null);
     const primary =
-      smoothed !== null
+      typeof smoothed === "number" && !isNaN(smoothed)
         ? `${smoothed.toFixed(1)}ms`
-        : `${(shown ?? 0).toFixed(1)}ms`;
-    const bufferMs = l.baseMs;
-    const bufferSamples = l.sampleRate
-      ? Math.round((bufferMs / 1000) * l.sampleRate)
+        : typeof shown === "number" && !isNaN(shown)
+          ? `${shown.toFixed(1)}ms`
+          : "—";
+    const bufferMs = typeof l.baseMs === "number" && !isNaN(l.baseMs) ? l.baseMs : 0;
+    const sampleRate = typeof l.sampleRate === "number" && l.sampleRate > 0 ? l.sampleRate : 48000;
+    const bufferSamples = bufferMs
+      ? Math.round((bufferMs / 1000) * sampleRate)
       : 0;
     const measuredFrames = l.measuredFrames || bufferSamples;
-    const stalled = l.lockMs !== null && Math.abs(l.lockMs) > 50;
+    const stalled = typeof l.lockMs === "number" && Math.abs(l.lockMs) > 50;
     const currentProf = l.profile || "balanced";
     const recom = l.recommendedProfile;
 
@@ -1699,12 +1724,15 @@ export class GigHudUI {
     let nativeSection = "";
     if (bridge && bSum && bSum.active && l.nativeBridge) {
       const bs = bSum.stats || {};
+      const validNum = (v) => typeof v === "number" && !isNaN(v);
+      const nativeLatStr = validNum(l.nativeLatencyMs) ? `${l.nativeLatencyMs.toFixed(1)} ms` : "0.0 ms";
+      const nativeFillStr = validNum(l.nativeFillMs) ? `${l.nativeFillMs.toFixed(1)} ms` : "0.0 ms";
       nativeSection = `
           <div class="latency-device-section" id="latency-native-section">
             <div class="latency-profile-title">⚡ NATIVE OUTPUT (OBOE) — ACTIVE · POC v6</div>
             <div class="latency-pop-body">
-              <div class="latency-pop-row"><span class="latency-pop-key">Stream latency (Oboe)</span><span class="latency-pop-val">${l.nativeLatencyMs ?? 0} ms${l.estimated ? " (est.)" : ""}</span></div>
-              <div class="latency-pop-row"><span class="latency-pop-key">Ring fill (queue)</span><span class="latency-pop-val">${l.nativeFillMs ?? 0} ms${bs.prefilling ? " (building…)" : ""}</span></div>
+              <div class="latency-pop-row"><span class="latency-pop-key">Stream latency (Oboe)</span><span class="latency-pop-val">${nativeLatStr}${l.estimated ? " (est.)" : ""}</span></div>
+              <div class="latency-pop-row"><span class="latency-pop-key">Ring fill (queue)</span><span class="latency-pop-val">${nativeFillStr}${bs.prefilling ? " (building…)" : ""}</span></div>
               <div class="latency-pop-row"><span class="latency-pop-key">Buffer burst</span><span class="latency-pop-val">${bs.burst ? `${bs.burst} frames` : "—"}</span></div>
               <div class="latency-pop-row"><span class="latency-pop-key">Bridge round-trip</span><span class="latency-pop-val">${bSum.rttMs != null ? `${bSum.rttMs} ms` : "—"}</span></div>
               <div class="latency-pop-row"><span class="latency-pop-key">Xruns (underruns)</span><span class="latency-pop-val">${bs.xruns ?? 0}${bs.droppedFrames ? ` (+${bs.droppedFrames} drift frames)` : ""}</span></div>
@@ -1745,18 +1773,22 @@ export class GigHudUI {
     }
 
     // Measured key-to-sound: input delivery + JS dispatch + output path.
-    const outputTotalMs = l.measuredMs ?? l.reportedMs ?? 0;
+    const outputTotalMs = typeof (l.measuredMs ?? l.reportedMs) === "number" && !isNaN(l.measuredMs ?? l.reportedMs)
+      ? (l.measuredMs ?? l.reportedMs)
+      : 0;
     const keyRow = (label, source) => {
       const st = latencyMeter.getStats(source);
       if (!st) {
         return `<div class="latency-pop-row"><span class="latency-pop-key">${label}</span><span class="latency-pop-val">— play a note first</span></div>`;
       }
-      if (st.deliveryMs === null) {
+      const delivery = typeof st.deliveryMs === "number" && !isNaN(st.deliveryMs) ? st.deliveryMs : null;
+      const dispatch = typeof st.dispatchMs === "number" && !isNaN(st.dispatchMs) ? st.dispatchMs : 0;
+      if (delivery === null) {
         return `<div class="latency-pop-row"><span class="latency-pop-key">${label}</span><span class="latency-pop-val">input not timestamped on this platform</span></div>`;
       }
       const estTag = l.estimated ? " (out est.)" : "";
-      const parts = `${st.deliveryMs.toFixed(1)} in + ${st.dispatchMs.toFixed(1)} js + ${outputTotalMs.toFixed(1)} out${estTag}`;
-      const total = (st.deliveryMs + st.dispatchMs + outputTotalMs).toFixed(1);
+      const parts = `${delivery.toFixed(1)} in + ${dispatch.toFixed(1)} js + ${outputTotalMs.toFixed(1)} out${estTag}`;
+      const total = (delivery + dispatch + outputTotalMs).toFixed(1);
       return `<div class="latency-pop-row"><span class="latency-pop-key">${label}</span><span class="latency-pop-val">${total} ms — ${parts}</span></div>`;
     };
 
@@ -1764,12 +1796,12 @@ export class GigHudUI {
       ["BUFFER PROFILE", l.profileLabel || "Balanced Studio"],
       [
         "OUTPUT PATH (buffer + output)",
-        `${(l.measuredMs ?? 7.6).toFixed(1)} ms${l.estimated ? " (browser est.)" : ""}`,
+        `${(typeof l.measuredMs === "number" && !isNaN(l.measuredMs) ? l.measuredMs : 7.6).toFixed(1)} ms${l.estimated ? " (browser est.)" : ""}`,
       ],
       ["SMOOTHED (10Hz avg)", primary],
       [
         "Base buffer (input side)",
-        `${(l.baseMs ?? 2.6).toFixed(1)} ms (${bufferSamples} samples @ ${((l.sampleRate || 48000) / 1000).toFixed(1)} kHz)`,
+        `${(typeof l.baseMs === "number" && !isNaN(l.baseMs) ? l.baseMs : 2.6).toFixed(1)} ms (${bufferSamples} samples @ ${(sampleRate / 1000).toFixed(1)} kHz)`,
       ],
       [
         "Negotiated buffer",
@@ -1777,7 +1809,7 @@ export class GigHudUI {
       ],
       [
         "Audio clock lock (drift)",
-        l.lockMs === null ? "—" : `${l.lockMs.toFixed(1)} ms`,
+        typeof l.lockMs === "number" && !isNaN(l.lockMs) ? `${l.lockMs.toFixed(1)} ms` : "—",
       ],
       ["Engine state", l.state || "running"],
     ]
@@ -1951,7 +1983,7 @@ export class GigHudUI {
               <label class="settings-row">
                 <span class="settings-label">Sustain Tone</span>
                 <input type="range" class="settings-slider" id="settings-sustain-decay" min="0.5" max="8" step="0.1" value="${multiLayerEngine.settings.sustainDecayTau}">
-                <span class="settings-val" id="settings-sustain-decay-val">${multiLayerEngine.settings.sustainDecayTau.toFixed(1)}</span>
+                <span class="settings-val" id="settings-sustain-decay-val">${(typeof multiLayerEngine.settings?.sustainDecayTau === "number" ? multiLayerEngine.settings.sustainDecayTau : 2.5).toFixed(1)}</span>
               </label>
               <label class="settings-row">
                 <span class="settings-label">Held Note Max</span>
@@ -2077,8 +2109,8 @@ export class GigHudUI {
     if (usageRow) {
       sampleCache.getStorageUsage().then((u) => {
         if (!usageRow.isConnected) return;
-        const mb = (u.usageBytes / (1024 * 1024)).toFixed(1);
-        const quotaMb = (u.quotaBytes / (1024 * 1024)).toFixed(0);
+        const mb = (((u?.usageBytes || 0)) / (1024 * 1024)).toFixed(1);
+        const quotaMb = (((u?.quotaBytes || 0)) / (1024 * 1024)).toFixed(0);
         usageRow.textContent = `Cache: ${mb} MB used of ${quotaMb} MB quota`;
       });
     }

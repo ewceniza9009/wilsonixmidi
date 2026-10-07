@@ -152,32 +152,80 @@ class PcmWorkletVoice {
 
   readSample(position) {
     if (!this.sampleBufferL || !Number.isFinite(position)) return 0;
-    const len = this.sampleBufferL.length;
+    const buf = this.sampleBufferL;
+    const len = buf.length;
     const idx = position | 0;
-    if (idx >= len) return 0;
-    if (idx < 0) return 0;
+    if (idx >= len || idx < 0) return 0;
+
+    const y1 = buf[idx];
     if (idx === len - 1) {
-      const s = this.sampleBufferL[idx];
-      return Number.isFinite(s) ? Math.max(-1.0, Math.min(1.0, s)) : 0;
+      return Number.isFinite(y1) ? Math.max(-1.0, Math.min(1.0, y1)) : 0;
     }
+
     const frac = position - idx;
-    const s = this.sampleBufferL[idx] * (1 - frac) + this.sampleBufferL[idx + 1] * frac;
+    const y2 = buf[idx + 1];
+    let y0, y3;
+    if (this.isLoopable && this.loopEnd > this.loopStart) {
+      const lStart = this.loopStart | 0;
+      const lEnd = this.loopEnd | 0;
+      if (idx >= lStart) {
+        y0 = idx > lStart ? buf[idx - 1] : (lEnd > lStart && lEnd <= len ? buf[lEnd - 1] : y1);
+        y3 = (idx + 2 < lEnd && idx + 2 < len) ? buf[idx + 2] : (lStart < len ? buf[lStart] : y2);
+      } else {
+        y0 = idx > 0 ? buf[idx - 1] : y1;
+        y3 = (idx + 2 < len) ? buf[idx + 2] : y2;
+      }
+    } else {
+      y0 = idx > 0 ? buf[idx - 1] : y1;
+      y3 = (idx + 2 < len) ? buf[idx + 2] : y2;
+    }
+
+    const a0 = -0.5 * y0 + 1.5 * y1 - 1.5 * y2 + 0.5 * y3;
+    const a1 = y0 - 2.5 * y1 + 2.0 * y2 - 0.5 * y3;
+    const a2 = -0.5 * y0 + 0.5 * y2;
+    const a3 = y1;
+
+    const s = ((a0 * frac + a1) * frac + a2) * frac + a3;
     return Number.isFinite(s) ? Math.max(-1.0, Math.min(1.0, s)) : 0;
   }
 
   readSampleR(position) {
     if (!this.isStereo || !this.sampleBufferR) return this.readSample(position);
     if (!Number.isFinite(position)) return 0;
-    const len = this.sampleBufferR.length;
+    const buf = this.sampleBufferR;
+    const len = buf.length;
     const idx = position | 0;
-    if (idx >= len) return 0;
-    if (idx < 0) return 0;
+    if (idx >= len || idx < 0) return 0;
+
+    const y1 = buf[idx];
     if (idx === len - 1) {
-      const s = this.sampleBufferR[idx];
-      return Number.isFinite(s) ? Math.max(-1.0, Math.min(1.0, s)) : 0;
+      return Number.isFinite(y1) ? Math.max(-1.0, Math.min(1.0, y1)) : 0;
     }
+
     const frac = position - idx;
-    const s = this.sampleBufferR[idx] * (1 - frac) + this.sampleBufferR[idx + 1] * frac;
+    const y2 = buf[idx + 1];
+    let y0, y3;
+    if (this.isLoopable && this.loopEnd > this.loopStart) {
+      const lStart = this.loopStart | 0;
+      const lEnd = this.loopEnd | 0;
+      if (idx >= lStart) {
+        y0 = idx > lStart ? buf[idx - 1] : (lEnd > lStart && lEnd <= len ? buf[lEnd - 1] : y1);
+        y3 = (idx + 2 < lEnd && idx + 2 < len) ? buf[idx + 2] : (lStart < len ? buf[lStart] : y2);
+      } else {
+        y0 = idx > 0 ? buf[idx - 1] : y1;
+        y3 = (idx + 2 < len) ? buf[idx + 2] : y2;
+      }
+    } else {
+      y0 = idx > 0 ? buf[idx - 1] : y1;
+      y3 = (idx + 2 < len) ? buf[idx + 2] : y2;
+    }
+
+    const a0 = -0.5 * y0 + 1.5 * y1 - 1.5 * y2 + 0.5 * y3;
+    const a1 = y0 - 2.5 * y1 + 2.0 * y2 - 0.5 * y3;
+    const a2 = -0.5 * y0 + 0.5 * y2;
+    const a3 = y1;
+
+    const s = ((a0 * frac + a1) * frac + a2) * frac + a3;
     return Number.isFinite(s) ? Math.max(-1.0, Math.min(1.0, s)) : 0;
   }
 }

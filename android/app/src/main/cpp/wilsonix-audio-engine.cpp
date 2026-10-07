@@ -33,7 +33,12 @@ constexpr int kChannels = 2;           // stereo interleave = AudioContext
 constexpr size_t kRingFrames = 16384;  // power of two, ~341ms @48k headroom
 constexpr size_t kRingMask = kRingFrames - 1;
 constexpr double kMaxFillMs = 60.0;    // drift guard: shed oldest past this
-constexpr double kPrefillMs = 24.0;    // jitter cushion before playback starts
+constexpr double kPrefillStartMs = 12.0;    // adaptive jitter cushion start
+constexpr double kPrefillFloorMs = 10.0;    // safety floor (safe against 5ms slice dips)
+constexpr double kPrefillCeilMs = 32.0;     // ceiling cap on xrun backoff
+constexpr double kPrefillStepUpMs = 4.0;    // backoff step per xrun
+constexpr double kPrefillStepDownMs = 1.0;  // recovery decay step
+constexpr int64_t kCleanFramesDecayWindow = 240000; // 5.0s @ 48k clean frames before -1ms decay
 constexpr double kFadeSec = 0.004;     // click-guard gain ramp time
 
 class FloatRing {
@@ -168,11 +173,15 @@ public:
 
         mSampleRate = mStream->getSampleRate();
         mHighWaterFrames = (size_t)((kMaxFillMs / 1000.0) * mSampleRate);
-        mPrefillFrames = (size_t)((kPrefillMs / 1000.0) * mSampleRate);
+        mCushionMs.store(kPrefillStartMs, std::memory_order_relaxed);
+        mCushionFrames.store((size_t)((kPrefillStartMs / 1000.0) * mSampleRate),
+                             std::memory_order_relaxed);
         mRing.reset();
         mXruns.store(0, std::memory_order_relaxed);
         mArmed.store(false, std::memory_order_relaxed);
         mStreamError.store(false, std::memory_order_relaxed);
+        mRebuffering.store(false, std::memory_order_relaxed);
+        mCleanFrames.store(0, std::memory_order_relaxed);
         // Deliberately NOT started yet: playback begins on the first write()
         // that sees the prefill cushion, so the consumer never races an empty
         // ring (producer == consumer rate -> fill would otherwise hover ~0ms
@@ -189,9 +198,10 @@ public:
                  (int)mStream->getFramesPerBurst(),
                  latencyMsOf(mStream.get()),
                  (int)mStream->getFormat());
-        LOGI("engine configured rate=%d burst=%d prefill=%d frames",
+        LOGI("engine configured rate=%d burst=%d prefill=%zu frames (%.1fms)",
              (int)mSampleRate, (int)mStream->getFramesPerBurst(),
-             (int)mPrefillFrames);
+             mCushionFrames.load(std::memory_order_relaxed),
+             mCushionMs.load(std::memory_order_relaxed));
         return std::string(json);
     }
 
@@ -205,12 +215,12 @@ public:
         // Start playback once the jitter cushion is in place (runs on the
         // Capacitor plugin thread; same thread serializes configure/stats).
         if (!mRunning.load(std::memory_order_acquire) && mStream &&
-            mRing.fillFrames() >= mPrefillFrames) {
+            mRing.fillFrames() >= mCushionFrames.load(std::memory_order_relaxed)) {
             const oboe::Result r = mStream->requestStart();
             if (r == oboe::Result::OK) {
                 mRunning.store(true, std::memory_order_release);
-                LOGI("prefill reached (%dms) - stream started",
-                     (int)kPrefillMs);
+                LOGI("prefill reached (%.1fms) - stream started",
+                     mCushionMs.load(std::memory_order_relaxed));
             } else {
                 mStreamError.store(true, std::memory_order_relaxed);
                 LOGE("requestStart failed: %s", oboe::convertToText(r));
@@ -237,13 +247,14 @@ public:
                  "{\"ok\":true,\"running\":%s,\"prefilling\":%s,\"error\":%s,"
                  "\"sampleRate\":%d,\"burst\":%d,"
                  "\"latencyMs\":%.1f,\"fillMs\":%.1f,"
-                 "\"xruns\":%lld,\"droppedFrames\":%lld}",
+                 "\"xruns\":%lld,\"droppedFrames\":%lld,\"cushionMs\":%.1f}",
                  (started ? "true" : "false"),
                  (mRunning.load(std::memory_order_relaxed) ? "false" : "true"),
                  (mStreamError.load(std::memory_order_relaxed) ? "true" : "false"),
                  (int)mSampleRate, burst, latMs, fillMs,
                  (long long)mXruns.load(std::memory_order_relaxed),
-                 (long long)mRing.droppedFrames());
+                 (long long)mRing.droppedFrames(),
+                 mCushionMs.load(std::memory_order_relaxed));
         return std::string(json);
     }
 
@@ -258,6 +269,23 @@ public:
                                           void* audioData,
                                           int32_t numFrames) override {
         float* out = static_cast<float*>(audioData);
+        if (numFrames <= 0) return oboe::DataCallbackResult::Continue;
+
+        const size_t targetFrames = mCushionFrames.load(std::memory_order_relaxed);
+
+        // Consumer-side rebuffer: if an xrun triggered rebuffering, feed silence
+        // without draining the ring until producer has rebuilt the target cushion.
+        if (mRebuffering.load(std::memory_order_relaxed)) {
+            if (mRing.fillFrames() < targetFrames) {
+                std::memset(out, 0, (size_t)numFrames * kChannels * sizeof(float));
+                mFadeTarget = 0.0f;
+                applyFade(out, numFrames);
+                return oboe::DataCallbackResult::Continue;
+            }
+            // Ring cushion replenished: resume consumption.
+            mRebuffering.store(false, std::memory_order_relaxed);
+        }
+
         const size_t got = mRing.read(out, (size_t)numFrames, mHighWaterFrames);
         if (got < (size_t)numFrames) {
             std::memset(out + got * kChannels, 0,
@@ -266,8 +294,34 @@ public:
                 mXruns.fetch_add(1, std::memory_order_relaxed);
             }
             mFadeTarget = 0.0f;
+
+            // Xrun detected: back off cushion by +4ms (up to kPrefillCeilMs ceiling),
+            // reset clean-frames counter, and enter consumer rebuffer mode.
+            double curMs = mCushionMs.load(std::memory_order_relaxed);
+            double newMs = curMs + kPrefillStepUpMs;
+            if (newMs > kPrefillCeilMs) newMs = kPrefillCeilMs;
+            mCushionMs.store(newMs, std::memory_order_relaxed);
+            mCushionFrames.store((size_t)((newMs / 1000.0) * mSampleRate),
+                                 std::memory_order_relaxed);
+            mCleanFrames.store(0, std::memory_order_relaxed);
+            mRebuffering.store(true, std::memory_order_relaxed);
         } else {
             mFadeTarget = 1.0f;
+
+            // Clean callback: accumulate clean frames. After 240,000 clean frames
+            // (5.0s @ 48kHz) with 0 xruns, decay cushion by -1ms down to floor (10ms).
+            int64_t clean = mCleanFrames.fetch_add(numFrames, std::memory_order_relaxed) + numFrames;
+            if (clean >= kCleanFramesDecayWindow) {
+                mCleanFrames.store(0, std::memory_order_relaxed);
+                double curMs = mCushionMs.load(std::memory_order_relaxed);
+                if (curMs > kPrefillFloorMs) {
+                    double newMs = curMs - kPrefillStepDownMs;
+                    if (newMs < kPrefillFloorMs) newMs = kPrefillFloorMs;
+                    mCushionMs.store(newMs, std::memory_order_relaxed);
+                    mCushionFrames.store((size_t)((newMs / 1000.0) * mSampleRate),
+                                         std::memory_order_relaxed);
+                }
+            }
         }
         applyFade(out, numFrames);
         return oboe::DataCallbackResult::Continue;
@@ -298,6 +352,7 @@ private:
 
     void stopInternal() {
         mRunning.store(false, std::memory_order_relaxed);
+        mRebuffering.store(false, std::memory_order_relaxed);
         if (mStream) {
             mStream->requestStop();
             mStream->close();
@@ -310,7 +365,10 @@ private:
     FloatRing mRing;
     int mSampleRate = 48000;
     size_t mHighWaterFrames = 48000;    // recomputed on configure
-    size_t mPrefillFrames = 1152;       // recomputed on configure
+    std::atomic<double> mCushionMs{kPrefillStartMs};
+    std::atomic<size_t> mCushionFrames{576}; // recomputed on configure / backoff / decay
+    std::atomic<bool> mRebuffering{false};
+    std::atomic<int64_t> mCleanFrames{0};
     std::atomic<bool> mArmed{false};
     std::atomic<bool> mRunning{false};  // true once prefill started playback
     std::atomic<bool> mStreamError{false};

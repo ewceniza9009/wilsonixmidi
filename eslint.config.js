@@ -5,7 +5,9 @@ export default [
   {
     ignores: [
       "dist/**",
+      "dist-apk/**",
       "android/**",
+      "src-tauri/target/**",
       "node_modules/**",
       "src/audio/korg-pcm-data.js",
     ],

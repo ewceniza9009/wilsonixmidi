@@ -651,6 +651,7 @@
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
   box-sizing: border-box;
+  contain: layout paint;
 }
 
 /* Authentic Acoustic Piano Crimson Felt Damping Strip */

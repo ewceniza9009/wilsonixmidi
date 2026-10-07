@@ -2,8 +2,8 @@
  * Native Output Bridge (Oboe) - Phase A POC.
  *
  * Replaces ONLY the last mile of the audio path on Android: the final mix is
- * tapped at outputStage, shipped to native as base64 float32 (10ms chunks,
- * ~100/s) over the Capacitor bridge, and played by an Oboe LowLatency stream
+ * tapped at outputStage, shipped to native as base64 float32 (5ms chunks,
+ * ~200/s) over the Capacitor bridge, and played by an Oboe LowLatency stream
  * (~3ms burst) instead of Chromium's ~45ms output pipeline. Everything
  * upstream (voices, effects, limiter, spatial, recorder taps) is untouched.
  *
@@ -174,7 +174,7 @@ export class OutputBridge {
     }
 
     // 2. Native configure BEFORE any graph change: failure mutates nothing.
-    const chunkFrames = Math.max(128, Math.round(ctx.sampleRate * 0.01));
+    const chunkFrames = Math.max(128, Math.round(ctx.sampleRate * 0.005));
     let cfg;
     try {
       cfg = await AudioBridge.configure({ sampleRate: Math.round(ctx.sampleRate) });
@@ -259,16 +259,16 @@ export class OutputBridge {
   _onChunk(chunk) {
     if (!this.enabled) return;
     if (!chunk || typeof chunk.length !== "number" || chunk.length === 0) return;
-    if (this._inflight >= 12) {
-      // Bridge stall (>=120ms of unanswered writes): SKIP this 10ms slice
+    if (this._inflight >= 24) {
+      // Bridge stall (>=120ms of unanswered writes at 5ms slices): SKIP this 5ms slice
       // instead of queueing latency behind it. The native ring underruns
       // briefly (click-guard fades), and the first resolving write resets the
       // burst - so a transient main-thread stall survives. Only a SUSTAINED
-      // overload (50 straight drops = 500ms, or promises that never settle)
+      // overload (100 straight drops = 500ms, or promises that never settle)
       // falls back to the web path.
       this._droppedChunks++;
       this._dropBurst++;
-      if (this._dropBurst >= 50) this._fail("backpressure");
+      if (this._dropBurst >= 100) this._fail("backpressure");
       return;
     }
     let b64;

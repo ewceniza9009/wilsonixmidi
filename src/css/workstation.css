@@ -98,9 +98,7 @@ body.mobile-stage-keys .studio-keyboard-deck {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  background: rgba(15, 18, 26, 0.94);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: linear-gradient(180deg, var(--chassis-gunmetal, #161a25) 0%, var(--chassis-obsidian, #0b0d13) 100%);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-md);
   padding: 3px 8px;
@@ -108,9 +106,10 @@ body.mobile-stage-keys .studio-keyboard-deck {
   min-height: 38px;
   max-height: 38px;
   box-sizing: border-box;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.75), var(--bevel-chamfer-top);
   flex-wrap: nowrap;
   width: 100%;
+  contain: layout paint;
 }
 
 .hud-section {
@@ -378,13 +377,13 @@ body.mobile-stage-keys .studio-keyboard-deck {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: linear-gradient(180deg, rgba(24, 31, 46, 0.95) 0%, rgba(13, 17, 26, 0.98) 100%);
-  border: 1px solid rgba(0, 210, 255, 0.35);
+  background: var(--oled-bg, #07090e);
+  border: 1px solid rgba(0, 229, 255, 0.45);
   border-radius: var(--radius-sm, 6px);
   padding: 2px 8px;
   height: 28px;
   box-sizing: border-box;
-  box-shadow: 0 0 12px rgba(0, 210, 255, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow: var(--oled-inner-shadow), 0 0 10px rgba(0, 229, 255, 0.2);
   cursor: pointer;
   width: 220px;
   max-width: 260px;
@@ -395,8 +394,8 @@ body.mobile-stage-keys .studio-keyboard-deck {
 }
 
 .hud-sound-cockpit:hover {
-  border-color: var(--accent-cyan, #00d2ff);
-  box-shadow: 0 0 16px rgba(0, 210, 255, 0.25);
+  border-color: var(--accent-cyan, #00e5ff);
+  box-shadow: var(--oled-inner-shadow), 0 0 16px rgba(0, 229, 255, 0.35);
 }
 
 .sound-cockpit-icon {
@@ -406,10 +405,12 @@ body.mobile-stage-keys .studio-keyboard-deck {
 }
 
 .sound-cockpit-text {
+  font-family: var(--font-family-mono);
   font-size: 0.68rem;
   font-weight: 800;
-  color: #fb923c;
-  letter-spacing: 0.2px;
+  color: var(--oled-amber-text, #ff9800);
+  text-shadow: var(--oled-amber-glow);
+  letter-spacing: 0.04em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -983,33 +984,47 @@ body.mobile-stage-keys .studio-keyboard-deck {
 .latency-hud-pill, .midi-status-pill {
   display: flex;
   align-items: center;
-  gap: 3px;
-  background: #090c13;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 4px;
+  background: var(--oled-bg, #07090e);
+  border: var(--oled-border);
+  box-shadow: var(--oled-inner-shadow);
   border-radius: var(--radius-sm);
-  padding: 0 5px;
+  padding: 0 6px;
   height: 26px;
   box-sizing: border-box;
-  font-size: 0.54rem;
+  font-family: var(--font-family-mono);
+  font-size: 0.58rem;
   font-weight: 700;
-  color: #94a3b8;
+  color: var(--oled-green-text, #00f59b);
+  letter-spacing: 0.04em;
 }
 
 .latency-hud-pill.interactive {
   cursor: pointer;
-  transition: all 0.12s ease;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
 .latency-hud-pill.interactive:hover {
   border-color: var(--accent-cyan);
-  color: #fff;
-  background: #141c2b;
+  box-shadow: var(--oled-inner-shadow), 0 0 10px rgba(0, 229, 255, 0.4);
 }
 
 #hud-latency-val {
-  min-width: 4.2ch;
+  min-width: 4.5ch;
   text-align: right;
   font-variant-numeric: tabular-nums;
+  color: var(--oled-green-text, #00f59b);
+  text-shadow: var(--oled-green-glow);
+}
+
+.latency-hud-pill.latency-warm #hud-latency-val {
+  color: var(--oled-amber-text, #ff9800);
+  text-shadow: var(--oled-amber-glow);
+}
+
+.latency-hud-pill.latency-hot #hud-latency-val {
+  color: var(--accent-red, #ff334b);
+  text-shadow: var(--led-red-on);
 }
 
 .latency-dot, .midi-indicator {
@@ -1020,23 +1035,75 @@ body.mobile-stage-keys .studio-keyboard-deck {
   box-shadow: 0 0 6px var(--accent-green);
 }
 
-.sunlight-mode-btn {
-  background: #090c13;
-  border: 1px solid rgba(251, 191, 36, 0.3);
-  font-size: 0.58rem;
-  padding: 0 5px;
+/* Hardware Theme & Stage Contrast Capsule Switch */
+.hud-theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   height: 26px;
+  padding: 0 7px;
+  background: linear-gradient(180deg, #181d28 0%, #0d1017 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top-color: rgba(255, 255, 255, 0.22);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
   box-sizing: border-box;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hud-theme-toggle-btn:hover {
+  background: linear-gradient(180deg, #242c3d 0%, #151924 100%);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.hud-theme-toggle-btn:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+.theme-icon-indicator {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background 0.12s ease;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
-.sunlight-mode-btn:hover {
-  background: #1e2029;
+.theme-svg-moon {
+  color: #38bdf8;
+  filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.6));
+}
+
+.theme-svg-sun {
+  color: #f59e0b;
+  filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.7));
+}
+
+.theme-toggle-label {
+  font-family: var(--font-family-mono);
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+
+.hud-theme-toggle-btn.dark-active .theme-toggle-label {
+  color: #93c5fd;
+  text-shadow: 0 0 6px rgba(59, 130, 246, 0.3);
+}
+
+.hud-theme-toggle-btn.light-active {
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.18) 0%, rgba(20, 24, 34, 0.95) 100%);
+  border-color: rgba(245, 158, 11, 0.5);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.hud-theme-toggle-btn.light-active .theme-toggle-label {
+  color: #fbbf24;
+  text-shadow: 0 0 6px rgba(251, 191, 36, 0.5);
 }
 
 /* ==========================================================================
@@ -1677,10 +1744,11 @@ select.midi-out-select[multiple] option:disabled {
   display: flex;
   align-items: center;
   gap: 2px;
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--chassis-obsidian, #0b0d13);
   padding: 2px 3px;
   border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--milled-groove);
   flex-shrink: 0 !important;
 }
 
@@ -1715,36 +1783,43 @@ select.midi-out-select[multiple] option:disabled {
   display: flex;
   align-items: center;
   gap: 3px;
-  background: rgba(18, 22, 32, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, #1e2433 0%, #131722 100%);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-top-color: rgba(255, 255, 255, 0.18);
   color: #94a3b8;
   font-family: var(--font-family-studio);
   font-size: 0.60rem;
-  font-weight: 700;
+  font-weight: 800;
   padding: 4px 8px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   white-space: nowrap;
-  letter-spacing: 0.4px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  letter-spacing: 0.5px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: all 0.12s cubic-bezier(0.16, 1, 0.3, 1);
   flex-shrink: 0 !important;
   user-select: none;
   touch-action: manipulation;
 }
 
 .ws-tab-btn:hover {
-  background: rgba(30, 37, 52, 0.95);
+  background: linear-gradient(180deg, #273044 0%, #181e2b 100%);
   color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.18);
-  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.ws-tab-btn:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
 .ws-tab-btn.active {
-  background: linear-gradient(135deg, rgba(255, 118, 77, 0.3) 0%, rgba(26, 32, 46, 0.95) 100%);
-  border-color: var(--accent-amber);
+  background: linear-gradient(180deg, rgba(255, 118, 77, 0.28) 0%, rgba(20, 24, 34, 0.98) 100%);
+  border: 1px solid var(--accent-amber);
+  border-top: 2px solid var(--accent-amber-bright);
   color: #ffffff;
-  box-shadow: 0 0 10px var(--accent-amber-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 12px rgba(255, 118, 77, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  text-shadow: 0 0 6px rgba(255, 118, 77, 0.6);
 }
 
 /* Memory Logger pill — live decoded-RAM vs budget readout in the tab bar */
@@ -4667,24 +4742,7 @@ select.midi-out-select[multiple] option:disabled {
   display: block;
 }
 
-/* 4. Sunlight Mode Button & Stage Daylight Styling */
-.sunlight-mode-btn {
-  background: #181f2b;
-  color: #fbbf24;
-  border: 1px solid rgba(251, 191, 36, 0.3);
-  font-size: 0.54rem;
-  font-weight: 800;
-  padding: 2px 5px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-
-.sunlight-mode-btn.active {
-  background: #fbbf24;
-  color: #000;
-  border-color: #f59e0b;
-  box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
-}
+/* 4. Stage Daylight Styling */
 
 body.stage-sunlight-mode {
   background: #252b3b !important;

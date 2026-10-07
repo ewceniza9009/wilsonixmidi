@@ -493,3 +493,19 @@
   border: 1px solid rgba(255, 255, 255, 0.15) !important;
 }
 
+[data-theme="light"] .hud-theme-toggle-btn {
+  background: linear-gradient(180deg, #ffffff 0%, #e2e8f0 100%) !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), inset 0 1px 0 #ffffff !important;
+}
+
+[data-theme="light"] .hud-theme-toggle-btn .theme-toggle-label {
+  color: #1e293b !important;
+}
+
+[data-theme="light"] .hud-theme-toggle-btn .theme-svg-sun {
+  color: #d97706 !important;
+  filter: drop-shadow(0 0 3px rgba(217, 119, 6, 0.5)) !important;
+}
+
+

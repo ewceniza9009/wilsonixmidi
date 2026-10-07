@@ -645,45 +645,157 @@ export class VirtualKeyboardUI {
     // Touches release immediately on touchend and touchcancel without artificial delay
     // to prevent keys sticking when multi-finger gestures (e.g. 3-finger chords/screenshot) occur.
 
+    const triggerPointerDown = (id, clientX, clientY, timeStamp) => {
+      if (this.activeTouches.has(id)) return;
+      lastTouchTime = performance.now();
+      const __latT0 = latencyMeter.inputArrived("touch", timeStamp || performance.now());
+      const key = getKeyFromPoint(clientX, clientY);
+      if (key) {
+        const snappedMidi = scaleLock.isLocked
+          ? scaleLock.snapToScale(key.midi)
+          : key.midi;
+        if (snappedMidi === null) return;
+        const vel = calculateVelocity(clientY, key.rect, key.el, false);
+        const notes = qwertyKeyboard.generateSmartVoicing(
+          snappedMidi,
+          qwertyKeyboard.chordMode,
+        );
+        this.activeTouches.set(id, {
+          midi: key.midi,
+          snappedMidi,
+          rect: key.rect,
+          chordNotes: notes,
+          lastGlissandoTime: lastTouchTime,
+        });
+
+        notes.forEach((n) => {
+          this.setKeyVisualState(n, true, vel);
+          if (arpeggiator.enabled) {
+            arpeggiator.handleNoteOn(n, vel);
+          } else {
+            multiLayerEngine.noteOn(n, vel);
+          }
+        });
+        latencyMeter.dispatchDone("touch", __latT0);
+      }
+    };
+
+    const triggerPointerMove = (id, clientX, clientY) => {
+      const prevTouch = this.activeTouches.get(id);
+      const key = getKeyFromPoint(clientX, clientY);
+
+      if (key) {
+        const snappedMidi = scaleLock.isLocked
+          ? scaleLock.snapToScale(key.midi)
+          : key.midi;
+        if (snappedMidi === null) return;
+
+        // Spatial Hysteresis: prevent buzzing/machine-gun retrigger near key borders
+        if (
+          prevTouch &&
+          prevTouch.rect &&
+          snappedMidi !== prevTouch.snappedMidi &&
+          clientX >= prevTouch.rect.left - 4 &&
+          clientX <= prevTouch.rect.right + 4 &&
+          clientY >= prevTouch.rect.top - 6 &&
+          clientY <= prevTouch.rect.bottom + 6
+        ) {
+          const relativeY = Math.max(
+            0,
+            Math.min(
+              1.0,
+              (clientY - prevTouch.rect.top) / prevTouch.rect.height,
+            ),
+          );
+          multiLayerEngine.setNoteExpression(prevTouch.midi, relativeY);
+          return;
+        }
+
+        if (!prevTouch || snappedMidi !== prevTouch.snappedMidi) {
+          const now = performance.now();
+          if (
+            prevTouch &&
+            prevTouch.lastGlissandoTime &&
+            now - prevTouch.lastGlissandoTime < 28
+          ) {
+            return;
+          }
+
+          // Glissando / slide to new key
+          const vel = calculateVelocity(clientY, key.rect, key.el, true);
+          const notes = qwertyKeyboard.generateSmartVoicing(
+            snappedMidi,
+            qwertyKeyboard.chordMode,
+          );
+          const prevChordNotes = prevTouch ? prevTouch.chordNotes : null;
+
+          this.activeTouches.set(id, {
+            midi: key.midi,
+            snappedMidi,
+            rect: key.rect,
+            chordNotes: notes,
+            lastGlissandoTime: now,
+          });
+
+          // 1. Trigger new note(s) first for seamless legato continuity
+          notes.forEach((n) => {
+            this.setKeyVisualState(n, true, vel);
+            if (arpeggiator.enabled) {
+              arpeggiator.handleNoteOn(n, vel);
+            } else {
+              multiLayerEngine.noteOn(n, vel);
+            }
+          });
+
+          // 2. Release previous note(s) that are no longer active
+          if (prevChordNotes) {
+            prevChordNotes.forEach((n) => {
+              if (!notes.includes(n)) {
+                this.setKeyVisualState(n, false);
+                if (arpeggiator.enabled) {
+                  arpeggiator.handleNoteOff(n);
+                } else {
+                  multiLayerEngine.noteOff(n);
+                }
+              }
+            });
+          }
+        } else {
+          // Continuous Vertical Slide on held key (Expressive Aftertouch)
+          const relativeY = Math.max(
+            0,
+            Math.min(1.0, (clientY - key.rect.top) / key.rect.height),
+          );
+          multiLayerEngine.setNoteExpression(key.midi, relativeY);
+        }
+      }
+    };
+
+    const triggerPointerRelease = (id) => {
+      const prevTouch = this.activeTouches.get(id);
+      if (!prevTouch || !prevTouch.chordNotes) {
+        this.activeTouches.delete(id);
+        return;
+      }
+      prevTouch.chordNotes.forEach((n) => {
+        this.setKeyVisualState(n, false);
+        if (arpeggiator.enabled) {
+          arpeggiator.handleNoteOff(n);
+        } else {
+          multiLayerEngine.noteOff(n);
+        }
+      });
+      this.activeTouches.delete(id);
+    };
+
     track.addEventListener(
       "touchstart",
       (e) => {
         if (e.cancelable) e.preventDefault();
         e.stopPropagation();
-        lastTouchTime = performance.now(); // Block synthetic mouse events
-        const __latT0 = latencyMeter.inputArrived("touch", e.timeStamp);
-
         for (let i = 0; i < e.changedTouches.length; i++) {
           const t = e.changedTouches[i];
-          const key = getKeyFromPoint(t.clientX, t.clientY);
-          if (key) {
-            const snappedMidi = scaleLock.isLocked
-              ? scaleLock.snapToScale(key.midi)
-              : key.midi;
-            if (snappedMidi === null) continue;
-            const vel = calculateVelocity(t.clientY, key.rect, key.el, false);
-            const notes = qwertyKeyboard.generateSmartVoicing(
-              snappedMidi,
-              qwertyKeyboard.chordMode,
-            );
-            this.activeTouches.set(t.identifier, {
-              midi: key.midi,
-              snappedMidi,
-              rect: key.rect,
-              chordNotes: notes,
-              lastGlissandoTime: lastTouchTime,
-            });
-
-            notes.forEach((n) => {
-              this.setKeyVisualState(n, true, vel);
-              if (arpeggiator.enabled) {
-                arpeggiator.handleNoteOn(n, vel);
-              } else {
-                multiLayerEngine.noteOn(n, vel);
-              }
-            });
-            latencyMeter.dispatchDone("touch", __latT0);
-          }
+          triggerPointerDown(t.identifier, t.clientX, t.clientY, e.timeStamp);
         }
       },
       { passive: false },
@@ -695,97 +807,7 @@ export class VirtualKeyboardUI {
 
       for (let i = 0; i < e.changedTouches.length; i++) {
         const t = e.changedTouches[i];
-        const prevTouch = this.activeTouches.get(t.identifier);
-        const key = getKeyFromPoint(t.clientX, t.clientY);
-
-        if (key) {
-          const snappedMidi = scaleLock.isLocked
-            ? scaleLock.snapToScale(key.midi)
-            : key.midi;
-          if (snappedMidi === null) continue;
-
-          // Spatial Hysteresis: prevent buzzing/machine-gun retrigger when finger micro-wobbles near key borders
-          if (
-            prevTouch &&
-            prevTouch.rect &&
-            snappedMidi !== prevTouch.snappedMidi &&
-            t.clientX >= prevTouch.rect.left - 4 &&
-            t.clientX <= prevTouch.rect.right + 4 &&
-            t.clientY >= prevTouch.rect.top - 6 &&
-            t.clientY <= prevTouch.rect.bottom + 6
-          ) {
-            // Finger is still on the held key's footprint; update expression without retriggering
-            const relativeY = Math.max(
-              0,
-              Math.min(
-                1.0,
-                (t.clientY - prevTouch.rect.top) / prevTouch.rect.height,
-              ),
-            );
-            multiLayerEngine.setNoteExpression(prevTouch.midi, relativeY);
-            continue;
-          }
-
-          if (!prevTouch || snappedMidi !== prevTouch.snappedMidi) {
-            const now = performance.now();
-            // Rate-limit sweep transitions to max ~35 notes/sec (~28ms dwell) per touch point
-            // to eliminate audio thread event queue flooding and voice stacking on 120Hz/240Hz screens
-            if (
-              prevTouch &&
-              prevTouch.lastGlissandoTime &&
-              now - prevTouch.lastGlissandoTime < 28
-            ) {
-              continue;
-            }
-
-            // Glissando / slide to new key
-            const vel = calculateVelocity(t.clientY, key.rect, key.el, true);
-            const notes = qwertyKeyboard.generateSmartVoicing(
-              snappedMidi,
-              qwertyKeyboard.chordMode,
-            );
-            const prevChordNotes = prevTouch ? prevTouch.chordNotes : null;
-
-            this.activeTouches.set(t.identifier, {
-              midi: key.midi,
-              snappedMidi,
-              rect: key.rect,
-              chordNotes: notes,
-              lastGlissandoTime: now,
-            });
-
-            // 1. Trigger new note(s) first for seamless legato continuity
-            notes.forEach((n) => {
-              this.setKeyVisualState(n, true, vel);
-              if (arpeggiator.enabled) {
-                arpeggiator.handleNoteOn(n, vel);
-              } else {
-                multiLayerEngine.noteOn(n, vel);
-              }
-            });
-
-            // 2. Release previous note(s) that are no longer active
-            if (prevChordNotes) {
-              prevChordNotes.forEach((n) => {
-                if (!notes.includes(n)) {
-                  this.setKeyVisualState(n, false);
-                  if (arpeggiator.enabled) {
-                    arpeggiator.handleNoteOff(n);
-                  } else {
-                    multiLayerEngine.noteOff(n);
-                  }
-                }
-              });
-            }
-          } else {
-            // Continuous Vertical Slide on held key (Expressive Aftertouch)
-            const relativeY = Math.max(
-              0,
-              Math.min(1.0, (t.clientY - key.rect.top) / key.rect.height),
-            );
-            multiLayerEngine.setNoteExpression(key.midi, relativeY);
-          }
-        }
+        triggerPointerMove(t.identifier, t.clientX, t.clientY);
       }
     };
 
@@ -793,6 +815,9 @@ export class VirtualKeyboardUI {
     this._onWindow(window, "touchmove", handleTouchMove, { passive: false });
 
     const handleTouchRelease = (e) => {
+      // Ignore synthetic events generated by the native bridge for external UI elements
+      if (e._isWilsonixSynth) return;
+
       const isPianoTouch =
         e.target &&
         (e.target.closest("#piano-keys-track") ||
@@ -801,66 +826,26 @@ export class VirtualKeyboardUI {
         e.preventDefault();
       }
 
-      const releaseTouch = (touchId, prevTouch) => {
-        if (!prevTouch || !prevTouch.chordNotes) {
-          this.activeTouches.delete(touchId);
-          return;
-        }
-
-        // Release immediately on both touchend and touchcancel to prevent stuck keys
-        prevTouch.chordNotes.forEach((n) => {
-          this.setKeyVisualState(n, false);
-          if (arpeggiator.enabled) {
-            arpeggiator.handleNoteOff(n);
-          } else {
-            multiLayerEngine.noteOff(n);
-          }
-        });
-        this.activeTouches.delete(touchId);
-      };
-
       for (let i = 0; i < e.changedTouches.length; i++) {
         const t = e.changedTouches[i];
-        const prevTouch = this.activeTouches.get(t.identifier);
-        releaseTouch(t.identifier, prevTouch);
+        triggerPointerRelease(t.identifier);
       }
 
       // Reconcile stuck touches if all fingers were lifted or system gesture cancelled touches
       if (e.touches) {
         if (e.touches.length === 0 && this.activeTouches.size > 0) {
-          // All fingers lifted or gesture cancelled: release all active touches immediately
-          this.activeTouches.forEach((prevTouch) => {
-            if (prevTouch && prevTouch.chordNotes) {
-              prevTouch.chordNotes.forEach((n) => {
-                this.setKeyVisualState(n, false);
-                if (arpeggiator.enabled) {
-                  arpeggiator.handleNoteOff(n);
-                } else {
-                  multiLayerEngine.noteOff(n);
-                }
-              });
-            }
-          });
+          for (const [id] of this.activeTouches.entries()) {
+            triggerPointerRelease(id);
+          }
           this.activeTouches.clear();
         } else {
-          // Release any touch IDs in activeTouches that no longer exist in e.touches
           const currentIds = new Set();
           for (let j = 0; j < e.touches.length; j++) {
             currentIds.add(e.touches[j].identifier);
           }
-          for (const [touchId, prevTouch] of this.activeTouches.entries()) {
+          for (const [touchId] of this.activeTouches.entries()) {
             if (!currentIds.has(touchId)) {
-              if (prevTouch && prevTouch.chordNotes) {
-                prevTouch.chordNotes.forEach((n) => {
-                  this.setKeyVisualState(n, false);
-                  if (arpeggiator.enabled) {
-                    arpeggiator.handleNoteOff(n);
-                  } else {
-                    multiLayerEngine.noteOff(n);
-                  }
-                });
-              }
-              this.activeTouches.delete(touchId);
+              triggerPointerRelease(touchId);
             }
           }
         }
@@ -883,16 +868,22 @@ export class VirtualKeyboardUI {
       const pts = data.pointers;
       const action = data.action;
       const idx = typeof data.i === "number" ? data.i : -1;
+      const trackRect = track.getBoundingClientRect();
 
-      const synth = (type, changedList, touchesList) => {
+      const isInsideTrack = (x, y) =>
+        x >= trackRect.left &&
+        x <= trackRect.right &&
+        y >= trackRect.top &&
+        y <= trackRect.bottom;
+
+      const synth = (type, changedList, touchesList, targetEl = track) => {
         try {
-          const target = track;
           const toTouch = (t) =>
             new Touch({
-              identifier: t.identifier,
-              target,
-              clientX: t.clientX,
-              clientY: t.clientY,
+              identifier: t.identifier != null ? t.identifier : t.id,
+              target: targetEl,
+              clientX: t.clientX != null ? t.clientX : t.x,
+              clientY: t.clientY != null ? t.clientY : t.y,
             });
           const ev = new TouchEvent(type, {
             changedTouches: changedList.map(toTouch),
@@ -900,39 +891,60 @@ export class VirtualKeyboardUI {
             cancelable: false,
             bubbles: true,
           });
-          target.dispatchEvent(ev);
+          ev._isWilsonixSynth = true;
+          targetEl.dispatchEvent(ev);
         } catch (e) {}
       };
 
       if (action === "DOWN" || action === "POINTER_DOWN") {
-        const fresh = pts.filter((p) => !this.activeTouches.has(p.id));
-        if (fresh.length) synth("touchstart", fresh);
-      } else if (action === "MOVE") {
-        const moved = [];
-        const lost = [];
-        for (const p of pts) {
-          if (this.activeTouches.has(p.id))
-            moved.push({ identifier: p.id, clientX: p.x, clientY: p.y });
-          else lost.push(p);
+        const p = idx >= 0 && idx < pts.length ? pts[idx] : pts[0];
+        if (p) {
+          if (this.activeTouches.has(p.id)) return;
+          if (isInsideTrack(p.x, p.y)) {
+            triggerPointerDown(p.id, p.x, p.y, performance.now());
+          } else {
+            const hitEl = document.elementFromPoint(p.x, p.y) || track;
+            synth("touchstart", [p], pts, hitEl);
+          }
         }
-        if (lost.length) synth("touchstart", lost);
-        if (moved.length)
-          synth(
-            "touchmove",
-            moved,
-            pts.map((p) => ({ identifier: p.id, clientX: p.x, clientY: p.y })),
-          );
+      } else if (action === "MOVE") {
+        for (const p of pts) {
+          if (this.activeTouches.has(p.id)) {
+            triggerPointerMove(p.id, p.x, p.y);
+          } else if (isInsideTrack(p.x, p.y)) {
+            // Finger slid in from outside/console into keybed: start note
+            triggerPointerDown(p.id, p.x, p.y, performance.now());
+          } else {
+            const hitEl = document.elementFromPoint(p.x, p.y) || track;
+            synth("touchmove", [p], pts, hitEl);
+          }
+        }
       } else if (action === "UP" || action === "POINTER_UP") {
-        const lifted =
-          action === "UP" ? pts.slice() : pts.filter((p, i2) => i2 === idx);
-        if (lifted.length) {
-          synth(
-            "touchend",
-            lifted,
-            pts.filter((p) => !lifted.includes(p)),
-          );
+        if (action === "UP") {
+          for (const p of pts) {
+            if (this.activeTouches.has(p.id)) {
+              triggerPointerRelease(p.id);
+            } else {
+              const hitEl = document.elementFromPoint(p.x, p.y) || track;
+              synth("touchend", [p], [], hitEl);
+            }
+          }
+        } else {
+          const p = idx >= 0 && idx < pts.length ? pts[idx] : pts[0];
+          if (p) {
+            if (this.activeTouches.has(p.id)) {
+              triggerPointerRelease(p.id);
+            } else {
+              const remaining = pts.filter((_, i2) => i2 !== idx);
+              const hitEl = document.elementFromPoint(p.x, p.y) || track;
+              synth("touchend", [p], remaining, hitEl);
+            }
+          }
         }
       } else if (action === "CANCEL") {
+        for (const [touchId] of this.activeTouches.entries()) {
+          triggerPointerRelease(touchId);
+        }
         synth("touchcancel", pts, []);
       }
     };

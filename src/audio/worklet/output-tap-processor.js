@@ -4,7 +4,7 @@
  * Sits at the app's final output point (after limiter + spatial, right before
  * ctx.destination) while the native Oboe bridge is active. Two jobs:
  *
- *  1. Accumulates the final stereo mix into fixed-size chunks (default 10ms)
+ *  1. Accumulates the final stereo mix into fixed-size chunks (default 5ms)
  *     and posts each chunk to the main thread (transferable, zero-copy), which
  *     ships it to the native Oboe engine over the Capacitor bridge.
  *  2. Outputs DIGITAL SILENCE to Chromium, so the web path stays wired (the
@@ -20,7 +20,7 @@ class OutputTapProcessor extends AudioWorkletProcessor {
   constructor(options) {
     super();
     const opts = (options && options.processorOptions) || {};
-    this.chunkFrames = opts.chunkFrames > 0 ? Math.floor(opts.chunkFrames) : 480;
+    this.chunkFrames = opts.chunkFrames > 0 ? Math.floor(opts.chunkFrames) : 240;
     this.channels = 2;
     this.buffer = new Float32Array(this.chunkFrames * this.channels);
     this.fill = 0;

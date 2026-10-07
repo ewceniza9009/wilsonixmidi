@@ -185,7 +185,7 @@ test("backpressure guard drops chunks during stalls, fails only when sustained",
   bridge.enabled = true;
   bridge.active = true;
   bridge._chunksSent = 10;
-  bridge._inflight = 12;
+  bridge._inflight = 24;
 
   // Transient stall: chunk is dropped (not sent, not counted), no fallback.
   bridge._onChunk(new Float32Array(960));
@@ -194,8 +194,8 @@ test("backpressure guard drops chunks during stalls, fails only when sustained",
   assert.equal(bridge._dropBurst, 1);
   assert.equal(bridge.enabled, true, "a short stall must not fall back");
 
-  // Sustained overload: 50 straight drops = 500ms -> web-path fallback.
-  bridge._dropBurst = 49;
+  // Sustained overload: 100 straight drops = 500ms -> web-path fallback.
+  bridge._dropBurst = 99;
   bridge._onChunk(new Float32Array(960));
   assert.equal(bridge.enabled, false);
   assert.equal(bridge.fallbackReason, "backpressure");

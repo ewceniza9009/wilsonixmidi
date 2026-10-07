@@ -71,6 +71,16 @@ export function createMockAudioContext() {
     createScriptProcessor: () => createNode(),
     createAnalyser: () => createNode(),
     createConvolver: () => createNode(),
+    createBuffer: (channels, length, sampleRate) => {
+      const data = [];
+      for (let c = 0; c < channels; c++) data.push(new Float32Array(length));
+      return {
+        numberOfChannels: channels,
+        length,
+        sampleRate,
+        getChannelData: (c) => data[c],
+      };
+    },
     destination: createNode(),
   };
 }

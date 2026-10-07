@@ -94,3 +94,101 @@ test("the probe worklet source is bundled and registers the right processor", as
   assert.match(code, /CALIBRATION_SEC/);
   assert.match(code, /REFRACTORY_SEC/);
 });
+
+test("GigHudUI._renderLatencyPopover renders safely without toFixed exceptions under edge-case latency inputs", async () => {
+  const origStorage = globalThis.localStorage;
+  const origWin = globalThis.window;
+  if (!globalThis.localStorage) {
+    globalThis.localStorage = {
+      getItem: () => null,
+      setItem: () => {},
+      removeItem: () => {},
+    };
+  }
+  if (!globalThis.window) {
+    globalThis.window = {
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      innerWidth: 1200,
+      innerHeight: 800,
+    };
+  }
+
+  const origDoc = globalThis.document;
+  const pill = {
+    getBoundingClientRect: () => ({ left: 20, right: 120, top: 10, bottom: 40 }),
+  };
+  const pop = {
+    className: "",
+    id: "",
+    style: {},
+    innerHTML: "",
+    querySelector: () => null,
+    querySelectorAll: () => [],
+    addEventListener: () => {},
+  };
+  if (!globalThis.document) {
+    globalThis.document = {
+      getElementById: (id) => (id === "hud-latency-pill" ? pill : null),
+      createElement: () => pop,
+      body: { appendChild: () => {} },
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    };
+  }
+
+  try {
+    const { GigHudUI } = await import("../src/components/gig-hud.js");
+
+    const mockHud = {
+      _closeLatencyPopover: () => {},
+    };
+
+    // Case 1: All values null/undefined
+    assert.doesNotThrow(() => {
+      GigHudUI.prototype._renderLatencyPopover.call(
+        mockHud,
+        {
+          measuredMs: null,
+          reportedMs: null,
+          baseMs: null,
+          sampleRate: null,
+          lockMs: null,
+          nativeLatencyMs: null,
+          nativeFillMs: null,
+          nativeBridge: false,
+        },
+        null
+      );
+    });
+    assert.ok(pop.innerHTML.length > 50, "popover should render HTML");
+
+    // Case 2: NaNs in measurements
+    assert.doesNotThrow(() => {
+      GigHudUI.prototype._renderLatencyPopover.call(
+        mockHud,
+        {
+          measuredMs: NaN,
+          reportedMs: NaN,
+          baseMs: NaN,
+          sampleRate: NaN,
+          lockMs: NaN,
+          nativeLatencyMs: NaN,
+          nativeFillMs: NaN,
+          nativeBridge: true,
+        },
+        NaN
+      );
+    });
+    assert.ok(!pop.innerHTML.includes("NaN ms"), "must not print 'NaN ms'");
+  } finally {
+    if (origDoc === undefined) delete globalThis.document;
+    else globalThis.document = origDoc;
+    if (origStorage === undefined) delete globalThis.localStorage;
+    else globalThis.localStorage = origStorage;
+    if (origWin === undefined) delete globalThis.window;
+    else globalThis.window = origWin;
+  }
+});
+
+
