@@ -10,7 +10,12 @@ function createParam(value = 0) {
   return new Proxy(target, {
     get(obj, prop) {
       if (prop === "cancelScheduledValues") return () => {};
-      if (prop === "setValueAtTime" || prop === "setTargetAtTime") {
+      if (
+        prop === "setValueAtTime" ||
+        prop === "setTargetAtTime" ||
+        prop === "linearRampToValueAtTime" ||
+        prop === "exponentialRampToValueAtTime"
+      ) {
         return (v) => { obj.value = v; obj._calls.push([prop, v]); };
       }
       // Record audio-node -> AudioParam connections (forces a-rate evaluation

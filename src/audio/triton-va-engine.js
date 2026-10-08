@@ -56,8 +56,15 @@ export class TritonVirtualAnalogEngine {
     // 3. Complex Synth Leads (Saw/Square/Trance): lush 3-osc supersaw detune
     // 4. General Pads, Strings, Brass: clean 2-osc mix (no sub rumble)
     const isSineProgram = (osc1 === "sine" && osc2 === "sine") || (prog.name || "").toLowerCase().includes("sine") || (prog.name || "").toLowerCase().includes("whistler");
-    const isLead = !isSineProgram && /(lead|trance|saw|synth|stabb|stab|fast|hit|motion)/i.test((prog.category || "") + " " + (prog.name || ""));
+    const isLead = /(lead|trance|saw|synth|stabb|stab|fast|hit|motion|whistler|solo)/i.test((prog.category || "") + " " + (prog.name || ""));
     const isOrganOrEP = !isSineProgram && /(organ|\bep\b|piano|tine|clav|vibes|bell|wurly|rhodes)/i.test((prog.category || "") + " " + (prog.name || ""));
+    const isPureSineLead =
+      prog.id === "A010" ||
+      prog.id === "A046" ||
+      /smooth\s*sine|sine\s*lead|sine\s*whistler/i.test(prog.name || "") ||
+      (isSineProgram && /(lead|whistler|solo)/i.test((prog.category || "") + " " + (prog.name || "")));
+    const isGlissando = !!prog.glissando || !!prog.glide || !!prog.portamento || isPureSineLead;
+    const glideTime = prog.glide || prog.portamento || 0.045; // ~45ms smooth liquid glissando
 
     let osc3Type = "sine";
     let osc3Ratio = 0.5;
@@ -155,6 +162,9 @@ export class TritonVirtualAnalogEngine {
       isPercussive,
       isLead,
       isPureSine: isSineProgram,
+      isPureSineLead,
+      isGlissando,
+      glideTime,
       syncSlave: isSyncProgram,
       masterGain: 0.82,
     };
@@ -169,8 +179,48 @@ export class TritonVirtualAnalogEngine {
 
     const ratio = Math.pow(2, this.pitchBendSemitones / 12);
 
+    // Monophonic legato glissando for pure sine leads and gliding synths (Smooth Sine Lead, G-Funk Whistler):
+    // Pure sine waves have no harmonics. When adjacent semitones overlap during slides, sweeps,
+    // or fast legato runs, multiple simultaneous sine voices create harsh 15-40Hz intermodulation
+    // flutter / motorboat buzzing. Instead, smoothly glide the active oscillator pitch to the new note.
+    if (this.config.isGlissando) {
+      const activeVoice = this.pool.voices.find(v => v.isBusy && v.activeMidiNote !== null);
+      const ctx = activeVoice?.ctx || audioCore.ctx;
+      const now = when > 0 ? Math.max(when, ctx.currentTime) : ctx.currentTime;
+
+      if (activeVoice) {
+        const baseFreq = 440 * Math.pow(2, (midiNote - 69) / 12);
+        const freq = baseFreq * ratio;
+        const glideTau = this.config.glideTime || 0.045;
+
+        activeVoice._gen++; // Invalidate any scheduled release timeouts
+        activeVoice.activeMidiNote = midiNote;
+        activeVoice.isBusy = true;
+        activeVoice.isSustained = false;
+
+        const velRatio = Math.max(0.05, Math.min(1.0, velocity / 127));
+        const peakGain = (0.35 + velRatio * 0.65) * (this.config.masterGain || 0.82);
+        const sustain = peakGain * (this.config.sustainLevel || 0.65);
+
+        // Cancel pending release decay and maintain sustain gain smoothly
+        activeVoice.voiceGain.gain.cancelScheduledValues(now);
+        activeVoice.voiceGain.gain.setTargetAtTime(sustain, now, 0.008);
+
+        // Continuous frequency glide: cancel previous scheduling and glide smoothly to new pitch
+        activeVoice.osc1.frequency.cancelScheduledValues(now);
+        activeVoice.osc2.frequency.cancelScheduledValues(now);
+        activeVoice.osc3.frequency.cancelScheduledValues(now);
+        activeVoice.osc1.frequency.setTargetAtTime(freq * (this.config.osc1Ratio || 1.0), now, glideTau);
+        activeVoice.osc2.frequency.setTargetAtTime(freq * (this.config.osc2Ratio || 2.0), now, glideTau);
+        activeVoice.osc3.frequency.setTargetAtTime(freq * (this.config.osc3Ratio || 0.5), now, glideTau);
+
+        this.heldNotes.add(midiNote);
+        return;
+      }
+    }
+
     // Voice polyphony ceiling: limits simultaneous voices to avoid DSP overflow under sustain
-    const maxActive = this.config.isLead ? 8 : 16;
+    const maxActive = this.config.isGlissando ? 1 : (this.config.isLead ? 8 : 16);
     const busyVoices = this.pool.voices.filter(v => v.isBusy);
     if (busyVoices.length >= maxActive) {
       // Steal oldest voice that is not currently held down by a finger
@@ -196,6 +246,40 @@ export class TritonVirtualAnalogEngine {
   noteOff(midiNote, when = 0) {
     if (!this.pool) return;
     this.heldNotes.delete(midiNote);
+
+    // For glissando leads, if the user is sliding/sweeping and another note is held, keep voice singing!
+    if (this.config?.isGlissando) {
+      if (this.heldNotes.size > 0) {
+        // Legato note release: if the released note was the active singing note,
+        // glide back to the most recent still-held note!
+        const activeVoice = this.pool.voices.find(v => v.isBusy && v.activeMidiNote === midiNote);
+        if (activeVoice) {
+          const remainingNotes = Array.from(this.heldNotes);
+          const fallbackNote = remainingNotes[remainingNotes.length - 1];
+          const ratio = Math.pow(2, this.pitchBendSemitones / 12);
+          const baseFreq = 440 * Math.pow(2, (fallbackNote - 69) / 12);
+          const freq = baseFreq * ratio;
+          const ctx = activeVoice.ctx || audioCore.ctx;
+          const now = when > 0 ? Math.max(when, ctx.currentTime) : ctx.currentTime;
+          const glideTau = this.config.glideTime || 0.045;
+
+          activeVoice.activeMidiNote = fallbackNote;
+          activeVoice.osc1.frequency.cancelScheduledValues(now);
+          activeVoice.osc2.frequency.cancelScheduledValues(now);
+          activeVoice.osc3.frequency.cancelScheduledValues(now);
+          activeVoice.osc1.frequency.setTargetAtTime(freq * (this.config.osc1Ratio || 1.0), now, glideTau);
+          activeVoice.osc2.frequency.setTargetAtTime(freq * (this.config.osc2Ratio || 2.0), now, glideTau);
+          activeVoice.osc3.frequency.setTargetAtTime(freq * (this.config.osc3Ratio || 0.5), now, glideTau);
+        }
+        return;
+      }
+      // All keys released: release the singing voice
+      const rel = Math.max(0.06, Math.min(1.2, this.config?.release || 0.35));
+      this.pool.voices.forEach(v => {
+        if (v.isBusy) v.release(this.sustainPedal, rel, when, this._sustainSettings);
+      });
+      return;
+    }
 
     const rel = Math.max(0.02, Math.min(1.2, this.config?.release || 0.35));
     const voices = this.pool.getActiveVoicesByNote(midiNote);
