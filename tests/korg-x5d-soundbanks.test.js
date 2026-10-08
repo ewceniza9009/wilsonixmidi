@@ -196,3 +196,40 @@ test("createCrossfadedLoopBuffer automatically trims leading delay for X5D prese
   const expectedTrim = (silenceFrames + 1) - 16;
   assert.equal(processed.length, totalFrames - expectedTrim);
 });
+
+test("Korg X5D presets receive crispy unconstrained filter cutoff and transient bite", () => {
+  const mockCtx = createMockAudioContext();
+  const origInit = NativePcmEngine.prototype.initBuffers;
+  NativePcmEngine.prototype.initBuffers = function() {
+    this.isReady = true;
+    return Promise.resolve();
+  };
+  const engine = new NativePcmEngine(mockCtx, undefined, { deferAssetLoading: true });
+  NativePcmEngine.prototype.initBuffers = origInit;
+
+  let lastWorkletParams = null;
+  engine.pcmWorkletNode = {
+    isReady: true,
+    ensureBuffer: () => {},
+    noteOn: (params) => {
+      lastWorkletParams = params;
+    },
+  };
+
+  // Populate mock anchor buffer for testing noteOn
+  const dummyBuf = { duration: 2.0, _isLoopable: false };
+  engine.decodedBuffers.set("x5d_analog_king", new Map([[60, dummyBuf]]));
+  engine.decodedBuffers.set("x5d_moonstone", new Map([[60, dummyBuf]]));
+
+  // 1. X5D lead/synth: wide-open 1.0 filter cutoff and 1ms instant transient attack
+  engine.playNote("x5d_analog_king", 60, 80, 1.0, null);
+  assert.ok(lastWorkletParams, "Worklet noteOn must be dispatched");
+  assert.equal(lastWorkletParams.filterCutoff, 1.0, "X5D synths/leads must have 1.0 wide-open cutoff");
+  assert.equal(lastWorkletParams.attackTime, 0.001, "X5D synths/leads must have crisp 1ms attack bite");
+
+  // 2. X5D ambient pad: elevated sparkle cutoff floor (>= 15 kHz) and smooth swell attack
+  engine.playNote("x5d_moonstone", 60, 80, 1.0, 1);
+  assert.ok(lastWorkletParams.filterCutoff >= 0.75, "X5D pads must have elevated sparkle cutoff floor >= 15 kHz");
+  assert.equal(lastWorkletParams.attackTime, 0.35, "X5D pad layers must maintain smooth swell attack");
+});
+
