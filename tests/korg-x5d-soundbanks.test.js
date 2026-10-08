@@ -199,13 +199,8 @@ test("createCrossfadedLoopBuffer automatically trims leading delay for X5D prese
 
 test("Korg X5D presets receive crispy unconstrained filter cutoff and transient bite", () => {
   const mockCtx = createMockAudioContext();
-  const origInit = NativePcmEngine.prototype.initBuffers;
-  NativePcmEngine.prototype.initBuffers = function() {
-    this.isReady = true;
-    return Promise.resolve();
-  };
   const engine = new NativePcmEngine(mockCtx, undefined, { deferAssetLoading: true });
-  NativePcmEngine.prototype.initBuffers = origInit;
+  engine.isReady = true;
 
   let lastWorkletParams = null;
   engine.pcmWorkletNode = {
