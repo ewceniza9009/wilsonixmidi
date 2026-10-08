@@ -3800,12 +3800,15 @@ export class MultiLayerEngine {
     this.heldNotes = new Set();
     this._heldNoteTimers = new Map();
 
-    // Ambient Pad Sidechain Ducking: smoothly dips Layer 1 (pad/strings) when Layer 0 (piano/lead) plays
-    this.isPadDuckingEnabled = false;
+    // Ambient Pad Sidechain Ducking: smoothly dips Layer 1 (pad/strings) when Layer 0 (piano/lead) plays.
+    // Modern stage workstation standard (MainStage / Sunday Keys): active by default so ambient pads never blast.
+    this.isPadDuckingEnabled = true;
     try {
       if (typeof localStorage !== "undefined") {
-        this.isPadDuckingEnabled =
-          localStorage.getItem("wilsonix_pad_ducking") === "1";
+        const stored = localStorage.getItem("wilsonix_pad_ducking");
+        if (stored !== null) {
+          this.isPadDuckingEnabled = stored === "1";
+        }
       }
     } catch (e) {}
     this.activeLeadNotes = 0;
@@ -4653,6 +4656,13 @@ export class MultiLayerEngine {
           this.layers[1].name =
             HD_SOUNDBANKS["string_ensemble_1"]?.name || "String Ensemble 1";
         }
+        if (this.isPadSound(this.layers[1].inst || this.layers[1].name)) {
+          try {
+            if (typeof localStorage === "undefined" || localStorage.getItem("wilsonix_pad_ducking") !== "0") {
+              this.isPadDuckingEnabled = true;
+            }
+          } catch (e) {}
+        }
       }
       // Disable layers 2 & 3 so dual layer is clean 2-instrument layer
       if (this.layers[2]) this.layers[2].enabled = false;
@@ -5478,9 +5488,10 @@ export class MultiLayerEngine {
                 const param = this.pcmEngine.layerInserts[j].input.gain;
                 param.cancelScheduledValues(duckTime);
                 param.setValueAtTime(param.value, duckTime);
-                // Fast 15ms dip down to 0.48 (-6.4 dB), then smooth 200ms recovery back to 1.0
-                param.setTargetAtTime(0.48, duckTime, 0.015);
-                param.setTargetAtTime(1.0, duckTime + 0.075, 0.20);
+                // Smooth musical breathing: dip down to 0.36 (-8.8 dB) over 18ms,
+                // hold through the lead note attack, then breathe back smoothly over 380ms
+                param.setTargetAtTime(0.36, duckTime, 0.018);
+                param.setTargetAtTime(1.0, duckTime + 0.12, 0.38);
               }
             }
           }
@@ -5533,11 +5544,13 @@ export class MultiLayerEngine {
         // fortissimo strikes on piano never cause harsh, overpowering pad blasts
         const isPadVoice = i > 0 && this.isPadSound(layer.inst || layer.name);
         const effectiveVelocity = isPadVoice
-          ? Math.round(25 + Math.min(60, velocity * 0.58))
+          ? Math.round(20 + Math.min(48, velocity * 0.48))
           : velocity;
 
-        // Trust user/preset layer gain: do not artificially halve secondary layers with 0.52 penalty!
-        const layerRoleTrim = 1.0;
+        // Stage workstation standard: background pad/string layers sit at a balanced,
+        // warm cushion level (-4.2 dB, 0.62x) behind the lead instrument so they
+        // compliment without smothering the melody.
+        const layerRoleTrim = isPadVoice ? 0.62 : 1.0;
         const effectiveGain =
           (layer.gain ?? 1.0) * combiScale * polyHeadroom * layerRoleTrim;
         const transposedMidi = Math.max(

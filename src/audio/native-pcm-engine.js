@@ -3866,15 +3866,8 @@ export class NativePcmEngine {
       // under their distinct rrKey (one copy per variant, then copy-free).
       const workletKey = anchorData.workletKey || anchorData.rrKey || anchorData.anchorMidi;
       this.pcmWorkletNode.ensureBuffer(baseId, workletKey, buf);
-      const isX5D = instId === "x5d_rock_piano" || instId?.startsWith("x5d_");
-      const isRockPiano = isX5D && (instId === "x5d_rock_piano" || instId?.includes("rock_piano"));
-      const isPadVoice =
-        layerIndex !== null &&
-        layerIndex > 0 &&
-        isPadSound(instId);
-      const trim = getInstrumentTrimGain(instId);
-      const dynamicAmp = (isX5D || isRockPiano) ? Math.pow(velNorm, 0.78) : Math.pow(velNorm, 1.10);
-      const peakGain = ((isX5D || isRockPiano) ? 0.28 + dynamicAmp * 0.72 : 0.16 + dynamicAmp * 0.84) * customGain * trim;
+      const isX5D = instId?.startsWith("x5d_");
+      const isRockPiano = instId === "x5d_rock_piano" || instId?.includes("rock_piano");
       const [isSax, isChoirTimbre] = this._instTimbre(instId);
       const isChoir =
         isChoirTimbre ||
@@ -3906,50 +3899,62 @@ export class NativePcmEngine {
         instId?.includes("clavi") ||
         instId?.includes("ep");
 
-      const releaseTime = (isX5D && !isPadVoice)
-        ? (isPiano ? 0.65 : 0.45)
-        : isRockPiano
-          ? 0.65
-          : isHit
-            ? 1.8
-            : isString
-              ? 0.75
-              : isChoir
-                ? 0.55
-                : isPiano
-                  ? 0.55
-                  : isSax
-                    ? 0.28
-                    : 0.35;
+      const isPad = isPadSound(instId);
+      const isPadVoice =
+        layerIndex !== null &&
+        layerIndex > 0 &&
+        isPad;
+      const isX5DSynthOrKey = isX5D && !isSax && !isPad;
+      const trim = getInstrumentTrimGain(instId);
+      const dynamicAmp = (isX5DSynthOrKey || isRockPiano) ? Math.pow(velNorm, 0.78) : Math.pow(velNorm, 1.10);
+      const peakGain = ((isX5DSynthOrKey || isRockPiano) ? 0.28 + dynamicAmp * 0.72 : 0.16 + dynamicAmp * 0.84) * customGain * trim;
 
-      const minCutoff = isX5D
-        ? (isPadVoice ? 15000 : 18500)
-        : isRockPiano
-          ? 18000
-          : isPiano
-            ? 14000
-            : isSax
-              ? 4000
-              : isChoir
-                ? 1000
-                : 3500;
-      const maxCutoff = isX5D ? 20000 : isSax ? 16000 : isChoir ? 8500 : 20000;
+      const releaseTime = (isX5D && !isPadVoice)
+        ? (isSax ? 0.28 : isPiano ? 0.65 : 0.45)
+        : isHit
+          ? 1.8
+          : isString
+            ? 0.75
+            : isChoir
+              ? 0.55
+              : isPiano
+                ? 0.55
+                : isSax
+                  ? 0.28
+                  : 0.35;
+
+      const minCutoff = isX5DSynthOrKey
+        ? 18500
+        : isX5D && isPad
+          ? 15000
+          : isRockPiano
+            ? 18000
+            : isPiano
+              ? 14000
+              : isSax
+                ? 4000
+                : isChoir
+                  ? 1000
+                  : 3500;
+      const maxCutoff = isSax ? 16000 : isChoir ? 8500 : 20000;
       const filterNorm = Math.min(
         1.0,
-        (minCutoff + Math.pow(velNorm, 1.25) * (maxCutoff - minCutoff)) / 20000,
+        (minCutoff + Math.pow(velNorm, isX5D ? 1.25 : 1.35) * (maxCutoff - minCutoff)) / 20000,
       );
 
       const voiceAttackTime = isPadVoice
-        ? 0.35
-        : (isX5D || isRockPiano)
-          ? 0.001
-          : isChoir
-            ? 0.04
-            : 0.003;
-      const voiceReleaseTime = isPadVoice ? 1.85 : releaseTime;
+        ? 0.48
+        : isPad
+          ? 0.25
+          : (isX5DSynthOrKey || isRockPiano)
+            ? 0.001
+            : isChoir
+              ? 0.04
+              : 0.003;
+      const voiceReleaseTime = isPadVoice ? 1.95 : (isPad ? 1.60 : releaseTime);
       const voiceSustainLevel = isPadVoice
         ? 0.88
-        : (isX5D || isRockPiano)
+        : (isX5DSynthOrKey || isRockPiano)
           ? 0.88
           : isHit
             ? 0.95
@@ -3969,10 +3974,10 @@ export class NativePcmEngine {
         loopStart: buf._loopStartSec || 0,
         loopEnd: buf._loopEndSec || 0,
         attackTime: voiceAttackTime,
-        decayTime: (isX5D && !isPiano) ? 0.35 : isRockPiano ? 0.60 : isPiano ? 0.4 : 0.25,
+        decayTime: (isX5DSynthOrKey && !isPiano) ? 0.35 : isRockPiano ? 0.60 : isPiano ? 0.4 : 0.25,
         sustainLevel: voiceSustainLevel,
         releaseTime: voiceReleaseTime,
-        filterCutoff: (isX5D && !isPadVoice) || isRockPiano ? 1.0 : filterNorm,
+        filterCutoff: isX5DSynthOrKey || isRockPiano ? 1.0 : filterNorm,
         maxLife: buf._isLoopable
           ? 60.0
           : Math.max(12.0, (buf.duration || 6.0) + 0.5),
@@ -4215,27 +4220,31 @@ export class NativePcmEngine {
       voiceGain.connect(dest);
     }
 
-    const isX5D = instId === "x5d_rock_piano" || instId?.startsWith("x5d_");
-    const isRockPiano = isX5D && (instId === "x5d_rock_piano" || instId?.includes("rock_piano"));
+    const isX5D = instId?.startsWith("x5d_");
+    const isRockPiano = instId === "x5d_rock_piano" || instId?.includes("rock_piano");
+    const isPad = isPadSound(instId);
     const isFallbackPad =
       layerIndex !== null &&
       layerIndex > 0 &&
-      isPadSound(instId);
+      isPad;
+    const isX5DSynthOrKey = isX5D && !isSax && !isPad;
 
-    const minCutoff = isX5D
-      ? (isFallbackPad ? 15000 : 18500)
-      : isPiano
-        ? 14000
-        : isSax
-          ? 4000
-          : isChoir
-            ? 1000
-            : isHashy
-              ? 3000
-              : 3500;
-    const maxCutoff = isX5D ? 20000 : isSax ? 16000 : isChoir ? 8500 : isHashy ? 16000 : 20000;
+    const minCutoff = isX5DSynthOrKey
+      ? 18500
+      : isX5D && isPad
+        ? 15000
+        : isPiano
+          ? 14000
+          : isSax
+            ? 4000
+            : isChoir
+              ? 1000
+              : isHashy
+                ? 3000
+                : 3500;
+    const maxCutoff = isSax ? 16000 : isChoir ? 8500 : isHashy ? 16000 : 20000;
     const dynamicCutoff =
-      minCutoff + Math.pow(velNorm, 1.25) * (maxCutoff - minCutoff);
+      minCutoff + Math.pow(velNorm, isX5D ? 1.25 : 1.35) * (maxCutoff - minCutoff);
     const noteFreq = 440 * Math.pow(2, (midiNote - 69) / 12);
     const keyTrackedCutoff = Math.max(
       dynamicCutoff,
@@ -4243,19 +4252,20 @@ export class NativePcmEngine {
     );
 
     filter.frequency.setValueAtTime(
-      (isX5D && !isFallbackPad) || isRockPiano ? 20000 : keyTrackedCutoff,
+      isX5DSynthOrKey || isRockPiano ? 20000 : keyTrackedCutoff,
       now,
     );
-    filter.Q.setValueAtTime(isX5D || isRockPiano ? 0.45 : 0.35, now);
+    filter.Q.setValueAtTime(isX5DSynthOrKey || isRockPiano ? 0.45 : 0.35, now);
 
     const trim = getInstrumentTrimGain(instId);
-    const dynamicAmp = (isX5D || isRockPiano) ? Math.pow(velNorm, 0.78) : Math.pow(velNorm, 1.10);
-    const peakGain = ((isX5D || isRockPiano) ? 0.28 + dynamicAmp * 0.72 : 0.16 + dynamicAmp * 0.84) * customGain * trim;
+    const dynamicAmp = (isX5DSynthOrKey || isRockPiano) ? Math.pow(velNorm, 0.78) : Math.pow(velNorm, 1.10);
+    const peakGain = ((isX5DSynthOrKey || isRockPiano) ? 0.28 + dynamicAmp * 0.72 : 0.16 + dynamicAmp * 0.84) * customGain * trim;
 
     voiceGain.gain.setValueAtTime(0.0, now);
-    if (isFallbackPad) voiceGain.gain.setTargetAtTime(peakGain, now, 0.35);
+    if (isFallbackPad) voiceGain.gain.setTargetAtTime(peakGain, now, 0.48);
+    else if (isPad) voiceGain.gain.setTargetAtTime(peakGain, now, 0.25);
     else if (isChoir) voiceGain.gain.setTargetAtTime(peakGain, now, 0.04);
-    else if (isX5D || isRockPiano) voiceGain.gain.setTargetAtTime(peakGain, now, 0.001);
+    else if (isX5DSynthOrKey || isRockPiano) voiceGain.gain.setTargetAtTime(peakGain, now, 0.001);
     else voiceGain.gain.setTargetAtTime(peakGain, now, 0.008);
 
     const maxLife =

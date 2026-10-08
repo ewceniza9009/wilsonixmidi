@@ -220,6 +220,7 @@ test("Korg X5D presets receive crispy unconstrained filter cutoff and transient 
   const dummyBuf = { duration: 2.0, _isLoopable: false };
   engine.decodedBuffers.set("x5d_analog_king", new Map([[60, dummyBuf]]));
   engine.decodedBuffers.set("x5d_moonstone", new Map([[60, dummyBuf]]));
+  engine.decodedBuffers.set("x5d_the_saxman", new Map([[60, dummyBuf]]));
 
   // 1. X5D lead/synth: wide-open 1.0 filter cutoff and 1ms instant transient attack
   engine.playNote("x5d_analog_king", 60, 80, 1.0, null);
@@ -227,9 +228,19 @@ test("Korg X5D presets receive crispy unconstrained filter cutoff and transient 
   assert.equal(lastWorkletParams.filterCutoff, 1.0, "X5D synths/leads must have 1.0 wide-open cutoff");
   assert.equal(lastWorkletParams.attackTime, 0.001, "X5D synths/leads must have crisp 1ms attack bite");
 
-  // 2. X5D ambient pad: elevated sparkle cutoff floor (>= 15 kHz) and smooth swell attack
+  // 2. X5D ambient pad layer: elevated sparkle cutoff floor (>= 15 kHz) and smooth 480ms swell attack
   engine.playNote("x5d_moonstone", 60, 80, 1.0, 1);
   assert.ok(lastWorkletParams.filterCutoff >= 0.75, "X5D pads must have elevated sparkle cutoff floor >= 15 kHz");
-  assert.equal(lastWorkletParams.attackTime, 0.35, "X5D pad layers must maintain smooth swell attack");
+  assert.equal(lastWorkletParams.attackTime, 0.48, "X5D pad layers must have smooth 480ms swell attack");
+
+  // 3. Single-mode X5D pad: retains pad bloom (250ms attack, not 1ms percussive click)
+  engine.playNote("x5d_moonstone", 60, 80, 1.0, null);
+  assert.equal(lastWorkletParams.attackTime, 0.25, "Single-mode X5D pad must have smooth 250ms bloom");
+
+  // 4. X5D Sax: preserves authentic sax envelope and acoustic filtering
+  engine.playNote("x5d_the_saxman", 60, 80, 1.0, null);
+  assert.equal(lastWorkletParams.attackTime, 0.003, "X5D sax must retain 3ms acoustic wind attack");
+  assert.equal(lastWorkletParams.releaseTime, 0.28, "X5D sax must retain 0.28s acoustic release");
+  assert.ok(lastWorkletParams.filterCutoff < 0.90, "X5D sax must retain acoustic low-pass filtering");
 });
 
